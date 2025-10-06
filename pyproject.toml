@@ -1,0 +1,38 @@
+[project]
+name = "ddon-dwarf-reconstructor"
+version = "0.1.0"
+description = "Reconstructs C/C++ header structures from DWARF debug symbols in PS4 ELF files"
+readme = {file = "README.adoc", content-type = "text/plain"}
+requires-python = ">=3.10"
+dependencies = [
+    "pyelftools>=0.31",
+    "python-dotenv>=1.0.0",
+]
+authors = [
+    { name = "ddon-dwarf-reconstructor contributors" }
+]
+license = { text = "MIT" }
+
+[project.scripts]
+ddon-dwarf-reconstructor = "ddon_dwarf_reconstructor.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ddon_dwarf_reconstructor"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "B"]
+ignore = []
