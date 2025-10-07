@@ -1,16 +1,16 @@
 """Core module initialization."""
 
+from .die_extractor import DIEExtractor
+from .dwarf_parser import DWARFParser
 from .models import (
     DIE,
-    DWARFAttribute,
-    DIEReference,
     CompilationUnit,
-    DWTag,
+    DIEReference,
     DWAccessibility,
-    DWVirtuality
+    DWARFAttribute,
+    DWTag,
+    DWVirtuality,
 )
-from .dwarf_parser import DWARFParser
-from .die_extractor import DIEExtractor
 
 __all__ = [
     "DIE",

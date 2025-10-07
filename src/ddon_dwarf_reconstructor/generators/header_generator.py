@@ -1,25 +1,19 @@
-"""Consolidated C++ header generator with multiple generation strategies.
+"""C++ header generator with optimized early-stopping strategy.
 
-This module replaces the previous scattered header generation files:
-- logged_header_gen.py
-- fast_header_gen.py  
-- ultra_fast_header_gen.py
-- simple_header_gen.py
-- header_generator.py
-
-It provides a unified interface with different generation modes for performance optimization.
+This module provides a single, optimized approach to generating C++ headers
+from DWARF debug information. It uses early-stopping CU parsing to find
+target symbols quickly, then resolves dependencies up to a configurable depth.
 """
 
-import time
 import logging
-from pathlib import Path
-from typing import Optional, List, Dict, Set, Tuple, Generator
+import time
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple
 
-from ..core.dwarf_parser import DWARFParser
 from ..core.die_extractor import DIEExtractor
-
+from ..core.dwarf_parser import DWARFParser
 
 # Set up logging
 logging.basicConfig(
@@ -31,24 +25,21 @@ logger = logging.getLogger(__name__)
 
 
 class GenerationMode(Enum):
-    """Header generation modes with different performance characteristics."""
-    
-    ULTRA_FAST = "ultra_fast"      # Scan only first few CUs (1-5 seconds)
-    FAST = "fast"                  # Limited dependency resolution (5-30 seconds)
-    FULL = "full"                  # Complete dependency tree (30 seconds - few minutes)
-    SIMPLE = "simple"              # Basic single-class generation (1-10 seconds)
+    """Header generation mode - optimized with early-stopping CU parsing."""
+
+    OPTIMIZED = "optimized"  # Single optimized strategy with early-stop parsing
 
 
 @dataclass
 class GenerationOptions:
     """Configuration options for header generation."""
 
-    mode: GenerationMode = GenerationMode.FAST
+    mode: GenerationMode = GenerationMode.OPTIMIZED
     max_dependency_depth: int = 50  # Maximum depth for dependency resolution
-    max_cu_parse: int = 500         # Maximum CUs to parse (memory limit)
+    max_cu_parse: Optional[int] = None  # Maximum CUs to parse (None = early stop on target found)
     add_metadata: bool = True       # Include comments and metadata
     include_dependencies: bool = True  # Include base classes and dependencies
-    
+
 
 @dataclass
 class ClassDefinition:
@@ -96,7 +87,7 @@ class OptimizedExtractor:
         # Cache result (including negative results)
         self._class_cache[class_name] = result if result else (None, None)
         return result
-    
+
     def resolve_type_name(self, type_attr_value) -> str:
         """Resolve and cache type name resolution."""
         # Handle both string and DIEReference types
@@ -116,79 +107,48 @@ class OptimizedExtractor:
 
 
 class HeaderGenerator:
-    """Unified C++ header generator with multiple generation strategies."""
+    """C++ header generator with optimized early-stopping strategy."""
 
     def __init__(self, parser: DWARFParser, options: GenerationOptions = None):
         """
         Initialize the header generator.
-        
+
         Args:
             parser: DWARFParser with loaded DWARF info
-            options: Generation options (defaults to FAST mode)
+            options: Generation options (defaults to OPTIMIZED mode)
         """
         self.parser = parser
         self.options = options or GenerationOptions()
-        
+
     def generate_header(
-        self, 
-        symbol_name: str, 
+        self,
+        symbol_name: str,
         output_path: Optional[Path] = None
     ) -> str:
         """
-        Generate C++ header using the configured generation mode.
-        
+        Generate C++ header using optimized early-stopping strategy.
+
         Args:
             symbol_name: Name of class/struct to generate header for
             output_path: Optional output file path
-            
+
         Returns:
             Generated header content
-            
+
         Raises:
             ValueError: If symbol not found
         """
         start_time = time.time()
-        mode_name = self.options.mode.value.replace('_', '-')
-        logger.info(f"=" * 70)
-        logger.info(f"Starting {mode_name} header generation for: {symbol_name}")
-        logger.info(f"=" * 70)
-        
-        if self.options.mode == GenerationMode.ULTRA_FAST:
-            return self._generate_ultra_fast(symbol_name, output_path)
-        elif self.options.mode == GenerationMode.FAST:
-            return self._generate_fast(symbol_name, output_path)
-        elif self.options.mode == GenerationMode.FULL:
-            return self._generate_full(symbol_name, output_path)
-        elif self.options.mode == GenerationMode.SIMPLE:
-            return self._generate_simple(symbol_name, output_path)
-        else:
-            raise ValueError(f"Unknown generation mode: {self.options.mode}")
-    
-    def _generate_ultra_fast(self, symbol_name: str, output_path: Optional[Path]) -> str:
-        """Generate header with minimal CU parsing."""
-        # Use consolidated strategy with very limited CUs and no dependencies
-        # Temporarily override max_cu_parse
-        original_max = self.options.max_cu_parse
-        self.options.max_cu_parse = 10  # Only parse first 10 CUs
-        try:
-            return self._generate_optimized(symbol_name, output_path, depth_limit=0)
-        finally:
-            self.options.max_cu_parse = original_max
-    
-    def _generate_fast(self, symbol_name: str, output_path: Optional[Path]) -> str:
-        """Generate header with optimized dependency resolution."""
-        # Use consolidated strategy with memory limit
-        return self._generate_optimized(symbol_name, output_path, depth_limit=3)
-    
-    def _generate_full(self, symbol_name: str, output_path: Optional[Path]) -> str:
-        """Generate header with complete dependency resolution."""
-        # Use consolidated strategy with full depth
-        return self._generate_optimized(symbol_name, output_path, depth_limit=self.options.max_dependency_depth)
-    
-    def _generate_simple(self, symbol_name: str, output_path: Optional[Path]) -> str:
-        """Generate header for single class without dependencies."""
-        # Use consolidated strategy with no dependency resolution
-        return self._generate_optimized(symbol_name, output_path, depth_limit=0)
+        logger.info("=" * 70)
+        logger.info(f"Starting optimized header generation for: {symbol_name}")
+        logger.info("=" * 70)
+
+        # Use single optimized strategy with configured dependency depth
+        return self._generate_optimized(
+            symbol_name,
+            output_path,
+            depth_limit=self.options.max_dependency_depth
+        )
 
     def _generate_optimized(
         self, symbol_name: str, output_path: Optional[Path], depth_limit: int
@@ -221,14 +181,14 @@ class HeaderGenerator:
             max_cus=self.options.max_cu_parse
         )
         parse_time = time.time() - parse_start
-        
+
         if not found_target:
             raise ValueError(f"Symbol '{symbol_name}' not found in {len(compilation_units)} CUs")
-            
+
         logger.info(f"  ✓ Phase 1 complete in {parse_time:.2f}s")
 
         # Phase 2: Create extractor and build indexes
-        logger.info(f"[Phase 2/5] Creating extractor with caching...")
+        logger.info("[Phase 2/5] Creating extractor with caching...")
         extractor_start = time.time()
         base_extractor = DIEExtractor(
             compilation_units, elf_file_path=getattr(self.parser, "elf_path", None)
@@ -249,7 +209,7 @@ class HeaderGenerator:
         logger.info(f"  ✓ Phase 3 complete in {find_time:.3f}s")
 
         # Phase 4: Build type index
-        logger.info(f"[Phase 4/5] Building type index...")
+        logger.info("[Phase 4/5] Building type index...")
         index_start = time.time()
         all_type_names = extractor.get_all_class_names()
         index_time = time.time() - index_start
@@ -312,7 +272,7 @@ class HeaderGenerator:
         )
 
         # Phase 6: Generate output
-        logger.info(f"[Phase 6/6] Generating header content...")
+        logger.info("[Phase 6/6] Generating header content...")
         gen_start = time.time()
         ordered = self._order_classes(parsed_classes)
         header_content = self._generate_header_content(parsed_classes, ordered, symbol_name, output_path)
@@ -333,7 +293,7 @@ class HeaderGenerator:
         )
 
         return header_content
-    
+
     def _parse_class_from_die(self, die, cu_offset: int) -> ClassDefinition:
         """Parse a DIE into ClassDefinition (basic version)."""
         name = die.get_name() or "unknown"
@@ -377,7 +337,7 @@ class HeaderGenerator:
                 cls.members.append((member_name, member_type, offset))
 
         return cls
-    
+
     def _parse_class_from_die_optimized(self, die, extractor: OptimizedExtractor, cu_offset: int) -> ClassDefinition:
         """Parse a DIE into ClassDefinition with optimized type resolution."""
         name = die.get_name() or "unknown"
@@ -404,7 +364,7 @@ class HeaderGenerator:
             if child.is_member():
                 member_name = child.get_name() or "unknown"
                 member_type_attr = child.get_attribute('DW_AT_type')
-                
+
                 if member_type_attr:
                     member_type = extractor.resolve_type_name(member_type_attr.value)
                 else:
@@ -416,13 +376,13 @@ class HeaderGenerator:
                 cls.members.append((member_name, member_type, offset))
 
         return cls
-    
+
     def _order_classes(self, classes: Dict[str, ClassDefinition]) -> List[str]:
         """Order classes so dependencies come first."""
         ordered = []
         visited = set()
         visiting = set()  # For cycle detection
-        
+
         def visit(name: str) -> bool:
             if name in visited:
                 return True
@@ -430,13 +390,13 @@ class HeaderGenerator:
                 return False  # Cycle detected
             if name not in classes:
                 return True
-                
+
             visiting.add(name)
-            
+
             cls = classes[name]
             for base in cls.base_classes:
                 visit(base)
-                    
+
             visiting.remove(name)
             visited.add(name)
             ordered.append(name)
@@ -446,27 +406,27 @@ class HeaderGenerator:
             visit(name)
 
         return ordered
-    
+
     def _generate_header_content(
-        self, 
-        classes: Dict[str, ClassDefinition], 
-        ordered: List[str], 
-        target_symbol: str, 
+        self,
+        classes: Dict[str, ClassDefinition],
+        ordered: List[str],
+        target_symbol: str,
         output_path: Optional[Path]
     ) -> str:
         """Generate the final header content."""
         lines = []
-        
+
         # Header guard
         guard = target_symbol.upper().replace('::', '_') + "_H"
         lines.append(f"#ifndef {guard}")
         lines.append(f"#define {guard}")
         lines.append("")
-        
+
         # Standard includes
         lines.append("#include <cstdint>")
         lines.append("")
-        
+
         # Type aliases
         lines.append("// Game-specific type aliases")
         lines.append("typedef int8_t s8;")
@@ -478,15 +438,15 @@ class HeaderGenerator:
         lines.append("typedef uint32_t u32;")
         lines.append("typedef uint64_t u64;")
         lines.append("")
-        
+
         # Metadata
         if self.options.add_metadata:
-            lines.append(f"// Generated from DWARF debug information")
+            lines.append("// Generated from DWARF debug information")
             lines.append(f"// Target symbol: {target_symbol}")
             lines.append(f"// Generation mode: {self.options.mode.value}")
             lines.append(f"// Classes: {len(classes)}")
             lines.append("")
-        
+
         # Forward declarations
         if self.options.include_dependencies:
             forward_decls = self._collect_forward_decls(classes, ordered)
@@ -495,25 +455,25 @@ class HeaderGenerator:
                 for fwd in sorted(forward_decls):
                     lines.append(f"struct {fwd};")
                 lines.append("")
-        
+
         # Class definitions
         for class_name in ordered:
             cls = classes[class_name]
             lines.extend(self._generate_class_definition(cls))
             lines.append("")
-        
+
         lines.append(f"#endif // {guard}")
-        
+
         content = "\n".join(lines)
-        
+
         # Write to file if requested
         if output_path:
             output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_text(content, encoding='utf-8')
             logger.info(f"✅ Wrote to: {output_path}")
-        
+
         return content
-    
+
     def _generate_class_definition(self, cls: ClassDefinition) -> List[str]:
         """Generate class definition lines."""
         lines = []
@@ -549,7 +509,7 @@ class HeaderGenerator:
         lines.append("};")
 
         return lines
-    
+
     def _collect_forward_decls(self, classes: Dict[str, ClassDefinition], ordered: List[str]) -> Set[str]:
         """Collect types that need forward declarations."""
         forward_decls = set()
@@ -567,8 +527,8 @@ class HeaderGenerator:
             for _, member_type, _ in cls.members:
                 base_type = member_type.replace('*', '').replace('&', '').replace('const', '').replace('volatile', '').strip()
 
-                if (base_type and 
-                    base_type not in known_types and 
+                if (base_type and
+                    base_type not in known_types and
                     base_type not in primitives and
                     base_type[0].isupper()):
                     forward_decls.add(base_type)
@@ -576,50 +536,37 @@ class HeaderGenerator:
         return forward_decls
 
 
-# Convenience functions for backward compatibility
-def generate_header_with_logging(
+def generate_header(
     parser: DWARFParser,
     symbol_name: str,
     output_path: Optional[Path] = None,
     add_metadata: bool = True,
     max_dependency_depth: int = 50
 ) -> str:
-    """Generate header with full dependency resolution (backward compatibility)."""
+    """
+    Generate C++ header with optimized early-stopping strategy.
+
+    Uses early-stop CU parsing to find the target symbol quickly,
+    then resolves dependencies up to the specified depth.
+
+    Args:
+        parser: DWARFParser with loaded DWARF info
+        symbol_name: Name of class/struct to generate header for
+        output_path: Optional output file path
+        add_metadata: Include metadata comments in header
+        max_dependency_depth: Maximum depth for dependency resolution
+
+    Returns:
+        Generated header content as string
+
+    Raises:
+        ValueError: If symbol not found
+    """
     options = GenerationOptions(
-        mode=GenerationMode.FULL,
+        mode=GenerationMode.OPTIMIZED,
         max_dependency_depth=max_dependency_depth,
-        add_metadata=add_metadata
-    )
-    generator = HeaderGenerator(parser, options)
-    return generator.generate_header(symbol_name, output_path)
-
-
-def generate_fast_header(
-    parser: DWARFParser,
-    symbol_name: str,
-    output_path: Optional[Path] = None,
-    max_classes: int = 10
-) -> str:
-    """Generate header with limited dependencies (backward compatibility)."""
-    options = GenerationOptions(
-        mode=GenerationMode.FAST,
-        max_cu_parse=100,  # Reasonable default for fast mode
-        max_dependency_depth=3
-    )
-    generator = HeaderGenerator(parser, options)
-    return generator.generate_header(symbol_name, output_path)
-
-
-def generate_ultra_fast_header(
-    parser: DWARFParser,
-    symbol_name: str,
-    output_path: Optional[Path] = None,
-    max_cu_scan: int = 10
-) -> str:
-    """Generate header by scanning only first few CUs (backward compatibility)."""
-    options = GenerationOptions(
-        mode=GenerationMode.ULTRA_FAST,
-        max_cu_parse=max_cu_scan  # Map old parameter to new one
+        add_metadata=add_metadata,
+        max_cu_parse=None  # Use early stopping
     )
     generator = HeaderGenerator(parser, options)
     return generator.generate_header(symbol_name, output_path)

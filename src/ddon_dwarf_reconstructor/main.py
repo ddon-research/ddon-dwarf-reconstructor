@@ -3,24 +3,37 @@
 import argparse
 import sys
 from pathlib import Path
-from typing import NoReturn, Optional
+from typing import NoReturn
 
 from .config import Config
 from .core import DIEExtractor, DWARFParser
-from .generators import (
-    HeaderGenerator,
-    GenerationMode,
-    GenerationOptions,
-    generate_header_with_logging,
-    generate_fast_header,
-    generate_ultra_fast_header
-)
+from .generators import generate_header
+from .utils import LoggerSetup, get_logger
 
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description="Reconstruct C/C++ structures from DWARF debug symbols in PS4 ELF files"
+        description="Reconstruct C++ headers from DWARF debug symbols in PS4 ELF files",
+        epilog="""
+Examples:
+  # Search for a symbol
+  python main.py resources/DDOORBIS.elf --search MtObject
+
+  # Generate header (quiet mode - default)
+  python main.py resources/DDOORBIS.elf --generate MtObject
+
+  # Generate header (verbose mode with debug logs)
+  python main.py resources/DDOORBIS.elf --generate MtObject --verbose
+
+  # Custom output directory
+  python main.py resources/DDOORBIS.elf --generate MtObject -o headers/
+
+  # Using .env file for configuration
+  echo 'ELF_FILE_PATH=resources/DDOORBIS.elf' > .env
+  python main.py --generate MtObject
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "elf_file",
@@ -38,7 +51,7 @@ def parse_args() -> argparse.Namespace:
         "-v",
         "--verbose",
         action="store_true",
-        help="Enable verbose output",
+        help="Enable verbose output with debug logs",
     )
     parser.add_argument(
         "--search",
@@ -46,45 +59,16 @@ def parse_args() -> argparse.Namespace:
         help="Search for a specific symbol name in DWARF info",
     )
     parser.add_argument(
-        "--generate-header",
+        "--generate",
         type=str,
         metavar="SYMBOL",
-        help="Generate C++ header file for the specified symbol (full dependency resolution)",
-    )
-    parser.add_argument(
-        "--fast-header",
-        type=str,
-        metavar="SYMBOL",
-        help="Generate C++ header with limited dependencies for fast execution",
-    )
-    parser.add_argument(
-        "--ultra-fast-header",
-        type=str,
-        metavar="SYMBOL",
-        help="Generate C++ header by scanning only first few CUs (maximum speed)",
-    )
-    parser.add_argument(
-        "--max-classes",
-        type=int,
-        default=10,
-        help="Maximum classes to include in fast header generation (default: 10)",
+        help="Generate C++ header file for the specified symbol",
     )
     parser.add_argument(
         "--max-depth",
         type=int,
         default=50,
-        help="Maximum dependency depth for full header generation (default: 50)",
-    )
-    parser.add_argument(
-        "--max-cu-scan",
-        type=int,
-        default=10,
-        help="Maximum CUs to scan in ultra-fast mode (default: 10)",
-    )
-    parser.add_argument(
-        "--no-dependencies",
-        action="store_true",
-        help="Don't include dependencies when generating headers",
+        help="Maximum dependency depth for header generation (default: 50)",
     )
     parser.add_argument(
         "--no-metadata",
@@ -110,174 +94,124 @@ def main() -> NoReturn:
         print(f"Configuration error: {e}", file=sys.stderr)
         sys.exit(1)
 
-    if config.verbose:
-        print(f"ELF file: {config.elf_file_path}")
-        print(f"Output directory: {config.output_dir}")
-        print()
+    # Initialize logging
+    log_dir = Path("logs")
+    LoggerSetup.initialize(log_dir, verbose=config.verbose)
+    logger = get_logger(__name__)
+
+    logger.debug(f"ELF file: {config.elf_file_path}")
+    logger.debug(f"Output directory: {config.output_dir}")
+    logger.debug(f"Log directory: {log_dir}")
+
+    # Ensure output directory exists
+    config.ensure_output_dir()
 
     # Parse DWARF information
     try:
         with DWARFParser(config.elf_file_path, config.verbose) as parser:
 
-            # Handle ultra-fast header generation
-            if args.ultra_fast_header:
-                symbol_name = args.ultra_fast_header
-                print(f"⚡ Ultra-fast header generation for: {symbol_name}")
-                print(f"Max CUs to scan: {args.max_cu_scan}")
+            # Handle header generation
+            if args.generate:
+                symbol_name = args.generate
+                logger.info(f"Generating header for: {symbol_name}")
 
-                output_file = config.output_dir / f"{symbol_name}_ultra_fast.h"
-
-                try:
-                    header_content = generate_ultra_fast_header(
-                        parser=parser,
-                        symbol_name=symbol_name,
-                        output_path=output_file,
-                        max_cu_scan=args.max_cu_scan
-                    )
-
-                    print(f"\n✅ Generated ultra-fast header: {output_file}")
-                    print(f"Size: {len(header_content)} bytes")
-
-                    if config.verbose:
-                        print("\nPreview (first 20 lines):")
-                        print("=" * 50)
-                        for line in header_content.split('\n')[:20]:
-                            print(line)
-                        print("=" * 50)
-
-                except ValueError as e:
-                    print(f"❌ Error: {e}", file=sys.stderr)
-                    sys.exit(1)
-
-                sys.exit(0)
-
-            # Handle fast header generation
-            if args.fast_header:
-                symbol_name = args.fast_header
-                print(f"🚀 Fast header generation for: {symbol_name}")
-                print(f"Max classes: {args.max_classes}")
-
-                output_file = config.output_dir / f"{symbol_name}_fast.h"
-
-                try:
-                    header_content = generate_fast_header(
-                        parser=parser,
-                        symbol_name=symbol_name,
-                        output_path=output_file,
-                        max_classes=args.max_classes
-                    )
-
-                    print(f"\n✅ Generated fast header: {output_file}")
-                    print(f"Size: {len(header_content)} bytes")
-
-                    if config.verbose:
-                        print("\nPreview (first 20 lines):")
-                        print("=" * 50)
-                        for line in header_content.split('\n')[:20]:
-                            print(line)
-                        print("=" * 50)
-
-                except ValueError as e:
-                    print(f"❌ Error: {e}", file=sys.stderr)
-                    sys.exit(1)
-
-                sys.exit(0)
-
-            # Handle full header generation
-            if args.generate_header:
-                symbol_name = args.generate_header
-                print(f"🏗️ Full header generation for: {symbol_name}")
-                print(f"Max dependency depth: {args.max_depth}")
-
-                # Determine output path
+                # Determine output path - always use <symbol>.h format
                 output_file = config.output_dir / f"{symbol_name}.h"
 
                 try:
-                    header_content = generate_header_with_logging(
+                    header_content = generate_header(
                         parser=parser,
                         symbol_name=symbol_name,
                         output_path=output_file,
                         add_metadata=not args.no_metadata,
-                        max_dependency_depth=args.max_depth
+                        max_dependency_depth=args.max_depth,
                     )
 
-                    print(f"\n✅ Generated header: {output_file}")
-                    print(f"Size: {len(header_content)} bytes")
+                    logger.info(f"✅ Generated: {output_file}")
+                    logger.info(f"Size: {len(header_content)} bytes")
 
                     if config.verbose:
-                        print("\nPreview (first 30 lines):")
-                        print("=" * 60)
-                        # Print first 30 lines
-                        lines = header_content.split('\n')
+                        logger.debug("\nPreview (first 30 lines):")
+                        logger.debug("=" * 60)
+                        lines = header_content.split("\n")
                         for line in lines[:30]:
-                            print(line)
+                            logger.debug(line)
                         if len(lines) > 30:
-                            print(f"... and {len(lines) - 30} more lines")
-                        print("=" * 60)
+                            logger.debug(f"... and {len(lines) - 30} more lines")
+                        logger.debug("=" * 60)
 
                 except ValueError as e:
-                    print(f"❌ Error: {e}", file=sys.stderr)
+                    logger.error(f"Error: {e}")
                     sys.exit(1)
 
                 sys.exit(0)
 
-            # Parse all compilation units for search functionality
-            compilation_units = parser.parse_all_compilation_units()
-
-            if not compilation_units:
-                print("Warning: No compilation units found in DWARF info", file=sys.stderr)
-                sys.exit(1)
-
-            # Create DIE extractor
-            extractor = DIEExtractor(compilation_units)
-
-            # If a search term was provided, search for it
+            # Handle search functionality
             if args.search:
-                print(f"\n🔍 Searching for symbol: {args.search}")
+                logger.info(f"Searching for symbol: {args.search}")
+
+                # Parse compilation units
+                compilation_units = parser.parse_all_compilation_units()
+
+                if not compilation_units:
+                    logger.warning("No compilation units found in DWARF info")
+                    sys.exit(1)
+
+                # Create DIE extractor
+                extractor = DIEExtractor(compilation_units)
+
+                # Search for symbol
                 results = extractor.find_dies_by_name(args.search)
 
                 if results:
-                    print(f"✅ Found {len(results)} result(s):\n")
+                    logger.info(f"✅ Found {len(results)} result(s):")
                     for cu, die in results:
-                        print(f"Compilation Unit at offset 0x{cu.offset:08x}:")
+                        logger.info(f"\nCompilation Unit at offset 0x{cu.offset:08x}:")
                         extractor.print_die_summary(die, indent=1)
 
                         # Print children summary
                         if die.children:
-                            print(f"  Children ({len(die.children)}):")
+                            logger.info(f"  Children ({len(die.children)}):")
                             for child in die.children[:10]:  # Limit to first 10
                                 extractor.print_die_summary(child, indent=2)
                             if len(die.children) > 10:
-                                print(f"    ... and {len(die.children) - 10} more")
-                        print()
+                                logger.info(f"    ... and {len(die.children) - 10} more")
                 else:
-                    print(f"❌ No results found for '{args.search}'")
+                    logger.info(f"❌ No results found for '{args.search}'")
 
                 sys.exit(0)
 
             # Default behavior: print summary
-            print("\n📊 DWARF Analysis Summary:")
-            print(f"Compilation Units: {len(compilation_units)}")
+            logger.info("Parsing DWARF information...")
+            compilation_units = parser.parse_all_compilation_units()
+
+            logger.info("\n📊 DWARF Analysis Summary:")
+            logger.info(f"Compilation Units: {len(compilation_units)}")
 
             total_dies = sum(len(cu.dies) for cu in compilation_units)
-            print(f"Total DIEs: {total_dies:,}")
+            logger.info(f"Total DIEs: {total_dies:,}")
 
             # Quick class/struct count
+            extractor = DIEExtractor(compilation_units)
             all_classes = extractor.get_all_classes()
             all_structs = extractor.get_all_structs()
-            print(f"Classes: {len(all_classes)}")
-            print(f"Structs: {len(all_structs)}")
+            logger.info(f"Classes: {len(all_classes)}")
+            logger.info(f"Structs: {len(all_structs)}")
 
-            print(f"\n💡 Usage examples:")
-            print(f"  Search: --search MtObject")
-            print(f"  Fast header: --fast-header cItemParam --max-classes 20")
-            print(f"  Full header: --generate-header MtObject --max-depth 10")
-            print(f"  Ultra-fast header: --ultra-fast-header cItemParam --max-classes 5 --max-cu-scan 10")
+            logger.info("\n💡 Usage examples:")
+            logger.info(f"  Search: python main.py {config.elf_file_path} --search MtObject")
+            logger.info(
+                f"  Generate: python main.py {config.elf_file_path} --generate MtObject"
+            )
+            logger.info(
+                f"  Verbose: python main.py {config.elf_file_path} --generate MtObject --verbose"
+            )
 
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error(f"Error: {e}")
         if config.verbose:
             import traceback
+
             traceback.print_exc()
         sys.exit(1)
 

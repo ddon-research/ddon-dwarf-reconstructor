@@ -1,13 +1,11 @@
 """Generators module initialization."""
 
 from .header_generator import (
-    HeaderGenerator,
+    ClassDefinition,
     GenerationMode,
     GenerationOptions,
-    ClassDefinition,
-    generate_header_with_logging,
-    generate_fast_header,
-    generate_ultra_fast_header
+    HeaderGenerator,
+    generate_header,
 )
 
 __all__ = [
@@ -15,7 +13,5 @@ __all__ = [
     "GenerationMode",
     "GenerationOptions",
     "ClassDefinition",
-    "generate_header_with_logging",
-    "generate_fast_header",
-    "generate_ultra_fast_header"
+    "generate_header",
 ]

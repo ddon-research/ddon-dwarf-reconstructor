@@ -11,7 +11,7 @@ from ddon_dwarf_reconstructor.generators import (
     HeaderGenerator,
     GenerationMode,
     GenerationOptions,
-    generate_ultra_fast_header,
+    generate_header,
 )
 
 
@@ -66,20 +66,20 @@ def test_die_extraction_performance(elf_file_path: Path) -> None:
 
 
 @pytest.mark.slow
-def test_ultra_fast_header_generation_performance(
+def test_optimized_header_generation_performance(
     elf_file_path: Path, fast_symbol: str
 ) -> None:
-    """Benchmark ultra-fast header generation end-to-end."""
+    """Benchmark optimized header generation end-to-end with early stopping."""
     with DWARFParser(elf_file_path, verbose=False) as parser:
         start = time.time()
-        header_content = generate_ultra_fast_header(
-            parser=parser, symbol_name=fast_symbol, max_cu_scan=10
+        header_content = generate_header(
+            parser=parser, symbol_name=fast_symbol, max_dependency_depth=50
         )
         elapsed = time.time() - start
 
     # Performance assertions
     assert len(header_content) > 0, "Should generate non-empty header"
-    assert elapsed < 10.0, f"ULTRA_FAST should complete in <10s, took {elapsed:.2f}s"
+    assert elapsed < 10.0, f"Optimized generation should complete in <10s, took {elapsed:.2f}s"
 
 
 @pytest.mark.slow

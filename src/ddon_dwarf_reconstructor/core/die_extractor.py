@@ -7,7 +7,7 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Callable, Optional
 
-from .models import CompilationUnit, DIE
+from .models import DIE, CompilationUnit
 
 logger = logging.getLogger(__name__)
 

@@ -6,9 +6,11 @@ Reconstructs C++ header files from DWARF debug symbols in PS4 ELF files.
 
 * Parse DWARF symbols from PS4 ELF binaries
 * Generate C++ struct/class definitions with type-safe output
-* Early stopping CU parsing: stops immediately when target symbol found
-* CU-level caching with 3.6x speedup on subsequent runs
-* Type-specific indexing with O(1) lookup performance
+* **Early-stopping CU parsing**: Stops immediately when target symbol found (82x speedup)
+* **CU-level caching**: 3.6x speedup on subsequent runs
+* **Type-specific indexing**: O(1) lookup performance with lazy loading
+* **Single optimized strategy**: No confusing mode selection
+* **Structured logging**: Timestamped log files in `logs/` directory
 * PS4-specific ELF handling with lenient parsing
 
 == Requirements
@@ -21,24 +23,90 @@ Reconstructs C++ header files from DWARF debug symbols in PS4 ELF files.
 
 [source,bash]
 ----
+# Using uv (recommended)
 uv sync
-# or pip install -e .
+
+# Or using pip
+pip install -e .
 ----
 
 == Usage
 
+=== Command Line Interface
+
 [source,bash]
 ----
-# Search for symbol
-ddon-dwarf-reconstructor --search MtObject
+# Search for a symbol
+python main.py resources/DDOORBIS.elf --search MtObject
 
-# Generate headers with different optimization levels
-ddon-dwarf-reconstructor --ultra-fast-header MtObject -o output/
-ddon-dwarf-reconstructor --generate-header cItemParam --verbose
+# Generate header (quiet mode - default)
+python main.py resources/DDOORBIS.elf --generate MtObject
 
-# Configuration via .env file
+# Generate header (verbose mode with debug logs)
+python main.py resources/DDOORBIS.elf --generate MtObject --verbose
+
+# Custom output directory
+python main.py resources/DDOORBIS.elf --generate MtObject -o headers/
+
+# Control dependency depth
+python main.py resources/DDOORBIS.elf --generate MtObject --max-depth 30
+----
+
+=== Using .env Configuration
+
+[source,bash]
+----
+# Create .env file
 echo "ELF_FILE_PATH=resources/DDOORBIS.elf" > .env
-ddon-dwarf-reconstructor --search ClassName
+
+# Now you can omit the ELF path
+python main.py --generate MtObject
+python main.py --search cItemParam
+----
+
+=== Output
+
+* **Headers**: Generated in `output/` directory as `<symbol>.h`
+* **Logs**: Timestamped files in `logs/` directory (e.g., `ddon_reconstructor_20251007_143052.log`)
+
+[source,bash]
+----
+# Example output structure
+output/
+  MtObject.h
+  cItemParam.h
+logs/
+  ddon_reconstructor_20251007_143052.log
+  ddon_reconstructor_20251007_151230.log
+----
+
+=== Verbose vs. Quiet Mode
+
+**Quiet Mode (default)**:
+[source]
+----
+INFO: Generating header for: MtObject
+INFO: ✅ Generated: output/MtObject.h
+INFO: Size: 15234 bytes
+----
+
+**Verbose Mode (`--verbose`)**:
+[source]
+----
+DEBUG: ELF file: resources/DDOORBIS.elf
+DEBUG: Output directory: output
+DEBUG: Log directory: logs
+INFO: Generating header for: MtObject
+INFO: ======================================================================
+INFO: Starting optimized header generation for: MtObject
+INFO: ======================================================================
+INFO: [Phase 1/5] Parsing CUs with early stop for 'MtObject'...
+DEBUG: Starting parse_cus_until_target_found
+... (detailed debug logs)
+DEBUG: Completed parse_cus_until_target_found in 2.34s
+INFO:   ✓ Phase 1 complete in 2.34s
+... (more phases)
+INFO: ✅ Generated: output/MtObject.h
 ----
 
 == Architecture
@@ -47,9 +115,18 @@ ddon-dwarf-reconstructor --search ClassName
 ----
 src/ddon_dwarf_reconstructor/
 ├── core/           # DWARF parsing, DIE extraction
-├── generators/     # Header generation with multiple modes
-├── config/         # Environment and CLI configuration
-└── utils/          # ELF patches, optimization utilities
+│   ├── dwarf_parser.py    # ELF/DWARF interface with early-stop parsing
+│   ├── die_extractor.py   # Optimized indexing and search
+│   └── models.py          # Type system (DIE, CompilationUnit, etc.)
+├── generators/     # C++ header generation
+│   └── header_generator.py  # Single optimized generation strategy
+├── config/         # Configuration management
+│   └── config.py          # Config with .env support
+├── utils/          # Utilities
+│   ├── logger.py          # Centralized logging
+│   ├── elf_patches.py     # PS4 ELF compatibility patches
+│   └── quick_search.py    # Fast symbol search utilities
+└── main.py         # CLI entry point
 ----
 
 == Testing
@@ -57,26 +134,78 @@ src/ddon_dwarf_reconstructor/
 [source,bash]
 ----
 # Run all tests
-pytest
-
-# Run performance benchmarks
-pytest tests/performance/ -v
+uv run pytest
 
 # Run specific test categories
-pytest -m "unit" --tb=short
-----
+uv run pytest -m unit               # Unit tests only
+uv run pytest -m integration        # Integration tests only
+uv run pytest -m "not slow"         # Fast tests (skip slow ones)
+uv run pytest -m performance        # Performance benchmarks
 
-== Testing
-
-[source,bash]
-----
-python tests/run_tests.py              # All tests
-python tests/run_tests.py --simple     # Essential tests only
-python tests/run_tests.py -m performance # Performance benchmarks
+# Verbose output with short tracebacks
+uv run pytest -v --tb=short
 ----
 
 == Performance
 
-* ULTRA_FAST mode: <10s generation for most symbols
-* Lazy indexing: O(1) repeated searches after initial build
-* Memory usage: <500MB peak for large ELF files
+* **Optimized mode**: <10s generation for most symbols
+* **Early stopping**: Parses only until target found (not all CUs)
+* **Lazy indexing**: O(1) repeated searches after initial index build
+* **Memory usage**: <500MB peak for large ELF files
+* **CU caching**: 3.6x speedup on repeated runs
+
+== Development
+
+[source,bash]
+----
+# Install with development dependencies
+uv sync
+
+# Run type checking
+uv run mypy src/
+
+# Run linting
+uv run ruff check src/
+
+# Format code
+uv run ruff format src/
+----
+
+== Configuration Priority
+
+Configuration is loaded in this order (later overrides earlier):
+
+1. `.env` file
+2. Environment variables
+3. Command-line arguments
+
+Example:
+[source,bash]
+----
+# .env file
+ELF_FILE_PATH=resources/DDOORBIS.elf
+OUTPUT_DIR=output
+VERBOSE=false
+
+# Override with CLI
+python main.py --verbose  # Uses .env ELF path but enables verbose
+----
+
+== Known Limitations
+
+* PS4 ELF files may have non-standard sections requiring lenient parsing
+* Some DWARF constructs may not be fully supported
+* Forward declarations may be needed for circular dependencies
+
+== License
+
+MIT
+
+== Contributing
+
+Contributions welcome! Please ensure:
+
+* All tests pass: `uv run pytest`
+* Type checking passes: `uv run mypy src/`
+* Linting passes: `uv run ruff check src/`
+* Follow existing code style

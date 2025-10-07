@@ -1,7 +1,7 @@
 """Patches for pyelftools to handle PS4 ELF files with non-standard sections."""
 
 from elftools.common.exceptions import ELFError
-from elftools.elf import elffile, dynamic
+from elftools.elf import elffile
 
 
 def patch_pyelftools_for_ps4() -> None:

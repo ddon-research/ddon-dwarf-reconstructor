@@ -1,8 +1,8 @@
 """DDON DWARF Reconstructor - Consolidated modular architecture."""
 
-from .core import DWARFParser, DIEExtractor
 from .config import Config
-from .generators import HeaderGenerator, GenerationMode, GenerationOptions
+from .core import DIEExtractor, DWARFParser
+from .generators import GenerationMode, GenerationOptions, HeaderGenerator
 from .main import main
 
 __all__ = [

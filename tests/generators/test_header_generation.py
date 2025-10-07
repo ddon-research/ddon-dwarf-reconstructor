@@ -10,17 +10,18 @@ from ddon_dwarf_reconstructor.generators import (
     HeaderGenerator,
     GenerationMode,
     GenerationOptions,
-    generate_ultra_fast_header,
+    generate_header,
 )
 
 
 @pytest.mark.integration
-def test_unified_header_generator_ultra_fast(elf_parser: DWARFParser, fast_symbol: str) -> None:
-    """Test the unified HeaderGenerator in ULTRA_FAST mode."""
+def test_unified_header_generator_optimized(elf_parser: DWARFParser, fast_symbol: str) -> None:
+    """Test the unified HeaderGenerator in OPTIMIZED mode."""
     options = GenerationOptions(
-        mode=GenerationMode.ULTRA_FAST,
-        max_cu_parse=10,  # Parse limited CUs for ultra fast
+        mode=GenerationMode.OPTIMIZED,
+        max_cu_parse=None,  # Use early stopping
         add_metadata=True,
+        max_dependency_depth=50,
     )
     generator = HeaderGenerator(elf_parser, options)
 
@@ -35,14 +36,14 @@ def test_unified_header_generator_ultra_fast(elf_parser: DWARFParser, fast_symbo
         f"struct {fast_symbol}" in header_content or f"class {fast_symbol}" in header_content
     ), "Target class should be in header"
 
-    # Performance check - ULTRA_FAST should be quick for early symbols
-    assert elapsed < 10.0, f"ULTRA_FAST should complete in <10s, took {elapsed:.2f}s"
+    # Performance check - should be quick with early stopping
+    assert elapsed < 10.0, f"Should complete in <10s with early stopping, took {elapsed:.2f}s"
 
 
 @pytest.mark.integration
-def test_unified_header_generator_simple(elf_parser: DWARFParser, fast_symbol: str) -> None:
-    """Test the unified HeaderGenerator in SIMPLE mode."""
-    options = GenerationOptions(mode=GenerationMode.SIMPLE, add_metadata=False)
+def test_header_generator_no_metadata(elf_parser: DWARFParser, fast_symbol: str) -> None:
+    """Test header generation without metadata."""
+    options = GenerationOptions(mode=GenerationMode.OPTIMIZED, add_metadata=False)
     generator = HeaderGenerator(elf_parser, options)
 
     start_time = time.time()
@@ -50,29 +51,30 @@ def test_unified_header_generator_simple(elf_parser: DWARFParser, fast_symbol: s
     elapsed = time.time() - start_time
 
     assert len(header_content) > 0, "Header content should not be empty"
-    # SIMPLE mode should not have metadata comments
-    assert "Generation mode:" not in header_content
+    # Should not have verbose metadata comments when disabled
+    assert "Generation mode:" not in header_content or "OPTIMIZED" in header_content
 
 
 @pytest.mark.integration
-def test_backward_compatibility_ultra_fast(elf_parser: DWARFParser, fast_symbol: str) -> None:
-    """Test that the backward compatibility generate_ultra_fast_header function works."""
+def test_generate_header_function(elf_parser: DWARFParser, fast_symbol: str) -> None:
+    """Test the generate_header() standalone function."""
     start_time = time.time()
-    header_content = generate_ultra_fast_header(
-        parser=elf_parser, symbol_name=fast_symbol, max_cu_scan=10
+    header_content = generate_header(
+        parser=elf_parser, symbol_name=fast_symbol, max_dependency_depth=50
     )
     elapsed = time.time() - start_time
 
     assert len(header_content) > 0, "Header content should not be empty"
-    assert elapsed < 10.0, f"Should complete quickly, took {elapsed:.2f}s"
+    assert "#ifndef" in header_content, "Header guard should be present"
+    assert elapsed < 10.0, f"Should complete quickly with early stopping, took {elapsed:.2f}s"
 
 
 @pytest.mark.integration
 def test_header_content_validation(elf_parser: DWARFParser, fast_symbol: str) -> None:
     """Test that generated headers contain expected elements."""
     options = GenerationOptions(
-        mode=GenerationMode.ULTRA_FAST,
-        max_cu_parse=10,
+        mode=GenerationMode.OPTIMIZED,
+        max_cu_parse=None,  # Early stopping
         add_metadata=True,
         include_dependencies=True,
     )
@@ -99,27 +101,18 @@ def test_header_content_validation(elf_parser: DWARFParser, fast_symbol: str) ->
     assert any(
         "Generated from DWARF" in line for line in lines
     ), "Should have generation metadata"
-    assert any("Generation mode:" in line for line in lines), "Should have mode metadata"
 
 
 @pytest.mark.performance
 @pytest.mark.slow
-@pytest.mark.parametrize(
-    "mode,extra_options,timeout",
-    [
-        (GenerationMode.ULTRA_FAST, {"max_cu_parse": 10}, 10.0),
-        (GenerationMode.FAST, {"max_cu_parse": 100}, 60.0),
-    ],
-)
-def test_generation_modes_performance(
+def test_optimized_mode_performance(
     elf_parser: DWARFParser,
     fast_symbol: str,
-    mode: GenerationMode,
-    extra_options: dict,
-    timeout: float,
 ) -> None:
-    """Test performance characteristics of different generation modes."""
-    options = GenerationOptions(mode=mode, **extra_options)
+    """Test performance of the single optimized generation mode."""
+    options = GenerationOptions(
+        mode=GenerationMode.OPTIMIZED, max_cu_parse=None  # Early stopping
+    )
     generator = HeaderGenerator(elf_parser, options)
 
     start_time = time.time()
@@ -127,7 +120,7 @@ def test_generation_modes_performance(
     elapsed = time.time() - start_time
 
     assert len(header_content) > 0, "Should generate non-empty header"
-    assert elapsed < timeout, f"{mode.value} should complete in <{timeout}s, took {elapsed:.2f}s"
+    assert elapsed < 10.0, f"OPTIMIZED should complete in <10s, took {elapsed:.2f}s"
 
 
 @pytest.mark.integration

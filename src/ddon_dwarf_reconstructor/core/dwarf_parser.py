@@ -1,25 +1,19 @@
 """DWARF Parser for extracting debug information from ELF files."""
 
 import logging
-import multiprocessing
 import pickle
-import time
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
-
 import sys
-import pickle
-import logging
+import time
 from hashlib import sha256
-from pathlib import Path
-from typing import Optional, Generator
 from multiprocessing import Pool, cpu_count
+from pathlib import Path
+from typing import Generator, Optional
 
 from elftools.dwarf.die import DIE as ElfDIE
 from elftools.elf.elffile import ELFFile
 
 from ..utils.elf_patches import patch_pyelftools_for_ps4
-from .models import CompilationUnit, DIE, DIEReference, DWARFAttribute
+from .models import DIE, CompilationUnit, DIEReference, DWARFAttribute
 
 # Apply PS4 ELF patches on module load
 patch_pyelftools_for_ps4()
@@ -397,8 +391,8 @@ class DWARFParser:
         return compilation_units
 
     def parse_cus_until_target_found(
-        self, 
-        target_symbol: str, 
+        self,
+        target_symbol: str,
         max_cus: Optional[int] = None
     ) -> tuple[list[CompilationUnit], bool]:
         """Parse CUs sequentially until target symbol is found or limit reached.
@@ -411,31 +405,31 @@ class DWARFParser:
             Tuple of (parsed_compilation_units, found_target)
         """
         logger = logging.getLogger(__name__)
-        
+
         if not self.dwarf_info:
             raise RuntimeError("DWARF info not loaded. Call load_dwarf_info() first.")
-            
+
         start_time = time.time()
         compilation_units: list[CompilationUnit] = []
-        
+
         limit_msg = f" (searching max {max_cus} CUs)" if max_cus else " (no limit)"
         logger.info(f"Starting CU parsing with early stop for '{target_symbol}'{limit_msg}...")
-        
+
         cu_count = 0
         total_dies = 0
         cu_times = []
         cache_hits = 0
         cache_misses = 0
         found_target = False
-        
+
         for cu in self.dwarf_info.iter_CUs():
             if max_cus and cu_count >= max_cus:
                 logger.info(f"Reached CU limit of {max_cus}, stopping search")
                 break
-                
+
             try:
                 cu_start = time.time()
-                
+
                 # Check if CU exists in cache before parsing
                 cached_cu = self._load_cu_from_cache(cu.cu_offset)
                 if cached_cu:
@@ -446,49 +440,49 @@ class DWARFParser:
                     comp_unit = self.parse_compilation_unit(cu, use_cache=True)
                     cache_misses += 1
                     cu_elapsed = time.time() - cu_start
-                    
+
                 compilation_units.append(comp_unit)
                 cu_count += 1
                 total_dies += len(comp_unit.dies)
                 cu_times.append(cu_elapsed)
-                
+
                 # Check if target symbol is in this CU
                 target_found_in_cu = self._check_cu_contains_class(comp_unit, target_symbol)
-                
+
                 status = "cached" if cached_cu else "parsed"
                 target_status = f", FOUND '{target_symbol}'!" if target_found_in_cu else ""
-                
+
                 logger.info(
                     f"  CU {cu_count} "
                     f"(offset: 0x{comp_unit.offset:08x}, "
                     f"{len(comp_unit.dies)} DIEs, "
                     f"{status}, {cu_elapsed:.3f}s){target_status}"
                 )
-                
+
                 if target_found_in_cu:
                     found_target = True
                     logger.info(f"✓ Early stop: Found '{target_symbol}' in CU {cu_count}")
                     break
-                    
+
             except Exception as e:
                 logger.warning(
                     f"Failed to parse CU at offset 0x{cu.cu_offset:08x}: {e}"
                 )
                 cache_misses += 1
-                
+
         total_time = time.time() - start_time
         avg_cu_time = sum(cu_times) / len(cu_times) if cu_times else 0
         cache_hit_rate = (cache_hits / cu_count * 100) if cu_count > 0 else 0
-        
+
         result_msg = "FOUND" if found_target else "NOT FOUND"
         logger.info(
             f"✓ Parsed {len(compilation_units)} CUs with {total_dies:,} total DIEs "
             f"in {total_time:.2f}s (avg: {avg_cu_time:.3f}s/CU) - Target: {result_msg}\n"
             f"  Cache: {cache_hits} hits, {cache_misses} misses ({cache_hit_rate:.1f}% hit rate)"
         )
-        
+
         return compilation_units, found_target
-        
+
     def _check_cu_contains_class(self, cu: CompilationUnit, target_symbol: str) -> bool:
         """Fast check if CU contains a class with the given name.
         
@@ -500,7 +494,7 @@ class DWARFParser:
             True if class found, False otherwise
         """
         class_tags = {'DW_TAG_class_type', 'DW_TAG_structure_type', 'DW_TAG_union_type'}
-        
+
         for die in cu.dies:
             if die.tag in class_tags:
                 name = die.get_name()

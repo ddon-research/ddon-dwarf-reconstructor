@@ -13,6 +13,7 @@ class Config:
     elf_file_path: Path
     output_dir: Path
     verbose: bool = False
+    log_dir: Path = Path("logs")
 
     @classmethod
     def from_env(cls, env_path: Optional[Path] = None) -> "Config":
@@ -98,3 +99,7 @@ class Config:
     def ensure_output_dir(self) -> None:
         """Create the output directory if it doesn't exist."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
+
+    def ensure_log_dir(self) -> None:
+        """Create the log directory if it doesn't exist."""
+        self.log_dir.mkdir(parents=True, exist_ok=True)
