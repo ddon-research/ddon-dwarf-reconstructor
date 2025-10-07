@@ -1,2 +1,4 @@
 -e file:///D:/ddon-dwarf-reconstructor
 pyelftools==0.32
+mypy
+pytest

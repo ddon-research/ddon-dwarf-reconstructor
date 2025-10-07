@@ -2,6 +2,10 @@
 
 Technical guidance for Claude when working with this DWARF-to-C++ header reconstruction tool.
 
+## Important instructions
+
+- Do not run tools in parallel. There is currently a bug in Claude Code that causes concurrency issues of this form "API Error: 400 due to tool use concurrency issues".
+
 ## Project Overview
 
 **Purpose**: Reconstruct C++ headers from DWARF debug symbols in PS4 ELF files  
@@ -18,6 +22,23 @@ Technical guidance for Claude when working with this DWARF-to-C++ header reconst
 
 ### `dwarf_parser.py` - ELF/DWARF Interface  
 - `DWARFParser`: Context manager for ELF file access
+- `parse_cus_until_target_found()`: Early stopping CU parsing
+- CU-level caching with pickle serialization
+
+## Performance Optimizations
+
+- **Early Stopping**: Parse CUs until target found (82x speedup for cItemParam)
+- **CU Caching**: Persistent disk cache with 3.6x speedup
+- **Type Indexing**: O(1) type lookups with lazy loading
+- **Memory Limiting**: Configurable CU parsing limits
+
+## Test Structure
+
+Run tests with `pytest` from project root:
+- `tests/core/` - DWARF parsing functionality
+- `tests/generators/` - Header generation modes  
+- `tests/performance/` - Optimization benchmarks
+- `tests/config/` - Configuration management
 - PS4-specific lenient parsing (`stream_loader=None`)
 - Iterator over compilation units
 - Converts pyelftools DIEs to typed model objects
@@ -43,10 +64,13 @@ uv sync
 # Run tool
 ddon-dwarf-reconstructor resources/DDOORBIS.elf --search MtObject
 
-# Testing
-python tests/run_tests.py                    # All tests
-python tests/run_tests.py --simple          # Essential only
-python tests/run_tests.py -m performance    # Benchmarks
+# Testing - MANDATORY: ALL TESTS MUST USE PYTEST
+pytest                          # All tests
+pytest -m unit                  # Unit tests only
+pytest -m integration           # Integration tests only
+pytest -m "not slow"            # Fast tests (skip performance)
+pytest -m performance           # Performance benchmarks
+pytest -v --tb=short            # Verbose with short tracebacks
 
 # Code quality
 mypy src/
@@ -73,10 +97,35 @@ ruff check src/
 ## Code Style Requirements
 
 - **Type Safety**: All functions must have type hints
-- **Line Length**: 100 characters (ruff config)  
+- **Line Length**: 100 characters (ruff config)
 - **Python Version**: 3.10+ (for union syntax)
 - **Docstrings**: PEP 257 format with parameter/return documentation
 - **Error Handling**: Explicit exception types, no bare `except`
+
+## Testing Requirements
+
+**MANDATORY**: All tests MUST be run via pytest. The legacy `run_tests.py` has been removed.
+
+### Test Structure
+- **Markers**: Use `@pytest.mark.unit`, `@pytest.mark.integration`, `@pytest.mark.performance`, `@pytest.mark.slow`
+- **Fixtures**: Use shared fixtures from `tests/conftest.py` (elf_parser, config, sample_symbols, etc.)
+- **Sample Symbols**: Use `fast_symbol` fixture for "MtObject" (fast, <10s) or test with other symbols from `sample_symbols` (may be slow)
+- **Performance**: Mark slow tests with `@pytest.mark.slow` so they can be skipped in fast CI runs
+
+### Writing Tests
+```python
+import pytest
+from ddon_dwarf_reconstructor.core import DWARFParser
+
+@pytest.mark.integration
+def test_example(elf_parser: DWARFParser, fast_symbol: str) -> None:
+    """Test with MtObject (fast symbol in first CU)."""
+    # Use elf_parser fixture (auto-setup/teardown)
+    # Use fast_symbol for quick tests
+    pass
+```
+
+See [tests/README.md](tests/README.md) for comprehensive testing documentation.
 
 ## Knowledge Base
 

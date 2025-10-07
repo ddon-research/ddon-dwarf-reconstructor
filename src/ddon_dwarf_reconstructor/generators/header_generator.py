@@ -42,12 +42,11 @@ class GenerationMode(Enum):
 @dataclass
 class GenerationOptions:
     """Configuration options for header generation."""
-    
+
     mode: GenerationMode = GenerationMode.FAST
-    max_classes: int = 10          # For FAST mode
-    max_dependency_depth: int = 50  # For FULL mode
-    max_cu_scan: int = 10          # For ULTRA_FAST mode
-    add_metadata: bool = True      # Include comments and metadata
+    max_dependency_depth: int = 50  # Maximum depth for dependency resolution
+    max_cu_parse: int = 500         # Maximum CUs to parse (memory limit)
+    add_metadata: bool = True       # Include comments and metadata
     include_dependencies: bool = True  # Include base classes and dependencies
     
 
@@ -67,44 +66,33 @@ class ClassDefinition:
 @dataclass
 class OptimizedExtractor:
     """Cached and optimized wrapper around DIEExtractor for header generation."""
-    
+
     extractor: DIEExtractor
-    
+
     # Performance caches
     _class_cache: Dict[str, Tuple[Optional[any], Optional[any]]] = field(default_factory=dict)
-    _all_class_names: Optional[Set[str]] = None
     _type_resolution_cache: Dict[str, str] = field(default_factory=dict)
-    
+
     def get_all_class_names(self) -> Set[str]:
-        """Get all class/struct names with caching."""
-        if self._all_class_names is None:
-            logger.info("  Building class name cache...")
-            start_time = time.time()
-            
-            self._all_class_names = set()
-            for cu in self.extractor.compilation_units:
-                for die in cu.dies:
-                    if die.is_class() or die.is_struct():
-                        name = die.get_name()
-                        if name:
-                            self._all_class_names.add(name)
-            
-            build_time = time.time() - start_time
-            logger.info(f"  ✓ Built class name cache: {len(self._all_class_names)} classes in {build_time:.2f}s")
-        
-        return self._all_class_names
-    
+        """Get all class/struct names using optimized type index."""
+        # Use the new type_exists infrastructure for O(1) lookup
+        # This triggers index building once, then all checks are O(1)
+        self.extractor._build_type_indexes()
+        return self.extractor._all_type_names
+
+    def type_exists(self, type_name: str) -> bool:
+        """Fast O(1) check if type exists."""
+        return self.extractor.type_exists(type_name)
+
     def find_class_cached(self, class_name: str) -> Optional[Tuple[any, any]]:
         """Find class with caching to avoid repeated searches."""
         if class_name in self._class_cache:
             cached_result = self._class_cache[class_name]
             return cached_result if cached_result != (None, None) else None
-        
-        # Search for class
-        result = self.extractor.find_class_by_name(class_name)
-        if not result:
-            result = self.extractor.find_struct_by_name(class_name)
-        
+
+        # Use optimized type index for faster lookup
+        result = self.extractor.find_type_by_name(class_name)
+
         # Cache result (including negative results)
         self._class_cache[class_name] = result if result else (None, None)
         return result
@@ -177,159 +165,174 @@ class HeaderGenerator:
             raise ValueError(f"Unknown generation mode: {self.options.mode}")
     
     def _generate_ultra_fast(self, symbol_name: str, output_path: Optional[Path]) -> str:
-        """Generate header by scanning only first few compilation units."""
-        # Find target symbol in first few CUs
-        found_target = False
-        target_die = None
-        scanned_cus = []
-        
-        cu_count = 0
-        for cu in self.parser.iter_compilation_units():
-            cu_count += 1
-            if cu_count > self.options.max_cu_scan:
-                break
-                
-            logger.info(f"  Scanning CU #{cu_count} (offset: 0x{cu.offset:08x}, {len(cu.dies)} DIEs)")
-            scanned_cus.append(cu)
-            
-            # Quick scan for target symbol
-            for die in cu.dies:
-                if (die.is_class() or die.is_struct()) and die.get_name() == symbol_name:
-                    found_target = True
-                    target_die = die
-                    logger.info(f"  ✅ Found '{symbol_name}' in CU #{cu_count}!")
-                    break
-                    
-            if found_target:
-                break
-        
-        if not found_target:
-            raise ValueError(f"Symbol '{symbol_name}' not found in first {cu_count} compilation units")
-
-        # Parse target class only
-        target_class = self._parse_class_from_die(target_die, cu.offset)
-        classes = {symbol_name: target_class}
-        
-        logger.info(f"✅ Parsed target: {symbol_name} ({len(target_class.members)} members)")
-        
-        return self._generate_header_content(classes, [symbol_name], symbol_name, output_path)
+        """Generate header with minimal CU parsing."""
+        # Use consolidated strategy with very limited CUs and no dependencies
+        # Temporarily override max_cu_parse
+        original_max = self.options.max_cu_parse
+        self.options.max_cu_parse = 10  # Only parse first 10 CUs
+        try:
+            return self._generate_optimized(symbol_name, output_path, depth_limit=0)
+        finally:
+            self.options.max_cu_parse = original_max
     
     def _generate_fast(self, symbol_name: str, output_path: Optional[Path]) -> str:
-        """Generate header with limited dependency resolution."""
-        compilation_units = self.parser.parse_all_compilation_units()
-        extractor = DIEExtractor(compilation_units)
-        
-        # Find target class
-        result = extractor.find_class_by_name(symbol_name)
-        if not result:
-            result = extractor.find_struct_by_name(symbol_name)
-        if not result:
-            raise ValueError(f"Symbol '{symbol_name}' not found")
-            
-        cu, target_die = result
-        
-        # Limited dependency resolution
-        parsed_classes = {}
-        classes_to_process = [symbol_name]
-        processed_count = 0
-
-        while classes_to_process and processed_count < self.options.max_classes:
-            class_name = classes_to_process.pop(0)
-            
-            if class_name in parsed_classes:
-                continue
-                
-            class_result = extractor.find_class_by_name(class_name)
-            if not class_result:
-                class_result = extractor.find_struct_by_name(class_name)
-            if not class_result:
-                continue
-                
-            _, die = class_result
-            processed_count += 1
-            
-            cls = self._parse_class_from_die(die, cu.offset)
-            parsed_classes[class_name] = cls
-            
-            # Add base classes to queue (limited)
-            for base in cls.base_classes:
-                if (processed_count < self.options.max_classes and 
-                    base not in classes_to_process and 
-                    base not in parsed_classes):
-                    classes_to_process.append(base)
-        
-        ordered = self._order_classes(parsed_classes)
-        return self._generate_header_content(parsed_classes, ordered, symbol_name, output_path)
+        """Generate header with optimized dependency resolution."""
+        # Use consolidated strategy with memory limit
+        return self._generate_optimized(symbol_name, output_path, depth_limit=3)
     
     def _generate_full(self, symbol_name: str, output_path: Optional[Path]) -> str:
         """Generate header with complete dependency resolution."""
-        compilation_units = self.parser.parse_all_compilation_units()
-        base_extractor = DIEExtractor(compilation_units)
-        extractor = OptimizedExtractor(extractor=base_extractor)
+        # Use consolidated strategy with full depth
+        return self._generate_optimized(symbol_name, output_path, depth_limit=self.options.max_dependency_depth)
+    
+    def _generate_simple(self, symbol_name: str, output_path: Optional[Path]) -> str:
+        """Generate header for single class without dependencies."""
+        # Use consolidated strategy with no dependency resolution
+        return self._generate_optimized(symbol_name, output_path, depth_limit=0)
+
+    def _generate_optimized(
+        self, symbol_name: str, output_path: Optional[Path], depth_limit: int
+    ) -> str:
+        """Consolidated optimized header generation strategy.
+
+        Uses all performance optimizations:
+        - Memory-limited CU parsing
+        - Type-specific indexing with caching
+        - Fast O(1) existence checks
+        - BFS dependency resolution
+
+        Args:
+            symbol_name: Target symbol to generate header for
+            output_path: Optional output file path
+            depth_limit: Maximum dependency depth (0 = no deps, 3 = fast, 50 = full)
+
+        Returns:
+            Generated header content
+        """
+        import time
+
+        overall_start = time.time()
+
+        # Phase 1: Parse CUs with early stopping
+        logger.info(f"[Phase 1/5] Parsing CUs with early stop for '{symbol_name}'...")
+        parse_start = time.time()
+        compilation_units, found_target = self.parser.parse_cus_until_target_found(
+            target_symbol=symbol_name,
+            max_cus=self.options.max_cu_parse
+        )
+        parse_time = time.time() - parse_start
         
-        # Find target class
+        if not found_target:
+            raise ValueError(f"Symbol '{symbol_name}' not found in {len(compilation_units)} CUs")
+            
+        logger.info(f"  ✓ Phase 1 complete in {parse_time:.2f}s")
+
+        # Phase 2: Create extractor and build indexes
+        logger.info(f"[Phase 2/5] Creating extractor with caching...")
+        extractor_start = time.time()
+        base_extractor = DIEExtractor(
+            compilation_units, elf_file_path=getattr(self.parser, "elf_path", None)
+        )
+        extractor = OptimizedExtractor(extractor=base_extractor)
+        extractor_time = time.time() - extractor_start
+        logger.info(f"  ✓ Phase 2 complete in {extractor_time:.2f}s")
+
+        # Phase 3: Locate target symbol (guaranteed to exist from Phase 1)
+        logger.info(f"[Phase 3/5] Locating target symbol '{symbol_name}' in parsed CUs...")
+        find_start = time.time()
         target_result = extractor.find_class_cached(symbol_name)
         if not target_result:
-            raise ValueError(f"Symbol '{symbol_name}' not found")
-
+            # This should never happen since early stopping found it
+            raise RuntimeError(f"Internal error: '{symbol_name}' found in Phase 1 but not in extractor")
         cu, target_die = target_result
-        
-        # Full dependency resolution with optimizations
+        find_time = time.time() - find_start
+        logger.info(f"  ✓ Phase 3 complete in {find_time:.3f}s")
+
+        # Phase 4: Build type index
+        logger.info(f"[Phase 4/5] Building type index...")
+        index_start = time.time()
+        all_type_names = extractor.get_all_class_names()
+        index_time = time.time() - index_start
+        logger.info(f"  ✓ Phase 4 complete: {len(all_type_names)} types indexed in {index_time:.3f}s")
+
+        # Phase 5: Resolve dependencies
+        logger.info(f"[Phase 5/5] Resolving dependencies (depth limit: {depth_limit})...")
+        resolve_start = time.time()
+
         parsed_classes = {}
         classes_to_parse = [(symbol_name, 0)]  # (class_name, depth)
         visited_classes = set()
-        all_class_names = extractor.get_all_class_names()
+
+        lookup_count = 0
+        hit_count = 0
+        miss_count = 0
 
         while classes_to_parse:
             class_name, depth = classes_to_parse.pop(0)
 
             # Depth limiting
-            if depth > self.options.max_dependency_depth:
+            if depth > depth_limit:
                 continue
 
             if class_name in parsed_classes or class_name in visited_classes:
                 continue
 
-            if class_name not in all_class_names:
+            # Fast O(1) existence check
+            lookup_count += 1
+            if not extractor.type_exists(class_name):
                 visited_classes.add(class_name)
+                miss_count += 1
                 continue
 
+            # Cached lookup
             result = extractor.find_class_cached(class_name)
             if not result:
                 visited_classes.add(class_name)
+                miss_count += 1
                 continue
 
+            hit_count += 1
             cu, die = result
             visited_classes.add(class_name)
-            
+
+            # Parse class
             cls = self._parse_class_from_die_optimized(die, extractor, cu.offset)
             parsed_classes[class_name] = cls
 
-            # Add dependencies
-            for base in cls.base_classes:
-                if base not in visited_classes:
-                    classes_to_parse.append((base, depth + 1))
+            # Add dependencies to queue
+            if depth < depth_limit:
+                for base in cls.base_classes:
+                    if base not in visited_classes:
+                        classes_to_parse.append((base, depth + 1))
 
+        resolve_time = time.time() - resolve_start
+        logger.info(
+            f"  ✓ Phase 5 complete: Resolved {len(parsed_classes)} classes "
+            f"in {resolve_time:.3f}s ({lookup_count} lookups: {hit_count} hits, {miss_count} misses)"
+        )
+
+        # Phase 6: Generate output
+        logger.info(f"[Phase 6/6] Generating header content...")
+        gen_start = time.time()
         ordered = self._order_classes(parsed_classes)
-        return self._generate_header_content(parsed_classes, ordered, symbol_name, output_path)
-    
-    def _generate_simple(self, symbol_name: str, output_path: Optional[Path]) -> str:
-        """Generate header for single class without dependencies."""
-        compilation_units = self.parser.parse_all_compilation_units()
-        extractor = DIEExtractor(compilation_units)
-        
-        # Find target class only
-        result = extractor.find_class_by_name(symbol_name)
-        if not result:
-            result = extractor.find_struct_by_name(symbol_name)
-        if not result:
-            raise ValueError(f"Symbol '{symbol_name}' not found")
-            
-        cu, target_die = result
-        target_class = self._parse_class_from_die(target_die, cu.offset)
-        
-        classes = {symbol_name: target_class}
-        return self._generate_header_content(classes, [symbol_name], symbol_name, output_path)
+        header_content = self._generate_header_content(parsed_classes, ordered, symbol_name, output_path)
+        gen_time = time.time() - gen_start
+        logger.info(f"  ✓ Phase 6 complete in {gen_time:.3f}s ({len(header_content)} bytes)")
+
+        total_time = time.time() - overall_start
+        logger.info(
+            f"\n{'='*70}\n"
+            f"TOTAL TIME: {total_time:.2f}s\n"
+            f"  Parse CUs:     {parse_time:6.2f}s ({parse_time/total_time*100:5.1f}%)\n"
+            f"  Create index:  {extractor_time:6.2f}s ({extractor_time/total_time*100:5.1f}%)\n"
+            f"  Find symbol:   {find_time:6.3f}s ({find_time/total_time*100:5.1f}%)\n"
+            f"  Build index:   {index_time:6.3f}s ({index_time/total_time*100:5.1f}%)\n"
+            f"  Resolve deps:  {resolve_time:6.3f}s ({resolve_time/total_time*100:5.1f}%)\n"
+            f"  Generate:      {gen_time:6.3f}s ({gen_time/total_time*100:5.1f}%)\n"
+            f"{'='*70}"
+        )
+
+        return header_content
     
     def _parse_class_from_die(self, die, cu_offset: int) -> ClassDefinition:
         """Parse a DIE into ClassDefinition (basic version)."""
@@ -600,7 +603,8 @@ def generate_fast_header(
     """Generate header with limited dependencies (backward compatibility)."""
     options = GenerationOptions(
         mode=GenerationMode.FAST,
-        max_classes=max_classes
+        max_cu_parse=100,  # Reasonable default for fast mode
+        max_dependency_depth=3
     )
     generator = HeaderGenerator(parser, options)
     return generator.generate_header(symbol_name, output_path)
@@ -615,7 +619,7 @@ def generate_ultra_fast_header(
     """Generate header by scanning only first few CUs (backward compatibility)."""
     options = GenerationOptions(
         mode=GenerationMode.ULTRA_FAST,
-        max_cu_scan=max_cu_scan
+        max_cu_parse=max_cu_scan  # Map old parameter to new one
     )
     generator = HeaderGenerator(parser, options)
     return generator.generate_header(symbol_name, output_path)

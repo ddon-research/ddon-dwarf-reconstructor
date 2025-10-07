@@ -66,3 +66,4 @@ output/
 *.elf.dwarfdump
 /references/references.md
 /.claude/settings.local.json
+.dwarf_cache/

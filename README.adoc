@@ -6,8 +6,9 @@ Reconstructs C++ header files from DWARF debug symbols in PS4 ELF files.
 
 * Parse DWARF symbols from PS4 ELF binaries
 * Generate C++ struct/class definitions with type-safe output
-* Multiple generation modes: ULTRA_FAST, FAST, SIMPLE
-* Lazy-loaded indexing for 60,000x search performance improvement
+* Early stopping CU parsing: stops immediately when target symbol found
+* CU-level caching with 3.6x speedup on subsequent runs
+* Type-specific indexing with O(1) lookup performance
 * PS4-specific ELF handling with lenient parsing
 
 == Requirements
@@ -28,15 +29,16 @@ uv sync
 
 [source,bash]
 ----
-# Generate header for specific symbol
-ddon-dwarf-reconstructor resources/DDOORBIS.elf --search MtObject
+# Search for symbol
+ddon-dwarf-reconstructor --search MtObject
 
-# Fast generation mode with output directory
-ddon-dwarf-reconstructor resources/DDOORBIS.elf -o ./output --mode ultra_fast
+# Generate headers with different optimization levels
+ddon-dwarf-reconstructor --ultra-fast-header MtObject -o output/
+ddon-dwarf-reconstructor --generate-header cItemParam --verbose
 
 # Configuration via .env file
 echo "ELF_FILE_PATH=resources/DDOORBIS.elf" > .env
-ddon-dwarf-reconstructor
+ddon-dwarf-reconstructor --search ClassName
 ----
 
 == Architecture
@@ -48,6 +50,20 @@ src/ddon_dwarf_reconstructor/
 ├── generators/     # Header generation with multiple modes
 ├── config/         # Environment and CLI configuration
 └── utils/          # ELF patches, optimization utilities
+----
+
+== Testing
+
+[source,bash]
+----
+# Run all tests
+pytest
+
+# Run performance benchmarks
+pytest tests/performance/ -v
+
+# Run specific test categories
+pytest -m "unit" --tb=short
 ----
 
 == Testing

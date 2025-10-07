@@ -13,6 +13,18 @@ authors = [
 ]
 license = { text = "MIT" }
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "pytest-timeout>=2.1",
+    "mypy>=1.0",
+    "ruff>=0.1.0",
+]
+test = [
+    "pytest>=7.0",
+]
+
 [project.scripts]
 ddon-dwarf-reconstructor = "ddon_dwarf_reconstructor.main:main"
 
@@ -23,11 +35,31 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/ddon_dwarf_reconstructor"]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "-v --tb=short --strict-markers --color=yes"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "performance: marks tests as performance benchmarks",
+]
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(levelname)s: %(message)s"
+
 [tool.mypy]
 python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "elftools.*"
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 100

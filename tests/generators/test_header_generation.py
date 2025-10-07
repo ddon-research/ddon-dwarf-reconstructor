@@ -1,198 +1,160 @@
 """Tests for header generation functionality."""
 
 import time
-from test_utils import setup_test_environment, TestRunner, handle_test_skip
+from pathlib import Path
 
-# Set up test environment (replaces redundant setup code)
-setup_test_environment()
+import pytest
 
-from ddon_dwarf_reconstructor.config import Config
 from ddon_dwarf_reconstructor.core import DWARFParser
 from ddon_dwarf_reconstructor.generators import (
     HeaderGenerator,
     GenerationMode,
     GenerationOptions,
-    generate_header_with_logging,
-    generate_fast_header,
-    generate_ultra_fast_header
+    generate_ultra_fast_header,
 )
 
 
-def test_unified_header_generator():
-    """Test the new unified HeaderGenerator with different modes."""
-    config = Config.from_env()
+@pytest.mark.integration
+def test_unified_header_generator_ultra_fast(elf_parser: DWARFParser, fast_symbol: str) -> None:
+    """Test the unified HeaderGenerator in ULTRA_FAST mode."""
+    options = GenerationOptions(
+        mode=GenerationMode.ULTRA_FAST,
+        max_cu_parse=10,  # Parse limited CUs for ultra fast
+        add_metadata=True,
+    )
+    generator = HeaderGenerator(elf_parser, options)
 
-    if not config.elf_file_path.exists():
-        handle_test_skip(f"ELF file not found at {config.elf_file_path}")
-        return
+    start_time = time.time()
+    header_content = generator.generate_header(fast_symbol)
+    elapsed = time.time() - start_time
 
-    with DWARFParser(config.elf_file_path, verbose=False) as parser:
+    # Assertions
+    assert len(header_content) > 0, "Header content should not be empty"
+    assert "#ifndef" in header_content, "Header guard should be present"
+    assert (
+        f"struct {fast_symbol}" in header_content or f"class {fast_symbol}" in header_content
+    ), "Target class should be in header"
 
-        # Test ULTRA_FAST mode
-        print("--- Testing ULTRA_FAST mode ---")
-        options = GenerationOptions(
-            mode=GenerationMode.ULTRA_FAST,
-            max_cu_scan=3,
-            add_metadata=True
-        )
-        generator = HeaderGenerator(parser, options)
-
-        start_time = time.time()
-        try:
-            header_content = generator.generate_header("MtObject")
-            elapsed = time.time() - start_time
-
-            assert len(header_content) > 0, "Header content should not be empty"
-            assert "#ifndef MTOBJECT_H" in header_content, "Header guard should be present"
-            assert "struct MtObject" in header_content or "class MtObject" in header_content, "Target class should be in header"
-            print(f"✓ ULTRA_FAST mode: Generated {len(header_content)} bytes in {elapsed:.2f}s")
-
-        except ValueError as e:
-            print(f"ℹ ULTRA_FAST mode: {e} (normal if symbol not in first few CUs)")
-
-        # Test SIMPLE mode
-        print("--- Testing SIMPLE mode ---")
-        options = GenerationOptions(
-            mode=GenerationMode.SIMPLE,
-            add_metadata=False
-        )
-        generator = HeaderGenerator(parser, options)
-
-        start_time = time.time()
-        try:
-            header_content = generator.generate_header("MtObject")
-            elapsed = time.time() - start_time
-
-            assert len(header_content) > 0, "Header content should not be empty"
-            print(f"✓ SIMPLE mode: Generated {len(header_content)} bytes in {elapsed:.2f}s")
-
-        except ValueError as e:
-            print(f"ℹ SIMPLE mode: {e}")
+    # Performance check - ULTRA_FAST should be quick for early symbols
+    assert elapsed < 10.0, f"ULTRA_FAST should complete in <10s, took {elapsed:.2f}s"
 
 
-def test_backward_compatibility_functions():
-    """Test that the backward compatibility functions still work."""
-    config = Config.from_env()
+@pytest.mark.integration
+def test_unified_header_generator_simple(elf_parser: DWARFParser, fast_symbol: str) -> None:
+    """Test the unified HeaderGenerator in SIMPLE mode."""
+    options = GenerationOptions(mode=GenerationMode.SIMPLE, add_metadata=False)
+    generator = HeaderGenerator(elf_parser, options)
 
-    if not config.elf_file_path.exists():
-        handle_test_skip(f"ELF file not found at {config.elf_file_path}")
-        return
+    start_time = time.time()
+    header_content = generator.generate_header(fast_symbol)
+    elapsed = time.time() - start_time
 
-    with DWARFParser(config.elf_file_path, verbose=False) as parser:
-
-        # Test generate_ultra_fast_header function
-        print("--- Testing generate_ultra_fast_header function ---")
-        start_time = time.time()
-        try:
-            header_content = generate_ultra_fast_header(
-                parser=parser,
-                symbol_name="MtObject",
-                max_cu_scan=3
-            )
-            elapsed = time.time() - start_time
-
-            assert len(header_content) > 0, "Header content should not be empty"
-            print(f"✓ generate_ultra_fast_header: Generated {len(header_content)} bytes in {elapsed:.2f}s")
-
-        except ValueError as e:
-            print(f"ℹ generate_ultra_fast_header: {e}")
+    assert len(header_content) > 0, "Header content should not be empty"
+    # SIMPLE mode should not have metadata comments
+    assert "Generation mode:" not in header_content
 
 
-def test_header_content_validation():
+@pytest.mark.integration
+def test_backward_compatibility_ultra_fast(elf_parser: DWARFParser, fast_symbol: str) -> None:
+    """Test that the backward compatibility generate_ultra_fast_header function works."""
+    start_time = time.time()
+    header_content = generate_ultra_fast_header(
+        parser=elf_parser, symbol_name=fast_symbol, max_cu_scan=10
+    )
+    elapsed = time.time() - start_time
+
+    assert len(header_content) > 0, "Header content should not be empty"
+    assert elapsed < 10.0, f"Should complete quickly, took {elapsed:.2f}s"
+
+
+@pytest.mark.integration
+def test_header_content_validation(elf_parser: DWARFParser, fast_symbol: str) -> None:
     """Test that generated headers contain expected elements."""
-    config = Config.from_env()
+    options = GenerationOptions(
+        mode=GenerationMode.ULTRA_FAST,
+        max_cu_parse=10,
+        add_metadata=True,
+        include_dependencies=True,
+    )
+    generator = HeaderGenerator(elf_parser, options)
 
-    if not config.elf_file_path.exists():
-        handle_test_skip(f"ELF file not found at {config.elf_file_path}")
-        return
+    header_content = generator.generate_header(fast_symbol)
 
-    with DWARFParser(config.elf_file_path, verbose=False) as parser:
+    # Validate header structure
+    lines = header_content.split("\n")
 
-        options = GenerationOptions(
-            mode=GenerationMode.ULTRA_FAST,
-            max_cu_scan=5,
-            add_metadata=True,
-            include_dependencies=True
-        )
-        generator = HeaderGenerator(parser, options)
+    # Check header guard
+    assert any("#ifndef" in line for line in lines), "Should have header guard start"
+    assert any("#endif" in line for line in lines), "Should have header guard end"
 
-        try:
-            header_content = generator.generate_header("MtObject")
+    # Check includes
+    assert any("#include <cstdint>" in line for line in lines), "Should include cstdint"
 
-            # Validate header structure
-            lines = header_content.split('\n')
+    # Check type aliases
+    assert any(
+        "typedef" in line and "u8" in line for line in lines
+    ), "Should have type aliases"
 
-            # Check header guard
-            assert any("#ifndef" in line for line in lines), "Should have header guard start"
-            assert any("#endif" in line for line in lines), "Should have header guard end"
-
-            # Check includes
-            assert any("#include <cstdint>" in line for line in lines), "Should include cstdint"
-
-            # Check type aliases
-            assert any("typedef" in line and "u8" in line for line in lines), "Should have type aliases"
-
-            # Check metadata comments
-            assert any("Generated from DWARF" in line for line in lines), "Should have generation metadata"
-            assert any("Generation mode:" in line for line in lines), "Should have mode metadata"
-
-            print(f"✓ Header validation passed: {len(lines)} lines")
-
-        except ValueError as e:
-            print(f"ℹ Header validation skipped: {e}")
+    # Check metadata comments
+    assert any(
+        "Generated from DWARF" in line for line in lines
+    ), "Should have generation metadata"
+    assert any("Generation mode:" in line for line in lines), "Should have mode metadata"
 
 
-def test_generation_modes_performance():
+@pytest.mark.performance
+@pytest.mark.slow
+@pytest.mark.parametrize(
+    "mode,extra_options,timeout",
+    [
+        (GenerationMode.ULTRA_FAST, {"max_cu_parse": 10}, 10.0),
+        (GenerationMode.FAST, {"max_cu_parse": 100}, 60.0),
+    ],
+)
+def test_generation_modes_performance(
+    elf_parser: DWARFParser,
+    fast_symbol: str,
+    mode: GenerationMode,
+    extra_options: dict,
+    timeout: float,
+) -> None:
     """Test performance characteristics of different generation modes."""
-    config = Config.from_env()
+    options = GenerationOptions(mode=mode, **extra_options)
+    generator = HeaderGenerator(elf_parser, options)
 
-    if not config.elf_file_path.exists():
-        handle_test_skip(f"ELF file not found at {config.elf_file_path}")
-        return
+    start_time = time.time()
+    header_content = generator.generate_header(fast_symbol)
+    elapsed = time.time() - start_time
 
-    with DWARFParser(config.elf_file_path, verbose=False) as parser:
-
-        modes_to_test = [
-            (GenerationMode.ULTRA_FAST, {"max_cu_scan": 2}),
-            (GenerationMode.FAST, {}),
-        ]
-
-        for mode, extra_options in modes_to_test:
-            print(f"--- Performance test: {mode.value} ---")
-
-            options = GenerationOptions(mode=mode, **extra_options)
-            generator = HeaderGenerator(parser, options)
-
-            start_time = time.time()
-            try:
-                header_content = generator.generate_header("MtObject")
-                elapsed = time.time() - start_time
-
-                print(f"✓ {mode.value}: {len(header_content)} bytes in {elapsed:.3f}s")
-
-                # Performance assertions
-                if mode == GenerationMode.ULTRA_FAST:
-                    assert elapsed < 10.0, f"ULTRA_FAST should complete in <10s, took {elapsed:.2f}s"
-
-            except ValueError as e:
-                print(f"ℹ {mode.value}: {e}")
+    assert len(header_content) > 0, "Should generate non-empty header"
+    assert elapsed < timeout, f"{mode.value} should complete in <{timeout}s, took {elapsed:.2f}s"
 
 
-def run_generator_tests(runner: TestRunner) -> None:
+@pytest.mark.integration
+@pytest.mark.slow
+def test_header_generation_with_slow_symbol(
+    elf_parser: DWARFParser, sample_symbols: dict[str, str | None]
+) -> None:
     """
-    Run all header generator tests.
+    Test header generation with symbols that may not be in early CUs.
 
-    Args:
-        runner: TestRunner instance to execute tests with
+    WARNING: This test may be slow as it needs to parse many CUs.
     """
-    runner.run_test(test_unified_header_generator)
-    runner.run_test(test_backward_compatibility_functions)
-    runner.run_test(test_header_content_validation)
-    runner.run_test(test_generation_modes_performance)
+    # Use a symbol that's not MtObject (likely slower to find)
+    slow_symbols = [s for s in sample_symbols.keys() if s != "MtObject"]
 
+    if not slow_symbols:
+        pytest.skip("No slow symbols to test")
 
-if __name__ == "__main__":
-    # Allow running this test module directly
-    runner = TestRunner()
-    run_generator_tests(runner)
-    runner.print_summary()
+    test_symbol = slow_symbols[0]  # Just test one to avoid long test times
+
+    options = GenerationOptions(
+        mode=GenerationMode.FAST,
+        max_cu_parse=None,  # Parse all CUs if needed
+        add_metadata=True,
+    )
+    generator = HeaderGenerator(elf_parser, options)
+
+    # This may take a while for symbols in later CUs
+    header_content = generator.generate_header(test_symbol)
+    assert len(header_content) > 0, f"Should generate header for {test_symbol}"
