@@ -9,7 +9,7 @@ applyTo: '**/*.py'
 
 - All functions must have type hints for parameters and return values
 - Use `typing` module imports: `List[str]`, `Dict[str, int]`, `Optional[T]`
-- Prefer `| None` over `Optional` for Python 3.10+
+- Prefer `| None` over `Optional` for Python 3.13+
 - Use `NoReturn` for functions that always exit
 
 ## Documentation

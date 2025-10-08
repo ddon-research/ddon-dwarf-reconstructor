@@ -3,15 +3,46 @@ name = "ddon-dwarf-reconstructor"
 version = "0.1.0"
 description = "Reconstructs C/C++ header structures from DWARF debug symbols in PS4 ELF files"
 readme = {file = "README.adoc", content-type = "text/plain"}
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 dependencies = [
     "pyelftools>=0.31",
     "python-dotenv>=1.0.0",
 ]
 authors = [
-    { name = "ddon-dwarf-reconstructor contributors" }
+    { name = "ddon-dwarf-reconstructor contributors", email = "contributors@example.com" }
 ]
-license = { text = "MIT" }
+maintainers = [
+    { name = "ddon-dwarf-reconstructor contributors", email = "contributors@example.com" }
+]
+license = "GPL-3.0-or-later"
+keywords = [
+    "dwarf", 
+    "elf", 
+    "debug-symbols", 
+    "reverse-engineering", 
+    "ps4", 
+    "c++", 
+    "header-reconstruction",
+    "binary-analysis"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Debuggers",
+    "Topic :: Software Development :: Disassemblers",
+    "Topic :: System :: Software Distribution",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Environment :: Console",
+]
+
+[project.urls]
+"Source Code" = "https://github.com/your-username/ddon-dwarf-reconstructor"
+"Bug Tracker" = "https://github.com/your-username/ddon-dwarf-reconstructor/issues"
+Documentation = "https://github.com/your-username/ddon-dwarf-reconstructor/tree/main/docs"
+Changelog = "https://github.com/your-username/ddon-dwarf-reconstructor/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
@@ -32,7 +63,7 @@ test = [
 ddon-dwarf-reconstructor = "ddon_dwarf_reconstructor.main:main"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.26"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
@@ -66,7 +97,7 @@ log_cli_level = "INFO"
 log_cli_format = "%(levelname)s: %(message)s"
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.13"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -77,7 +108,7 @@ ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "B"]

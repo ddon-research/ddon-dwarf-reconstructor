@@ -108,7 +108,7 @@ The project includes two GitHub Actions workflows:
 ### 1. Unit Tests and Coverage (`.github/workflows/test.yml`)
 
 **Triggers**: Push to `main`, Pull Requests
-**Matrix**: Python 3.10, 3.11, 3.12
+**Matrix**: Python 3.13
 **Steps**:
 1. Checkout code
 2. Setup Python and uv
@@ -163,7 +163,7 @@ Note: Unit tests alone provide ~38% coverage. The remaining coverage comes from 
 
 1. **Unit Tests Only**: CI runs only unit tests for speed
 2. **Coverage Enforcement**: CI fails if coverage drops below 80%
-3. **Multiple Python Versions**: Tests run on 3.10, 3.11, 3.12
+3. **Python 3.13 Only**: Tests run exclusively on Python 3.13
 4. **Artifact Preservation**: Test results saved for 30 days
 
 ## Troubleshooting
