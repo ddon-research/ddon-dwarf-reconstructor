@@ -21,19 +21,6 @@ def test_elf_patches_functionality() -> None:
 
 
 @pytest.mark.unit
-def test_quick_search_functionality() -> None:
-    """Test quick search utilities."""
-    try:
-        from ddon_dwarf_reconstructor.utils import quick_search
-
-        # Test that the module has expected functions/classes
-        assert hasattr(quick_search, "__name__"), "Module should have basic attributes"
-
-    except ImportError:
-        pytest.skip("Quick search module not available")
-
-
-@pytest.mark.unit
 def test_path_utilities() -> None:
     """Test path handling utilities."""
     # Test basic path operations that our utilities might use

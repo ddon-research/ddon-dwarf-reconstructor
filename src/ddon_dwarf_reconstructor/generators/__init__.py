@@ -1,17 +1,7 @@
 """Generators module initialization."""
 
-from .header_generator import (
-    ClassDefinition,
-    GenerationMode,
-    GenerationOptions,
-    HeaderGenerator,
-    generate_header,
-)
+from .native_generator import NativeDwarfGenerator
 
 __all__ = [
-    "HeaderGenerator",
-    "GenerationMode",
-    "GenerationOptions",
-    "ClassDefinition",
-    "generate_header",
+    "NativeDwarfGenerator",
 ]

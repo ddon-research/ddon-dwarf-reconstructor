@@ -1,17 +1,16 @@
 = DDON DWARF Reconstructor
 
-Reconstructs C++ header files from DWARF debug symbols in PS4 ELF files.
+Reconstructs C++ header files from DWARF debug symbols in PS4 ELF files using native pyelftools.
 
 == Features
 
-* Parse DWARF symbols from PS4 ELF binaries
-* Generate C++ struct/class definitions with type-safe output
-* **Early-stopping CU parsing**: Stops immediately when target symbol found (82x speedup)
-* **CU-level caching**: 3.6x speedup on subsequent runs
-* **Type-specific indexing**: O(1) lookup performance with lazy loading
-* **Single optimized strategy**: No confusing mode selection
+* **Native pyelftools integration**: Uses proven DWARF library directly
+* **Superior type resolution**: Resolves complex types like `const MtDTI&`, `MtUI*`  
+* **Clean C++ output**: Proper virtual methods, static members, vtable pointers
+* **Context management**: Automatic resource cleanup with context managers
+* **Fast execution**: ~0.3s generation time for typical classes
 * **Structured logging**: Timestamped log files in `logs/` directory
-* PS4-specific ELF handling with lenient parsing
+* **PS4 ELF support**: Handles PS4-specific ELF variations
 
 == Requirements
 
@@ -36,9 +35,6 @@ pip install -e .
 
 [source,bash]
 ----
-# Search for a symbol
-python main.py resources/DDOORBIS.elf --search MtObject
-
 # Generate header (quiet mode - default)
 python main.py resources/DDOORBIS.elf --generate MtObject
 
@@ -47,9 +43,6 @@ python main.py resources/DDOORBIS.elf --generate MtObject --verbose
 
 # Custom output directory
 python main.py resources/DDOORBIS.elf --generate MtObject -o headers/
-
-# Control dependency depth
-python main.py resources/DDOORBIS.elf --generate MtObject --max-depth 30
 ----
 
 === Using .env Configuration
@@ -61,7 +54,6 @@ echo "ELF_FILE_PATH=resources/DDOORBIS.elf" > .env
 
 # Now you can omit the ELF path
 python main.py --generate MtObject
-python main.py --search cItemParam
 ----
 
 === Output
@@ -74,10 +66,8 @@ python main.py --search cItemParam
 # Example output structure
 output/
   MtObject.h
-  cItemParam.h
 logs/
   ddon_reconstructor_20251007_143052.log
-  ddon_reconstructor_20251007_151230.log
 ----
 
 === Verbose vs. Quiet Mode
@@ -86,8 +76,9 @@ logs/
 [source]
 ----
 INFO: Generating header for: MtObject
-INFO: ✅ Generated: output/MtObject.h
-INFO: Size: 15234 bytes
+INFO: Found MtObject in CU at offset 0xc9d
+INFO: [SUCCESS] Generated: output/MtObject.h
+INFO: Size: 784 bytes
 ----
 
 **Verbose Mode (`--verbose`)**:
@@ -95,18 +86,13 @@ INFO: Size: 15234 bytes
 ----
 DEBUG: ELF file: resources/DDOORBIS.elf
 DEBUG: Output directory: output
-DEBUG: Log directory: logs
 INFO: Generating header for: MtObject
-INFO: ======================================================================
-INFO: Starting optimized header generation for: MtObject
-INFO: ======================================================================
-INFO: [Phase 1/5] Parsing CUs with early stop for 'MtObject'...
-DEBUG: Starting parse_cus_until_target_found
-... (detailed debug logs)
-DEBUG: Completed parse_cus_until_target_found in 2.34s
-INFO:   ✓ Phase 1 complete in 2.34s
-... (more phases)
-INFO: ✅ Generated: output/MtObject.h
+INFO: Found MtObject in CU at offset 0xc9d
+DEBUG: DIE DW_TAG_subprogram has no DW_AT_type attribute
+INFO: [SUCCESS] Generated: output/MtObject.h
+DEBUG: Preview (first 30 lines):
+... (header content preview)
+DEBUG: ============================================================
 ----
 
 == Architecture
@@ -114,18 +100,15 @@ INFO: ✅ Generated: output/MtObject.h
 [source]
 ----
 src/ddon_dwarf_reconstructor/
-├── core/           # DWARF parsing, DIE extraction
-│   ├── dwarf_parser.py    # ELF/DWARF interface with early-stop parsing
-│   ├── die_extractor.py   # Optimized indexing and search
-│   └── models.py          # Type system (DIE, CompilationUnit, etc.)
+├── core/           # DWARF constants and enums
+│   └── models.py          # DWTag, DWAccessibility, DWVirtuality enums
 ├── generators/     # C++ header generation
-│   └── header_generator.py  # Single optimized generation strategy
+│   └── native_generator.py  # Native pyelftools implementation
 ├── config/         # Configuration management
 │   └── config.py          # Config with .env support
 ├── utils/          # Utilities
 │   ├── logger.py          # Centralized logging
-│   ├── elf_patches.py     # PS4 ELF compatibility patches
-│   └── quick_search.py    # Fast symbol search utilities
+│   └── elf_patches.py     # PS4 ELF compatibility patches
 └── main.py         # CLI entry point
 ----
 
@@ -140,7 +123,6 @@ uv run pytest
 uv run pytest -m unit               # Unit tests only
 uv run pytest -m integration        # Integration tests only
 uv run pytest -m "not slow"         # Fast tests (skip slow ones)
-uv run pytest -m performance        # Performance benchmarks
 
 # Verbose output with short tracebacks
 uv run pytest -v --tb=short
@@ -148,11 +130,11 @@ uv run pytest -v --tb=short
 
 == Performance
 
-* **Optimized mode**: <10s generation for most symbols
-* **Early stopping**: Parses only until target found (not all CUs)
-* **Lazy indexing**: O(1) repeated searches after initial index build
-* **Memory usage**: <500MB peak for large ELF files
-* **CU caching**: 3.6x speedup on repeated runs
+* **Fast execution**: ~0.3s generation for typical classes
+* **Native pyelftools**: Leverages optimized DWARF library
+* **Direct type resolution**: Uses built-in `get_DIE_from_attribute()`
+* **Low memory usage**: Context manager ensures proper cleanup
+* **Simple architecture**: No complex caching or indexing needed
 
 == Development
 
@@ -191,11 +173,33 @@ VERBOSE=false
 python main.py --verbose  # Uses .env ELF path but enables verbose
 ----
 
+== Sample Output
+
+Generated `MtObject.h`:
+[source,cpp]
+----
+class MtObject
+{
+public:
+    virtual ~MtObject();
+    virtual MtUI* createUI();
+    virtual bool isEnableInstance();
+    virtual void createProperty();
+    virtual const MtDTI& getDTI();
+public:
+    void* _vptr$MtObject;  // offset: 0x0
+
+    // Static members
+    static const u32 INITIAL_ALLOCATOR = 0;
+    static MyDTI DTI;
+};
+----
+
 == Known Limitations
 
 * PS4 ELF files may have non-standard sections requiring lenient parsing
 * Some DWARF constructs may not be fully supported
-* Forward declarations may be needed for circular dependencies
+* Currently focused on class/struct generation
 
 == License
 

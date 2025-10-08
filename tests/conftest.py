@@ -13,8 +13,6 @@ if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
 from ddon_dwarf_reconstructor.config import Config
-from ddon_dwarf_reconstructor.core import DWARFParser
-
 
 @pytest.fixture(scope="session")
 def project_root() -> Path:
@@ -69,15 +67,7 @@ def elf_file_path(config: Config) -> Path:
     return config.elf_file_path
 
 
-@pytest.fixture(scope="function")
-def elf_parser(elf_file_path: Path) -> Generator[DWARFParser, None, None]:
-    """
-    Create a DWARFParser instance for testing.
-
-    Uses function scope so each test gets a fresh parser.
-    """
-    with DWARFParser(elf_file_path, verbose=False) as parser:
-        yield parser
+# DWARFParser fixture removed - using native pyelftools implementation
 
 
 @pytest.fixture(scope="session")

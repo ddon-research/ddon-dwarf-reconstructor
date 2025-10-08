@@ -1,0 +1,361 @@
+< 1><0x00065902 GOFF=0x0ee839cd>    DW_TAG_class_type <abbrev 36 ABGOFF = 0x00145e8e count = 0x00000005>
+                                      DW_AT_containing_type       <0x0000699e GOFF=0x0ee24a69> Refers to: MtObject
+                                      DW_AT_name                  cSetInfoOmBreakTarget
+                                      DW_AT_byte_size             120
+                                      DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                      DW_AT_decl_line             0x00000438
+< 2><0x0006590f GOFF=0x0ee839da>      DW_TAG_inheritance <abbrev 7 ABGOFF = 0x00145d1f count = 0x00000003>
+                                        DW_AT_type                  <0x000061da GOFF=0x0ee242a5> Refers to: cSetInfoOm
+                                        DW_AT_data_member_location  0
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 2><0x00065916 GOFF=0x0ee839e1>      DW_TAG_member <abbrev 26 ABGOFF = 0x00145e0e count = 0x00000007>
+                                        DW_AT_name                  DTI
+                                        DW_AT_type                  <0x00065923 GOFF=0x0ee839ee> Refers to: MyDTI
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x0000043b
+                                        DW_AT_external              yes(1)
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 2><0x00065923 GOFF=0x0ee839ee>      DW_TAG_class_type <abbrev 36 ABGOFF = 0x00145e8e count = 0x00000005>
+                                        DW_AT_containing_type       <0x00006b32 GOFF=0x0ee24bfd> Refers to: MtDTI
+                                        DW_AT_name                  MyDTI
+                                        DW_AT_byte_size             56
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x0000043b
+< 3><0x00065930 GOFF=0x0ee839fb>        DW_TAG_inheritance <abbrev 7 ABGOFF = 0x00145d1f count = 0x00000003>
+                                          DW_AT_type                  <0x00006b32 GOFF=0x0ee24bfd> Refers to: MtDTI
+                                          DW_AT_data_member_location  0
+                                          DW_AT_accessibility         DW_ACCESS_public
+< 3><0x00065937 GOFF=0x0ee83a02>        DW_TAG_subprogram <abbrev 23 ABGOFF = 0x00145ddd count = 0x00000006>
+                                          DW_AT_name                  MyDTI
+                                          DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                          DW_AT_decl_line             0x0000043b
+                                          DW_AT_declaration           yes(1)
+                                          DW_AT_external              yes(1)
+                                          DW_AT_accessibility         DW_ACCESS_public
+< 4><0x00065940 GOFF=0x0ee83a0b>          DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x00145d16 count = 0x00000002>
+                                            DW_AT_type                  <0x00065b78 GOFF=0x0ee83c43>
+                                            DW_AT_artificial            yes(1)
+< 4><0x00065945 GOFF=0x0ee83a10>          DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                            DW_AT_type                  <0x00006dee GOFF=0x0ee24eb9> Refers to: MT_CTSTR
+< 4><0x0006594a GOFF=0x0ee83a15>          DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                            DW_AT_type                  <0x00006e17 GOFF=0x0ee24ee2>
+< 4><0x0006594f GOFF=0x0ee83a1a>          DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                            DW_AT_type                  <0x00006e2d GOFF=0x0ee24ef8> Refers to: size_t
+< 4><0x00065954 GOFF=0x0ee83a1f>          DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                            DW_AT_type                  <0x00003421 GOFF=0x0ee214ec> Refers to: u32
+< 4><0x00065959 GOFF=0x0ee83a24>          DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                            DW_AT_type                  <0x00003421 GOFF=0x0ee214ec> Refers to: u32
+< 3><0x0006595f GOFF=0x0ee83a2a>        DW_TAG_subprogram <abbrev 42 ABGOFF = 0x00145ee2 count = 0x0000000a>
+                                          DW_AT_name                  newInstance
+                                          DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                          DW_AT_decl_line             0x0000043b
+                                          DW_AT_type                  <0x00006e58 GOFF=0x0ee24f23>
+                                          DW_AT_virtuality            DW_VIRTUALITY_virtual
+                                          DW_AT_vtable_elem_location  len 0x0002: 0x1002:
+                                              DW_OP_constu 2
+                                          DW_AT_declaration           yes(1)
+                                          DW_AT_external              yes(1)
+                                          DW_AT_accessibility         DW_ACCESS_public
+                                          DW_AT_containing_type       <0x00065923 GOFF=0x0ee839ee> Refers to: MyDTI
+< 4><0x00065974 GOFF=0x0ee83a3f>          DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x00145d16 count = 0x00000002>
+                                            DW_AT_type                  <0x00065b7d GOFF=0x0ee83c48>
+                                            DW_AT_artificial            yes(1)
+< 2><0x0006597b GOFF=0x0ee83a46>      DW_TAG_member <abbrev 22 ABGOFF = 0x00145dcc count = 0x00000006>
+                                        DW_AT_name                  mBreakHitNum
+                                        DW_AT_type                  <0x00003421 GOFF=0x0ee214ec> Refers to: u32
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x0000045e
+                                        DW_AT_data_member_location  112
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 2><0x00065989 GOFF=0x0ee83a54>      DW_TAG_subprogram <abbrev 35 ABGOFF = 0x00145e7b count = 0x00000007>
+                                        DW_AT_name                  getMyDTIPtr
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x0000043b
+                                        DW_AT_type                  <0x00006e17 GOFF=0x0ee24ee2>
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 2><0x00065996 GOFF=0x0ee83a61>      DW_TAG_subprogram <abbrev 132 ABGOFF = 0x00146428 count = 0x00000006>
+                                        DW_AT_name                  usage
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x0000043b
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 2><0x000659a0 GOFF=0x0ee83a6b>      DW_TAG_subprogram <abbrev 42 ABGOFF = 0x00145ee2 count = 0x0000000a>
+                                        DW_AT_name                  getDTI
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x0000043b
+                                        DW_AT_type                  <0x00006e4e GOFF=0x0ee24f19>
+                                        DW_AT_virtuality            DW_VIRTUALITY_virtual
+                                        DW_AT_vtable_elem_location  len 0x0002: 0x1005:
+                                            DW_OP_constu 5
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+                                        DW_AT_containing_type       <0x00065902 GOFF=0x0ee839cd> Refers to: cSetInfoOmBreakTarget
+< 3><0x000659b5 GOFF=0x0ee83a80>        DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x00145d16 count = 0x00000002>
+                                          DW_AT_type                  <0x00065b87 GOFF=0x0ee83c52>
+                                          DW_AT_artificial            yes(1)
+< 2><0x000659bb GOFF=0x0ee83a86>      DW_TAG_subprogram <abbrev 35 ABGOFF = 0x00145e7b count = 0x00000007>
+                                        DW_AT_name                  getAllocator
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x0000043b
+                                        DW_AT_type                  <0x00008ae7 GOFF=0x0ee26bb2>
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 2><0x000659c8 GOFF=0x0ee83a93>      DW_TAG_subprogram <abbrev 23 ABGOFF = 0x00145ddd count = 0x00000006>
+                                        DW_AT_name                  setAllocator
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x0000043b
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 3><0x000659d1 GOFF=0x0ee83a9c>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x00003421 GOFF=0x0ee214ec> Refers to: u32
+< 2><0x000659d7 GOFF=0x0ee83aa2>      DW_TAG_subprogram <abbrev 24 ABGOFF = 0x00145dee count = 0x00000007>
+                                        DW_AT_name                  operator new
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x0000043b
+                                        DW_AT_type                  <0x0000851d GOFF=0x0ee265e8>
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 3><0x000659e4 GOFF=0x0ee83aaf>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x00006e2d GOFF=0x0ee24ef8> Refers to: size_t
+< 3><0x000659e9 GOFF=0x0ee83ab4>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x00003421 GOFF=0x0ee214ec> Refers to: u32
+< 2><0x000659ef GOFF=0x0ee83aba>      DW_TAG_subprogram <abbrev 24 ABGOFF = 0x00145dee count = 0x00000007>
+                                        DW_AT_name                  operator new[]
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x0000043b
+                                        DW_AT_type                  <0x0000851d GOFF=0x0ee265e8>
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 3><0x000659fc GOFF=0x0ee83ac7>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x00006e2d GOFF=0x0ee24ef8> Refers to: size_t
+< 3><0x00065a01 GOFF=0x0ee83acc>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x00003421 GOFF=0x0ee214ec> Refers to: u32
+< 2><0x00065a07 GOFF=0x0ee83ad2>      DW_TAG_subprogram <abbrev 24 ABGOFF = 0x00145dee count = 0x00000007>
+                                        DW_AT_name                  operator new
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x0000043b
+                                        DW_AT_type                  <0x0000851d GOFF=0x0ee265e8>
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 3><0x00065a14 GOFF=0x0ee83adf>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x00006e2d GOFF=0x0ee24ef8> Refers to: size_t
+< 3><0x00065a19 GOFF=0x0ee83ae4>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x0000851d GOFF=0x0ee265e8>
+< 2><0x00065a1f GOFF=0x0ee83aea>      DW_TAG_subprogram <abbrev 24 ABGOFF = 0x00145dee count = 0x00000007>
+                                        DW_AT_name                  operator new[]
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x0000043b
+                                        DW_AT_type                  <0x0000851d GOFF=0x0ee265e8>
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 3><0x00065a2c GOFF=0x0ee83af7>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x00006e2d GOFF=0x0ee24ef8> Refers to: size_t
+< 3><0x00065a31 GOFF=0x0ee83afc>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x0000851d GOFF=0x0ee265e8>
+< 2><0x00065a37 GOFF=0x0ee83b02>      DW_TAG_subprogram <abbrev 23 ABGOFF = 0x00145ddd count = 0x00000006>
+                                        DW_AT_name                  operator delete
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x0000043b
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 3><0x00065a40 GOFF=0x0ee83b0b>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x0000851d GOFF=0x0ee265e8>
+< 2><0x00065a46 GOFF=0x0ee83b11>      DW_TAG_subprogram <abbrev 23 ABGOFF = 0x00145ddd count = 0x00000006>
+                                        DW_AT_name                  operator delete[]
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x0000043b
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 3><0x00065a4f GOFF=0x0ee83b1a>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x0000851d GOFF=0x0ee265e8>
+< 2><0x00065a55 GOFF=0x0ee83b20>      DW_TAG_subprogram <abbrev 23 ABGOFF = 0x00145ddd count = 0x00000006>
+                                        DW_AT_name                  operator delete
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x0000043b
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 3><0x00065a5e GOFF=0x0ee83b29>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x0000851d GOFF=0x0ee265e8>
+< 3><0x00065a63 GOFF=0x0ee83b2e>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x00003421 GOFF=0x0ee214ec> Refers to: u32
+< 2><0x00065a69 GOFF=0x0ee83b34>      DW_TAG_subprogram <abbrev 23 ABGOFF = 0x00145ddd count = 0x00000006>
+                                        DW_AT_name                  operator delete[]
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x0000043b
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 3><0x00065a72 GOFF=0x0ee83b3d>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x0000851d GOFF=0x0ee265e8>
+< 3><0x00065a77 GOFF=0x0ee83b42>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x00003421 GOFF=0x0ee214ec> Refers to: u32
+< 2><0x00065a7d GOFF=0x0ee83b48>      DW_TAG_subprogram <abbrev 23 ABGOFF = 0x00145ddd count = 0x00000006>
+                                        DW_AT_name                  cSetInfoOmBreakTarget
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x0000043e
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 3><0x00065a86 GOFF=0x0ee83b51>        DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x00145d16 count = 0x00000002>
+                                          DW_AT_type                  <0x00065b91 GOFF=0x0ee83c5c>
+                                          DW_AT_artificial            yes(1)
+< 2><0x00065a8c GOFF=0x0ee83b57>      DW_TAG_subprogram <abbrev 102 ABGOFF = 0x0014628c count = 0x00000009>
+                                        DW_AT_name                  ~cSetInfoOmBreakTarget
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x00000440
+                                        DW_AT_virtuality            DW_VIRTUALITY_virtual
+                                        DW_AT_vtable_elem_location  len 0x0002: 0x1000:
+                                            DW_OP_constu 0
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+                                        DW_AT_containing_type       <0x00065902 GOFF=0x0ee839cd> Refers to: cSetInfoOmBreakTarget
+< 3><0x00065a9d GOFF=0x0ee83b68>        DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x00145d16 count = 0x00000002>
+                                          DW_AT_type                  <0x00065b91 GOFF=0x0ee83c5c>
+                                          DW_AT_artificial            yes(1)
+< 2><0x00065aa3 GOFF=0x0ee83b6e>      DW_TAG_subprogram <abbrev 102 ABGOFF = 0x0014628c count = 0x00000009>
+                                        DW_AT_name                  createProperty
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x00000443
+                                        DW_AT_virtuality            DW_VIRTUALITY_virtual
+                                        DW_AT_vtable_elem_location  len 0x0002: 0x1004:
+                                            DW_OP_constu 4
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+                                        DW_AT_containing_type       <0x00065902 GOFF=0x0ee839cd> Refers to: cSetInfoOmBreakTarget
+< 3><0x00065ab4 GOFF=0x0ee83b7f>        DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x00145d16 count = 0x00000002>
+                                          DW_AT_type                  <0x00065b91 GOFF=0x0ee83c5c>
+                                          DW_AT_artificial            yes(1)
+< 3><0x00065ab9 GOFF=0x0ee83b84>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x00010814 GOFF=0x0ee2e8df>
+< 2><0x00065abf GOFF=0x0ee83b8a>      DW_TAG_subprogram <abbrev 102 ABGOFF = 0x0014628c count = 0x00000009>
+                                        DW_AT_name                  createToolProperty
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x00000445
+                                        DW_AT_virtuality            DW_VIRTUALITY_virtual
+                                        DW_AT_vtable_elem_location  len 0x0002: 0x1006:
+                                            DW_OP_constu 6
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+                                        DW_AT_containing_type       <0x00065902 GOFF=0x0ee839cd> Refers to: cSetInfoOmBreakTarget
+< 3><0x00065ad0 GOFF=0x0ee83b9b>        DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x00145d16 count = 0x00000002>
+                                          DW_AT_type                  <0x00065b91 GOFF=0x0ee83c5c>
+                                          DW_AT_artificial            yes(1)
+< 3><0x00065ad5 GOFF=0x0ee83ba0>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x00010814 GOFF=0x0ee2e8df>
+< 2><0x00065adb GOFF=0x0ee83ba6>      DW_TAG_subprogram <abbrev 42 ABGOFF = 0x00145ee2 count = 0x0000000a>
+                                        DW_AT_name                  load
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x00000448
+                                        DW_AT_type                  <0x0000128d GOFF=0x0ee1f358> Refers to: bool
+                                        DW_AT_virtuality            DW_VIRTUALITY_virtual
+                                        DW_AT_vtable_elem_location  len 0x0002: 0x1007:
+                                            DW_OP_constu 7
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+                                        DW_AT_containing_type       <0x00065902 GOFF=0x0ee839cd> Refers to: cSetInfoOmBreakTarget
+< 3><0x00065af0 GOFF=0x0ee83bbb>        DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x00145d16 count = 0x00000002>
+                                          DW_AT_type                  <0x00065b91 GOFF=0x0ee83c5c>
+                                          DW_AT_artificial            yes(1)
+< 3><0x00065af5 GOFF=0x0ee83bc0>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x00010a5c GOFF=0x0ee2eb27>
+< 2><0x00065afb GOFF=0x0ee83bc6>      DW_TAG_subprogram <abbrev 42 ABGOFF = 0x00145ee2 count = 0x0000000a>
+                                        DW_AT_name                  save
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x0000044b
+                                        DW_AT_type                  <0x0000128d GOFF=0x0ee1f358> Refers to: bool
+                                        DW_AT_virtuality            DW_VIRTUALITY_virtual
+                                        DW_AT_vtable_elem_location  len 0x0002: 0x1008:
+                                            DW_OP_constu 8
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+                                        DW_AT_containing_type       <0x00065902 GOFF=0x0ee839cd> Refers to: cSetInfoOmBreakTarget
+< 3><0x00065b10 GOFF=0x0ee83bdb>        DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x00145d16 count = 0x00000002>
+                                          DW_AT_type                  <0x00065b91 GOFF=0x0ee83c5c>
+                                          DW_AT_artificial            yes(1)
+< 3><0x00065b15 GOFF=0x0ee83be0>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x00010f85 GOFF=0x0ee2f050>
+< 2><0x00065b1b GOFF=0x0ee83be6>      DW_TAG_subprogram <abbrev 42 ABGOFF = 0x00145ee2 count = 0x0000000a>
+                                        DW_AT_name                  applyInfo
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x0000044e
+                                        DW_AT_type                  <0x0000128d GOFF=0x0ee1f358> Refers to: bool
+                                        DW_AT_virtuality            DW_VIRTUALITY_virtual
+                                        DW_AT_vtable_elem_location  len 0x0002: 0x1009:
+                                            DW_OP_constu 9
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+                                        DW_AT_containing_type       <0x00065902 GOFF=0x0ee839cd> Refers to: cSetInfoOmBreakTarget
+< 3><0x00065b30 GOFF=0x0ee83bfb>        DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x00145d16 count = 0x00000002>
+                                          DW_AT_type                  <0x00065b87 GOFF=0x0ee83c52>
+                                          DW_AT_artificial            yes(1)
+< 3><0x00065b35 GOFF=0x0ee83c00>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x000112ad GOFF=0x0ee2f378>
+< 2><0x00065b3b GOFF=0x0ee83c06>      DW_TAG_subprogram <abbrev 42 ABGOFF = 0x00145ee2 count = 0x0000000a>
+                                        DW_AT_name                  applyParam
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x00000451
+                                        DW_AT_type                  <0x0000128d GOFF=0x0ee1f358> Refers to: bool
+                                        DW_AT_virtuality            DW_VIRTUALITY_virtual
+                                        DW_AT_vtable_elem_location  len 0x0002: 0x100e:
+                                            DW_OP_constu 14
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+                                        DW_AT_containing_type       <0x00065902 GOFF=0x0ee839cd> Refers to: cSetInfoOmBreakTarget
+< 3><0x00065b50 GOFF=0x0ee83c1b>        DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x00145d16 count = 0x00000002>
+                                          DW_AT_type                  <0x00065b87 GOFF=0x0ee83c52>
+                                          DW_AT_artificial            yes(1)
+< 3><0x00065b55 GOFF=0x0ee83c20>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x00019554 GOFF=0x0ee3761f>
+< 2><0x00065b5b GOFF=0x0ee83c26>      DW_TAG_subprogram <abbrev 102 ABGOFF = 0x0014628c count = 0x00000009>
+                                        DW_AT_name                  copy
+                                        DW_AT_decl_file             0x00000045 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/prog/cSetInfoOm.h
+                                        DW_AT_decl_line             0x00000454
+                                        DW_AT_virtuality            DW_VIRTUALITY_virtual
+                                        DW_AT_vtable_elem_location  len 0x0002: 0x100b:
+                                            DW_OP_constu 11
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+                                        DW_AT_containing_type       <0x00065902 GOFF=0x0ee839cd> Refers to: cSetInfoOmBreakTarget
+< 3><0x00065b6c GOFF=0x0ee83c37>        DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x00145d16 count = 0x00000002>
+                                          DW_AT_type                  <0x00065b91 GOFF=0x0ee83c5c>
+                                          DW_AT_artificial            yes(1)
+< 3><0x00065b71 GOFF=0x0ee83c3c>        DW_TAG_formal_parameter <abbrev 12 ABGOFF = 0x00145d62 count = 0x00000001>
+                                          DW_AT_type                  <0x00011294 GOFF=0x0ee2f35f>
+< 1><0x00065b78 GOFF=0x0ee83c43>    DW_TAG_pointer_type <abbrev 16 ABGOFF = 0x00145d8a count = 0x00000001>
+                                      DW_AT_type                  <0x00065923 GOFF=0x0ee839ee> Refers to: MyDTI
+< 1><0x00065b7d GOFF=0x0ee83c48>    DW_TAG_pointer_type <abbrev 16 ABGOFF = 0x00145d8a count = 0x00000001>
+                                      DW_AT_type                  <0x00065b82 GOFF=0x0ee83c4d>
+< 1><0x00065b82 GOFF=0x0ee83c4d>    DW_TAG_const_type <abbrev 15 ABGOFF = 0x00145d83 count = 0x00000001>
+                                      DW_AT_type                  <0x00065923 GOFF=0x0ee839ee> Refers to: MyDTI
+< 1><0x00065b87 GOFF=0x0ee83c52>    DW_TAG_pointer_type <abbrev 16 ABGOFF = 0x00145d8a count = 0x00000001>
+                                      DW_AT_type                  <0x00065b8c GOFF=0x0ee83c57>
+< 1><0x00065b8c GOFF=0x0ee83c57>    DW_TAG_const_type <abbrev 15 ABGOFF = 0x00145d83 count = 0x00000001>
+                                      DW_AT_type                  <0x00065902 GOFF=0x0ee839cd> Refers to: cSetInfoOmBreakTarget
+< 1><0x00065b91 GOFF=0x0ee83c5c>    DW_TAG_pointer_type <abbrev 16 ABGOFF = 0x00145d8a count = 0x00000001>
+                                      DW_AT_type                  <0x00065902 GOFF=0x0ee839cd> Refers to: cSetInfoOmBreakTarget
+< 1><0x00065b96 GOFF=0x0ee83c61>    DW_TAG_variable <abbrev 17 ABGOFF = 0x00145d91 count = 0x00000002>
+                                      DW_AT_specification         <0x00065916 GOFF=0x0ee839e1> Refers to: DTI
+                                      DW_AT_location              len 0x0009: 0x0360e7550200000000:
+                                          DW_OP_addr 0x0255e760

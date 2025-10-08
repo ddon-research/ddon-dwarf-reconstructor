@@ -14,31 +14,16 @@ Technical guidance for Claude when working with this DWARF-to-C++ header reconst
 
 ## Core Components
 
-### `models.py` - Type System
-- `DIE`: Debug Information Entry with attributes/children
-- `DWARFAttribute`: Name/value pairs from DWARF data
-- `CompilationUnit`: Container for DIE collections
-- Enums: `DWTag`, `DWAccessibility`, `DWVirtuality`
+### `models.py` - DWARF Constants
+- Enums: `DWTag`, `DWAccessibility`, `DWVirtuality` for reference
 
-### `dwarf_parser.py` - ELF/DWARF Interface
-- `DWARFParser`: Context manager for ELF file access
-- `parse_cus_until_target_found()`: Early stopping CU parsing (82x speedup)
-- CU-level caching with pickle serialization (3.6x speedup)
-- PS4-specific lenient parsing (`stream_loader=None`)
-- Iterator over compilation units
-- Converts pyelftools DIEs to typed model objects
-
-### `die_extractor.py` - Optimized Search
-- `DIEExtractor`: Lazy-loaded indexes for O(1) repeated searches
-- Methods: `find_dies_by_name()`, `find_dies_by_tag()`, `get_die_by_offset()`
-- 60,000x performance improvement over linear search
-- Inspired by Ghidra's indexing architecture
-
-### `header_generator.py` - C++ Output
-- `HeaderGenerator`: Clean generator with single optimized strategy
-- `GenerationMode.OPTIMIZED`: Single mode - no complexity
-- `GenerationOptions`: Configuration for output customization
-- `generate_header()`: Main standalone function
+### `native_generator.py` - Native pyelftools Implementation  
+- `NativeDwarfGenerator`: Context manager using pyelftools directly
+- Methods: `find_class()`, `parse_class_info()`, `generate_header()`
+- Uses native pyelftools DIE structures exclusively
+- Built-in type resolution with `get_DIE_from_attribute()`
+- No custom parsing - leverages proven pyelftools foundation
+- Simplified architecture with superior type resolution
 
 ### `logger.py` - Centralized Logging
 - `LoggerSetup`: Manages dual logging (console + file)
@@ -139,14 +124,14 @@ uv run ruff check src/
 ### Writing Tests
 ```python
 import pytest
-from ddon_dwarf_reconstructor.core import DWARFParser
+from ddon_dwarf_reconstructor.generators.native_generator import NativeDwarfGenerator
 
 @pytest.mark.integration
-def test_example(elf_parser: DWARFParser, fast_symbol: str) -> None:
-    """Test with MtObject (fast symbol in first CU)."""
-    # Use elf_parser fixture (auto-setup/teardown)
-    # Use fast_symbol for quick tests
-    pass
+def test_example(elf_file_path):
+    """Test with native pyelftools implementation."""
+    with NativeDwarfGenerator(elf_file_path) as generator:
+        header = generator.generate_header("MtObject")
+        assert len(header) > 0
 ```
 
 See [tests/README.md](tests/README.md) for comprehensive testing documentation.

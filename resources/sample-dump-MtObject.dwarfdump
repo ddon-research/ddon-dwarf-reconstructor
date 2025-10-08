@@ -1,0 +1,229 @@
+< 1><0x00007850 GOFF=0x000084ed>    DW_TAG_class_type <abbrev 53 ABGOFF = 0x0000049c count = 0x00000005>
+                                      DW_AT_containing_type       <0x00007850 GOFF=0x000084ed> Refers to: MtObject
+                                      DW_AT_name                  MtObject
+                                      DW_AT_byte_size             8
+                                      DW_AT_decl_file             0x0000000b D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/../capdev200/MT/MtObject.h
+                                      DW_AT_decl_line             0x00000020
+< 2><0x0000785c GOFF=0x000084f9>      DW_TAG_member <abbrev 47 ABGOFF = 0x00000446 count = 0x00000005>
+                                        DW_AT_name                  _vptr$MtObject
+                                        DW_AT_type                  <0x000079ca GOFF=0x00008667>
+                                        DW_AT_data_member_location  0
+                                        DW_AT_accessibility         DW_ACCESS_public
+                                        DW_AT_artificial            yes(1)
+< 2><0x00007867 GOFF=0x00008504>      DW_TAG_member <abbrev 98 ABGOFF = 0x0000074f count = 0x00000008>
+                                        DW_AT_name                  INITIAL_ALLOCATOR
+                                        DW_AT_type                  <0x000034f6 GOFF=0x00004193>
+                                        DW_AT_decl_file             0x0000000b D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/../capdev200/MT/MtObject.h
+                                        DW_AT_decl_line             0x00000028
+                                        DW_AT_external              yes(1)
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+                                        DW_AT_const_value           0
+< 2><0x00007874 GOFF=0x00008511>      DW_TAG_member <abbrev 90 ABGOFF = 0x000006d1 count = 0x00000007>
+                                        DW_AT_name                  DTI
+                                        DW_AT_type                  <0x00007880 GOFF=0x0000851d> Refers to: MyDTI
+                                        DW_AT_decl_file             0x0000000b D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/../capdev200/MT/MtObject.h
+                                        DW_AT_decl_line             0x00000039
+                                        DW_AT_external              yes(1)
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 2><0x00007880 GOFF=0x0000851d>      DW_TAG_class_type <abbrev 53 ABGOFF = 0x0000049c count = 0x00000005>
+                                        DW_AT_containing_type       <0x000079e4 GOFF=0x00008681> Refers to: MtDTI
+                                        DW_AT_name                  MyDTI
+                                        DW_AT_byte_size             56
+                                        DW_AT_decl_file             0x0000000b D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/../capdev200/MT/MtObject.h
+                                        DW_AT_decl_line             0x0000002e
+< 3><0x0000788c GOFF=0x00008529>        DW_TAG_inheritance <abbrev 9 ABGOFF = 0x0000024e count = 0x00000003>
+                                          DW_AT_type                  <0x000079e4 GOFF=0x00008681> Refers to: MtDTI
+                                          DW_AT_data_member_location  0
+                                          DW_AT_accessibility         DW_ACCESS_public
+< 3><0x00007893 GOFF=0x00008530>        DW_TAG_subprogram <abbrev 5 ABGOFF = 0x0000021c count = 0x00000006>
+                                          DW_AT_name                  MyDTI
+                                          DW_AT_decl_file             0x0000000b D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/../capdev200/MT/MtObject.h
+                                          DW_AT_decl_line             0x00000031
+                                          DW_AT_declaration           yes(1)
+                                          DW_AT_external              yes(1)
+                                          DW_AT_accessibility         DW_ACCESS_public
+< 4><0x0000789b GOFF=0x00008538>          DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x0000022d count = 0x00000002>
+                                            DW_AT_type                  <0x00007d0f GOFF=0x000089ac>
+                                            DW_AT_artificial            yes(1)
+< 4><0x000078a0 GOFF=0x0000853d>          DW_TAG_formal_parameter <abbrev 15 ABGOFF = 0x000002a2 count = 0x00000001>
+                                            DW_AT_type                  <0x00007ca0 GOFF=0x0000893d> Refers to: MT_CTSTR
+< 4><0x000078a5 GOFF=0x00008542>          DW_TAG_formal_parameter <abbrev 15 ABGOFF = 0x000002a2 count = 0x00000001>
+                                            DW_AT_type                  <0x00007cc9 GOFF=0x00008966>
+< 3><0x000078ab GOFF=0x00008548>        DW_TAG_subprogram <abbrev 55 ABGOFF = 0x000004c2 count = 0x0000000a>
+                                          DW_AT_name                  newInstance
+                                          DW_AT_decl_file             0x0000000b D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/../capdev200/MT/MtObject.h
+                                          DW_AT_decl_line             0x00000034
+                                          DW_AT_type                  <0x00007d0a GOFF=0x000089a7>
+                                          DW_AT_virtuality            DW_VIRTUALITY_virtual
+                                          DW_AT_vtable_elem_location  len 0x0002: 0x1002:
+                                              DW_OP_constu 2
+                                          DW_AT_declaration           yes(1)
+                                          DW_AT_external              yes(1)
+                                          DW_AT_accessibility         DW_ACCESS_public
+                                          DW_AT_containing_type       <0x00007880 GOFF=0x0000851d> Refers to: MyDTI
+< 4><0x000078bf GOFF=0x0000855c>          DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x0000022d count = 0x00000002>
+                                            DW_AT_type                  <0x00007d14 GOFF=0x000089b1>
+                                            DW_AT_artificial            yes(1)
+< 2><0x000078c6 GOFF=0x00008563>      DW_TAG_subprogram <abbrev 5 ABGOFF = 0x0000021c count = 0x00000006>
+                                        DW_AT_name                  MtObject
+                                        DW_AT_decl_file             0x0000000b D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/../capdev200/MT/MtObject.h
+                                        DW_AT_decl_line             0x0000003c
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 3><0x000078ce GOFF=0x0000856b>        DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x0000022d count = 0x00000002>
+                                          DW_AT_type                  <0x00007d1e GOFF=0x000089bb>
+                                          DW_AT_artificial            yes(1)
+                                        DW_AT_decl_line             0x0000003f
+                                        DW_AT_virtuality            DW_VIRTUALITY_virtual
+                                        DW_AT_vtable_elem_location  len 0x0002: 0x1000:
+                                            DW_OP_constu 0
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+                                        DW_AT_containing_type       <0x00007850 GOFF=0x000084ed> Refers to: MtObject
+< 3><0x000078e4 GOFF=0x00008581>        DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x0000022d count = 0x00000002>
+                                          DW_AT_type                  <0x00007d1e GOFF=0x000089bb>
+                                          DW_AT_artificial            yes(1)
+< 2><0x000078ea GOFF=0x00008587>      DW_TAG_subprogram <abbrev 55 ABGOFF = 0x000004c2 count = 0x0000000a>
+                                        DW_AT_name                  createUI
+                                        DW_AT_decl_file             0x0000000b D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/../capdev200/MT/MtObject.h
+                                        DW_AT_decl_line             0x00000042
+                                        DW_AT_type                  <0x00007d23 GOFF=0x000089c0>
+                                        DW_AT_virtuality            DW_VIRTUALITY_virtual
+                                        DW_AT_vtable_elem_location  len 0x0002: 0x1002:
+                                            DW_OP_constu 2
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+                                        DW_AT_containing_type       <0x00007850 GOFF=0x000084ed> Refers to: MtObject
+< 3><0x000078fe GOFF=0x0000859b>        DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x0000022d count = 0x00000002>
+                                          DW_AT_type                  <0x00007d1e GOFF=0x000089bb>
+                                          DW_AT_artificial            yes(1)
+< 3><0x00007903 GOFF=0x000085a0>        DW_TAG_formal_parameter <abbrev 15 ABGOFF = 0x000002a2 count = 0x00000001>
+                                          DW_AT_type                  <0x00008130 GOFF=0x00008dcd>
+< 2><0x00007909 GOFF=0x000085a6>      DW_TAG_subprogram <abbrev 45 ABGOFF = 0x00000424 count = 0x00000007>
+                                        DW_AT_name                  operator new
+                                        DW_AT_decl_file             0x0000000b D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/../capdev200/MT/MtObject.h
+                                        DW_AT_decl_line             0x0000004b
+                                        DW_AT_type                  <0x00009985 GOFF=0x0000a622>
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 3><0x00007915 GOFF=0x000085b2>        DW_TAG_formal_parameter <abbrev 15 ABGOFF = 0x000002a2 count = 0x00000001>
+                                          DW_AT_type                  <0x00007cdf GOFF=0x0000897c> Refers to: size_t
+< 2><0x0000791b GOFF=0x000085b8>      DW_TAG_subprogram <abbrev 5 ABGOFF = 0x0000021c count = 0x00000006>
+                                        DW_AT_name                  operator delete
+                                        DW_AT_decl_file             0x0000000b D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/../capdev200/MT/MtObject.h
+                                        DW_AT_decl_line             0x0000004c
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 3><0x00007923 GOFF=0x000085c0>        DW_TAG_formal_parameter <abbrev 15 ABGOFF = 0x000002a2 count = 0x00000001>
+                                          DW_AT_type                  <0x00009985 GOFF=0x0000a622>
+< 2><0x00007929 GOFF=0x000085c6>      DW_TAG_subprogram <abbrev 55 ABGOFF = 0x000004c2 count = 0x0000000a>
+                                        DW_AT_name                  isEnableInstance
+                                        DW_AT_decl_file             0x0000000b D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/../capdev200/MT/MtObject.h
+                                        DW_AT_decl_line             0x0000005d
+                                        DW_AT_type                  <0x000012f2 GOFF=0x00001f8f> Refers to: bool
+                                        DW_AT_virtuality            DW_VIRTUALITY_virtual
+                                        DW_AT_vtable_elem_location  len 0x0002: 0x1003:
+                                            DW_OP_constu 3
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+                                        DW_AT_containing_type       <0x00007850 GOFF=0x000084ed> Refers to: MtObject
+< 3><0x0000793d GOFF=0x000085da>        DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x0000022d count = 0x00000002>
+                                          DW_AT_type                  <0x00011c90 GOFF=0x0001292d>
+                                          DW_AT_artificial            yes(1)
+< 2><0x00007943 GOFF=0x000085e0>      DW_TAG_subprogram <abbrev 54 ABGOFF = 0x000004ab count = 0x00000009>
+                                        DW_AT_name                  createProperty
+                                        DW_AT_decl_file             0x0000000b D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/../capdev200/MT/MtObject.h
+                                        DW_AT_decl_line             0x00000066
+                                        DW_AT_virtuality            DW_VIRTUALITY_virtual
+                                        DW_AT_vtable_elem_location  len 0x0002: 0x1004:
+                                            DW_OP_constu 4
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+                                        DW_AT_containing_type       <0x00007850 GOFF=0x000084ed> Refers to: MtObject
+< 3><0x00007953 GOFF=0x000085f0>        DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x0000022d count = 0x00000002>
+                                          DW_AT_type                  <0x00007d1e GOFF=0x000089bb>
+                                          DW_AT_artificial            yes(1)
+< 3><0x00007958 GOFF=0x000085f5>        DW_TAG_formal_parameter <abbrev 15 ABGOFF = 0x000002a2 count = 0x00000001>
+                                          DW_AT_type                  <0x00011c9a GOFF=0x00012937>
+< 2><0x0000795e GOFF=0x000085fb>      DW_TAG_subprogram <abbrev 55 ABGOFF = 0x000004c2 count = 0x0000000a>
+                                        DW_AT_name                  getDTI
+                                        DW_AT_decl_file             0x0000000b D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/../capdev200/MT/MtObject.h
+                                        DW_AT_decl_line             0x0000006f
+                                        DW_AT_type                  <0x00007d00 GOFF=0x0000899d>
+                                        DW_AT_virtuality            DW_VIRTUALITY_virtual
+                                        DW_AT_vtable_elem_location  len 0x0002: 0x1005:
+                                            DW_OP_constu 5
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+                                        DW_AT_containing_type       <0x00007850 GOFF=0x000084ed> Refers to: MtObject
+< 3><0x00007972 GOFF=0x0000860f>        DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x0000022d count = 0x00000002>
+                                          DW_AT_type                  <0x00011c90 GOFF=0x0001292d>
+                                          DW_AT_artificial            yes(1)
+< 2><0x00007978 GOFF=0x00008615>      DW_TAG_subprogram <abbrev 45 ABGOFF = 0x00000424 count = 0x00000007>
+                                        DW_AT_name                  isKindOf
+                                        DW_AT_decl_file             0x0000000b D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/../capdev200/MT/MtObject.h
+                                        DW_AT_decl_line             0x00000076
+                                        DW_AT_type                  <0x000012f2 GOFF=0x00001f8f> Refers to: bool
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 3><0x00007984 GOFF=0x00008621>        DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x0000022d count = 0x00000002>
+                                          DW_AT_type                  <0x00011c90 GOFF=0x0001292d>
+                                          DW_AT_artificial            yes(1)
+< 3><0x00007989 GOFF=0x00008626>        DW_TAG_formal_parameter <abbrev 15 ABGOFF = 0x000002a2 count = 0x00000001>
+                                          DW_AT_type                  <0x00007d00 GOFF=0x0000899d>
+< 2><0x0000798f GOFF=0x0000862c>      DW_TAG_subprogram <abbrev 91 ABGOFF = 0x000006e4 count = 0x00000007>
+                                        DW_AT_name                  getMyDTIPtr
+                                        DW_AT_decl_file             0x0000000b D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/../capdev200/MT/MtObject.h
+                                        DW_AT_decl_line             0x0000007f
+                                        DW_AT_type                  <0x00007cc9 GOFF=0x00008966>
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 2><0x0000799b GOFF=0x00008638>      DW_TAG_subprogram <abbrev 45 ABGOFF = 0x00000424 count = 0x00000007>
+                                        DW_AT_name                  cast
+                                        DW_AT_decl_file             0x0000000b D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/../capdev200/MT/MtObject.h
+                                        DW_AT_decl_line             0x00000088
+                                        DW_AT_type                  <0x00007d0a GOFF=0x000089a7>
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 3><0x000079a7 GOFF=0x00008644>        DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x0000022d count = 0x00000002>
+                                          DW_AT_type                  <0x00007d1e GOFF=0x000089bb>
+                                          DW_AT_artificial            yes(1)
+< 3><0x000079ac GOFF=0x00008649>        DW_TAG_formal_parameter <abbrev 15 ABGOFF = 0x000002a2 count = 0x00000001>
+                                          DW_AT_type                  <0x00007d00 GOFF=0x0000899d>
+< 2><0x000079b2 GOFF=0x0000864f>      DW_TAG_subprogram <abbrev 45 ABGOFF = 0x00000424 count = 0x00000007>
+                                        DW_AT_name                  cast
+                                        DW_AT_decl_file             0x0000000b D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/../capdev200/MT/MtObject.h
+                                        DW_AT_decl_line             0x0000008f
+                                        DW_AT_type                  <0x00011ec9 GOFF=0x00012b66>
+                                        DW_AT_declaration           yes(1)
+                                        DW_AT_external              yes(1)
+                                        DW_AT_accessibility         DW_ACCESS_public
+< 3><0x000079be GOFF=0x0000865b>        DW_TAG_formal_parameter <abbrev 6 ABGOFF = 0x0000022d count = 0x00000002>
+                                          DW_AT_type                  <0x00011c90 GOFF=0x0001292d>
+                                          DW_AT_artificial            yes(1)
+< 3><0x000079c3 GOFF=0x00008660>        DW_TAG_formal_parameter <abbrev 15 ABGOFF = 0x000002a2 count = 0x00000001>
+                                          DW_AT_type                  <0x00007d00 GOFF=0x0000899d>
+< 1><0x000079ca GOFF=0x00008667>    DW_TAG_pointer_type <abbrev 19 ABGOFF = 0x000002ca count = 0x00000001>
+                                      DW_AT_type                  <0x000079cf GOFF=0x0000866c> Refers to: __vtbl_ptr_type
+< 1><0x000079cf GOFF=0x0000866c>    DW_TAG_pointer_type <abbrev 99 ABGOFF = 0x00000764 count = 0x00000002>
+                                      DW_AT_type                  <0x000079d8 GOFF=0x00008675>
+                                      DW_AT_name                  __vtbl_ptr_type
+< 1><0x000079d8 GOFF=0x00008675>    DW_TAG_subroutine_type <abbrev 100 ABGOFF = 0x0000076d count = 0x00000001>
+                                      DW_AT_type                  <0x000079dd GOFF=0x0000867a> Refers to: int
+< 1><0x000079dd GOFF=0x0000867a>    DW_TAG_base_type <abbrev 25 ABGOFF = 0x00000312 count = 0x00000003>
+                                      DW_AT_name                  int
+                                      DW_AT_encoding              DW_ATE_signed
+                                      DW_AT_byte_size             4

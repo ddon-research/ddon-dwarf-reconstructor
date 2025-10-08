@@ -1,16 +1,11 @@
-"""DDON DWARF Reconstructor - Consolidated modular architecture."""
+"""DDON DWARF Reconstructor - Native pyelftools implementation."""
 
 from .config import Config
-from .core import DIEExtractor, DWARFParser
-from .generators import GenerationMode, GenerationOptions, HeaderGenerator
+from .generators.native_generator import NativeDwarfGenerator
 from .main import main
 
 __all__ = [
-    "DWARFParser",
-    "DIEExtractor",
     "Config",
-    "HeaderGenerator",
-    "GenerationMode",
-    "GenerationOptions",
+    "NativeDwarfGenerator", 
     "main"
 ]

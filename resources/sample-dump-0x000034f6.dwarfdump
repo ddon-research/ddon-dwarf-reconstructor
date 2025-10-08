@@ -1,0 +1,13 @@
+< 1><0x000034f6 GOFF=0x00004193>    DW_TAG_const_type <abbrev 18 ABGOFF = 0x000002c3 count = 0x00000001>
+                                      DW_AT_type                  <0x00003486 GOFF=0x00004123> Refers to: u32
+---
+< 1><0x00003486 GOFF=0x00004123>    DW_TAG_typedef <abbrev 24 ABGOFF = 0x00000305 count = 0x00000004>
+                                      DW_AT_type                  <0x00003491 GOFF=0x0000412e> Refers to: unsigned int
+                                      DW_AT_name                  u32
+                                      DW_AT_decl_file             0x00000003 D:/publishDDO_PS4_02_02_Master/DDO_02_02/DD_ONLINE/../capdev200/MT/MtType.h
+                                      DW_AT_decl_line             0x000000ce
+---
+< 1><0x00003491 GOFF=0x0000412e>    DW_TAG_base_type <abbrev 25 ABGOFF = 0x00000312 count = 0x00000003>
+                                      DW_AT_name                  unsigned int
+                                      DW_AT_encoding              DW_ATE_unsigned
+                                      DW_AT_byte_size             4
