@@ -3,16 +3,17 @@
 import csv
 import sys
 from pathlib import Path
-from typing import Generator, Optional
+from typing import Optional
 
 import pytest
+
+from ddon_dwarf_reconstructor.config import Config
 
 # Add src directory to path for imports
 src_path = Path(__file__).parent.parent / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
-from ddon_dwarf_reconstructor.config import Config
 
 @pytest.fixture(scope="session")
 def project_root() -> Path:

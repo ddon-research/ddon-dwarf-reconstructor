@@ -9,7 +9,7 @@ from time import time
 from typing import Any, Callable, Optional, TypeVar, cast
 
 # Type variable for generic function decoration
-F = TypeVar('F', bound=Callable[..., Any])
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 class LoggerSetup:
@@ -47,18 +47,15 @@ class LoggerSetup:
         # Console handler - level depends on verbose flag
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(logging.DEBUG if verbose else logging.INFO)
-        console_formatter = logging.Formatter(
-            '%(levelname)s: %(message)s'
-        )
+        console_formatter = logging.Formatter("%(levelname)s: %(message)s")
         console_handler.setFormatter(console_formatter)
         root_logger.addHandler(console_handler)
 
         # File handler - always DEBUG level
-        file_handler = logging.FileHandler(cls._log_file_path, encoding='utf-8')
+        file_handler = logging.FileHandler(cls._log_file_path, encoding="utf-8")
         file_handler.setLevel(logging.DEBUG)
         file_formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
         )
         file_handler.setFormatter(file_formatter)
         root_logger.addHandler(file_handler)
@@ -104,6 +101,7 @@ def log_timing(func: F) -> F:
     Returns:
         Wrapped function that logs timing
     """
+
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         logger = get_logger(func.__module__)

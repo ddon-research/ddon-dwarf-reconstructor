@@ -8,6 +8,6 @@ from .models import (
 
 __all__ = [
     "DWTag",
-    "DWAccessibility", 
+    "DWAccessibility",
     "DWVirtuality",
 ]

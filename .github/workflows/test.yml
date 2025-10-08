@@ -39,7 +39,7 @@ jobs:
         
     - name: Run unit tests with coverage
       run: |
-        uv run pytest -m "unit" --cov-fail-under=30 --junit-xml=test-results.xml
+        uv run pytest -m "unit" --cov=src --cov-fail-under=30 --junit-xml=test-results.xml
         
     - name: Generate coverage report
       run: |

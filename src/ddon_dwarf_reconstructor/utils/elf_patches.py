@@ -1,5 +1,7 @@
 """Patches for pyelftools to handle PS4 ELF files with non-standard sections."""
 
+from typing import Any
+
 from elftools.common.exceptions import ELFError
 from elftools.elf import elffile
 
@@ -15,7 +17,7 @@ def patch_pyelftools_for_ps4() -> None:
     original_make_section = elffile.ELFFile._make_section
     original_get_section = elffile.ELFFile.get_section
 
-    def patched_make_section(self: elffile.ELFFile, section_header: any) -> any:
+    def patched_make_section(self: elffile.ELFFile, section_header: Any) -> Any:
         """Patched version of _make_section that handles PS4-specific issues."""
         try:
             return original_make_section(self, section_header)
@@ -25,12 +27,12 @@ def patch_pyelftools_for_ps4() -> None:
                 # Return a generic Section instead of failing
                 from elftools.elf.sections import Section
 
-                return Section(section_header, '', self)
+                return Section(section_header, "", self)
             raise
 
     def patched_get_section(
-        self: elffile.ELFFile, section_index: int, type_filter: any = None
-    ) -> any:
+        self: elffile.ELFFile, section_index: int, type_filter: Any = None
+    ) -> Any:
         """Patched version of get_section that handles PS4-specific issues."""
         try:
             return original_get_section(self, section_index, type_filter)
@@ -41,9 +43,9 @@ def patch_pyelftools_for_ps4() -> None:
                 section_header = self._get_section_header(section_index)
                 from elftools.elf.sections import Section
 
-                return Section(section_header, '', self)
+                return Section(section_header, "", self)
             raise
 
     # Apply patches
-    elffile.ELFFile._make_section = patched_make_section
-    elffile.ELFFile.get_section = patched_get_section
+    elffile.ELFFile._make_section = patched_make_section  # type: ignore[method-assign]
+    elffile.ELFFile.get_section = patched_get_section  # type: ignore[method-assign]

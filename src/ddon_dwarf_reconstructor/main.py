@@ -13,13 +13,14 @@ from .utils import LoggerSetup, get_logger
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description="Reconstruct C++ headers from DWARF debug symbols in ELF files using pyelftools",
+        description="Reconstruct C++ headers from DWARF debug symbols in ELF files "
+        "using pyelftools",
         epilog="""
 Examples:
   # Generate header (quiet mode - default)
   python main.py resources/DDOORBIS.elf --generate MtObject
 
-  # Generate header (verbose mode with debug logs)  
+  # Generate header (verbose mode with debug logs)
   python main.py resources/DDOORBIS.elf --generate MtObject --verbose
 
   # Custom output directory
@@ -104,9 +105,9 @@ def main() -> NoReturn:
                 header_content = generator.generate_complete_hierarchy_header(symbol_name)
             else:
                 header_content = generator.generate_header(symbol_name)
-            
+
             # Write to output file
-            output_file.write_text(header_content, encoding='utf-8')
+            output_file.write_text(header_content, encoding="utf-8")
 
             logger.info(f"[SUCCESS] Generated: {output_file}")
             logger.info(f"Size: {len(header_content)} bytes")
@@ -128,6 +129,7 @@ def main() -> NoReturn:
         logger.error(f"Error: {e}")
         if config.verbose:
             import traceback
+
             traceback.print_exc()
         sys.exit(1)
 

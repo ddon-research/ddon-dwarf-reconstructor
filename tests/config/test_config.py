@@ -33,14 +33,14 @@ def test_config_env_file_loading(monkeypatch) -> None:
     monkeypatch.setenv("ELF_FILE_PATH", "test.elf")
     monkeypatch.setenv("OUTPUT_DIR", "test_output")
     monkeypatch.setenv("VERBOSE", "true")
-    
+
     config = Config.from_env()
-    
+
     # Verify configuration attributes are properly loaded
     assert hasattr(config, "elf_file_path"), "Should have elf_file_path attribute"
-    assert hasattr(config, "output_dir"), "Should have output_dir attribute"  
+    assert hasattr(config, "output_dir"), "Should have output_dir attribute"
     assert hasattr(config, "verbose"), "Should have verbose attribute"
-    
+
     # Verify the actual values (if accessible)
     assert str(config.elf_file_path).endswith("test.elf"), "Should use env ELF path"
     assert str(config.output_dir).endswith("test_output"), "Should use env output dir"

@@ -48,9 +48,7 @@ class Config:
         output_dir = Path(output_dir_str)
         verbose = verbose_str in ("true", "1", "yes")
 
-        return cls(
-            elf_file_path=elf_file_path, output_dir=output_dir, verbose=verbose
-        )
+        return cls(elf_file_path=elf_file_path, output_dir=output_dir, verbose=verbose)
 
     @classmethod
     def from_args(
