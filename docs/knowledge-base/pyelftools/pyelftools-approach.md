@@ -1,85 +1,154 @@
-# pyelftools Approach and Architecture
+# pyelftools API Reference and Usage Patterns
 
 Source: pyelftools (https://github.com/eliben/pyelftools)
-Currently used by our implementation
+**Policy**: We use pyelftools directly without reinventing DWARF parsing
 
 ## Overview
 
-pyelftools is a pure-Python library for parsing ELF and DWARF. It prioritizes:
-- **Simplicity**: Easy-to-use API
-- **Completeness**: Comprehensive DWARF support
-- **Pure Python**: No C dependencies
+pyelftools is a pure-Python library for parsing ELF and DWARF. We commit to using their API directly:
+- **Established API**: Use their proven `DWARFInfo`, `CompilationUnit`, `DIE` classes 
+- **No reinvention**: Avoid custom abstractions over pyelftools
+- **Direct usage**: Leverage their methods like `iter_CUs()`, `get_DIE_from_attribute()`
+- **Upstream benefits**: Automatically get bug fixes and improvements
 
-## Architecture
+## Core API Structure
 
-### ELF Parsing
-
+### Entry Point - ELFFile
 ```python
-ELFFile(stream)
-  ├── has_dwarf_info()
-  ├── get_dwarf_info() → DWARFInfo
-  ├── iter_sections() → Section[]
-  └── iter_segments() → Segment[]
+from elftools.elf.elffile import ELFFile
+
+with open(filename, 'rb') as f:
+    elffile = ELFFile(f)
+    
+    # Check for DWARF info
+    if elffile.has_dwarf_info():
+        dwarfinfo = elffile.get_dwarf_info()
 ```
 
-### DWARF Parsing
-
+### DWARF Information - DWARFInfo
 ```python
+# Main DWARF context object
 DWARFInfo
-  ├── iter_CUs() → CompilationUnit[]
-  └── get_DIE(offset) → DIE
+  ├── iter_CUs() → CompilationUnit[]        # Iterate compilation units
+  ├── get_DIE_from_offset(offset) → DIE    # Direct offset lookup  
+  └── line_program_for_CU(cu) → LineProgram # Line number info
+```
 
+### Compilation Units - CompilationUnit
+```python
 CompilationUnit
-  ├── get_top_DIE() → DIE
-  └── iter_DIEs() → DIE[]
+  ├── get_top_DIE() → DIE                  # Root DIE (typically DW_TAG_compile_unit)
+  ├── iter_DIEs() → DIE[]                  # All DIEs in this CU
+  ├── cu_offset: int                       # CU offset in .debug_info
+  └── header: dict                         # DWARF header info
+```
 
+### Debug Information Entries - DIE
+```python
 DIE
-  ├── tag: str (e.g., "DW_TAG_class_type")
-  ├── attributes: dict[str, Attribute]
-  ├── offset: int
-  └── iter_children() → DIE[]
+  ├── tag: str                             # e.g., "DW_TAG_class_type"
+  ├── attributes: dict[str, Attribute]     # DWARF attributes
+  ├── offset: int                          # DIE offset
+  ├── iter_children() → DIE[]              # Child DIEs
+  ├── get_parent() → DIE                   # Parent DIE
+  └── cu: CompilationUnit                  # Owning compilation unit
+```
+
+## Essential Usage Patterns
+
+### Basic DWARF Processing
+```python
+# Standard pattern from pyelftools examples
+def process_file(filename):
+    with open(filename, 'rb') as f:
+        elffile = ELFFile(f)
+        
+        if not elffile.has_dwarf_info():
+            return
+            
+        dwarfinfo = elffile.get_dwarf_info()
+        
+        for cu in dwarfinfo.iter_CUs():
+            top_die = cu.get_top_DIE()
+            print(f"CU: {top_die.get_full_path()}")
+```
+
+### DIE Attribute Access
+```python
+# Access attributes using DWARF attribute names
+die = some_die
+name = die.attributes.get('DW_AT_name')
+type_die = die.attributes.get('DW_AT_type')
+
+# Use built-in reference resolution
+if type_die:
+    resolved_die = cu.get_DIE_from_attribute(type_die)
+```
+
+### Type Following Pattern
+```python
+def resolve_type(cu: CompilationUnit, die: DIE) -> Optional[DIE]:
+    """Follow DW_AT_type references - standard pyelftools pattern."""
+    type_attr = die.attributes.get('DW_AT_type')
+    if type_attr:
+        return cu.get_DIE_from_attribute(type_attr)  # Built-in method
+    return None
+```
+
+### Tree Traversal
+```python
+def find_class_by_name(cu: CompilationUnit, class_name: str) -> Optional[DIE]:
+    """Find class DIE by name - use pyelftools iteration."""
+    for die in cu.iter_DIEs():
+        if (die.tag == 'DW_TAG_class_type' and 
+            'DW_AT_name' in die.attributes and
+            die.attributes['DW_AT_name'].value.decode() == class_name):
+            return die
+    return None
 ```
 
 ## Key Characteristics
 
 ### Eager Loading
-- **All attributes parsed** when DIE is read
-- Simpler API
-- Higher memory usage for large files
+- All attributes parsed when DIE is read
+- Simpler API, higher memory usage for large files
+- **Use as-is**: Don't try to optimize with custom lazy loading
 
-### Nested Object Model
-- **Parent-child as references**
-- Natural tree structure
-- Easy traversal via `iter_children()`
+### Reference Resolution  
+- Built-in `get_DIE_from_attribute()` method handles offsets
+- **Use built-in**: Avoid reimplementing reference following
+- Handles cross-CU references automatically
 
-### Stream-Based
-- Uses `BinaryReader` abstraction
-- Can parse from file or memory
-- Efficient for moderate-sized files
+### Stream-Based Architecture
+- Uses file streams with seeking
+- **Reuse streams**: Don't create custom file handling
 
-## Comparison with Our Implementation
+## Our Implementation Strategy
 
-### What We've Added
+### What We Add (Minimal Layers)
 
-1. **PS4 ELF Patches** (`elf_patches.py`)
-   - Handles non-standard section types
-   - Monkey-patches pyelftools for PS4 compatibility
-   - Graceful handling of malformed sections
+1. **PS4 ELF Compatibility** 
+   - Minimal patches for PS4-specific ELF variations
+   - **Principle**: Patch only what's needed, use pyelftools for everything else
 
-2. **Type-Safe Models** (`models.py`)
-   - Strong typing with dataclasses
-   - Type hints throughout
-   - Enums for constants
+2. **C++ Header Generation**
+   - Business logic for C++ syntax generation  
+   - **Principle**: Use pyelftools DIEs as-is, don't wrap them
 
-3. **Search Utilities** (`die_extractor.py`)
-   - Find by name, tag, predicate
-   - Specialized searches (classes, structs)
-   - Member/method extraction
+3. **Type Resolution Helpers**
+   - Convenience methods for common DWARF patterns
+   - **Principle**: Build on pyelftools methods, don't replace them
 
-4. **Configuration Management** (`config.py`)
-   - .env file support
-   - Command-line override
-   - Environment variable fallback
+4. **Configuration & Logging**
+   - Project-specific configuration and logging
+   - **Principle**: Infrastructure only, no DWARF parsing
+
+### What We Don't Reinvent
+
+1. **DWARF Parsing**: Use pyelftools `DWARFInfo`, `CompilationUnit`, `DIE` directly
+2. **Attribute Access**: Use their `attributes` dict and `get_DIE_from_attribute()`  
+3. **Tree Navigation**: Use their `iter_children()`, `iter_DIEs()`, `get_parent()`
+4. **Stream Handling**: Use their file stream management
 
 ## Strengths of pyelftools
 

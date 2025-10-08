@@ -49,6 +49,9 @@ dmypy.json
 .coverage
 htmlcov/
 .tox/
+test-results.xml
+coverage.xml
+.coverage.*
 
 # UV
 .uv/

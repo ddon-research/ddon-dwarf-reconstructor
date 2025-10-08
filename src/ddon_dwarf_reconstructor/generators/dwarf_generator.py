@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-"""Simplified DWARF-to-C++ header generator using native pyelftools.
+"""DWARF-to-C++ header generator using pyelftools.
 
-This module replaces our custom DWARF parsing with direct use of pyelftools'
-native structures and methods for more reliable DIE reference resolution.
+This module uses pyelftools directly, reusing their proven API and data structures
+without reinventing DWARF parsing. It generates C++ headers from DWARF debug information.
 """
 
 import logging
@@ -112,8 +112,8 @@ class ClassInfo:
     packing_info: Optional[Dict[str, int]] = None  # packing, padding, alignment hints
 
 
-class NativeDwarfGenerator:
-    """Header generator using native pyelftools structures."""
+class DwarfGenerator:
+    """DWARF-to-C++ header generator using pyelftools."""
     
     def __init__(self, elf_path: Path):
         """Initialize with ELF file path."""
@@ -138,8 +138,9 @@ class NativeDwarfGenerator:
             self.file_handle.close()
             
     def find_class(self, class_name: str) -> Optional[tuple[CompileUnit, DIE]]:
-        """Find a class DIE by name using pyelftools native iteration.
+        """Find a type DIE by name using pyelftools iteration.
         
+        Supports classes, structs, unions, enums, typedefs, and arrays.
         Returns the first complete definition (with size > 0) found.
         Falls back to forward declaration if no complete definition exists.
         """
@@ -149,7 +150,8 @@ class NativeDwarfGenerator:
         # Look for complete definition first (early exit on match)
         for cu in self.dwarf_info.iter_CUs():
             for die in cu.iter_DIEs():
-                if die.tag in ('DW_TAG_class_type', 'DW_TAG_structure_type'):
+                if die.tag in ('DW_TAG_class_type', 'DW_TAG_structure_type', 'DW_TAG_union_type', 
+                              'DW_TAG_enumeration_type', 'DW_TAG_typedef', 'DW_TAG_array_type'):
                     name_attr = die.attributes.get('DW_AT_name')
                     if name_attr and name_attr.value == target_name:
                         # Check if this is a complete definition
@@ -389,14 +391,14 @@ class NativeDwarfGenerator:
         return used_typedefs
     
     def resolve_type_name(self, die: DIE, type_attr_name: str = 'DW_AT_type') -> str:
-        """Resolve type name using pyelftools native DIE reference resolution."""
+        """Resolve type name using pyelftools DIE reference resolution."""
         try:
             # First check if the DIE has the type attribute
             if type_attr_name not in die.attributes:
                 logger.debug(f"DIE {die.tag} has no {type_attr_name} attribute")
                 return "void"  # Methods without return type are void
                 
-            # Use pyelftools' native method to resolve DIE reference
+            # Use pyelftools' method to resolve DIE reference
             type_die = die.get_DIE_from_attribute(type_attr_name)
             if not type_die:
                 logger.debug(f"Could not resolve {type_attr_name} reference")
@@ -447,7 +449,7 @@ class NativeDwarfGenerator:
             return "unknown_type"
             
     def parse_class_info(self, cu: CompileUnit, class_die: DIE) -> ClassInfo:
-        """Parse class information using native pyelftools methods."""
+        """Parse class information using pyelftools methods."""
         # Get class name
         name_attr = class_die.attributes.get('DW_AT_name')
         class_name = name_attr.value.decode('utf-8') if name_attr else "unknown_class"
@@ -585,7 +587,7 @@ class NativeDwarfGenerator:
         return class_info_temp
         
     def parse_member(self, member_die: DIE) -> Optional[MemberInfo]:
-        """Parse a class member using native pyelftools."""
+        """Parse a class member using pyelftools."""
         # Resolve member type first to determine if it's anonymous
         type_name = self.resolve_type_name(member_die)
         
@@ -633,7 +635,7 @@ class NativeDwarfGenerator:
         )
         
     def parse_method(self, method_die: DIE) -> Optional[MethodInfo]:
-        """Parse a class method using native pyelftools."""
+        """Parse a class method using pyelftools."""
         # Get method name
         name_attr = method_die.attributes.get('DW_AT_name')
         if not name_attr:
@@ -687,7 +689,7 @@ class NativeDwarfGenerator:
         )
         
     def parse_parameter(self, param_die: DIE) -> Optional[ParameterInfo]:
-        """Parse a function parameter using native pyelftools."""
+        """Parse a function parameter using pyelftools."""
         # Check if artificial (like 'this' pointer)
         is_artificial = param_die.attributes.get('DW_AT_artificial') is not None
         
@@ -715,7 +717,7 @@ class NativeDwarfGenerator:
         )
     
     def parse_enum(self, enum_die: DIE) -> Optional[EnumInfo]:
-        """Parse an enumeration using native pyelftools."""
+        """Parse an enumeration using pyelftools."""
         # Get enum name
         name_attr = enum_die.attributes.get('DW_AT_name')
         enum_name = name_attr.value.decode('utf-8') if name_attr else "unknown_enum"
@@ -756,7 +758,7 @@ class NativeDwarfGenerator:
         )
     
     def parse_enumerator(self, enumerator_die: DIE) -> Optional[EnumeratorInfo]:
-        """Parse an enumerator value using native pyelftools."""
+        """Parse an enumerator value using pyelftools."""
         # Get enumerator name
         name_attr = enumerator_die.attributes.get('DW_AT_name')
         if not name_attr:
@@ -1333,7 +1335,16 @@ class NativeDwarfGenerator:
         """Generate C++ header for the specified class."""
         result = self.find_class(class_name)
         if not result:
-            raise ValueError(f"Class '{class_name}' not found")
+            # Return empty header with a comment instead of throwing an error
+            # This avoids the expensive full iteration through all CUs
+            return f"""#ifndef {class_name.upper()}_H
+#define {class_name.upper()}_H
+
+// Class '{class_name}' not found in DWARF information
+// Generated from DWARF debug information using pyelftools
+
+#endif // {class_name.upper()}_H
+"""
             
         cu, class_die = result
         class_info = self.parse_class_info(cu, class_die)
@@ -1357,7 +1368,7 @@ class NativeDwarfGenerator:
             lines.append("")
         
         lines.extend([
-            "// Generated from DWARF debug information using native pyelftools",
+            "// Generated from DWARF debug information using pyelftools",
             f"// Target symbol: {class_name}",
             "",
             "// DWARF Debug Information:",

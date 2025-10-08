@@ -1,6 +1,8 @@
 # DDON DWARF Reconstructor - Knowledge Base
 
-This knowledge base contains distilled information from various ELF and DWARF parsing implementations to inform our development approach.
+This knowledge base documents our approach to DWARF-to-C++ header reconstruction. 
+
+**Core Principle**: We use pyelftools directly without reinventing DWARF parsing APIs or data structures.
 
 ## Directory Structure
 
@@ -44,11 +46,11 @@ knowledge-base/
    - Focus: Industrial-strength DWARF parser
    - Key insights: Lazy loading, index-based trees, abbreviation caching, optimization strategies
 
-4. **pyelftools** (Python)
+4. **pyelftools** (Python) - **OUR FOUNDATION**
    - Source: https://github.com/eliben/pyelftools
-   - Used by: Our current implementation
-   - Focus: Pure Python ELF/DWARF parsing
-   - Key insights: Eager loading, nested objects, stream-based parsing
+   - Status: **Primary dependency - we use their API directly**
+   - Focus: Pure Python ELF/DWARF parsing with proven stability
+   - **Our commitment**: Use pyelftools classes (`DWARFInfo`, `DIE`, etc.) without reinvention
 
 5. **LLVM DWARF Parser** (C++)
    - Source: https://github.com/llvm/llvm-project
@@ -118,8 +120,7 @@ knowledge-base/
 - ✅ Search utilities (by name, tag, predicate)
 - ✅ Configuration management (.env support)
 - ✅ Fast search by using pyelftools' iter_DIEs() directly
-- ✅ **Lazy-loaded indexes** for fast repeated searches (60,000x speedup)
-- ✅ **Index-based CU references** inspired by Ghidra
+
 
 ### Future Enhancements 🔄
 

@@ -1,20 +1,21 @@
 = DDON DWARF Reconstructor
 
-Reconstructs C++ header files from DWARF debug symbols in PS4 ELF files using native pyelftools.
+Reconstructs C++ header files from DWARF debug symbols in PS4 ELF files using pyelftools.
 
 == Features
 
-* **Native pyelftools integration**: Uses proven DWARF library directly
-* **Superior type resolution**: Resolves complex types like `const MtDTI&`, `MtUI*`  
-* **Clean C++ output**: Proper virtual methods, static members, vtable pointers
-* **Context management**: Automatic resource cleanup with context managers
-* **Fast execution**: ~0.3s generation time for typical classes
-* **Structured logging**: Timestamped log files in `logs/` directory
-* **PS4 ELF support**: Handles PS4-specific ELF variations
+* **pyelftools integration**: Direct use of pyelftools DWARF parser without reinventing APIs
+* **Type resolution**: Resolves complex C++ types including references, pointers, and const qualifiers
+* **C++ structure reconstruction**: Generates class definitions with inheritance, virtual methods, and member variables
+* **PS4 ELF compatibility**: Handles PS4-specific ELF format variations
+
+== Design Philosophy
+
+This project uses pyelftools directly without reinventing DWARF parsing. We reuse their established API and data structures (`DWARFInfo`, `CompilationUnit`, `DIE`) rather than creating custom abstractions. This approach provides:
 
 == Requirements
 
-* Python 3.10+
+* Python 3.13+
 * pyelftools
 * ELF file with DWARF debug information
 
@@ -24,9 +25,6 @@ Reconstructs C++ header files from DWARF debug symbols in PS4 ELF files using na
 ----
 # Using uv (recommended)
 uv sync
-
-# Or using pip
-pip install -e .
 ----
 
 == Usage
@@ -114,27 +112,48 @@ src/ddon_dwarf_reconstructor/
 
 == Testing
 
+The project includes a comprehensive testing infrastructure with xUnit reporting, code coverage, and automated CI/CD.
+
+=== Quick Testing
+
 [source,bash]
 ----
-# Run all tests
+# Unit tests (fast, mocked - recommended for development)
+uv run pytest -m unit
+
+# All tests  
 uv run pytest
 
-# Run specific test categories
-uv run pytest -m unit               # Unit tests only
-uv run pytest -m integration        # Integration tests only
-uv run pytest -m "not slow"         # Fast tests (skip slow ones)
+# With coverage report
+uv run pytest -m unit --cov-report=html
+# Open htmlcov/index.html for detailed coverage
 
-# Verbose output with short tracebacks
-uv run pytest -v --tb=short
+# Using Makefile shortcuts
+make test          # Unit tests
+make coverage      # HTML coverage report
+make ci           # Full CI simulation
 ----
 
-== Performance
+=== Test Categories
 
-* **Fast execution**: ~0.3s generation for typical classes
-* **Native pyelftools**: Leverages optimized DWARF library
-* **Direct type resolution**: Uses built-in `get_DIE_from_attribute()`
-* **Low memory usage**: Context manager ensures proper cleanup
-* **Simple architecture**: No complex caching or indexing needed
+* **Unit Tests** (`@pytest.mark.unit`): Fast mocked tests (~0.1s, 22 tests)
+* **Integration Tests** (`@pytest.mark.integration`): Real ELF file tests (~3s, 2 tests)  
+* **Slow Tests** (`@pytest.mark.slow`): Long-running tests (skip with `-m "not slow"`)
+
+=== CI/CD Pipeline
+
+* **GitHub Actions**: Automated testing on push to `main` and PRs
+* **Python 3.13**: Latest Python version with ubuntu-latest
+* **Coverage Reporting**: Codecov integration with 30% minimum threshold
+* **Quality Gates**: Ruff linting, MyPy type checking, test coverage
+
+=== Generated Reports
+
+* **JUnit XML** (`test-results.xml`): xUnit-style test results for CI systems
+* **Coverage XML** (`coverage.xml`): Machine-readable coverage data  
+* **HTML Coverage** (`htmlcov/`): Interactive line-by-line coverage visualization
+
+See link:docs/TESTING.md[docs/TESTING.md] for comprehensive testing documentation.
 
 == Development
 
@@ -194,22 +213,3 @@ public:
     static MyDTI DTI;
 };
 ----
-
-== Known Limitations
-
-* PS4 ELF files may have non-standard sections requiring lenient parsing
-* Some DWARF constructs may not be fully supported
-* Currently focused on class/struct generation
-
-== License
-
-MIT
-
-== Contributing
-
-Contributions welcome! Please ensure:
-
-* All tests pass: `uv run pytest`
-* Type checking passes: `uv run mypy src/`
-* Linting passes: `uv run ruff check src/`
-* Follow existing code style

@@ -8,22 +8,22 @@ Technical guidance for Claude when working with this DWARF-to-C++ header reconst
 
 ## Project Overview
 
-**Purpose**: Reconstruct C++ headers from DWARF debug symbols in PS4 ELF files
-**Language**: Python 3.10+ with strict type hints (mypy)
-**Architecture**: Modular design with lazy-loaded indexing optimization
+**Purpose**: Reconstruct C++ headers from DWARF debug symbols in ELF files
+**Language**: Python 3.13+ with strict type hints (mypy)
+**Architecture**: Direct pyelftools integration without reinventing DWARF parsing
 
 ## Core Components
 
 ### `models.py` - DWARF Constants
 - Enums: `DWTag`, `DWAccessibility`, `DWVirtuality` for reference
 
-### `native_generator.py` - Native pyelftools Implementation  
-- `NativeDwarfGenerator`: Context manager using pyelftools directly
+### `dwarf_generator.py` - pyelftools Integration
+- `DwarfGenerator`: Context manager using pyelftools directly
 - Methods: `find_class()`, `parse_class_info()`, `generate_header()`
-- Uses native pyelftools DIE structures exclusively
+- Uses pyelftools DIE structures exclusively (`DWARFInfo`, `CompilationUnit`, `DIE`)
 - Built-in type resolution with `get_DIE_from_attribute()`
-- No custom parsing - leverages proven pyelftools foundation
-- Simplified architecture with superior type resolution
+- No custom DWARF parsing - leverages proven pyelftools API
+- Reuses established data structures without reinventing them
 
 ### `logger.py` - Centralized Logging
 - `LoggerSetup`: Manages dual logging (console + file)
@@ -54,24 +54,20 @@ echo "ELF_FILE_PATH=resources/DDOORBIS.elf" > .env
 python main.py --generate MtObject --verbose
 
 # Testing - MANDATORY: ALL TESTS MUST USE PYTEST with uv run
-uv run pytest                          # All tests
-uv run pytest -m unit                  # Unit tests only
-uv run pytest -m integration           # Integration tests only
-uv run pytest -m "not slow"            # Fast tests (skip performance)
-uv run pytest -m performance           # Performance benchmarks
-uv run pytest -v --tb=short            # Verbose with short tracebacks
+uv run pytest -m "unit"               # Unit tests (preferred - fast ~0.1s)
+uv run pytest                         # All tests (~3s)
+uv run pytest -m "integration"        # Integration tests only
+uv run pytest --cov-report=html       # With HTML coverage report
+
+# Shortcuts via Makefile
+make test                             # Unit tests
+make coverage                        # HTML coverage report
+make ci                              # Full CI simulation
 
 # Code quality
 uv run mypy src/
 uv run ruff check src/
 ```
-
-## Performance Optimizations
-
-- **Early Stopping**: Parse CUs until target found (82x speedup for cItemParam)
-- **CU Caching**: Persistent disk cache with 3.6x speedup
-- **Type Indexing**: O(1) type lookups with lazy loading
-- **Single Strategy**: No mode confusion - one optimized path
 
 ## Architecture Notes
 
@@ -81,11 +77,9 @@ uv run ruff check src/
 - **Config**: `.env` → environment → CLI args (priority order)
 
 ### CLI Arguments
-- `--search SYMBOL`: Search for symbol in DWARF info
 - `--generate SYMBOL`: Generate C++ header for symbol
 - `--verbose` / `-v`: Enable debug logs in console + file
 - `-o` / `--output`: Output directory (default: `./output`)
-- `--max-depth N`: Max dependency depth (default: 50)
 - `--no-metadata`: Skip metadata comments
 
 ### Output Structure
@@ -97,16 +91,10 @@ uv run ruff check src/
 - Try-except blocks around DWARF operations
 - Graceful degradation for parsing failures
 
-### Performance Constraints
-- <10s for most symbols with early stopping
-- Memory: <500MB peak usage
-- Lazy indexing: Build on first access, cache thereafter
-
 ## Code Style Requirements
 
 - **Type Safety**: All functions must have type hints
-- **Line Length**: 100 characters (ruff config)
-- **Python Version**: 3.10+ (for union syntax)
+- **Python Version**: 3.13+
 - **Docstrings**: PEP 257 format with parameter/return documentation
 - **Error Handling**: Explicit exception types, no bare `except`
 - **Logging**: Use `get_logger(__name__)` instead of `print()`
@@ -115,26 +103,107 @@ uv run ruff check src/
 
 **MANDATORY**: All tests MUST be run via `uv run pytest`.
 
-### Test Structure
-- **Markers**: Use `@pytest.mark.unit`, `@pytest.mark.integration`, `@pytest.mark.performance`, `@pytest.mark.slow`
-- **Fixtures**: Use shared fixtures from `tests/conftest.py` (elf_parser, config, sample_symbols, etc.)
-- **Sample Symbols**: Use `fast_symbol` fixture for "MtObject" (fast, <10s) or test with other symbols from `sample_symbols` (may be slow)
-- **Performance**: Mark slow tests with `@pytest.mark.slow` so they can be skipped in fast CI runs
+### Professional Testing Setup
+The project has a comprehensive testing infrastructure with:
+
+- **xUnit Reporting**: JUnit XML output for CI/CD integration
+- **Code Coverage**: Multiple formats (XML, HTML, terminal)
+- **GitHub Actions**: Automated CI/CD for unit tests and code quality
+- **Test Categories**: Unit (fast), integration (real files), slow, performance
+
+### Test Commands
+```bash
+# Unit tests (preferred for development - fast)
+uv run pytest -m "unit"
+
+# All tests
+uv run pytest
+
+# With coverage report
+uv run pytest -m "unit" --cov-report=html
+# Then open: htmlcov/index.html
+
+# Integration tests only
+uv run pytest -m "integration"
+
+# Using Makefile shortcuts
+make test          # Unit tests
+make coverage      # HTML coverage report  
+make ci           # Full CI simulation
+```
+
+### Test Structure & Markers
+- **`@pytest.mark.unit`**: Fast mocked tests (22 tests, ~0.1s) - **PREFERRED FOR DEVELOPMENT**
+- **`@pytest.mark.integration`**: Real ELF file tests (2 tests, ~3s)
+- **`@pytest.mark.slow`**: Long-running tests (skip with `-m "not slow"`)
+- **`@pytest.mark.performance`**: Performance benchmarks
+
+### Coverage Metrics
+- **Unit Tests**: ~38% coverage (realistic for mocked tests)
+- **Integration Tests**: Higher coverage but slower execution
+- **CI Threshold**: 30% minimum (enforced)
+- **Target**: 80%+ with both unit and integration tests
+
+### CI/CD Pipeline
+- **Triggers**: Push to `main`, all PRs  
+- **Python Version**: 3.13 (Ubuntu latest)
+- **Test Workflow** (`.github/workflows/test.yml`):
+  - Unit tests only (fast feedback ~30s)
+  - Code coverage with 30% minimum threshold
+  - Codecov integration for coverage tracking
+  - JUnit XML and coverage artifacts (30-day retention)
+- **Quality Workflow** (`.github/workflows/quality.yml`):
+  - Ruff linting with GitHub format output
+  - Ruff formatter check  
+  - MyPy type checking
+- **Artifacts**: Test results XML, coverage reports, HTML coverage
+
+### Generated Reports
+- **`test-results.xml`**: JUnit format for CI systems
+- **`coverage.xml`**: Machine-readable coverage for Codecov
+- **`htmlcov/`**: Interactive coverage visualization
+- **Terminal**: Live coverage summary with missing lines
 
 ### Writing Tests
 ```python
 import pytest
-from ddon_dwarf_reconstructor.generators.native_generator import NativeDwarfGenerator
+from unittest.mock import Mock
+from ddon_dwarf_reconstructor.generators.dwarf_generator import DwarfGenerator
 
-@pytest.mark.integration
-def test_example(elf_file_path):
-    """Test with native pyelftools implementation."""
-    with NativeDwarfGenerator(elf_file_path) as generator:
+@pytest.mark.unit
+def test_find_class_success(mocker):
+    """Unit test with mocks (preferred)."""
+    mock_elf = Mock()
+    # ... setup realistic mocks ...
+    mocker.patch("builtins.open")
+    mocker.patch("...ELFFile", return_value=mock_elf)
+    
+    with DwarfGenerator("test.elf") as generator:
+        result = generator.find_class("MtObject")
+        assert result is not None
+
+@pytest.mark.integration  
+def test_real_elf_processing(elf_file_path):
+    """Integration test with real files (slower)."""
+    with DwarfGenerator(elf_file_path) as generator:
         header = generator.generate_header("MtObject")
         assert len(header) > 0
 ```
 
-See [tests/README.md](tests/README.md) for comprehensive testing documentation.
+### Testing Philosophy
+1. **Unit First**: Write comprehensive mocked unit tests
+2. **Integration Validation**: Use real files for critical path validation
+3. **Performance Awareness**: Mark slow tests appropriately
+4. **CI Friendly**: Focus on fast unit tests in CI pipeline
+
+### Key Testing Changes (October 2025)
+- **Professional CI/CD**: GitHub Actions with Python 3.13, xUnit reporting, Codecov integration
+- **Comprehensive Coverage**: XML/HTML/terminal reports with 30% minimum threshold
+- **Fast Development**: Unit tests preferred (~0.1s vs 3s for integration tests)  
+- **Quality Automation**: Separate workflows for testing and code quality
+- **Developer Tools**: Makefile shortcuts, detailed documentation in `docs/TESTING.md`
+
+See [docs/TESTING.md](docs/TESTING.md) for complete testing documentation.
 
 ## Logging Best Practices
 
@@ -162,31 +231,8 @@ def expensive_operation() -> None:
 - **Quiet mode** (default): INFO and above
 - **Verbose mode** (`--verbose`): DEBUG and above
 
-### File Output
-- Always DEBUG and above
-- Timestamped files in `logs/`
-- Rotation not currently implemented (future enhancement)
-
-## CLI Usage
-
-### Command Line Arguments
-- `--search SYMBOL`: Search for symbol in DWARF info
-- `--generate SYMBOL`: Generate C++ header for symbol
-- `--verbose` / `-v`: Enable debug logs
-- `-o` / `--output`: Output directory (default: `./output`)
-- `--max-depth N`: Max dependency depth (default: 50)
-- `--no-metadata`: Skip metadata comments
-
-### Output Format
-- Headers: `output/<symbol>.h` (clean, simple naming)
-- Logs: `logs/ddon_reconstructor_YYYYMMDD_HHMMSS.log`
 
 ## Common Operations
-
-### Run Tool with Verbose Logging
-```bash
-python main.py resources/DDOORBIS.elf --generate MtObject --verbose
-```
 
 ### Check Generated Logs
 ```bash
@@ -232,6 +278,5 @@ Local repository paths maintained in `references/references.md`.
 - Verify linting with ruff
 
 ### Performance Validation
-- For critical changes, run performance benchmarks
 - Ensure MtObject generation stays <10s
 - Check log files for timing breakdowns

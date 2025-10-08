@@ -6,14 +6,14 @@ from pathlib import Path
 from typing import NoReturn
 
 from .config import Config
-from .generators.native_generator import NativeDwarfGenerator
+from .generators.dwarf_generator import DwarfGenerator
 from .utils import LoggerSetup, get_logger
 
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description="Reconstruct C++ headers from DWARF debug symbols using native pyelftools",
+        description="Reconstruct C++ headers from DWARF debug symbols in ELF files using pyelftools",
         epilog="""
 Examples:
   # Generate header (quiet mode - default)
@@ -65,7 +65,7 @@ Examples:
 
 
 def main() -> NoReturn:
-    """Main entry point for native pyelftools-based header generation."""
+    """Main entry point for DWARF-to-C++ header generation using pyelftools."""
     args = parse_args()
 
     # Load configuration
@@ -91,7 +91,7 @@ def main() -> NoReturn:
     # Ensure output directory exists
     config.ensure_output_dir()
 
-    # Generate header using native pyelftools
+    # Generate header using pyelftools
     symbol_name = args.generate
     logger.info(f"Generating header for: {symbol_name}")
 
@@ -99,7 +99,7 @@ def main() -> NoReturn:
     output_file = config.output_dir / f"{symbol_name}.h"
 
     try:
-        with NativeDwarfGenerator(config.elf_file_path) as generator:
+        with DwarfGenerator(config.elf_file_path) as generator:
             if args.full_hierarchy:
                 header_content = generator.generate_complete_hierarchy_header(symbol_name)
             else:

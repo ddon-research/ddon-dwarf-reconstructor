@@ -1,7 +1,5 @@
 """Tests for configuration management functionality."""
 
-import os
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -29,29 +27,23 @@ def test_config_validation(config: Config) -> None:
 
 
 @pytest.mark.unit
-def test_config_env_file_loading() -> None:
-    """Test loading configuration from .env file."""
-    # Create a temporary .env file for testing
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False) as f:
-        f.write("ELF_FILE_PATH=test.elf\n")
-        f.write("OUTPUT_DIR=test_output\n")
-        f.write("VERBOSE=true\n")
-        env_file_path = f.name
-
-    try:
-        # Test would need to be expanded to actually test .env loading
-        # For now, just verify the config structure is correct
-        config = Config.from_env()
-        assert hasattr(config, "elf_file_path"), "Should have elf_file_path attribute"
-        assert hasattr(config, "output_dir"), "Should have output_dir attribute"
-        assert hasattr(config, "verbose"), "Should have verbose attribute"
-
-    finally:
-        # Clean up temporary file
-        try:
-            os.unlink(env_file_path)
-        except Exception:
-            pass
+def test_config_env_file_loading(monkeypatch) -> None:
+    """Test loading configuration from environment variables (mocked)."""
+    # Mock environment variables instead of creating files
+    monkeypatch.setenv("ELF_FILE_PATH", "test.elf")
+    monkeypatch.setenv("OUTPUT_DIR", "test_output")
+    monkeypatch.setenv("VERBOSE", "true")
+    
+    config = Config.from_env()
+    
+    # Verify configuration attributes are properly loaded
+    assert hasattr(config, "elf_file_path"), "Should have elf_file_path attribute"
+    assert hasattr(config, "output_dir"), "Should have output_dir attribute"  
+    assert hasattr(config, "verbose"), "Should have verbose attribute"
+    
+    # Verify the actual values (if accessible)
+    assert str(config.elf_file_path).endswith("test.elf"), "Should use env ELF path"
+    assert str(config.output_dir).endswith("test_output"), "Should use env output dir"
 
 
 @pytest.mark.unit

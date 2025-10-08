@@ -1,7 +1,7 @@
 """Generators module initialization."""
 
-from .native_generator import NativeDwarfGenerator
+from .dwarf_generator import DwarfGenerator
 
 __all__ = [
-    "NativeDwarfGenerator",
+    "DwarfGenerator",
 ]
