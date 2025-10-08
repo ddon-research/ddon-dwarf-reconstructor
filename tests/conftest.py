@@ -3,7 +3,6 @@
 import csv
 import sys
 from pathlib import Path
-from typing import Optional
 
 import pytest
 
@@ -31,7 +30,7 @@ def sample_symbols_csv(project_root: Path) -> Path:
 
 
 @pytest.fixture(scope="session")
-def sample_symbols(sample_symbols_csv: Path) -> dict[str, Optional[str]]:
+def sample_symbols(sample_symbols_csv: Path) -> dict[str, str | None]:
     """
     Load sample symbols from CSV file.
 
@@ -39,7 +38,7 @@ def sample_symbols(sample_symbols_csv: Path) -> dict[str, Optional[str]]:
     Note: MtObject is typically in the first CU (fast), others may be much slower.
     """
     symbols = {}
-    with open(sample_symbols_csv, "r") as f:
+    with open(sample_symbols_csv) as f:
         reader = csv.DictReader(f)
         for row in reader:
             name = row["name"].strip()
@@ -82,7 +81,7 @@ def fast_symbol() -> str:
 
 
 @pytest.fixture(params=["MtObject"])
-def known_symbol(request: pytest.FixtureRequest, sample_symbols: dict[str, Optional[str]]) -> str:
+def known_symbol(request: pytest.FixtureRequest, sample_symbols: dict[str, str | None]) -> str:
     """
     Parametrized fixture for testing with known symbols.
 

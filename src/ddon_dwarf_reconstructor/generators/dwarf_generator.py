@@ -6,6 +6,7 @@ This module uses pyelftools directly, reusing their proven API and data structur
 without reinventing DWARF parsing. It generates C++ headers from DWARF debug information.
 """
 
+import contextlib
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -520,9 +521,8 @@ class DwarfGenerator:
         decl_line_attr = class_die.attributes.get("DW_AT_decl_line")
 
         declaration_file = None
-        if decl_file_attr:
+        if decl_file_attr and cu.get_top_DIE().get_full_path() and self.dwarf_info is not None:
             # Get file name from line program if available
-            if cu.get_top_DIE().get_full_path() and self.dwarf_info is not None:
                 try:
                     line_program = self.dwarf_info.line_program_for_CU(cu)
                     if line_program and decl_file_attr.value < len(line_program.header.file_entry):
@@ -693,10 +693,11 @@ class DwarfGenerator:
             offset = offset_attr.value
 
         # Special handling for vtable pointers
-        if member_name.startswith("_vptr$"):
-            if type_name == "unknown_type" or "__vtbl_ptr_type" in type_name:
-                logger.info(f"Applying vtable pointer fallback for {member_name}")
-                type_name = "void*"
+        if member_name.startswith("_vptr$") and (
+            type_name == "unknown_type" or "__vtbl_ptr_type" in type_name
+        ):
+            logger.info(f"Applying vtable pointer fallback for {member_name}")
+            type_name = "void*"
 
         return MemberInfo(
             name=member_name,
@@ -802,11 +803,9 @@ class DwarfGenerator:
         declaration_file = None
         if decl_file_attr:
             # Try to resolve file name from line program
-            try:
+            with contextlib.suppress(Exception):
                 # This is a simplified approach - could be enhanced with proper line program parsing
                 declaration_file = f"file_{decl_file_attr.value}"
-            except Exception:
-                pass
 
         declaration_line = decl_line_attr.value if decl_line_attr else None
 
@@ -843,10 +842,7 @@ class DwarfGenerator:
         value = value_attr.value
         if isinstance(value, bytes):
             # Convert bytes to signed integer
-            if len(value) <= 8:
-                value = int.from_bytes(value, byteorder="little", signed=True)
-            else:
-                value = 0
+            value = int.from_bytes(value, byteorder="little", signed=True) if len(value) <= 8 else 0
         elif not isinstance(value, int):
             try:
                 value = int(value)
@@ -1205,7 +1201,7 @@ class DwarfGenerator:
                         clean_type = member.type_name[6:].strip()
                     else:
                         clean_type = member.type_name
-                    if not clean_type.endswith("*") and clean_type not in (
+                    if (not clean_type.endswith("*") and clean_type not in (
                         "unknown_type",
                         "s8",
                         "s16",
@@ -1215,23 +1211,22 @@ class DwarfGenerator:
                         "u16",
                         "u32",
                         "u64",
-                    ):
+                    ) and clean_type not in hierarchy_order):
                         # Don't forward declare classes we're already generating
-                        if clean_type not in hierarchy_order:
-                            # Try to resolve basic Mt types (MtFloat3, MtString, etc.)
-                            if (
-                                clean_type.startswith("Mt") and len(clean_type) < 20
-                            ):  # Basic Mt types
-                                type_result = self.find_class(clean_type)
-                                if type_result:
-                                    cu, type_die = type_result
-                                    type_info = self.parse_class_info(cu, type_die)
-                                    # Include if it's a simple type (small size, few members)
-                                    if type_info.byte_size <= 64 and len(type_info.members) <= 10:
-                                        additional_types[clean_type] = type_info
-                                        continue
-                            # Otherwise, forward declare
-                            forward_decls.add(clean_type)
+                        # Try to resolve basic Mt types (MtFloat3, MtString, etc.)
+                        if (
+                            clean_type.startswith("Mt") and len(clean_type) < 20
+                        ):  # Basic Mt types
+                            type_result = self.find_class(clean_type)
+                            if type_result:
+                                cu, type_die = type_result
+                                type_info = self.parse_class_info(cu, type_die)
+                                # Include if it's a simple type (small size, few members)
+                                if type_info.byte_size <= 64 and len(type_info.members) <= 10:
+                                    additional_types[clean_type] = type_info
+                                    continue
+                        # Otherwise, forward declare
+                        forward_decls.add(clean_type)
 
         if forward_decls:
             lines.append("")

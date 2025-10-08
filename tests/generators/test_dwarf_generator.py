@@ -191,13 +191,12 @@ class TestDwarfGenerator:
         # Mock DIE reference resolution (realistic behavior)
         def mock_get_die_from_attribute(attr):
             if hasattr(attr, "value"):
-                offset_val = attr.value
-                if offset_val == 0x4193:
-                    return mock_base_type_u32
-                elif offset_val == 0x8667:
-                    return mock_pointer_type
-                elif offset_val == 0x84ED:
-                    return mock_die
+                offset_map = {
+                    0x4193: mock_base_type_u32,
+                    0x8667: mock_pointer_type,
+                    0x84ED: mock_die,
+                }
+                return offset_map.get(attr.value)
             return None
 
         mock_cu.get_DIE_from_attribute.side_effect = mock_get_die_from_attribute
@@ -313,10 +312,9 @@ class TestDwarfGenerator:
             "ddon_dwarf_reconstructor.generators.dwarf_generator.ELFFile", return_value=mock_elf
         )
 
-        with pytest.raises(ValueError, match="No DWARF info found"):
-            with DwarfGenerator(mock_path) as generator:
-                # This should raise before we can do anything
-                assert generator is not None
+        with pytest.raises(ValueError, match="No DWARF info found"), DwarfGenerator(mock_path):
+            # This should raise before we can do anything with the generator
+            pass
 
     @pytest.mark.unit
     def test_file_not_found_error(self, mocker):
@@ -329,10 +327,9 @@ class TestDwarfGenerator:
         generator = DwarfGenerator(mock_path)  # Constructor doesn't check existence
 
         # The error should occur when entering the context manager
-        with pytest.raises(FileNotFoundError):
-            with generator as g:
-                # Should not reach here due to file not found
-                assert g is None
+        with pytest.raises(FileNotFoundError), generator:
+            # Should not reach here due to file not found
+            pass
 
     @pytest.mark.unit
     def test_find_struct_type(self, mocker, mock_elf_file):
