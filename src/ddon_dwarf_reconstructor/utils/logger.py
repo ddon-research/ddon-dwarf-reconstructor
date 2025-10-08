@@ -2,11 +2,12 @@
 
 import logging
 import sys
+from collections.abc import Callable
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
 from time import time
-from typing import Any, Callable, Optional, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 # Type variable for generic function decoration
 F = TypeVar("F", bound=Callable[..., Any])
@@ -16,7 +17,7 @@ class LoggerSetup:
     """Manages logging configuration for the application."""
 
     _initialized = False
-    _log_file_path: Optional[Path] = None
+    _log_file_path: Path | None = None
 
     @classmethod
     def initialize(cls, log_dir: Path, verbose: bool = False) -> None:
@@ -55,7 +56,7 @@ class LoggerSetup:
         file_handler = logging.FileHandler(cls._log_file_path, encoding="utf-8")
         file_handler.setLevel(logging.DEBUG)
         file_formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S",
         )
         file_handler.setFormatter(file_formatter)
         root_logger.addHandler(file_handler)
@@ -68,7 +69,7 @@ class LoggerSetup:
         logger.debug(f"Verbose mode: {verbose}")
 
     @classmethod
-    def get_log_file_path(cls) -> Optional[Path]:
+    def get_log_file_path(cls) -> Path | None:
         """Get the current log file path."""
         return cls._log_file_path
 
@@ -120,4 +121,4 @@ def log_timing(func: F) -> F:
             logger.error(f"Failed {func_name} after {elapsed:.2f}s: {e}")
             raise
 
-    return cast(F, wrapper)
+    return cast("F", wrapper)

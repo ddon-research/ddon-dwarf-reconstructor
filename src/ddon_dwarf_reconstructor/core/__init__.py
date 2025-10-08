@@ -7,7 +7,7 @@ from .models import (
 )
 
 __all__ = [
-    "DWTag",
     "DWAccessibility",
+    "DWTag",
     "DWVirtuality",
 ]

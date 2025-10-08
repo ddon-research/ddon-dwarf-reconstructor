@@ -3,7 +3,6 @@
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 
 @dataclass
@@ -16,7 +15,7 @@ class Config:
     log_dir: Path = Path("logs")
 
     @classmethod
-    def from_env(cls, env_path: Optional[Path] = None) -> "Config":
+    def from_env(cls, env_path: Path | None = None) -> "Config":
         """
         Load configuration from environment variables or .env file.
 
@@ -53,9 +52,9 @@ class Config:
     @classmethod
     def from_args(
         cls,
-        elf_file_path: Optional[Path] = None,
-        output_dir: Optional[Path] = None,
-        verbose: Optional[bool] = None,
+        elf_file_path: Path | None = None,
+        output_dir: Path | None = None,
+        verbose: bool | None = None,
     ) -> "Config":
         """
         Create configuration from explicit arguments, falling back to environment.

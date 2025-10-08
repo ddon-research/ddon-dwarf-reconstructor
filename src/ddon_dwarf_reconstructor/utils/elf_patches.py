@@ -31,7 +31,7 @@ def patch_pyelftools_for_ps4() -> None:
             raise
 
     def patched_get_section(
-        self: elffile.ELFFile, section_index: int, type_filter: Any = None
+        self: elffile.ELFFile, section_index: int, type_filter: Any = None,
     ) -> Any:
         """Patched version of get_section that handles PS4-specific issues."""
         try:

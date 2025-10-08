@@ -69,13 +69,40 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/ddon_dwarf_reconstructor"]
 
+[tool.coverage.run]
+source = ["src"]
+branch = true
+omit = [
+    "tests/*",
+    "*/__init__.py",
+    "src/ddon_dwarf_reconstructor/__main__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+show_missing = true
+skip_covered = false
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 addopts = [
-    "-v",
+    "--maxfail=1",
+    "--disable-warnings",
+    "-q",
     "--tb=short", 
     "--strict-markers",
     "--color=yes",
@@ -85,6 +112,7 @@ addopts = [
     "--cov-report=html:htmlcov",
     "--junit-xml=test-results.xml",
     "--cov-branch",
+    "--cov-fail-under=30",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
@@ -98,18 +126,51 @@ log_cli_format = "%(levelname)s: %(message)s"
 
 [tool.mypy]
 python_version = "3.13"
+strict = true
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+ignore_missing_imports = true
+exclude = "^tests/"
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true
 
 [[tool.mypy.overrides]]
 module = "elftools.*"
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+ignore_errors = true
+
 [tool.ruff]
 line-length = 100
 target-version = "py313"
+fix = true
+exclude = [
+    "build",
+    "dist", 
+    ".venv",
+    "__pycache__",
+    "src/**/migrations",
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "B"]
-ignore = []
+select = ["E", "F", "W", "C90", "I", "N", "B", "UP", "SIM"]
+ignore = [
+    "C901",    # function too complex (allow complex functions for now)
+    "UP047",   # use type parameters (Python 3.13 specific)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "E501",    # line too long (tests can be more verbose)
+    "PLR2004", # magic values in tests are OK
+]

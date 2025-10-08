@@ -9,7 +9,6 @@ without reinventing DWARF parsing. It generates C++ headers from DWARF debug inf
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from elftools.dwarf.compileunit import CompileUnit
 from elftools.dwarf.die import DIE
@@ -29,10 +28,10 @@ class MemberInfo:
 
     name: str
     type_name: str
-    offset: Optional[int] = None
+    offset: int | None = None
     is_static: bool = False
     is_const: bool = False
-    const_value: Optional[int] = None
+    const_value: int | None = None
 
 
 @dataclass
@@ -41,7 +40,7 @@ class ParameterInfo:
 
     name: str
     type_name: str
-    default_value: Optional[str] = None
+    default_value: str | None = None
 
 
 @dataclass
@@ -58,9 +57,9 @@ class EnumInfo:
 
     name: str
     byte_size: int
-    enumerators: List[EnumeratorInfo]
-    declaration_file: Optional[str] = None
-    declaration_line: Optional[int] = None
+    enumerators: list[EnumeratorInfo]
+    declaration_file: str | None = None
+    declaration_line: int | None = None
 
 
 @dataclass
@@ -69,9 +68,9 @@ class MethodInfo:
 
     name: str
     return_type: str
-    parameters: Optional[List[ParameterInfo]] = None
+    parameters: list[ParameterInfo] | None = None
     is_virtual: bool = False
-    vtable_index: Optional[int] = None
+    vtable_index: int | None = None
     is_constructor: bool = False
     is_destructor: bool = False
 
@@ -86,8 +85,8 @@ class StructInfo:
 
     name: str
     byte_size: int
-    members: List[MemberInfo]
-    die_offset: Optional[int] = None
+    members: list[MemberInfo]
+    die_offset: int | None = None
 
 
 @dataclass
@@ -96,9 +95,9 @@ class UnionInfo:
 
     name: str
     byte_size: int
-    members: List[MemberInfo]
-    nested_structs: List["StructInfo"]
-    die_offset: Optional[int] = None
+    members: list[MemberInfo]
+    nested_structs: list["StructInfo"]
+    die_offset: int | None = None
 
 
 @dataclass
@@ -107,17 +106,17 @@ class ClassInfo:
 
     name: str
     byte_size: int
-    members: List[MemberInfo]
-    methods: List[MethodInfo]
-    base_classes: List[str]
-    enums: List[EnumInfo]
-    nested_structs: List[StructInfo]
-    unions: List[UnionInfo]
-    alignment: Optional[int] = None
-    declaration_file: Optional[str] = None
-    declaration_line: Optional[int] = None
-    die_offset: Optional[int] = None
-    packing_info: Optional[Dict[str, int]] = None  # packing, padding, alignment hints
+    members: list[MemberInfo]
+    methods: list[MethodInfo]
+    base_classes: list[str]
+    enums: list[EnumInfo]
+    nested_structs: list[StructInfo]
+    unions: list[UnionInfo]
+    alignment: int | None = None
+    declaration_file: str | None = None
+    declaration_line: int | None = None
+    die_offset: int | None = None
+    packing_info: dict[str, int] | None = None  # packing, padding, alignment hints
 
 
 class DwarfGenerator:
@@ -126,7 +125,7 @@ class DwarfGenerator:
     def __init__(self, elf_path: Path):
         """Initialize with ELF file path."""
         self.elf_path = elf_path
-        self.elf_file: Optional[ELFFile] = None
+        self.elf_file: ELFFile | None = None
         self.dwarf_info = None
 
     def __enter__(self) -> "DwarfGenerator":
@@ -145,7 +144,7 @@ class DwarfGenerator:
         if hasattr(self, "file_handle"):
             self.file_handle.close()
 
-    def find_class(self, class_name: str) -> Optional[tuple[CompileUnit, DIE]]:
+    def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
         """Find a type DIE by name using pyelftools iteration.
 
         Supports classes, structs, unions, enums, typedefs, and arrays.
@@ -176,31 +175,30 @@ class DwarfGenerator:
                         if size_attr and size_attr.value > 0:
                             logger.info(
                                 f"Found {class_name} in CU at offset 0x{cu.cu_offset:x} "
-                                f"(size: {size_attr.value} bytes)"
+                                f"(size: {size_attr.value} bytes)",
                             )
                             return cu, die
-                        elif die.has_children:
+                        if die.has_children:
                             logger.info(
                                 f"Found {class_name} in CU at offset 0x{cu.cu_offset:x} "
-                                f"(has members)"
+                                f"(has members)",
                             )
                             return cu, die
-                        else:
-                            # Keep first forward declaration as fallback
-                            if fallback_candidate is None:
-                                fallback_candidate = (cu, die)
+                        # Keep first forward declaration as fallback
+                        if fallback_candidate is None:
+                            fallback_candidate = (cu, die)
 
         # Return fallback if found
         if fallback_candidate:
             cu, die = fallback_candidate
             logger.info(
-                f"Found {class_name} in CU at offset 0x{cu.cu_offset:x} (forward declaration)"
+                f"Found {class_name} in CU at offset 0x{cu.cu_offset:x} (forward declaration)",
             )
             return cu, die
 
         return None
 
-    def build_inheritance_hierarchy(self, class_name: str) -> List[str]:
+    def build_inheritance_hierarchy(self, class_name: str) -> list[str]:
         """Build complete inheritance hierarchy for a class."""
         hierarchy = []
         current_class = class_name
@@ -227,7 +225,7 @@ class DwarfGenerator:
 
         return list(reversed(hierarchy))  # Return from base to derived
 
-    def calculate_packing_info(self, class_info: ClassInfo) -> Dict[str, int]:
+    def calculate_packing_info(self, class_info: ClassInfo) -> dict[str, int]:
         """Calculate packing and alignment information from member layout."""
         packing_info = {
             "suggested_packing": 1,  # Default to byte-aligned
@@ -241,7 +239,7 @@ class DwarfGenerator:
 
         # Sort members by offset
         sorted_members = sorted(
-            [m for m in class_info.members if m.offset is not None], key=lambda m: m.offset or 0
+            [m for m in class_info.members if m.offset is not None], key=lambda m: m.offset or 0,
         )
 
         if not sorted_members:
@@ -316,7 +314,7 @@ class DwarfGenerator:
 
         return packing_info
 
-    def find_typedef(self, typedef_name: str) -> Optional[tuple[str, str]]:
+    def find_typedef(self, typedef_name: str) -> tuple[str, str] | None:
         """Find a typedef definition by name for primitive types only.
 
         Returns (typedef_name, underlying_type) if found, None otherwise.
@@ -341,7 +339,7 @@ class DwarfGenerator:
         for cu in self.dwarf_info.iter_CUs():
             cu_count += 1
             logging.debug(
-                f"Searching CU #{cu_count} at offset 0x{cu.cu_offset:x} for typedef {typedef_name}"
+                f"Searching CU #{cu_count} at offset 0x{cu.cu_offset:x} for typedef {typedef_name}",
             )
 
             for die in cu.iter_DIEs():
@@ -351,7 +349,7 @@ class DwarfGenerator:
                     if name_attr and name_attr.value == target_name:
                         logging.debug(
                             f"Found typedef {typedef_name} at DIE offset 0x{die.offset:x} "
-                            f"in CU #{cu_count}"
+                            f"in CU #{cu_count}",
                         )
                         # Get the underlying type
                         underlying_type = self.resolve_type_name(die)
@@ -359,11 +357,11 @@ class DwarfGenerator:
                         return typedef_name, underlying_type
 
         logging.debug(
-            f"Typedef {typedef_name} not found after searching {cu_count} CUs and {die_count} DIEs"
+            f"Typedef {typedef_name} not found after searching {cu_count} CUs and {die_count} DIEs",
         )
         return None
 
-    def collect_used_typedefs(self, class_info: ClassInfo) -> Dict[str, str]:
+    def collect_used_typedefs(self, class_info: ClassInfo) -> dict[str, str]:
         """Collect only the typedefs that are actually used by this class."""
         logging.debug(f"Collecting used typedefs for class: {class_info.name}")
         used_typedefs = {}
@@ -395,7 +393,7 @@ class DwarfGenerator:
                 typedef_name, underlying_type = result
                 used_typedefs[typedef_name] = underlying_type
                 logging.debug(
-                    f"Found typedef for member {member.name}: {typedef_name} -> {underlying_type}"
+                    f"Found typedef for member {member.name}: {typedef_name} -> {underlying_type}",
                 )
 
         # Check method return types and parameters
@@ -438,7 +436,7 @@ class DwarfGenerator:
                         used_typedefs[typedef_name] = underlying_type
                         logging.debug(
                             f"Found typedef for parameter {param.name}: "
-                            f"{typedef_name} -> {underlying_type}"
+                            f"{typedef_name} -> {underlying_type}",
                         )
 
         logging.debug(f"Collected {len(used_typedefs)} total typedefs: {used_typedefs}")
@@ -463,8 +461,7 @@ class DwarfGenerator:
             if name_attr:
                 if isinstance(name_attr.value, bytes):
                     return name_attr.value.decode("utf-8")
-                else:
-                    return str(name_attr.value)
+                return str(name_attr.value)
 
             # Handle different type tags
             if type_die.tag == "DW_TAG_typedef":
@@ -475,32 +472,30 @@ class DwarfGenerator:
                     else str(name_attr.value)
                 )
                 return typedef_name
-            elif type_die.tag == "DW_TAG_pointer_type":
+            if type_die.tag == "DW_TAG_pointer_type":
                 # Recurse to get pointed-to type
                 pointed_type = self.resolve_type_name(type_die)
                 return f"{pointed_type}*" if pointed_type != "unknown_type" else "void*"
-            elif type_die.tag == "DW_TAG_const_type":
+            if type_die.tag == "DW_TAG_const_type":
                 base_type = self.resolve_type_name(type_die)
                 return f"const {base_type}"
-            elif type_die.tag == "DW_TAG_reference_type":
+            if type_die.tag == "DW_TAG_reference_type":
                 base_type = self.resolve_type_name(type_die)
                 return f"{base_type}&"
-            elif type_die.tag == "DW_TAG_array_type":
+            if type_die.tag == "DW_TAG_array_type":
                 # Parse array type with dimensions
                 array_info = self.parse_array_type(type_die)
                 if array_info:
                     return str(array_info["name"])
-                else:
-                    # Fallback if parsing fails
-                    element_type = self.resolve_type_name(type_die)
-                    return f"{element_type}[]"
-            elif type_die.tag == "DW_TAG_base_type":
+                # Fallback if parsing fails
+                element_type = self.resolve_type_name(type_die)
+                return f"{element_type}[]"
+            if type_die.tag == "DW_TAG_base_type":
                 # Base types should have names, but fallback to tag
                 return str(type_die.tag).replace("DW_TAG_", "")
-            else:
-                # For unnamed types, use the tag name
-                logger.debug(f"Unnamed type with tag: {type_die.tag}")
-                return str(type_die.tag).replace("DW_TAG_", "")
+            # For unnamed types, use the tag name
+            logger.debug(f"Unnamed type with tag: {type_die.tag}")
+            return str(type_die.tag).replace("DW_TAG_", "")
 
         except Exception as e:
             logger.warning(f"Failed to resolve type reference for {die.tag}: {e}")
@@ -571,7 +566,7 @@ class DwarfGenerator:
                                 processed_union_offsets.add(type_die.offset)
                                 logging.debug(
                                     f"Found anonymous union in {class_name}: "
-                                    f"({union_info.byte_size} bytes)"
+                                    f"({union_info.byte_size} bytes)",
                                 )
                             continue
                     except Exception as e:
@@ -606,7 +601,7 @@ class DwarfGenerator:
                     nested_structs.append(struct_obj)
                     logging.debug(
                         f"Found nested structure in {class_name}: {struct_info['name']} "
-                        f"({struct_info['size']} bytes)"
+                        f"({struct_info['size']} bytes)",
                     )
             elif child.tag == "DW_TAG_union_type":
                 # Skip unions that were already processed as anonymous members
@@ -617,7 +612,7 @@ class DwarfGenerator:
                         unions.append(union_info)
                         logging.debug(
                             f"Found union in {class_name}: {union_info.name} "
-                            f"({union_info.byte_size} bytes)"
+                            f"({union_info.byte_size} bytes)",
                         )
             elif child.tag == "DW_TAG_array_type":
                 # Parse array type with size information
@@ -625,14 +620,14 @@ class DwarfGenerator:
                 if array_info:
                     logging.debug(
                         f"Found array type in {class_name}: {array_info['name']} "
-                        f"(size: {array_info['total_elements']})"
+                        f"(size: {array_info['total_elements']})",
                     )
             elif child.tag in ["DW_TAG_typedef", "DW_TAG_class_type"]:
                 # These are known nested types - log but don't warn
                 child_name = child.attributes.get("DW_AT_name")
                 child_name_str = child_name.value.decode("utf-8") if child_name else "unnamed"
                 logging.debug(
-                    f"Found nested type in {class_name}: {child.tag} (name: {child_name_str})"
+                    f"Found nested type in {class_name}: {child.tag} (name: {child_name_str})",
                 )
             else:
                 # Log warning for unhandled tags
@@ -640,7 +635,7 @@ class DwarfGenerator:
                 child_name_str = child_name.value.decode("utf-8") if child_name else "unnamed"
                 logging.warning(
                     f"Unhandled DWARF tag in class {class_name}: {child.tag} "
-                    f"(name: {child_name_str}) at offset 0x{child.offset:x}"
+                    f"(name: {child_name_str}) at offset 0x{child.offset:x}",
                 )
 
         class_info_temp = ClassInfo(
@@ -665,7 +660,7 @@ class DwarfGenerator:
 
         return class_info_temp
 
-    def parse_member(self, member_die: DIE) -> Optional[MemberInfo]:
+    def parse_member(self, member_die: DIE) -> MemberInfo | None:
         """Parse a class member using pyelftools."""
         # Resolve member type first to determine if it's anonymous
         type_name = self.resolve_type_name(member_die)
@@ -674,12 +669,11 @@ class DwarfGenerator:
         name_attr = member_die.attributes.get("DW_AT_name")
         if name_attr:
             member_name = name_attr.value.decode("utf-8")
+        # Check if this is an anonymous union/struct member
+        elif "union" in type_name.lower() or "struct" in type_name.lower():
+            member_name = ""  # Anonymous member
         else:
-            # Check if this is an anonymous union/struct member
-            if "union" in type_name.lower() or "struct" in type_name.lower():
-                member_name = ""  # Anonymous member
-            else:
-                return None  # Skip if not an anonymous aggregate type
+            return None  # Skip if not an anonymous aggregate type
 
         # Check if it's static/external
         is_external = member_die.attributes.get("DW_AT_external") is not None
@@ -713,7 +707,7 @@ class DwarfGenerator:
             const_value=const_value,
         )
 
-    def parse_method(self, method_die: DIE) -> Optional[MethodInfo]:
+    def parse_method(self, method_die: DIE) -> MethodInfo | None:
         """Parse a class method using pyelftools."""
         # Get method name
         name_attr = method_die.attributes.get("DW_AT_name")
@@ -767,7 +761,7 @@ class DwarfGenerator:
             is_destructor=is_destructor,
         )
 
-    def parse_parameter(self, param_die: DIE) -> Optional[ParameterInfo]:
+    def parse_parameter(self, param_die: DIE) -> ParameterInfo | None:
         """Parse a function parameter using pyelftools."""
         # Check if artificial (like 'this' pointer)
         is_artificial = param_die.attributes.get("DW_AT_artificial") is not None
@@ -791,7 +785,7 @@ class DwarfGenerator:
 
         return ParameterInfo(name=param_name, type_name=param_type, default_value=default_value)
 
-    def parse_enum(self, enum_die: DIE) -> Optional[EnumInfo]:
+    def parse_enum(self, enum_die: DIE) -> EnumInfo | None:
         """Parse an enumeration using pyelftools."""
         # Get enum name
         name_attr = enum_die.attributes.get("DW_AT_name")
@@ -832,7 +826,7 @@ class DwarfGenerator:
             declaration_line=declaration_line,
         )
 
-    def parse_enumerator(self, enumerator_die: DIE) -> Optional[EnumeratorInfo]:
+    def parse_enumerator(self, enumerator_die: DIE) -> EnumeratorInfo | None:
         """Parse an enumerator value using pyelftools."""
         # Get enumerator name
         name_attr = enumerator_die.attributes.get("DW_AT_name")
@@ -861,7 +855,7 @@ class DwarfGenerator:
 
         return EnumeratorInfo(name=enumerator_name, value=value)
 
-    def parse_nested_structure(self, struct_die: DIE) -> Optional[Dict]:
+    def parse_nested_structure(self, struct_die: DIE) -> dict | None:
         """Parse a nested structure definition."""
         # Get structure name (can be None for anonymous structs)
         name_attr = struct_die.attributes.get("DW_AT_name")
@@ -892,7 +886,7 @@ class DwarfGenerator:
             "die_offset": struct_die.offset,
         }
 
-    def parse_union(self, union_die: DIE) -> Optional[UnionInfo]:
+    def parse_union(self, union_die: DIE) -> UnionInfo | None:
         """Parse a union definition."""
         # Get union name (might be None for anonymous unions)
         name_attr = union_die.attributes.get("DW_AT_name")
@@ -941,7 +935,7 @@ class DwarfGenerator:
             die_offset=union_die.offset,
         )
 
-    def parse_array_type(self, array_die: DIE) -> Optional[Dict]:
+    def parse_array_type(self, array_die: DIE) -> dict | None:
         """Parse array type with size calculation from DW_TAG_subrange_type children."""
         logging.debug(f"Parsing array type at DIE offset 0x{array_die.offset:x}")
 
@@ -972,7 +966,7 @@ class DwarfGenerator:
                     lower_bound = lower_bound_attr.value if lower_bound_attr else 0
                     dimension_size = (upper_bound - lower_bound) + 1
                     logging.debug(
-                        f"Subrange bounds: {lower_bound} to {upper_bound}, size: {dimension_size}"
+                        f"Subrange bounds: {lower_bound} to {upper_bound}, size: {dimension_size}",
                     )
                 else:
                     # Unknown size
@@ -1000,7 +994,7 @@ class DwarfGenerator:
             "die_offset": array_die.offset,
         }
 
-    def generate_struct_definition(self, struct_info: StructInfo) -> List[str]:
+    def generate_struct_definition(self, struct_info: StructInfo) -> list[str]:
         """Generate C++ struct definition with proper padding analysis."""
         lines = []
 
@@ -1011,7 +1005,7 @@ class DwarfGenerator:
 
         # Sort members by offset for proper layout analysis
         sorted_members = sorted(
-            [m for m in struct_info.members if m.offset is not None], key=lambda m: m.offset or 0
+            [m for m in struct_info.members if m.offset is not None], key=lambda m: m.offset or 0,
         )
 
         current_offset = 0
@@ -1079,7 +1073,7 @@ class DwarfGenerator:
         # We marked artificial parameters with a special name during parsing
         return param.name == "__artificial__"
 
-    def generate_union_definition(self, union_info: UnionInfo) -> List[str]:
+    def generate_union_definition(self, union_info: UnionInfo) -> list[str]:
         """Generate C++ union definition."""
         lines = []
 
@@ -1170,7 +1164,7 @@ class DwarfGenerator:
         lines.extend(
             [
                 "// Generated complete inheritance hierarchy for: " + class_name,
-            ]
+            ],
         )
 
         # Add metadata for the main class
@@ -1182,7 +1176,7 @@ class DwarfGenerator:
                     f"// Target Class: {class_name}",
                     f"// - Size: {main_class.byte_size} bytes",
                     f"// - DIE Offset: 0x{main_class.die_offset:08x}",
-                ]
+                ],
             )
 
             if main_class.packing_info:
@@ -1263,7 +1257,7 @@ class DwarfGenerator:
 
         return "\n".join(lines)
 
-    def _generate_single_class(self, class_name: str, class_info: ClassInfo) -> List[str]:
+    def _generate_single_class(self, class_name: str, class_info: ClassInfo) -> list[str]:
         """Generate a single class definition."""
         lines = []
         logging.debug(f"Generating class {class_name} with {len(class_info.methods)} methods")
@@ -1274,7 +1268,7 @@ class DwarfGenerator:
                 f"// {class_name} - DWARF Information:",
                 f"// - Size: {class_info.byte_size} bytes",
                 f"// - DIE Offset: 0x{class_info.die_offset:08x}",
-            ]
+            ],
         )
 
         # Add packing information if available
@@ -1352,12 +1346,12 @@ class DwarfGenerator:
         non_virtual_methods = [m for m in class_info.methods if not m.is_virtual]
         logging.debug(
             f"Total methods: {len(class_info.methods)}, "
-            f"Non-virtual methods: {len(non_virtual_methods)}"
+            f"Non-virtual methods: {len(non_virtual_methods)}",
         )
         for i, method in enumerate(class_info.methods):
             logging.debug(
                 f"Method {i + 1}: {method.name}, virtual={method.is_virtual}, "
-                f"constructor={method.is_constructor}, destructor={method.is_destructor}"
+                f"constructor={method.is_constructor}, destructor={method.is_destructor}",
             )
         if non_virtual_methods:
             lines.append("public:")
@@ -1416,20 +1410,19 @@ class DwarfGenerator:
                 # Handle return type for operators
                 if method.return_type and method.return_type != "void":
                     lines.append(f"    {method.return_type} {method.name}({params});")
+                # For operators without explicit return type, infer appropriate return type
+                elif method.name in (
+                    "operator+=",
+                    "operator-=",
+                    "operator*=",
+                    "operator/=",
+                    "operator=",
+                ):
+                    lines.append(f"    MtPoint& {method.name}({params});")
+                elif method.name == "operator-" and len(param_list) == 0:  # Unary minus
+                    lines.append(f"    MtPoint {method.name}();")
                 else:
-                    # For operators without explicit return type, infer appropriate return type
-                    if method.name in (
-                        "operator+=",
-                        "operator-=",
-                        "operator*=",
-                        "operator/=",
-                        "operator=",
-                    ):
-                        lines.append(f"    MtPoint& {method.name}({params});")
-                    elif method.name == "operator-" and len(param_list) == 0:  # Unary minus
-                        lines.append(f"    MtPoint {method.name}();")
-                    else:
-                        lines.append(f"    void {method.name}({params});")
+                    lines.append(f"    void {method.name}({params});")
 
             # Generate other methods
             for method in other_methods:
@@ -1526,7 +1519,7 @@ class DwarfGenerator:
                 f"// - Size: {class_info.byte_size} bytes",
                 f"// - DIE Offset: 0x{class_info.die_offset:08x}",
                 f"// - Source CU: 0x{cu.cu_offset:08x}",
-            ]
+            ],
         )
 
         # Add alignment information if available
@@ -1541,7 +1534,7 @@ class DwarfGenerator:
                 lines.append(f"// - Total Padding: {packing['total_padding']} bytes")
                 lines.append(
                     f"// - Natural Size: {packing['natural_size']} "
-                    f"vs Actual Size: {packing['actual_size']}"
+                    f"vs Actual Size: {packing['actual_size']}",
                 )
 
         # Add declaration information if available
@@ -1557,7 +1550,7 @@ class DwarfGenerator:
             lines.append(f"// - Full Inheritance Chain: {hierarchy_chain}")
         elif class_info.base_classes:
             lines.append(
-                f"// - Direct Inheritance: {' -> '.join(class_info.base_classes)} -> {class_name}"
+                f"// - Direct Inheritance: {' -> '.join(class_info.base_classes)} -> {class_name}",
             )
 
         lines.extend([""])
@@ -1734,20 +1727,19 @@ class DwarfGenerator:
                 # Handle return type for operators
                 if method.return_type and method.return_type != "void":
                     lines.append(f"    {method.return_type} {method.name}({params});")
+                # For operators without explicit return type, infer appropriate return type
+                elif method.name in (
+                    "operator+=",
+                    "operator-=",
+                    "operator*=",
+                    "operator/=",
+                    "operator=",
+                ):
+                    lines.append(f"    MtPoint& {method.name}({params});")
+                elif method.name == "operator-" and len(param_list) == 0:  # Unary minus
+                    lines.append(f"    MtPoint {method.name}();")
                 else:
-                    # For operators without explicit return type, infer appropriate return type
-                    if method.name in (
-                        "operator+=",
-                        "operator-=",
-                        "operator*=",
-                        "operator/=",
-                        "operator=",
-                    ):
-                        lines.append(f"    MtPoint& {method.name}({params});")
-                    elif method.name == "operator-" and len(param_list) == 0:  # Unary minus
-                        lines.append(f"    MtPoint {method.name}();")
-                    else:
-                        lines.append(f"    void {method.name}({params});")
+                    lines.append(f"    void {method.name}({params});")
 
             # Generate other methods
             for method in other_methods:
