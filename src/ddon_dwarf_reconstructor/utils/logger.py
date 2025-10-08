@@ -56,7 +56,8 @@ class LoggerSetup:
         file_handler = logging.FileHandler(cls._log_file_path, encoding="utf-8")
         file_handler.setLevel(logging.DEBUG)
         file_formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S",
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
         file_handler.setFormatter(file_formatter)
         root_logger.addHandler(file_handler)

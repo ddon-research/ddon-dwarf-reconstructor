@@ -224,14 +224,20 @@ class TestDwarfGenerator:
         # Mock file operations and ELF parsing
         mocker.patch("pathlib.Path.exists", return_value=True)
         mock_open_file = mocker.patch("builtins.open", mock_open())
+        # Patch ELFFile where it's actually used (in base_generator)
         mocker.patch(
-            "ddon_dwarf_reconstructor.generators.dwarf_generator.ELFFile",
+            "ddon_dwarf_reconstructor.generators.base_generator.ELFFile",
             return_value=mock_elf_file,
         )
 
         with DwarfGenerator(mock_path) as generator:
             assert generator.elf_file is not None
             assert generator.dwarf_info is not None
+            # Verify new module attributes are initialized
+            assert generator.type_resolver is not None
+            assert generator.class_parser is not None
+            assert generator.header_generator is not None
+            assert generator.hierarchy_builder is not None
 
         # Verify file was opened and closed
         mock_open_file.assert_called_once()
@@ -245,7 +251,7 @@ class TestDwarfGenerator:
         mocker.patch("pathlib.Path.exists", return_value=True)
         mocker.patch("builtins.open", mock_open())
         mocker.patch(
-            "ddon_dwarf_reconstructor.generators.dwarf_generator.ELFFile",
+            "ddon_dwarf_reconstructor.generators.base_generator.ELFFile",
             return_value=mock_elf_file,
         )
 
@@ -271,7 +277,7 @@ class TestDwarfGenerator:
         mocker.patch("pathlib.Path.exists", return_value=True)
         mocker.patch("builtins.open", mock_open())
         mocker.patch(
-            "ddon_dwarf_reconstructor.generators.dwarf_generator.ELFFile",
+            "ddon_dwarf_reconstructor.generators.base_generator.ELFFile",
             return_value=mock_elf_file,
         )
 
@@ -309,7 +315,7 @@ class TestDwarfGenerator:
         mocker.patch("pathlib.Path.exists", return_value=True)
         mocker.patch("builtins.open", mock_open())
         mocker.patch(
-            "ddon_dwarf_reconstructor.generators.dwarf_generator.ELFFile", return_value=mock_elf
+            "ddon_dwarf_reconstructor.generators.base_generator.ELFFile", return_value=mock_elf
         )
 
         with pytest.raises(ValueError, match="No DWARF info found"), DwarfGenerator(mock_path):
@@ -386,7 +392,7 @@ class TestDwarfGenerator:
         mocker.patch("pathlib.Path.exists", return_value=True)
         mocker.patch("builtins.open", mock_open())
         mocker.patch(
-            "ddon_dwarf_reconstructor.generators.dwarf_generator.ELFFile",
+            "ddon_dwarf_reconstructor.generators.base_generator.ELFFile",
             return_value=mock_elf_file,
         )
 
@@ -451,7 +457,7 @@ class TestDwarfGenerator:
         mocker.patch("pathlib.Path.exists", return_value=True)
         mocker.patch("builtins.open", mock_open())
         mocker.patch(
-            "ddon_dwarf_reconstructor.generators.dwarf_generator.ELFFile",
+            "ddon_dwarf_reconstructor.generators.base_generator.ELFFile",
             return_value=mock_elf_file,
         )
 
@@ -498,7 +504,7 @@ class TestDwarfGenerator:
         mocker.patch("pathlib.Path.exists", return_value=True)
         mocker.patch("builtins.open", mock_open())
         mocker.patch(
-            "ddon_dwarf_reconstructor.generators.dwarf_generator.ELFFile",
+            "ddon_dwarf_reconstructor.generators.base_generator.ELFFile",
             return_value=mock_elf_file,
         )
 
@@ -569,7 +575,7 @@ class TestDwarfGenerator:
         mocker.patch("pathlib.Path.exists", return_value=True)
         mocker.patch("builtins.open", mock_open())
         mocker.patch(
-            "ddon_dwarf_reconstructor.generators.dwarf_generator.ELFFile",
+            "ddon_dwarf_reconstructor.generators.base_generator.ELFFile",
             return_value=mock_elf_file,
         )
 
@@ -626,7 +632,7 @@ class TestDwarfGenerator:
         mocker.patch("pathlib.Path.exists", return_value=True)
         mocker.patch("builtins.open", mock_open())
         mocker.patch(
-            "ddon_dwarf_reconstructor.generators.dwarf_generator.ELFFile",
+            "ddon_dwarf_reconstructor.generators.base_generator.ELFFile",
             return_value=mock_elf_file,
         )
 
@@ -723,7 +729,7 @@ class TestDwarfGenerator:
         mocker.patch("pathlib.Path.exists", return_value=True)
         mocker.patch("builtins.open", mock_open())
         mocker.patch(
-            "ddon_dwarf_reconstructor.generators.dwarf_generator.ELFFile",
+            "ddon_dwarf_reconstructor.generators.base_generator.ELFFile",
             return_value=mock_elf_file,
         )
 
@@ -828,7 +834,7 @@ class TestDwarfGenerator:
         mocker.patch("pathlib.Path.exists", return_value=True)
         mocker.patch("builtins.open", mock_open())
         mocker.patch(
-            "ddon_dwarf_reconstructor.generators.dwarf_generator.ELFFile",
+            "ddon_dwarf_reconstructor.generators.base_generator.ELFFile",
             return_value=mock_elf_file,
         )
 
@@ -940,7 +946,7 @@ class TestDwarfGenerator:
         mocker.patch("pathlib.Path.exists", return_value=True)
         mocker.patch("builtins.open", mock_open())
         mocker.patch(
-            "ddon_dwarf_reconstructor.generators.dwarf_generator.ELFFile",
+            "ddon_dwarf_reconstructor.generators.base_generator.ELFFile",
             return_value=mock_elf_file,
         )
 
