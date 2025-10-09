@@ -20,7 +20,7 @@ from ..models import (
     StructInfo,
     UnionInfo,
 )
-from ..utils.logger import get_logger
+from ..utils.logger import get_logger, log_timing
 from .type_resolver import TypeResolver
 
 logger = get_logger(__name__)
@@ -47,6 +47,7 @@ class ClassParser:
         self.type_resolver = type_resolver
         self.dwarf_info = dwarf_info
 
+    @log_timing
     def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
         """Find a type DIE by name using pyelftools iteration.
 
@@ -104,6 +105,7 @@ class ClassParser:
 
         return None
 
+    @log_timing
     def parse_class_info(self, cu: CompileUnit, class_die: DIE) -> ClassInfo:
         """Parse class information using pyelftools methods.
 

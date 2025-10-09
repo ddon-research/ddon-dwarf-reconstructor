@@ -16,7 +16,7 @@ from elftools.dwarf.compileunit import CompileUnit
 from elftools.dwarf.die import DIE
 
 from ..models import ClassInfo
-from ..utils.logger import get_logger
+from ..utils.logger import get_logger, log_timing
 from .base_generator import BaseGenerator
 from .class_parser import ClassParser
 from .header_generator import HeaderGenerator
@@ -117,6 +117,7 @@ class DwarfGenerator(BaseGenerator):
 
         return class_info
 
+    @log_timing
     def generate_header(self, class_name: str, include_metadata: bool = True) -> str:
         """Generate C++ header for a single class.
 
@@ -164,6 +165,7 @@ class DwarfGenerator(BaseGenerator):
         logger.info(f"Header generated successfully for {class_name}")
         return header
 
+    @log_timing
     def generate_complete_hierarchy_header(
         self,
         class_name: str,

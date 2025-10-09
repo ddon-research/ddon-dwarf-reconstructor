@@ -9,7 +9,7 @@ all classes in an inheritance hierarchy for full hierarchy header generation.
 from elftools.dwarf.die import DIE
 
 from ..models import ClassInfo
-from ..utils.logger import get_logger
+from ..utils.logger import get_logger, log_timing
 from .class_parser import ClassParser
 
 logger = get_logger(__name__)
@@ -32,6 +32,7 @@ class HierarchyBuilder:
         """
         self.class_parser = class_parser
 
+    @log_timing
     def build_full_hierarchy(
         self,
         class_name: str,
@@ -87,6 +88,7 @@ class HierarchyBuilder:
 
         return all_class_infos, hierarchy_order
 
+    @log_timing
     def build_hierarchy_chain(self, class_name: str) -> list[str]:
         """Build inheritance chain returning only class names.
 
