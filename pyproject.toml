@@ -174,3 +174,8 @@ ignore = [
     "E501",    # line too long (tests can be more verbose)
     "PLR2004", # magic values in tests are OK
 ]
+
+[dependency-groups]
+dev = [
+    "nuitka>=2.7.16",
+]

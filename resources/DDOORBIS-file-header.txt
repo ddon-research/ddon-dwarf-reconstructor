@@ -1,0 +1,4 @@
+DDOORBIS.elf: file format elf64-x86-64-freebsd
+architecture: i386:x86-64, flags 0x00100150:
+HAS_SYMS, DYNAMIC, D_PAGED
+start address 0x0000000000d5a8d0

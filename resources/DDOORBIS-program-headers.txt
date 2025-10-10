@@ -1,0 +1,32 @@
+Elf file type is OS Specific: (fe10)
+Entry point 0xd5a8d0
+There are 11 program headers, starting at offset 64
+
+Program Headers:
+  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+  LOAD           0x004000 0x0000000000000000 0x0000000000000000 0x235a0e4 0x235a0e4 R E 0x4000
+  LOOS+1000010   0x2360000 0x000000000235c000 0x000000000235c000 0x19fa28 0x1a0000 R   0x4000
+  LOAD           0x2500000 0x00000000024fc000 0x00000000024fc000 0x02b328 0x137540 RW  0x4000
+  LOOS+1000001   0x2500000 0x00000000024fc000 0x00000000024fc000 0x000040 0x000040 R   0x8
+  DYNAMIC        0x2928380 0x0000000000000000 0x0000000000000000 0x000ea0 0x000ea0 RW  0x8
+  INTERP         0x004000 0x0000000000000000 0x0000000000000000 0x000015 0x000015 R   0x1
+      [Requesting program interpreter: /libexec/ld-elf.so.1]
+  TLS            0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 R   0x1
+  GNU_EH_FRAME   0x227c0a0 0x00000000022780a0 0x00000000022780a0 0x0e2044 0x0e2044 R   0x4
+  LOOS+1000000   0x252b330 0x0000000000000000 0x0000000000000000 0x3fdef0 0x000000 R   0x10
+  LOOS+fffff00   0x2929220 0x0000000000000000 0x0000000000000000 0x00004c 0x000000     0x10
+  LOOS+fffff01   0x292926c 0x0000000000000000 0x0000000000000000 0x018512 0x000000     0x10
+
+ Section to Segment mapping:
+  Segment Sections...
+   00     .interp .init .text .fini .plt .rodata .eh_frame .eh_frame_hdr .preinit_array .init_array .fini_array
+   01     .data.rel.ro .got .got.plt .preinit_array .init_array .fini_array
+   02     .sce_process_param .data .ctors .dtors .preinit_array .init_array .fini_array .bss
+   03     .sce_process_param .preinit_array .init_array .fini_array
+   04     .preinit_array .init_array .fini_array .dynamic
+   05     .interp .preinit_array .init_array .fini_array
+   06
+   07     .eh_frame_hdr .preinit_array .init_array .fini_array
+   08     .preinit_array .init_array .fini_array .sce_special .dynamic
+   09     .preinit_array .init_array .fini_array .prodg_meta_data
+   10     .preinit_array .init_array .fini_array .sceversion

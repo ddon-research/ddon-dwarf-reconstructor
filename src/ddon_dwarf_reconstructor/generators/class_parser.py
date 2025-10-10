@@ -65,8 +65,13 @@ class ClassParser:
         fallback_candidate = None
 
         # Look for complete definition first (early exit on match)
-        for cu in self.dwarf_info.iter_CUs():
-            for die in cu.iter_DIEs():
+        cu: CompileUnit
+        for cu in self.dwarf_info.iter_CUs():  # type: ignore
+            die: DIE
+            for die in cu.iter_DIEs():  # type: ignore
+                if die.is_null():  # type: ignore
+                    continue
+
                 if die.tag in (
                     "DW_TAG_class_type",
                     "DW_TAG_structure_type",
@@ -147,7 +152,8 @@ class ClassParser:
         )  # Track anonymous unions to avoid double processing
 
         # Process class children
-        for child in class_die.iter_children():
+        child: DIE
+        for child in class_die.iter_children():  # type: ignore
             if child.tag == "DW_TAG_member":
                 # Check for anonymous union/struct
                 member_result = self._parse_member_or_anonymous(
