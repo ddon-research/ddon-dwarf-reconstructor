@@ -7,7 +7,7 @@ handling formatting, forward declarations, and proper C++ syntax.
 """
 
 from ..models import ClassInfo, EnumInfo, MethodInfo, StructInfo, UnionInfo
-from ..utils.logger import get_logger
+from ..utils.logger import get_logger, log_timing
 
 logger = get_logger(__name__)
 
@@ -28,6 +28,7 @@ class HeaderGenerator:
         """Initialize header generator."""
         pass
 
+    @log_timing
     def generate_header(
         self,
         class_info: ClassInfo,
@@ -81,6 +82,7 @@ class HeaderGenerator:
 
         return "\n".join(lines)
 
+    @log_timing
     def generate_hierarchy_header(
         self,
         class_infos: dict[str, ClassInfo],

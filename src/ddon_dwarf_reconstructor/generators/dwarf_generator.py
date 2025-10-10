@@ -17,6 +17,7 @@ from elftools.dwarf.die import DIE
 
 from ..models import ClassInfo
 from ..utils.logger import get_logger, log_timing
+from time import time
 from .base_generator import BaseGenerator
 from .class_parser import ClassParser
 from .header_generator import HeaderGenerator
@@ -54,13 +55,32 @@ class DwarfGenerator(BaseGenerator):
         super().__enter__()
 
         # Initialize modules (dwarf_info is guaranteed non-None after __enter__)
+        initialization_start = time()
         assert self.dwarf_info is not None
+        
+        # Initialize components with timing
+        resolver_start = time()
         self.type_resolver = TypeResolver(self.dwarf_info)
+        resolver_elapsed = time() - resolver_start
+        logger.debug(f"TypeResolver initialization: {resolver_elapsed:.3f}s")
+        
+        parser_start = time()
         self.class_parser = ClassParser(self.type_resolver, self.dwarf_info)
+        parser_elapsed = time() - parser_start
+        logger.debug(f"ClassParser initialization: {parser_elapsed:.3f}s")
+        
+        header_start = time()
         self.header_generator = HeaderGenerator()
+        header_elapsed = time() - header_start
+        logger.debug(f"HeaderGenerator initialization: {header_elapsed:.3f}s")
+        
+        hierarchy_start = time()
         self.hierarchy_builder = HierarchyBuilder(self.class_parser)
+        hierarchy_elapsed = time() - hierarchy_start
+        logger.debug(f"HierarchyBuilder initialization: {hierarchy_elapsed:.3f}s")
 
-        logger.info("DwarfGenerator initialized with modular architecture")
+        total_elapsed = time() - initialization_start
+        logger.info(f"DwarfGenerator initialized with modular architecture in {total_elapsed:.3f}s")
         return self
 
     def generate(self, symbol: str, **options: bool) -> str:
@@ -130,30 +150,41 @@ class DwarfGenerator(BaseGenerator):
         """
         logger.info(f"Generating header for: {class_name}")
 
-        # Find class
+        # Find class with timing
+        find_start = time()
         result = self.find_class(class_name)
+        find_elapsed = time() - find_start
+        logger.debug(f"Class search completed in {find_elapsed:.3f}s")
+        
         if not result:
             logger.warning(f"Class {class_name} not found")
             return self._generate_not_found_header(class_name)
 
         cu, class_die = result
 
-        # Parse class
+        # Parse class with timing
+        parse_start = time()
         class_info = self.parse_class_info(cu, class_die)
+        parse_elapsed = time() - parse_start
+        logger.debug(f"Class parsing completed in {parse_elapsed:.3f}s")
+        
         logger.info(
             f"Parsed {class_name}: {class_info.byte_size} bytes, "
             f"{len(class_info.members)} members, {len(class_info.methods)} methods",
         )
 
-        # Collect used typedefs
+        # Collect used typedefs with timing
+        typedef_start = time()
         assert self.type_resolver is not None
         typedefs = self.type_resolver.collect_used_typedefs(
             class_info.members,
             class_info.methods,
         )
-        logger.debug(f"Collected {len(typedefs)} typedefs")
+        typedef_elapsed = time() - typedef_start
+        logger.debug(f"Collected {len(typedefs)} typedefs in {typedef_elapsed:.3f}s")
 
-        # Generate header
+        # Generate header with timing
+        header_start = time()
         assert self.header_generator is not None
         header = self.header_generator.generate_header(
             class_info,
@@ -161,6 +192,8 @@ class DwarfGenerator(BaseGenerator):
             cu_offset=cu.cu_offset,
             include_metadata=include_metadata,
         )
+        header_elapsed = time() - header_start
+        logger.debug(f"Header generation completed in {header_elapsed:.3f}s")
 
         logger.info(f"Header generated successfully for {class_name}")
         return header
@@ -186,18 +219,25 @@ class DwarfGenerator(BaseGenerator):
         logger.info(f"Generating complete hierarchy header for: {class_name}")
 
         # Expand typedef search for full hierarchy mode
+        typedef_expand_start = time()
         assert self.type_resolver is not None
         self.type_resolver.expand_primitive_search(full_hierarchy=True)
+        typedef_expand_elapsed = time() - typedef_expand_start
+        logger.debug(f"Typedef search expansion completed in {typedef_expand_elapsed:.3f}s")
 
-        # Build full hierarchy
+        # Build full hierarchy with timing
+        hierarchy_start = time()
         assert self.hierarchy_builder is not None
         class_infos, hierarchy_order = self.hierarchy_builder.build_full_hierarchy(class_name)
+        hierarchy_elapsed = time() - hierarchy_start
+        logger.debug(f"Hierarchy building completed in {hierarchy_elapsed:.3f}s")
 
         if not class_infos:
             logger.warning(f"No classes found in hierarchy for {class_name}")
             return self._generate_not_found_header(class_name)
 
-        # Add packing info and collect typedefs from all classes
+        # Add packing info and collect typedefs from all classes with timing
+        packing_start = time()
         all_typedefs: dict[str, str] = {}
         for _cls_name, class_info in class_infos.items():
             if class_info.packing_info is None:
@@ -209,13 +249,17 @@ class DwarfGenerator(BaseGenerator):
                 class_info.methods,
             )
             all_typedefs.update(class_typedefs)
+        
+        packing_elapsed = time() - packing_start
+        logger.debug(f"Packing analysis and typedef collection completed in {packing_elapsed:.3f}s")
 
         logger.info(
             f"Hierarchy complete: {len(class_infos)} classes in order: "
             f"{' -> '.join(hierarchy_order)}, collected {len(all_typedefs)} typedefs",
         )
 
-        # Generate hierarchy header
+        # Generate hierarchy header with timing
+        header_gen_start = time()
         assert self.header_generator is not None
         header = self.header_generator.generate_hierarchy_header(
             class_infos,
@@ -224,6 +268,8 @@ class DwarfGenerator(BaseGenerator):
             typedefs=all_typedefs,
             include_metadata=include_metadata,
         )
+        header_gen_elapsed = time() - header_gen_start
+        logger.debug(f"Hierarchy header generation completed in {header_gen_elapsed:.3f}s")
 
         logger.info(f"Hierarchy header generated successfully for {class_name}")
         return header

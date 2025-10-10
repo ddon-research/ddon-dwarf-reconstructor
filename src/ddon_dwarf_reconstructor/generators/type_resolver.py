@@ -9,6 +9,7 @@ This module provides type resolution logic for DWARF DIEs, handling:
 - Caching for performance optimization
 """
 
+from time import time
 from typing import TYPE_CHECKING
 
 from elftools.dwarf.die import DIE
@@ -17,7 +18,7 @@ from elftools.dwarf.dwarfinfo import DWARFInfo
 if TYPE_CHECKING:
     from ..models import MemberInfo, MethodInfo
 
-from ..utils.logger import get_logger
+from ..utils.logger import get_logger, log_timing
 
 logger = get_logger(__name__)
 
@@ -166,6 +167,7 @@ class TypeResolver:
             logger.warning(f"Failed to resolve type reference for {die.tag}: {e}")
             return "unknown_type"
 
+    @log_timing
     def find_typedef(self, typedef_name: str, deep_search: bool = False) -> tuple[str, str] | None:
         """Find a typedef definition by name for primitive types only.
 
@@ -198,21 +200,26 @@ class TypeResolver:
 
         cu_count = 0
         die_count = 0
+        start_time = time()
 
         for cu in self.dwarf_info.iter_CUs():
             cu_count += 1
+            cu_start_time = time()
             logger.debug(
                 f"Searching CU #{cu_count} at offset 0x{cu.cu_offset:x} for typedef {typedef_name}",
             )
 
+            cu_die_count = 0
             for die in cu.iter_DIEs():
                 die_count += 1
+                cu_die_count += 1
                 if die.tag == "DW_TAG_typedef":
                     name_attr = die.attributes.get("DW_AT_name")
                     if name_attr and name_attr.value == target_name:
+                        elapsed = time() - start_time
                         logger.debug(
                             f"Found typedef {typedef_name} at DIE offset 0x{die.offset:x} "
-                            f"in CU #{cu_count}",
+                            f"in CU #{cu_count} after {elapsed:.3f}s ({die_count} DIEs searched)",
                         )
                         # Get the underlying type
                         underlying_type = self.resolve_type_name(die)
@@ -221,13 +228,20 @@ class TypeResolver:
                         result = (typedef_name, underlying_type)
                         self._typedef_cache[cache_key] = result
                         return result
+            
+            cu_elapsed = time() - cu_start_time
+            if cu_elapsed > 0.1:  # Log slow CUs
+                logger.debug(f"CU #{cu_count} search took {cu_elapsed:.3f}s ({cu_die_count} DIEs)")
 
+        elapsed = time() - start_time
         logger.debug(
-            f"Typedef {typedef_name} not found after searching {cu_count} CUs and {die_count} DIEs",
+            f"Typedef {typedef_name} not found after searching {cu_count} CUs and "
+            f"{die_count} DIEs in {elapsed:.3f}s",
         )
         self._typedef_cache[cache_key] = None
         return None
 
+    @log_timing
     def collect_used_typedefs(
         self, members: list["MemberInfo"], methods: list["MethodInfo"]
     ) -> dict[str, str]:
@@ -246,6 +260,7 @@ class TypeResolver:
         used_typedefs = {}
 
         # Check all member types
+        member_start_time = time()
         logger.debug(f"Checking {len(members)} members for typedef usage")
         for member in members:
             # Extract base type name from complex types
@@ -253,16 +268,32 @@ class TypeResolver:
             logger.debug(f"Member {member.name} has cleaned type: {type_name}")
 
             # Try to find as typedef
+            typedef_start_time = time()
             result = self.find_typedef(type_name)
+            typedef_elapsed = time() - typedef_start_time
+            
             if result:
                 typedef_name, underlying_type = result
                 used_typedefs[typedef_name] = underlying_type
                 logger.debug(
-                    f"Found typedef for member {member.name}: {typedef_name} -> {underlying_type}",
+                    f"Found typedef for member {member.name}: {typedef_name} -> {underlying_type} "
+                    f"(resolved in {typedef_elapsed:.3f}s)",
                 )
+            elif typedef_elapsed > 0.1:  # Log slow typedef searches
+                logger.debug(
+                    f"Typedef search for {type_name} took {typedef_elapsed:.3f}s (not found)"
+                )
+        
+        member_elapsed = time() - member_start_time
+        if len(members) > 0:
+            logger.debug(f"Member typedef analysis completed in {member_elapsed:.3f}s "
+                        f"({member_elapsed/len(members):.3f}s avg per member)")
 
         # Check method return types and parameters
+        method_start_time = time()
         logger.debug(f"Checking {len(methods)} methods for typedef usage")
+        method_typedef_count = 0
+        
         for method in methods:
             # Check return type
             return_type = self._extract_base_type(method.return_type)
@@ -272,6 +303,7 @@ class TypeResolver:
             if result:
                 typedef_name, underlying_type = result
                 used_typedefs[typedef_name] = underlying_type
+                method_typedef_count += 1
                 logger.debug(f"Found typedef for return type: {typedef_name} -> {underlying_type}")
 
             # Check parameter types
@@ -285,10 +317,17 @@ class TypeResolver:
                     if result:
                         typedef_name, underlying_type = result
                         used_typedefs[typedef_name] = underlying_type
+                        method_typedef_count += 1
                         logger.debug(
                             f"Found typedef for parameter {param.name}: "
                             f"{typedef_name} -> {underlying_type}",
                         )
+        
+        method_elapsed = time() - method_start_time
+        if len(methods) > 0:
+            logger.debug(f"Method typedef analysis completed in {method_elapsed:.3f}s "
+                        f"({method_elapsed/len(methods):.3f}s avg per method, "
+                        f"{method_typedef_count} typedefs found)")
 
         logger.debug(f"Collected {len(used_typedefs)} total typedefs: {used_typedefs}")
         return used_typedefs

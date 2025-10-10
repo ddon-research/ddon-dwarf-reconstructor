@@ -7,7 +7,7 @@ from typing import NoReturn
 
 from .config import Config
 from .generators.dwarf_generator import DwarfGenerator
-from .utils import LoggerSetup, get_logger
+from .utils import LoggerSetup, get_logger, log_timing
 
 
 def parse_args() -> argparse.Namespace:
@@ -65,8 +65,12 @@ Examples:
     return parser.parse_args()
 
 
+@log_timing
 def main() -> NoReturn:
     """Main entry point for DWARF-to-C++ header generation using pyelftools."""
+    logger = get_logger(__name__)
+    logger.debug("Starting DDON DWARF Reconstructor main program")
+    
     args = parse_args()
 
     # Load configuration
@@ -95,6 +99,9 @@ def main() -> NoReturn:
     # Generate header using pyelftools
     symbol_name = args.generate
     logger.info(f"Generating header for: {symbol_name}")
+    
+    logger.debug(f"Generation mode: {'full-hierarchy' if args.full_hierarchy else 'single-class'}")
+    logger.debug(f"Target symbol: {symbol_name}")
 
     # Determine output path - always use <symbol>.h format
     output_file = config.output_dir / f"{symbol_name}.h"
@@ -111,11 +118,14 @@ def main() -> NoReturn:
 
             logger.info(f"[SUCCESS] Generated: {output_file}")
             logger.info(f"Size: {len(header_content)} bytes")
+            
+            # Calculate lines and provide summary statistics
+            lines = header_content.split("\n")
+            logger.debug(f"Generated header contains {len(lines)} lines")
 
             if config.verbose:
                 logger.debug("\nPreview (first 30 lines):")
                 logger.debug("=" * 60)
-                lines = header_content.split("\n")
                 for line in lines[:30]:
                     logger.debug(line)
                 if len(lines) > 30:
@@ -124,15 +134,18 @@ def main() -> NoReturn:
 
     except ValueError as e:
         logger.error(f"Error: {e}")
+        logger.debug("Main program terminating due to ValueError")
         sys.exit(1)
     except Exception as e:
         logger.error(f"Error: {e}")
+        logger.debug("Main program terminating due to unexpected exception")
         if config.verbose:
             import traceback
 
             traceback.print_exc()
         sys.exit(1)
 
+    logger.debug("Main program completed successfully")
     sys.exit(0)
 
 
