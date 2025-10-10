@@ -40,7 +40,7 @@ class BaseGenerator(ABC):
     def __enter__(self) -> "BaseGenerator":
         # Load ELF file
         # Extract DWARF info  
-        # Apply PS4 patches
+        # Apply enhanced PS4 patches (automatic detection & error recovery)
         
     def __exit__(self):
         # Clean resource cleanup
@@ -56,7 +56,13 @@ class BaseGenerator(ABC):
 - PS4-specific ELF patching application
 - Resource cleanup and exception handling
 
-**Dependencies:** `pyelftools.ELFFile`, `utils.elf_patches`
+**Dependencies:** `pyelftools.ELFFile`, `utils.elf_patches` (enhanced PS4 support)
+
+**PS4 ELF Compatibility:**
+- **Automatic Detection:** Identifies PS4 ELF files by type (0xfe10) and OS/ABI (FreeBSD)
+- **Dynamic Section Fixes:** Handles sh_link=0 pointing to NULL sections instead of string tables
+- **Section Type Fallbacks:** Creates generic sections for unknown PS4-specific types
+- **Non-Invasive Patching:** Only activates on actual errors, preserves normal ELF behavior
 
 ---
 
@@ -72,7 +78,7 @@ class DwarfGenerator(BaseGenerator):
         
     def __enter__(self) -> "DwarfGenerator":
         super().__enter__()
-        # Initialize all modules
+        # Initialize all modules with enhanced PS4 support
         self.type_resolver = TypeResolver(self.dwarf_info)
         self.class_parser = ClassParser(self.type_resolver, self.dwarf_info)
         # ... other modules
@@ -88,9 +94,10 @@ class DwarfGenerator(BaseGenerator):
 
 **Responsibilities:**
 - Module initialization and coordination
-- Generation pipeline orchestration
+- Generation pipeline orchestration  
 - Public API surface (`generate_header`, `generate_complete_hierarchy_header`)
 - Performance monitoring with `@log_timing`
+- PS4 ELF compatibility (automatically applied)
 
 **Dependencies:** All other generator modules
 

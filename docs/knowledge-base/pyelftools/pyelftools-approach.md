@@ -128,7 +128,7 @@ def find_class_by_name(cu: CompilationUnit, class_name: str) -> Optional[DIE]:
 ### What We Add (Minimal Layers)
 
 1. **PS4 ELF Compatibility** 
-   - Minimal patches for PS4-specific ELF variations
+   - Comprehensive patches for PS4-specific ELF variations (enhanced October 2025)
    - **Principle**: Patch only what's needed, use pyelftools for everything else
 
 2. **C++ Header Generation**
@@ -161,19 +161,28 @@ def find_class_by_name(cu: CompilationUnit, class_name: str) -> Optional[DIE]:
 
 1. **Memory Usage**: Eager loading can be expensive
 2. **Performance**: Slower than native parsers (like libdwarf)
-3. **PS4 Support**: Requires patching for non-standard ELFs
-4. **Large Files**: Can be slow on multi-GB ELFs
+3. **Large Files**: Can be slow on multi-GB ELFs
+
+## Enhanced PS4 Support ✅
+
+**Comprehensive PS4 ELF Compatibility:**
+- **Automatic Detection**: Identifies PS4 files by ELF type (0xfe10) and OS/ABI (FreeBSD)
+- **Dynamic Section Fixes**: Handles sh_link=0 pointing to NULL sections vs string tables
+- **Section Type Fallbacks**: Creates generic sections for unknown PS4-specific types
+- **SCE Tag Support**: Sony Computer Entertainment custom dynamic tags
+- **Zero Configuration**: Patches applied automatically on error detection
+- **Performance Impact**: None for standard ELF files, minimal overhead for PS4 files
 
 ## Integration Strategy
 
-Our implementation wraps pyelftools with:
+Our implementation wraps pyelftools with enhanced PS4 support:
 
 ```
 User Code
     ↓
 DWARFParser (our wrapper)
     ↓
-elf_patches (PS4 compatibility)
+elf_patches (enhanced PS4 compatibility)
     ↓
 pyelftools (core parsing)
 ```

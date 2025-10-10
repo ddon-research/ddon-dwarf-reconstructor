@@ -87,9 +87,11 @@ uv run ruff check src/
 - **Logs**: `logs/ddon_reconstructor_YYYYMMDD_HHMMSS.log`
 
 ### PS4 ELF Handling
-- Non-standard sections require lenient parsing
-- Try-except blocks around DWARF operations
-- Graceful degradation for parsing failures
+- Enhanced PS4 ELF compatibility with comprehensive pyelftools patches
+- Automatic detection and handling of PS4-specific ELF format (type 0xfe10)
+- Supports SCE dynamic tags and custom section types
+- Handles dynamic sections with sh_link=0 pointing to NULL sections
+- Graceful error recovery for PS4-specific parsing challenges
 
 ## Code Style Requirements
 

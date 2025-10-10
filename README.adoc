@@ -26,7 +26,7 @@ generators/
 * Full inheritance hierarchy reconstruction  
 * Advanced type resolution with typedef caching
 * Memory layout analysis with packing suggestions
-* PS4 ELF compatibility with automatic patching
+* Enhanced PS4 ELF compatibility with comprehensive automatic patching
 
 **Performance Characteristics:**
 * Single class generation: ~1s (3-5x faster than legacy)
@@ -209,7 +209,7 @@ src/ddon_dwarf_reconstructor/
 │   └── config.py       # .env support + path resolution
 ├── utils/              # Core utilities  
 │   ├── logger.py       # Enhanced logging + ProgressTracker
-│   └── elf_patches.py  # PS4 ELF compatibility
+│   └── elf_patches.py  # Enhanced PS4 ELF compatibility
 └── main.py            # CLI entry point
 ```
 

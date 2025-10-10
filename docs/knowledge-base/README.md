@@ -115,7 +115,7 @@ knowledge-base/
 ## Recommendations for Our Implementation
 
 ### Current Status ✅
-- ✅ PS4 ELF support via monkey-patching
+- ✅ **Enhanced PS4 ELF support** with comprehensive patches (dynamic sections, SCE tags, automatic detection)
 - ✅ Type-safe models with dataclasses
 - ✅ Search utilities (by name, tag, predicate)
 - ✅ Configuration management (.env support)
