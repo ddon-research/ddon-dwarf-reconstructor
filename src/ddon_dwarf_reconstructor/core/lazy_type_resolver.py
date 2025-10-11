@@ -628,22 +628,64 @@ class LazyTypeResolver:
                     # Recursively resolve the typedef chain
                     return self._get_primitive_base_type_name(target_die)
 
-        # Handle const/volatile/pointer/reference types by following their type
-        if type_die.tag in (
-            "DW_TAG_const_type",
-            "DW_TAG_volatile_type",
-            "DW_TAG_pointer_type",
-            "DW_TAG_reference_type",
-        ):
+        # Handle pointer type - PRESERVE the pointer notation
+        if type_die.tag == "DW_TAG_pointer_type":
             type_attr = type_die.attributes.get("DW_AT_type")
             if type_attr:
                 target_die = type_die.get_DIE_from_attribute("DW_AT_type")
                 if target_die:
+                    base_type = self._get_primitive_base_type_name(target_die)
+                    return f"{base_type}*"  # PRESERVE pointer notation
+            # Pointer with no target = void*
+            return "void*"
+
+        # Handle reference type - PRESERVE the reference notation
+        if type_die.tag == "DW_TAG_reference_type":
+            type_attr = type_die.attributes.get("DW_AT_type")
+            if type_attr:
+                target_die = type_die.get_DIE_from_attribute("DW_AT_type")
+                if target_die:
+                    base_type = self._get_primitive_base_type_name(target_die)
+                    return f"{base_type}&"  # PRESERVE reference notation
+            # Reference with no target = void& (rare but possible)
+            return "void&"
+
+        # Handle const/volatile types - PRESERVE the qualifier
+        if type_die.tag in ("DW_TAG_const_type", "DW_TAG_volatile_type"):
+            qualifier = "const" if type_die.tag == "DW_TAG_const_type" else "volatile"
+            type_attr = type_die.attributes.get("DW_AT_type")
+            if type_attr:
+                target_die = type_die.get_DIE_from_attribute("DW_AT_type")
+                if target_die:
+                    base_type = self._get_primitive_base_type_name(target_die)
+                    return f"{qualifier} {base_type}"  # PRESERVE qualifier
+            # Const/volatile with no target (shouldn't happen, but handle it)
+            return qualifier
+
+        # Handle pointer-to-member type (C++: int Class::*ptr)
+        if type_die.tag == "DW_TAG_ptr_to_member_type":
+            # Try containing type first (the class)
+            if "DW_AT_containing_type" in type_die.attributes:
+                containing_die = type_die.get_DIE_from_attribute("DW_AT_containing_type")
+                if containing_die:
+                    return self._get_primitive_base_type_name(containing_die)
+            # Fallback to member type
+            if "DW_AT_type" in type_die.attributes:
+                target_die = type_die.get_DIE_from_attribute("DW_AT_type")
+                if target_die:
                     return self._get_primitive_base_type_name(target_die)
-            else:
-                # Pointer/reference with no target = void* (implicit void)
-                if type_die.tag in ("DW_TAG_pointer_type", "DW_TAG_reference_type"):
-                    return "void"
+            logger.debug(f"Incomplete pointer-to-member type at offset 0x{type_die.offset:x}")
+            return "unknown_type"
+
+        # Handle function pointer (subroutine type)
+        if type_die.tag == "DW_TAG_subroutine_type":
+            # Try to get return type
+            if "DW_AT_type" in type_die.attributes:
+                return_die = type_die.get_DIE_from_attribute("DW_AT_type")
+                if return_die:
+                    return self._get_primitive_base_type_name(return_die)
+            # No return type = void function pointer
+            return "void"
 
         # Check if this is a named class/struct/union type
         if type_die.tag in (

@@ -160,8 +160,8 @@ class HeaderGenerator:
         for class_info in class_infos.values():
             forward_decls.update(self._collect_forward_declarations(class_info, typedefs or {}))
 
-        # Remove classes that are in the hierarchy
-        forward_decls = {decl for decl in forward_decls if decl not in hierarchy_order}
+        # Remove classes that are fully defined in this header (all classes in class_infos)
+        forward_decls = {decl for decl in forward_decls if decl not in class_infos}
 
         if forward_decls:
             lines.append("")
@@ -172,9 +172,21 @@ class HeaderGenerator:
                 # and will compile correctly, though semantically inconsistent
                 lines.append(f"class {decl};")
 
-        # Generate all classes in hierarchy order (base to derived)
-        for cls_name in hierarchy_order:
-            if cls_name in class_infos:
+        # Generate primary inheritance hierarchy first (base to derived)
+        if hierarchy_order:
+            lines.append("")
+            lines.append("// ========== Inheritance Hierarchy ==========")
+            for cls_name in hierarchy_order:
+                if cls_name in class_infos:
+                    class_lines = self._generate_single_class(class_infos[cls_name], include_metadata)
+                    lines.extend([""] + class_lines)
+
+        # Generate all dependency classes (not in hierarchy chain)
+        dependency_classes = sorted(set(class_infos.keys()) - set(hierarchy_order))
+        if dependency_classes:
+            lines.append("")
+            lines.append("// ========== Dependency Classes ==========")
+            for cls_name in dependency_classes:
                 class_lines = self._generate_single_class(class_infos[cls_name], include_metadata)
                 lines.extend([""] + class_lines)
 

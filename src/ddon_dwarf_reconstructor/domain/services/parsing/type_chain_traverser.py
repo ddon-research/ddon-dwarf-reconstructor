@@ -172,6 +172,75 @@ class TypeChainTraverser:
                 logger.debug(f"Array with no element type at 0x{current.offset:x}")
                 return None
 
+            # Handle anonymous class/struct/union types (terminal types without names)
+            if current.tag in ("DW_TAG_class_type", "DW_TAG_structure_type", "DW_TAG_union_type"):
+                # These are terminal types - return them even if anonymous
+                if "DW_AT_name" not in current.attributes:
+                    logger.debug(
+                        f"Anonymous {current.tag} at 0x{current.offset:x} (terminal type)"
+                    )
+                    return current
+                # Has name - should have been caught by is_named_type() check
+                logger.warning(
+                    f"Named {current.tag} at 0x{current.offset:x} reached fallback "
+                    f"(possible logic error in DIETypeClassifier)"
+                )
+                return current
+
+            # Handle pointer-to-member type (C++: int Class::*ptr)
+            if current.tag == "DW_TAG_ptr_to_member_type":
+                # Pointer-to-member has two attributes:
+                # - DW_AT_type: type of the member being pointed to
+                # - DW_AT_containing_type: class containing the member
+                # For dependency purposes, we need the containing class
+
+                # First try containing type (the class)
+                if "DW_AT_containing_type" in current.attributes:
+                    containing_die = current.get_DIE_from_attribute("DW_AT_containing_type")
+                    if containing_die:
+                        logger.debug(
+                            f"Pointer-to-member at 0x{current.offset:x} "
+                            f"-> containing type 0x{containing_die.offset:x}"
+                        )
+                        current = containing_die
+                        continue
+
+                # Fallback to member type if no containing type
+                if "DW_AT_type" in current.attributes:
+                    member_type_die = current.get_DIE_from_attribute("DW_AT_type")
+                    if member_type_die:
+                        logger.debug(
+                            f"Pointer-to-member at 0x{current.offset:x} "
+                            f"-> member type 0x{member_type_die.offset:x}"
+                        )
+                        current = member_type_die
+                        continue
+
+                logger.debug(f"Incomplete pointer-to-member at 0x{current.offset:x}")
+                return None
+
+            # Handle function pointer (subroutine type)
+            # Example: void (*func)(int, char)
+            if current.tag == "DW_TAG_subroutine_type":
+                # Function pointer has:
+                # - DW_AT_type: return type
+                # - DW_TAG_formal_parameter children: parameter types
+                # For dependencies, we need the return type
+
+                if "DW_AT_type" in current.attributes:
+                    return_die = current.get_DIE_from_attribute("DW_AT_type")
+                    if return_die:
+                        logger.debug(
+                            f"Function pointer at 0x{current.offset:x} "
+                            f"-> return type 0x{return_die.offset:x}"
+                        )
+                        current = return_die
+                        continue
+
+                # No return type = void function pointer
+                logger.debug(f"Void function pointer at 0x{current.offset:x}")
+                return None
+
             # Unhandled tag type
             logger.debug(
                 f"Unhandled tag {current.tag} at 0x{current.offset:x} "

@@ -280,10 +280,11 @@ class DependencyExtractor:
 **hierarchy_builder.py** - Offset-based inheritance management (REFACTORED)
 
 - Complete inheritance chain discovery
-- **Offset-based dependency resolution** (371 lines deleted, 60% reduction)
+- **Recursive offset-based dependency resolution** (371 lines deleted, 60% reduction)
 - Uses DependencyExtractor for type validation
 - Filters internal DWARF types (class_type, void, pointer_type, etc.)
 - Base-to-derived ordering
+- **Resolves ALL dependencies recursively** (not just direct references)
 
 ```python
 class HierarchyBuilder:
@@ -294,12 +295,27 @@ class HierarchyBuilder:
     def build_full_hierarchy_with_dependencies(
         self, class_name: str, max_depth: int = 10
     ) -> tuple[dict[str, ClassInfo], list[str]]:
-        """Build complete hierarchy with offset-based dependencies."""
+        """Build complete hierarchy with recursive dependency resolution.
+        
+        Resolves all dependent types (members, methods, parameters) recursively
+        up to max_depth levels. For example, if ClassA references ClassB, and
+        ClassB references ClassC, all three are resolved and returned.
+        """
     
     def _process_dependencies_offset_based(
-        self, class_info: ClassInfo, resolved: set[str], depth: int
-    ) -> dict[str, ClassInfo]:
-        """Pure offset-based dependency resolution (no string parsing)."""
+        self, hierarchy_classes: dict[str, ClassInfo],
+        all_classes: dict[str, ClassInfo],
+        max_depth: int
+    ) -> None:
+        """Pure offset-based recursive dependency resolution.
+        
+        Algorithm:
+        1. Extract type_offset from all members/methods/parameters
+        2. For each offset, resolve to ClassInfo (parse full definition)
+        3. Recursively extract dependencies from those ClassInfo objects
+        4. Continue until max_depth or no new dependencies
+        5. Track visited offsets to prevent infinite loops
+        """
 ```
 
 **header_generator.py** - C++ code generation (REFACTORED)
@@ -308,9 +324,12 @@ class HierarchyBuilder:
 - Class definitions with members/methods
 - Typedef integration
 - Memory layout comments
+- **Two-phase generation for full hierarchies:**
+  1. **Inheritance hierarchy** (base → derived)
+  2. **All dependency classes** (alphabetical order)
 - **Offset-based forward declaration validation** (18 lines deleted)
 - Only forward declares class/struct/union (validated via DIETypeClassifier)
-- No DWARF dependencies in generation logic
+- **Generates full definitions for all resolved dependencies** (not just forward declarations)
 
 ```python
 class HeaderGenerator:
@@ -320,13 +339,28 @@ class HeaderGenerator:
     def generate_single_class_header(self, class_info: ClassInfo) -> str:
         """Generate header for individual class."""
     
-    def generate_hierarchy_header(self, class_infos: dict, order: list) -> str:
-        """Generate complete inheritance hierarchy header."""
+    def generate_hierarchy_header(
+        self, class_infos: dict, order: list, target_class: str
+    ) -> str:
+        """Generate complete inheritance hierarchy header.
+        
+        Generates FULL CLASS DEFINITIONS for all classes in class_infos dict:
+        - Phase 1: Inheritance chain (base → derived) 
+        - Phase 2: All dependency classes (alphabetically)
+        - Forward declarations: ONLY for external/unresolved types
+        
+        Before fix: Generated only hierarchy chain, forward declared dependencies
+        After fix: Generates ALL resolved classes with full definitions
+        """
     
     def _collect_forward_declarations(
         self, class_info: ClassInfo, typedefs: dict
     ) -> set[str]:
-        """Offset-based validation of forward declarable types."""
+        """Offset-based validation of forward declarable types.
+        
+        Returns types that need forward declaration (not in class_infos dict).
+        Most types should have full definitions, not forward declarations.
+        """
 ```
 
 **packing_analyzer.py** - Memory layout analysis
@@ -395,7 +429,7 @@ class PackingInfo:
     - Returns header string
 ```
 
-### Full Hierarchy Generation (Offset-Based)
+### Full Hierarchy Generation (Offset-Based with Recursive Resolution)
 
 ```text
 1. DwarfGenerator.generate_complete_hierarchy_header("MtPropertyList")
@@ -406,8 +440,11 @@ class PackingInfo:
        - Extracts type_offset from members/methods/parameters
        - Validates with DIETypeClassifier.requires_resolution()
        - Filters internal types (class_type, structure_type, void)
-       - Resolves dependencies by offset (O(1) lookup)
-    c. Returns {class_name: ClassInfo} + ordered list
+       - **Recursively resolves dependencies** (e.g., MtProperty → MtPropertyValue → MtType)
+       - Continues until max_depth (default: 10) or no new dependencies
+       - Tracks visited offsets to prevent infinite loops
+       - **Result:** Full ClassInfo for ALL 74+ classes (hierarchy + dependencies)
+    c. Returns {class_name: ClassInfo} dict + hierarchy order list
 3. LazyTypeResolver.collect_used_typedefs(all_classes)
     - Gathers typedefs from entire hierarchy
     - Validates typedef targets (rejects *, &, [)
@@ -417,10 +454,19 @@ class PackingInfo:
        - Uses type_offset fields from data models
        - Validates with DIETypeClassifier.is_forward_declarable()
        - Only forward declares class/struct/union
-       - Filters arrays, enums, primitives
-    b. Generates complete inheritance chain
-    c. Returns hierarchy header
+       - **Excludes all classes in class_infos dict** (they get full definitions)
+       - Result: Minimal/zero forward declarations
+    b. **Phase 1:** Generates inheritance hierarchy classes (base → derived)
+    c. **Phase 2:** Generates ALL dependency classes (alphabetically)
+    d. Returns complete self-contained header with 74+ full class definitions
 ```
+
+**Example Output for MtObject:**
+- Input: 1 class name
+- Resolved: 74 classes (MtObject + 73 recursive dependencies)
+- Generated: 3,605 lines with 74 full class definitions
+- Forward declarations: 0 (all dependencies fully defined)
+- File size: ~126 KB (complete, self-contained)
 
 ## Performance Optimizations
 
@@ -435,6 +481,8 @@ class PackingInfo:
 | LRU caching | LRUCache | O(1) lookups |
 | Persistent cache | PersistentSymbolCache | Skip re-parsing across sessions |
 | Internal type filtering | LazyTypeResolver | Prevents infinite search loops |
+| Recursive dependency resolution | HierarchyBuilder | Complete headers with all dependencies |
+| Two-phase generation | HeaderGenerator | Clear separation of hierarchy vs dependencies |
 
 ### Integration Test Results (289 symbols)
 
@@ -442,6 +490,7 @@ class PackingInfo:
 - **No Hangs:** Zero infinite loops (previous bugs: class_type, void, pointer_type)
 - **Clean Output:** No invalid typedefs, correct forward declarations
 - **Cache Performance:** 1519 symbols cached for fast re-use
+- **Complete Headers:** All dependencies fully resolved and generated
 
 ### Offset-Based Architecture Benefits
 

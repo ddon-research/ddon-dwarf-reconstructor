@@ -180,19 +180,74 @@ class PersistentSymbolCache:
         return str(result) if result is not None else None
 
     def save(self) -> None:
-        """Save cache to disk if modified."""
-        if self._modified:
-            try:
-                self.cache_file.parent.mkdir(parents=True, exist_ok=True)
-                with open(self.cache_file, "w", encoding="utf-8") as f:
-                    json.dump(self.data, f, indent=2)
-                logger.info(
-                    f"Saved cache to {self.cache_file} "
-                    f"({len(self.data['symbol_to_offset'])} symbols)"
-                )
-                self._modified = False
-            except OSError as e:
-                logger.error(f"Failed to save cache to {self.cache_file}: {e}")
+        """Save cache to disk only if content actually changed.
+
+        Compares current cache data against disk content, ignoring timestamps.
+        Only writes to disk if symbol mappings have changed, reducing I/O.
+        """
+        if not self._modified:
+            return
+
+        # Load current disk content for comparison
+        disk_data = self._load_disk_cache_for_comparison()
+
+        # Compare content (ignore timestamps)
+        if self._cache_content_unchanged(disk_data):
+            logger.debug(
+                f"Cache content unchanged (only timestamps differ), "
+                f"skipping save to {self.cache_file}"
+            )
+            self._modified = False
+            return
+
+        # Content changed, proceed with save
+        try:
+            self.cache_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.cache_file, "w", encoding="utf-8") as f:
+                json.dump(self.data, f, indent=2)
+            logger.info(
+                f"Saved cache to {self.cache_file} "
+                f"({len(self.data['symbol_to_offset'])} symbols)"
+            )
+            self._modified = False
+        except OSError as e:
+            logger.error(f"Failed to save cache to {self.cache_file}: {e}")
+
+    def _load_disk_cache_for_comparison(self) -> dict[str, Any]:
+        """Load cache from disk for content comparison.
+
+        Returns:
+            Cache data from disk, or empty dict if file doesn't exist
+        """
+        try:
+            if self.cache_file.exists():
+                with open(self.cache_file, encoding="utf-8") as f:
+                    return json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            logger.debug(f"Could not load disk cache for comparison: {e}")
+
+        return {}
+
+    def _cache_content_unchanged(self, disk_data: dict[str, Any]) -> bool:
+        """Compare cache data, ignoring timestamps.
+
+        Args:
+            disk_data: Data loaded from disk
+
+        Returns:
+            True if content is identical (except timestamps)
+        """
+        # If disk is empty, we have changes
+        if not disk_data:
+            return False
+
+        # Compare all symbol mapping sections (ignore timestamps)
+        return (
+            self.data.get("symbol_to_offset") == disk_data.get("symbol_to_offset")
+            and self.data.get("offset_to_symbol") == disk_data.get("offset_to_symbol")
+            and self.data.get("symbol_to_cu_offset") == disk_data.get("symbol_to_cu_offset")
+            and self.data.get("cu_offset_to_symbols") == disk_data.get("cu_offset_to_symbols")
+        )
 
     def get_symbol_cu_offset(self, symbol_name: str) -> int | None:
         """Get CU offset for symbol for efficient CU targeting.

@@ -14,6 +14,7 @@ from .tag_constants import (
     PRIMITIVE_TYPE_NAMES,
     TYPE_QUALIFIER_TAGS,
 )
+from .template_param_info import TemplateTypeParam, TemplateValueParam
 from .union_info import UnionInfo
 
 __all__ = [
@@ -27,6 +28,8 @@ __all__ = [
     "ParameterInfo",
     "PRIMITIVE_TYPE_NAMES",
     "StructInfo",
+    "TemplateTypeParam",
+    "TemplateValueParam",
     "TYPE_QUALIFIER_TAGS",
     "UnionInfo",
 ]
