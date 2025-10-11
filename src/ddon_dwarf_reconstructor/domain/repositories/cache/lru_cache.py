@@ -11,7 +11,7 @@ class LRUCache:
 
     def __init__(self, max_size: int = 10000):
         """Initialize LRU cache with maximum size.
-        
+
         Args:
             max_size: Maximum number of items to cache
         """
@@ -22,10 +22,10 @@ class LRUCache:
 
     def get(self, key: int) -> Any | None:
         """Get item from cache, moving it to end (most recently used).
-        
+
         Args:
             key: Cache key
-            
+
         Returns:
             Cached value or None if not found
         """
@@ -41,7 +41,7 @@ class LRUCache:
 
     def put(self, key: int, value: Any) -> None:
         """Add item to cache, evicting oldest if necessary.
-        
+
         Args:
             key: Cache key
             value: Value to cache
@@ -63,7 +63,7 @@ class LRUCache:
 
     def stats(self) -> dict[str, Any]:
         """Get cache statistics.
-        
+
         Returns:
             Dictionary with cache performance metrics
         """
@@ -75,7 +75,7 @@ class LRUCache:
             "max_size": self.max_size,
             "hits": self.hits,
             "misses": self.misses,
-            "hit_rate": f"{hit_rate:.1f}%"
+            "hit_rate": f"{hit_rate:.1f}%",
         }
 
     def __len__(self) -> int:
@@ -85,4 +85,3 @@ class LRUCache:
     def __contains__(self, key: int) -> bool:
         """Check if key exists in cache without affecting LRU order."""
         return key in self.cache
-

@@ -39,7 +39,9 @@ help:
 	@echo ""
 	@echo "Run:"
 	@echo "  run            - Run example (make run CLASS=MtObject)"
+	@echo "                   Supports multiple: make run CLASS='MtObject,MtVector4'"
 	@echo "  run-full       - Run with full hierarchy (make run-full CLASS=MtPropertyList)"
+	@echo "                   Supports multiple: make run-full CLASS='MtObject,MtVector4'"
 
 # Development setup
 install:

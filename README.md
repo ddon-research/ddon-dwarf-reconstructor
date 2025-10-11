@@ -30,8 +30,14 @@ uv run pytest -m unit  # verify
 # Single class
 uv run python main.py resources/DDOORBIS.elf --generate MtObject
 
+# Multiple classes (comma-separated)
+uv run python main.py resources/DDOORBIS.elf --generate MtObject,MtVector4,rTbl2Base
+
 # Full inheritance hierarchy
 uv run python main.py resources/DDOORBIS.elf --generate ClassName --full-hierarchy
+
+# Multiple classes with full hierarchy
+uv run python main.py resources/DDOORBIS.elf --generate MtPropertyList,rTbl2ChatMacro --full-hierarchy
 
 # With options
 uv run python main.py resources/DDOORBIS.elf --generate ClassName --output dir/ --verbose

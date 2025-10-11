@@ -40,24 +40,45 @@ class TypeResolver:
     # Common primitive typedefs for quick lookup
     PRIMITIVE_TYPEDEFS = frozenset(
         {
-            "u8", "u16", "u32", "u64",
-            "s8", "s16", "s32", "s64",
-            "f32", "f64",
-            "size_t", "ssize_t",
-            "uint_fast8_t", "int_fast8_t",
-            "uint_fast16_t", "int_fast16_t",
-            "uint_fast32_t", "int_fast32_t",
-            "uint_fast64_t", "int_fast64_t",
+            "u8",
+            "u16",
+            "u32",
+            "u64",
+            "s8",
+            "s16",
+            "s32",
+            "s64",
+            "f32",
+            "f64",
+            "size_t",
+            "ssize_t",
+            "uint_fast8_t",
+            "int_fast8_t",
+            "uint_fast16_t",
+            "int_fast16_t",
+            "uint_fast32_t",
+            "int_fast32_t",
+            "uint_fast64_t",
+            "int_fast64_t",
             # Platform-specific types
-            "uint8_t", "int8_t",
-            "uint16_t", "int16_t",
-            "uint32_t", "int32_t",
-            "uint64_t", "int64_t",
-            "uintptr_t", "intptr_t",
-            "__uint64_t", "__int64_t",
-            "__uint32_t", "__int32_t",
-            "__uint16_t", "__int16_t",
-            "__uint8_t", "__int8_t",
+            "uint8_t",
+            "int8_t",
+            "uint16_t",
+            "int16_t",
+            "uint32_t",
+            "int32_t",
+            "uint64_t",
+            "int64_t",
+            "uintptr_t",
+            "intptr_t",
+            "__uint64_t",
+            "__int64_t",
+            "__uint32_t",
+            "__int32_t",
+            "__uint16_t",
+            "__int16_t",
+            "__uint8_t",
+            "__int8_t",
         }
     )
 
@@ -84,10 +105,18 @@ class TypeResolver:
         if full_hierarchy:
             # Add additional platform-specific types for full hierarchy mode
             additional_types = {
-                "ptrdiff_t", "wchar_t", "char16_t", "char32_t",
-                "long long", "unsigned long long",
-                "long double", "bool", "char", "wchar",
-                "std::size_t", "std::ptrdiff_t"
+                "ptrdiff_t",
+                "wchar_t",
+                "char16_t",
+                "char32_t",
+                "long long",
+                "unsigned long long",
+                "long double",
+                "bool",
+                "char",
+                "wchar",
+                "std::size_t",
+                "std::ptrdiff_t",
             }
             self._primitive_typedefs.update(additional_types)
 
@@ -167,11 +196,11 @@ class TypeResolver:
     @log_timing
     def collect_all_typedefs(self) -> dict[str, str]:
         """Collect ALL typedefs from the DWARF information.
-        
+
         This method scans the entire DWARF info once and caches all typedefs for
         comprehensive type resolution. This includes primitive types, class types,
         struct types, and any other typedefs.
-        
+
         Returns:
             Dictionary mapping typedef names to their underlying types
         """
@@ -192,9 +221,11 @@ class TypeResolver:
                 if die.tag == "DW_TAG_typedef":
                     name_attr = die.attributes.get("DW_AT_name")
                     if name_attr:
-                        typedef_name = (name_attr.value.decode("utf-8")
-                                      if isinstance(name_attr.value, bytes)
-                                      else str(name_attr.value))
+                        typedef_name = (
+                            name_attr.value.decode("utf-8")
+                            if isinstance(name_attr.value, bytes)
+                            else str(name_attr.value)
+                        )
 
                         # Get the underlying type
                         underlying_type = self.resolve_type_name(die)
@@ -210,14 +241,14 @@ class TypeResolver:
 
     def resolve_typedef_chain(self, typedef_name: str) -> str:
         """Recursively resolve a typedef to its final underlying type.
-        
+
         This handles typedef chains like:
         typedef __uint64_t u64;
         typedef unsigned long long __uint64_t;
-        
+
         Args:
             typedef_name: Name of typedef to resolve
-            
+
         Returns:
             Final underlying type after resolving all typedef chains
         """
@@ -311,13 +342,13 @@ class TypeResolver:
         members: list["MemberInfo"],
         methods: list["MethodInfo"],
         unions: list["UnionInfo"] | None = None,
-        nested_structs: list["StructInfo"] | None = None
+        nested_structs: list["StructInfo"] | None = None,
     ) -> dict[str, str]:
         """Collect only the typedefs that are actually used by members, methods, unions, and nested structs.
 
         Args:
             members: List of MemberInfo objects
-            methods: List of MethodInfo objects  
+            methods: List of MethodInfo objects
             unions: Optional list of UnionInfo objects to examine for typedefs
             nested_structs: Optional list of StructInfo objects to examine for typedefs
 
@@ -354,7 +385,9 @@ class TypeResolver:
             if typedef_result:
                 typedef_name, final_type = typedef_result
                 used_typedefs[typedef_name] = final_type
-                logger.debug(f"Found typedef for member {member.name}: {typedef_name} -> {final_type}")
+                logger.debug(
+                    f"Found typedef for member {member.name}: {typedef_name} -> {final_type}"
+                )
 
         # Check method return types and parameters
         for method in methods:
@@ -396,35 +429,47 @@ class TypeResolver:
                     if typedef_result:
                         typedef_name, final_type = typedef_result
                         used_typedefs[typedef_name] = final_type
-                        logger.debug(f"Found typedef for union member {member.name}: {typedef_name} -> {final_type}")
+                        logger.debug(
+                            f"Found typedef for union member {member.name}: {typedef_name} -> {final_type}"
+                        )
 
                 # Also check nested structs within unions
-                if hasattr(union, 'nested_structs') and union.nested_structs:
+                if hasattr(union, "nested_structs") and union.nested_structs:
                     for nested_struct in union.nested_structs:
                         logger.debug(f"Examining nested struct in union {union.name}")
                         for member in nested_struct.members:
                             type_name = self._extract_base_type(member.type_name)
-                            logger.debug(f"Nested struct member {member.name} has cleaned type: {type_name}")
+                            logger.debug(
+                                f"Nested struct member {member.name} has cleaned type: {type_name}"
+                            )
 
                             typedef_result = self.find_typedef(type_name)
                             if typedef_result:
                                 typedef_name, final_type = typedef_result
                                 used_typedefs[typedef_name] = final_type
-                                logger.debug(f"Found typedef for nested struct member {member.name}: {typedef_name} -> {final_type}")
+                                logger.debug(
+                                    f"Found typedef for nested struct member {member.name}: {typedef_name} -> {final_type}"
+                                )
 
         # Check nested struct member types
         if nested_structs:
             for struct in nested_structs:
-                logger.debug(f"Examining nested struct {struct.name} with {len(struct.members)} members")
+                logger.debug(
+                    f"Examining nested struct {struct.name} with {len(struct.members)} members"
+                )
                 for member in struct.members:
                     type_name = self._extract_base_type(member.type_name)
-                    logger.debug(f"Nested struct member {member.name} has cleaned type: {type_name}")
+                    logger.debug(
+                        f"Nested struct member {member.name} has cleaned type: {type_name}"
+                    )
 
                     typedef_result = self.find_typedef(type_name)
                     if typedef_result:
                         typedef_name, final_type = typedef_result
                         used_typedefs[typedef_name] = final_type
-                        logger.debug(f"Found typedef for nested struct member {member.name}: {typedef_name} -> {final_type}")
+                        logger.debug(
+                            f"Found typedef for nested struct member {member.name}: {typedef_name} -> {final_type}"
+                        )
 
         # Also check for any indirect typedefs (typedefs used by resolved types)
         additional_typedefs = {}

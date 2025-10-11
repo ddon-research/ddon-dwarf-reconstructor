@@ -84,8 +84,7 @@ class ProgressTracker:
         cu_length = getattr(cu, "cu_length", 0)
 
         self.logger.debug(
-            f"Processing CU #{self.cu_count} at 0x{cu_offset:x} "
-            f"(length: {cu_length} bytes)"
+            f"Processing CU #{self.cu_count} at 0x{cu_offset:x} (length: {cu_length} bytes)"
         )
 
         initial_die_count = self.die_count
@@ -97,8 +96,7 @@ class ProgressTracker:
             dies_processed = self.die_count - initial_die_count
 
             self.logger.debug(
-                f"CU #{self.cu_count} completed in {elapsed:.3f}s "
-                f"({dies_processed} DIEs processed)"
+                f"CU #{self.cu_count} completed in {elapsed:.3f}s ({dies_processed} DIEs processed)"
             )
 
         except Exception as e:

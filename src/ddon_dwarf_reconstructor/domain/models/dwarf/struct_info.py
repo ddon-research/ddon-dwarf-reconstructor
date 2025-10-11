@@ -15,6 +15,3 @@ class StructInfo:
     byte_size: int
     members: list[MemberInfo]
     die_offset: int | None = None
-
-
-

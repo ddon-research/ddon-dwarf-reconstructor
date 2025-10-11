@@ -167,6 +167,7 @@ select = ["E", "F", "W", "C90", "I", "N", "B", "UP", "SIM"]
 ignore = [
     "C901",    # function too complex (allow complex functions for now)
     "UP047",   # use type parameters (Python 3.13 specific)
+    "E501",    # line too long (handled by formatter, allow long docstrings/debug statements)
 ]
 
 [tool.ruff.lint.per-file-ignores]

@@ -96,9 +96,7 @@ class DwarfGenerator(BaseGenerator):
         # Initialize lazy index
         lazy_start = time()
         self.lazy_index = LazyDwarfIndexService(
-            self.dwarf_info,
-            str(cache_file),
-            die_cache_size=config["DIE_CACHE_SIZE"]
+            self.dwarf_info, str(cache_file), die_cache_size=config["DIE_CACHE_SIZE"]
         )
         lazy_elapsed = time() - lazy_start
         logger.debug(f"LazyDwarfIndex initialization: {lazy_elapsed:.3f}s")

@@ -24,7 +24,30 @@
     "typedef:u16": 42724,
     "class:MtTypedArray<nCharacterEdit::cPaletteParams>": 1718877,
     "class:MtArray": 99004,
-    "class:cArray<MtVector3, 4>": 19619
+    "class:cArray<MtVector3, 4>": 19619,
+    "class:rTbl2ChatMacro": 306872520,
+    "class:rTbl2<cTbl2ChatMacro>": 306872955,
+    "class:MtOscillator": 71972,
+    "class:rLandInfo": 1005268,
+    "class:rTbl2<cWarpLocation>": 29718122,
+    "class:rTbl2<cWeaponOffset>": 307924666,
+    "class:rTbl2<cWeaponResTable>": 89666176,
+    "class:rTbl2<cWeatherFogInfo>": 1029015,
+    "class:rTbl2<cWeatherInfo>": 1027162,
+    "class:rTbl2<cWeatherParamEfcInfo>": 1031459,
+    "class:rTbl2<cWeatherParamInfo>": 1027666,
+    "class:rTbl2<cWepCateResTbl>": 215099393,
+    "class:rTbl2<nJobParam::cJobInfo>": 998883,
+    "class:rTbl2<nKeyConfigTextTable::cKeyText>": 54699943,
+    "class:rTbl2<rAcquirement::cAbilityAddData>": 281306595,
+    "class:rTbl2<rAcquirement::cAbilityData>": 49073188,
+    "class:rTbl2<rAcquirement::cCustomSkillData>": 11146051,
+    "class:rTbl2<rAcquirement::cNormalSkillData>": 11148658,
+    "class:rTbl2ClanEmblemTextureId": 306985732,
+    "class:rTbl2<cTbl2ClanEmblemTextureId>": 306986167,
+    "class:rTbl2ItemIconId": 307052794,
+    "class:rTbl2<cTbl2ItemIconId>": 307053229,
+    "class:rTblMenuComm": 3459194
   },
   "offset_to_symbol": {
     "34029": "class:MtObject",
@@ -49,7 +72,30 @@
     "42724": "typedef:u16",
     "1718877": "class:MtTypedArray<nCharacterEdit::cPaletteParams>",
     "99004": "class:MtArray",
-    "19619": "class:cArray<MtVector3, 4>"
+    "19619": "class:cArray<MtVector3, 4>",
+    "306872520": "class:rTbl2ChatMacro",
+    "306872955": "class:rTbl2<cTbl2ChatMacro>",
+    "71972": "class:MtOscillator",
+    "1005268": "class:rLandInfo",
+    "29718122": "class:rTbl2<cWarpLocation>",
+    "307924666": "class:rTbl2<cWeaponOffset>",
+    "89666176": "class:rTbl2<cWeaponResTable>",
+    "1029015": "class:rTbl2<cWeatherFogInfo>",
+    "1027162": "class:rTbl2<cWeatherInfo>",
+    "1031459": "class:rTbl2<cWeatherParamEfcInfo>",
+    "1027666": "class:rTbl2<cWeatherParamInfo>",
+    "215099393": "class:rTbl2<cWepCateResTbl>",
+    "998883": "class:rTbl2<nJobParam::cJobInfo>",
+    "54699943": "class:rTbl2<nKeyConfigTextTable::cKeyText>",
+    "281306595": "class:rTbl2<rAcquirement::cAbilityAddData>",
+    "49073188": "class:rTbl2<rAcquirement::cAbilityData>",
+    "11146051": "class:rTbl2<rAcquirement::cCustomSkillData>",
+    "11148658": "class:rTbl2<rAcquirement::cNormalSkillData>",
+    "306985732": "class:rTbl2ClanEmblemTextureId",
+    "306986167": "class:rTbl2<cTbl2ClanEmblemTextureId>",
+    "307052794": "class:rTbl2ItemIconId",
+    "307053229": "class:rTbl2<cTbl2ItemIconId>",
+    "3459194": "class:rTblMenuComm"
   },
   "symbol_to_cu_offset": {
     "MtObject": 3229,
@@ -74,7 +120,30 @@
     "u16": 3229,
     "MtTypedArray<nCharacterEdit::cPaletteParams>": 1166123,
     "MtArray": 3229,
-    "cArray<MtVector3, 4>": 3229
+    "cArray<MtVector3, 4>": 3229,
+    "rTbl2ChatMacro": 306817021,
+    "rTbl2<cTbl2ChatMacro>": 306817021,
+    "MtOscillator": 3229,
+    "rLandInfo": 3229,
+    "rTbl2<cWarpLocation>": 28750346,
+    "rTbl2<cWeaponOffset>": 307871463,
+    "rTbl2<cWeaponResTable>": 89176705,
+    "rTbl2<cWeatherFogInfo>": 3229,
+    "rTbl2<cWeatherInfo>": 3229,
+    "rTbl2<cWeatherParamEfcInfo>": 3229,
+    "rTbl2<cWeatherParamInfo>": 3229,
+    "rTbl2<cWepCateResTbl>": 214515977,
+    "rTbl2<nJobParam::cJobInfo>": 3229,
+    "rTbl2<nKeyConfigTextTable::cKeyText>": 53451222,
+    "rTbl2<rAcquirement::cAbilityAddData>": 281244002,
+    "rTbl2<rAcquirement::cAbilityData>": 48999848,
+    "rTbl2<rAcquirement::cCustomSkillData>": 11085790,
+    "rTbl2<rAcquirement::cNormalSkillData>": 11085790,
+    "rTbl2ClanEmblemTextureId": 306931094,
+    "rTbl2<cTbl2ClanEmblemTextureId>": 306931094,
+    "rTbl2ItemIconId": 306998156,
+    "rTbl2<cTbl2ItemIconId>": 306998156,
+    "rTblMenuComm": 2434092
   },
   "cu_offset_to_symbols": {
     "3229": [
@@ -95,7 +164,14 @@
       "class:MtPropertyList",
       "typedef:u16",
       "class:MtArray",
-      "class:cArray<MtVector3, 4>"
+      "class:cArray<MtVector3, 4>",
+      "class:MtOscillator",
+      "class:rLandInfo",
+      "class:rTbl2<cWeatherFogInfo>",
+      "class:rTbl2<cWeatherInfo>",
+      "class:rTbl2<cWeatherParamEfcInfo>",
+      "class:rTbl2<cWeatherParamInfo>",
+      "class:rTbl2<nJobParam::cJobInfo>"
     ],
     "0": [
       "typedef:size_t",
@@ -109,6 +185,46 @@
     ],
     "1166123": [
       "class:MtTypedArray<nCharacterEdit::cPaletteParams>"
+    ],
+    "306817021": [
+      "class:rTbl2ChatMacro",
+      "class:rTbl2<cTbl2ChatMacro>"
+    ],
+    "28750346": [
+      "class:rTbl2<cWarpLocation>"
+    ],
+    "307871463": [
+      "class:rTbl2<cWeaponOffset>"
+    ],
+    "89176705": [
+      "class:rTbl2<cWeaponResTable>"
+    ],
+    "214515977": [
+      "class:rTbl2<cWepCateResTbl>"
+    ],
+    "53451222": [
+      "class:rTbl2<nKeyConfigTextTable::cKeyText>"
+    ],
+    "281244002": [
+      "class:rTbl2<rAcquirement::cAbilityAddData>"
+    ],
+    "48999848": [
+      "class:rTbl2<rAcquirement::cAbilityData>"
+    ],
+    "11085790": [
+      "class:rTbl2<rAcquirement::cCustomSkillData>",
+      "class:rTbl2<rAcquirement::cNormalSkillData>"
+    ],
+    "306931094": [
+      "class:rTbl2ClanEmblemTextureId",
+      "class:rTbl2<cTbl2ClanEmblemTextureId>"
+    ],
+    "306998156": [
+      "class:rTbl2ItemIconId",
+      "class:rTbl2<cTbl2ItemIconId>"
+    ],
+    "2434092": [
+      "class:rTblMenuComm"
     ]
   },
   "typedef_offsets": {
@@ -135,8 +251,31 @@
     "MtPropertyList": 76092,
     "MtTypedArray<nCharacterEdit::cPaletteParams>": 1718877,
     "MtArray": 99004,
-    "cArray<MtVector3, 4>": 19619
+    "cArray<MtVector3, 4>": 19619,
+    "rTbl2ChatMacro": 306872520,
+    "rTbl2<cTbl2ChatMacro>": 306872955,
+    "MtOscillator": 71972,
+    "rLandInfo": 1005268,
+    "rTbl2<cWarpLocation>": 29718122,
+    "rTbl2<cWeaponOffset>": 307924666,
+    "rTbl2<cWeaponResTable>": 89666176,
+    "rTbl2<cWeatherFogInfo>": 1029015,
+    "rTbl2<cWeatherInfo>": 1027162,
+    "rTbl2<cWeatherParamEfcInfo>": 1031459,
+    "rTbl2<cWeatherParamInfo>": 1027666,
+    "rTbl2<cWepCateResTbl>": 215099393,
+    "rTbl2<nJobParam::cJobInfo>": 998883,
+    "rTbl2<nKeyConfigTextTable::cKeyText>": 54699943,
+    "rTbl2<rAcquirement::cAbilityAddData>": 281306595,
+    "rTbl2<rAcquirement::cAbilityData>": 49073188,
+    "rTbl2<rAcquirement::cCustomSkillData>": 11146051,
+    "rTbl2<rAcquirement::cNormalSkillData>": 11148658,
+    "rTbl2ClanEmblemTextureId": 306985732,
+    "rTbl2<cTbl2ClanEmblemTextureId>": 306986167,
+    "rTbl2ItemIconId": 307052794,
+    "rTbl2<cTbl2ItemIconId>": 307053229,
+    "rTblMenuComm": 3459194
   },
   "created": 1760175209.3007119,
-  "last_updated": 1760179715.8537855
+  "last_updated": 1760193999.286558
 }

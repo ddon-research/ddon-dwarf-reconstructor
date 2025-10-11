@@ -1,4 +1,4 @@
-﻿"""Path utilities for cross-platform file operations."""
+"""Path utilities for cross-platform file operations."""
 
 import re
 import string

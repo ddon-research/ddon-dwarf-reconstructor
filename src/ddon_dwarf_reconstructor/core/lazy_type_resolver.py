@@ -20,7 +20,7 @@ logger = get_logger(__name__)
 
 class LazyTypeResolver:
     """On-demand type resolution without full DWARF loading.
-    
+
     This class provides memory-efficient type resolution by:
     1. Using offset-based caching instead of loading all typedefs
     2. Leveraging pyelftools' get_DIE_from_attribute() for reference resolution
@@ -29,30 +29,53 @@ class LazyTypeResolver:
     """
 
     # Common primitive typedefs for quick lookup
-    PRIMITIVE_TYPEDEFS = frozenset({
-        "u8", "u16", "u32", "u64",
-        "s8", "s16", "s32", "s64",
-        "f32", "f64",
-        "size_t", "ssize_t",
-        "uint_fast8_t", "int_fast8_t",
-        "uint_fast16_t", "int_fast16_t",
-        "uint_fast32_t", "int_fast32_t",
-        "uint_fast64_t", "int_fast64_t",
-        # Platform-specific types
-        "uint8_t", "int8_t",
-        "uint16_t", "int16_t",
-        "uint32_t", "int32_t",
-        "uint64_t", "int64_t",
-        "uintptr_t", "intptr_t",
-        "__uint64_t", "__int64_t",
-        "__uint32_t", "__int32_t",
-        "__uint16_t", "__int16_t",
-        "__uint8_t", "__int8_t",
-    })
+    PRIMITIVE_TYPEDEFS = frozenset(
+        {
+            "u8",
+            "u16",
+            "u32",
+            "u64",
+            "s8",
+            "s16",
+            "s32",
+            "s64",
+            "f32",
+            "f64",
+            "size_t",
+            "ssize_t",
+            "uint_fast8_t",
+            "int_fast8_t",
+            "uint_fast16_t",
+            "int_fast16_t",
+            "uint_fast32_t",
+            "int_fast32_t",
+            "uint_fast64_t",
+            "int_fast64_t",
+            # Platform-specific types
+            "uint8_t",
+            "int8_t",
+            "uint16_t",
+            "int16_t",
+            "uint32_t",
+            "int32_t",
+            "uint64_t",
+            "int64_t",
+            "uintptr_t",
+            "intptr_t",
+            "__uint64_t",
+            "__int64_t",
+            "__uint32_t",
+            "__int32_t",
+            "__uint16_t",
+            "__int16_t",
+            "__uint8_t",
+            "__int8_t",
+        }
+    )
 
     def __init__(self, dwarf_info: DWARFInfo, lazy_index: LazyDwarfIndexService):
         """Initialize lazy type resolver.
-        
+
         Args:
             dwarf_info: DWARF information from pyelftools
             lazy_index: Lazy DWARF index for offset-based lookups
@@ -75,26 +98,34 @@ class LazyTypeResolver:
 
     def expand_primitive_search(self, full_hierarchy: bool = False) -> None:
         """Expand the set of primitive types to search for.
-        
+
         Args:
             full_hierarchy: If True, include additional platform-specific types
         """
         if full_hierarchy:
             additional_types = {
-                "ptrdiff_t", "wchar_t", "char16_t", "char32_t",
-                "long long", "unsigned long long",
-                "long double", "bool", "char", "wchar",
-                "std::size_t", "std::ptrdiff_t"
+                "ptrdiff_t",
+                "wchar_t",
+                "char16_t",
+                "char32_t",
+                "long long",
+                "unsigned long long",
+                "long double",
+                "bool",
+                "char",
+                "wchar",
+                "std::size_t",
+                "std::ptrdiff_t",
             }
             self._primitive_typedefs.update(additional_types)
 
     def resolve_type_name(self, die: DIE, type_attr_name: str = "DW_AT_type") -> str:
         """Resolve type name using offset-based caching.
-        
+
         Args:
             die: DIE to resolve type from
             type_attr_name: Attribute name containing type reference
-            
+
         Returns:
             Resolved type name as string
         """
@@ -128,10 +159,10 @@ class LazyTypeResolver:
 
     def _resolve_die_type_name(self, type_die: DIE) -> str:
         """Resolve type name from a type DIE.
-        
+
         Args:
             type_die: DIE representing a type
-            
+
         Returns:
             Resolved type name
         """
@@ -173,10 +204,10 @@ class LazyTypeResolver:
 
     def find_typedef(self, typedef_name: str) -> tuple[str, str] | None:
         """Find typedef using lazy loading and caching.
-        
+
         Args:
             typedef_name: Name of typedef to find
-            
+
         Returns:
             Tuple of (typedef_name, underlying_type) or None if not found
         """
@@ -218,10 +249,10 @@ class LazyTypeResolver:
 
     def resolve_typedef_chain(self, typedef_name: str) -> str:
         """Recursively resolve typedef to its final underlying type.
-        
+
         Args:
             typedef_name: Name of typedef to resolve
-            
+
         Returns:
             Final underlying type after resolving all typedef chains
         """
@@ -264,10 +295,10 @@ class LazyTypeResolver:
 
     def collect_typedefs_from_die(self, class_die: DIE) -> set[str]:
         """Collect typedefs used by a class DIE, resolving them lazily.
-        
+
         Args:
             class_die: DIE representing a class/struct
-            
+
         Returns:
             Set of resolved typedef names used by the class
         """
@@ -293,7 +324,7 @@ class LazyTypeResolver:
 
     def get_cache_stats(self) -> dict[str, Any]:
         """Get statistics about cache usage and performance.
-        
+
         Returns:
             Dictionary with cache statistics
         """
@@ -302,7 +333,7 @@ class LazyTypeResolver:
             "type_name_cache_size": len(self._type_name_cache),
             "typedef_chains_size": len(self._typedef_chains),
             "types_in_progress": len(self._types_in_progress),
-            "primitive_typedefs": len(self._primitive_typedefs)
+            "primitive_typedefs": len(self._primitive_typedefs),
         }
 
     def clear_caches(self) -> None:
@@ -318,19 +349,19 @@ class LazyTypeResolver:
         members: list,
         methods: list,
         unions: list | None = None,
-        nested_structs: list | None = None
+        nested_structs: list | None = None,
     ) -> dict[str, str]:
         """Collect typedefs used by members, methods, unions, and nested structs with lazy resolution.
-        
+
         This method discovers and resolves primitive typedefs that are actually
         used in the class definition, providing compatibility with header generation.
-        
+
         Args:
             members: List of MemberInfo objects
             methods: List of MethodInfo objects
             unions: Optional list of UnionInfo objects to examine for typedefs
             nested_structs: Optional list of StructInfo objects to examine for typedefs
-            
+
         Returns:
             Dictionary mapping typedef names to their resolved types
         """
@@ -345,7 +376,7 @@ class LazyTypeResolver:
         # Collect type names from members using DWARF DIE traversal
         type_names = set()
         for member in members:
-            if hasattr(member, 'type_name') and member.type_name:
+            if hasattr(member, "type_name") and member.type_name:
                 # Try to get base type via DWARF DIE traversal first
                 base_type = self._get_base_type_from_typename(member.type_name)
                 if base_type:
@@ -355,11 +386,13 @@ class LazyTypeResolver:
                     # Fallback to string extraction if DIE traversal fails
                     base_type = self._extract_base_type(member.type_name)
                     type_names.add(base_type)
-                    logger.debug(f"Member {member.name}: {member.type_name} -> {base_type} (string fallback)")
+                    logger.debug(
+                        f"Member {member.name}: {member.type_name} -> {base_type} (string fallback)"
+                    )
 
         # Collect type names from methods (parameters and return types)
         for method in methods:
-            if hasattr(method, 'return_type') and method.return_type:
+            if hasattr(method, "return_type") and method.return_type:
                 # Try DWARF DIE traversal first for return type
                 base_type = self._get_base_type_from_typename(method.return_type)
                 if base_type:
@@ -373,9 +406,9 @@ class LazyTypeResolver:
                         f"Method return type: {method.return_type} -> {base_type} (string fallback)"
                     )
 
-            if hasattr(method, 'parameters'):
+            if hasattr(method, "parameters"):
                 for param in method.parameters:
-                    if hasattr(param, 'type_name') and param.type_name:
+                    if hasattr(param, "type_name") and param.type_name:
                         # Try DWARF DIE traversal first for parameter type
                         base_type = self._get_base_type_from_typename(param.type_name)
                         if base_type:
@@ -396,29 +429,35 @@ class LazyTypeResolver:
             for union in unions:
                 logger.debug(f"Examining union {union.name} for typedefs")
                 for member in union.members:
-                    if hasattr(member, 'type_name') and member.type_name:
+                    if hasattr(member, "type_name") and member.type_name:
                         base_type = self._extract_base_type(member.type_name)
                         type_names.add(base_type)
-                        logger.debug(f"Union member {member.name}: {member.type_name} -> {base_type}")
+                        logger.debug(
+                            f"Union member {member.name}: {member.type_name} -> {base_type}"
+                        )
 
                 # Check nested structs within unions
-                if hasattr(union, 'nested_structs') and union.nested_structs:
+                if hasattr(union, "nested_structs") and union.nested_structs:
                     for nested_struct in union.nested_structs:
                         for member in nested_struct.members:
-                            if hasattr(member, 'type_name') and member.type_name:
+                            if hasattr(member, "type_name") and member.type_name:
                                 base_type = self._extract_base_type(member.type_name)
                                 type_names.add(base_type)
-                                logger.debug(f"Nested struct member {member.name}: {member.type_name} -> {base_type}")
+                                logger.debug(
+                                    f"Nested struct member {member.name}: {member.type_name} -> {base_type}"
+                                )
 
         # Collect type names from nested struct members
         if nested_structs:
             for struct in nested_structs:
                 logger.debug(f"Examining nested struct {struct.name} for typedefs")
                 for member in struct.members:
-                    if hasattr(member, 'type_name') and member.type_name:
+                    if hasattr(member, "type_name") and member.type_name:
                         base_type = self._extract_base_type(member.type_name)
                         type_names.add(base_type)
-                        logger.debug(f"Nested struct member {member.name}: {member.type_name} -> {base_type}")
+                        logger.debug(
+                            f"Nested struct member {member.name}: {member.type_name} -> {base_type}"
+                        )
 
         # Look for primitive typedefs in the collected type names
         for type_name in type_names:
@@ -437,10 +476,10 @@ class LazyTypeResolver:
 
     def _resolve_primitive_typedef(self, typedef_name: str) -> str | None:
         """Resolve a primitive type (typedef or base type) using lazy search.
-        
+
         Args:
             typedef_name: Name of the type to resolve (can be typedef or base type)
-            
+
         Returns:
             Resolved type name, or None if not found
         """
@@ -482,11 +521,17 @@ class LazyTypeResolver:
                                 logger.debug(f"Resolved typedef {typedef_name} -> {resolved_name}")
                                 return resolved_name
                             else:
-                                logger.debug(f"Could not get target DIE from DW_AT_type for {typedef_name}")
+                                logger.debug(
+                                    f"Could not get target DIE from DW_AT_type for {typedef_name}"
+                                )
                         else:
-                            logger.debug(f"No DW_AT_type attribute found for typedef {typedef_name}")
+                            logger.debug(
+                                f"No DW_AT_type attribute found for typedef {typedef_name}"
+                            )
                 else:
-                    logger.debug(f"Could not retrieve DIE at offset 0x{offset:x} for {typedef_name}")
+                    logger.debug(
+                        f"Could not retrieve DIE at offset 0x{offset:x} for {typedef_name}"
+                    )
             else:
                 logger.debug(f"No offset found for typedef: {typedef_name}")
 
@@ -499,10 +544,10 @@ class LazyTypeResolver:
 
     def _get_primitive_base_type_name(self, type_die: DIE) -> str:
         """Get the name of a primitive base type from DIE with recursive resolution.
-        
+
         Args:
             type_die: DIE representing the base type
-            
+
         Returns:
             String representation of the base type
         """
@@ -524,7 +569,12 @@ class LazyTypeResolver:
                     return self._get_primitive_base_type_name(target_die)
 
         # Handle const/volatile/pointer/reference types by following their type
-        if type_die.tag in ("DW_TAG_const_type", "DW_TAG_volatile_type", "DW_TAG_pointer_type", "DW_TAG_reference_type"):
+        if type_die.tag in (
+            "DW_TAG_const_type",
+            "DW_TAG_volatile_type",
+            "DW_TAG_pointer_type",
+            "DW_TAG_reference_type",
+        ):
             type_attr = type_die.attributes.get("DW_AT_type")
             if type_attr:
                 target_die = type_die.get_DIE_from_attribute("DW_AT_type")
@@ -557,7 +607,7 @@ class LazyTypeResolver:
                 type_name = type_name[9:].strip()
 
         # Remove rvalue reference suffix first (&&), then lvalue reference (&), then pointers (*)
-        while (type_name.endswith("&&") or type_name.endswith("&") or type_name.endswith("*")):
+        while type_name.endswith("&&") or type_name.endswith("&") or type_name.endswith("*"):
             if type_name.endswith("&&"):
                 type_name = type_name[:-2].strip()
             elif type_name.endswith("&") or type_name.endswith("*"):

@@ -15,4 +15,3 @@ class MemberInfo:
     is_static: bool = False
     is_const: bool = False
     const_value: int | None = None
-

@@ -221,11 +221,27 @@ class HeaderGenerator:
 
         # Primitive types to exclude
         primitives = {
-            "int", "char", "float", "double", "void", "bool",
-            "unknown_type", "unsigned", "signed", "short", "long",
-            "u8", "u16", "u32", "u64",
-            "s8", "s16", "s32", "s64",
-            "f32", "f64",
+            "int",
+            "char",
+            "float",
+            "double",
+            "void",
+            "bool",
+            "unknown_type",
+            "unsigned",
+            "signed",
+            "short",
+            "long",
+            "u8",
+            "u16",
+            "u32",
+            "u64",
+            "s8",
+            "s16",
+            "s32",
+            "s64",
+            "f32",
+            "f64",
         }
 
         # Process class members
@@ -248,7 +264,7 @@ class HeaderGenerator:
         # Process method parameters and return types
         for method in class_info.methods:
             # Check return type
-            if hasattr(method, 'return_type') and method.return_type:
+            if hasattr(method, "return_type") and method.return_type:
                 clean_type = self._extract_base_type(method.return_type)
                 if (
                     clean_type not in primitives
@@ -260,9 +276,9 @@ class HeaderGenerator:
                     forward_decls.add(clean_type)
 
             # Check method parameters
-            if hasattr(method, 'parameters') and method.parameters:
+            if hasattr(method, "parameters") and method.parameters:
                 for param in method.parameters:
-                    if hasattr(param, 'type_name') and param.type_name:
+                    if hasattr(param, "type_name") and param.type_name:
                         clean_type = self._extract_base_type(param.type_name)
                         if (
                             clean_type not in primitives
@@ -293,12 +309,12 @@ class HeaderGenerator:
 
     def _format_member_declaration(self, member: MemberInfo) -> str:
         """Format a member declaration with proper C++ syntax.
-        
+
         Handles special cases like arrays and static members.
-        
+
         Args:
             member: MemberInfo object to format
-            
+
         Returns:
             Properly formatted C++ member declaration
         """
@@ -308,7 +324,7 @@ class HeaderGenerator:
         # Handle array types - need to reformat for C++ syntax
         if "[" in type_name and "]" in type_name:
             # Parse array declaration
-            match = re.match(r'^(.+?)(\[.+\])$', type_name)
+            match = re.match(r"^(.+?)(\[.+\])$", type_name)
             if match:
                 base_type = match.group(1).strip()
                 dimensions = match.group(2)
@@ -447,9 +463,9 @@ class HeaderGenerator:
 
         if include_metadata:
             lines.append(f"    // Enum {enum.name} ({enum.byte_size} bytes)")
-            if hasattr(enum, 'declaration_file') and enum.declaration_file:
+            if hasattr(enum, "declaration_file") and enum.declaration_file:
                 lines.append(f"    // Declared in: {enum.declaration_file}")
-                if hasattr(enum, 'declaration_line') and enum.declaration_line:
+                if hasattr(enum, "declaration_line") and enum.declaration_line:
                     lines.append(f"    //   Line: {enum.declaration_line}")
 
         lines.append(f"    enum class {enum.name}")

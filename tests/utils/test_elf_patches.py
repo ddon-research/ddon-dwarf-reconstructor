@@ -30,14 +30,15 @@ class TestElfPatches:
     @pytest.mark.unit
     def test_patch_pyelftools_for_ps4_modifies_elffile(self):
         """Test that patching modifies ELFFile behavior."""
-        with patch('src.ddon_dwarf_reconstructor.utils.elf_patches.elffile') as mock_elffile:
+        with patch("src.ddon_dwarf_reconstructor.utils.elf_patches.elffile") as mock_elffile:
             mock_elffile.ELFFile = Mock()
 
             patch_pyelftools_for_ps4()
 
             # Should have modified the ELFFile class methods
-            assert hasattr(mock_elffile.ELFFile, '_make_section') or \
-                   hasattr(mock_elffile.ELFFile, 'get_section')
+            assert hasattr(mock_elffile.ELFFile, "_make_section") or hasattr(
+                mock_elffile.ELFFile, "get_section"
+            )
 
     @pytest.mark.unit
     def test_patched_make_section_functionality(self):
@@ -68,6 +69,7 @@ class TestElfPatches:
 
         # Test section retrieval with various indices
         import contextlib
+
         with contextlib.suppress(AttributeError):
             # Should handle valid indices
             mock_elf_file.get_section(0)
@@ -91,7 +93,7 @@ class TestElfPatches:
     @pytest.mark.unit
     def test_patch_with_mock_elffile_module(self):
         """Test patching with mocked elffile module."""
-        with patch('src.ddon_dwarf_reconstructor.utils.elf_patches.elffile') as mock_elffile:
+        with patch("src.ddon_dwarf_reconstructor.utils.elf_patches.elffile") as mock_elffile:
             # Create mock ELFFile class
             mock_elffile_class = Mock()
             mock_elffile.ELFFile = mock_elffile_class
@@ -105,7 +107,7 @@ class TestElfPatches:
     @pytest.mark.unit
     def test_patch_preserves_original_methods(self):
         """Test that patching preserves original method behavior where appropriate."""
-        with patch('src.ddon_dwarf_reconstructor.utils.elf_patches.elffile') as mock_elffile:
+        with patch("src.ddon_dwarf_reconstructor.utils.elf_patches.elffile") as mock_elffile:
             # Set up mock with original methods
             original_make_section = Mock()
             original_get_section = Mock()
@@ -125,7 +127,7 @@ class TestElfPatches:
     @pytest.mark.unit
     def test_patch_handles_missing_methods_gracefully(self):
         """Test that patching works even if some expected methods don't exist."""
-        with patch('src.ddon_dwarf_reconstructor.utils.elf_patches.elffile') as mock_elffile:
+        with patch("src.ddon_dwarf_reconstructor.utils.elf_patches.elffile") as mock_elffile:
             # Create mock ELFFile class without expected methods
             mock_elffile_class = Mock()
             # Deliberately don't set _make_section or get_section
@@ -137,13 +139,18 @@ class TestElfPatches:
     @pytest.mark.unit
     def test_patch_import_error_handling(self):
         """Test handling of import errors during patching."""
-        with patch('src.ddon_dwarf_reconstructor.utils.elf_patches.elffile', side_effect=ImportError):
+        import contextlib
+
+        # Combine context managers as suggested by SIM117
+        with (
+            patch(
+                "src.ddon_dwarf_reconstructor.utils.elf_patches.elffile",
+                side_effect=ImportError,
+            ),
+            contextlib.suppress(ImportError),
+        ):
             # Should handle import errors gracefully
-            try:
-                patch_pyelftools_for_ps4()
-            except ImportError:
-                # Acceptable behavior - patches can't be applied without elftools
-                pass
+            patch_pyelftools_for_ps4()
 
     @pytest.mark.unit
     def test_ps4_specific_section_handling(self):
@@ -192,7 +199,7 @@ class TestElfPatches:
     @pytest.mark.unit
     def test_patch_effects_on_section_parsing(self):
         """Test that patches affect section parsing behavior."""
-        with patch('src.ddon_dwarf_reconstructor.utils.elf_patches.elffile') as mock_elffile:
+        with patch("src.ddon_dwarf_reconstructor.utils.elf_patches.elffile") as mock_elffile:
             mock_elffile_class = Mock()
             mock_elffile.ELFFile = mock_elffile_class
 

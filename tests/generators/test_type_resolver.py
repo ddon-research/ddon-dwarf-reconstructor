@@ -6,8 +6,9 @@ Tests the critical type resolution logic including caching, primitive typedef
 expansion, and cross-hierarchy typedef collection.
 """
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 from ddon_dwarf_reconstructor.domain.services.parsing import TypeResolver
 
@@ -27,7 +28,7 @@ class TestTypeResolver:
         mock_cu1.iter_DIEs.return_value = []  # Empty DIE list
 
         mock_cu2 = Mock()
-        mock_cu2.cu_offset = 0xc9d
+        mock_cu2.cu_offset = 0xC9D
         mock_cu2.cu_length = 42851
         mock_cu2.iter_DIEs.return_value = []  # Empty DIE list
 
@@ -54,10 +55,18 @@ class TestTypeResolver:
 
         # Core integer types
         expected_types = {
-            "u8", "u16", "u32", "u64",
-            "s8", "s16", "s32", "s64",
-            "f32", "f64",
-            "size_t", "ssize_t"
+            "u8",
+            "u16",
+            "u32",
+            "u64",
+            "s8",
+            "s16",
+            "s32",
+            "s64",
+            "f32",
+            "f64",
+            "size_t",
+            "ssize_t",
         }
 
         for expected_type in expected_types:
@@ -86,11 +95,16 @@ class TestTypeResolver:
 
         # Check for additional types
         additional_types = {
-            "uint8_t", "int8_t",
-            "uint16_t", "int16_t", 
-            "uint32_t", "int32_t",
-            "uint64_t", "int64_t",
-            "uintptr_t", "intptr_t"
+            "uint8_t",
+            "int8_t",
+            "uint16_t",
+            "int16_t",
+            "uint32_t",
+            "int32_t",
+            "uint64_t",
+            "int64_t",
+            "uintptr_t",
+            "intptr_t",
         }
 
         for additional_type in additional_types:
@@ -144,7 +158,7 @@ class TestTypeResolver:
             ("DW_TAG_pointer_type", "pointer types"),
             ("DW_TAG_const_type", "const qualified types"),
             ("DW_TAG_reference_type", "reference types"),
-            ("DW_TAG_array_type", "array types")
+            ("DW_TAG_array_type", "array types"),
         ]
 
         for tag, description in test_cases:
@@ -194,12 +208,12 @@ class TestTypeResolver:
         mock_member1 = Mock()
         mock_member1.type_name = "u32"
 
-        mock_member2 = Mock()  
+        mock_member2 = Mock()
         mock_member2.type_name = "const u16"
 
         members = [mock_member1, mock_member2]
 
-        with patch.object(type_resolver, 'find_typedef') as mock_find:
+        with patch.object(type_resolver, "find_typedef") as mock_find:
             # Return None for both since they won't be found in mock DWARF
             mock_find.return_value = None
 
@@ -212,7 +226,7 @@ class TestTypeResolver:
 
     @pytest.mark.unit
     def test_collect_used_typedefs_from_methods(self, type_resolver):
-        """Test typedef collection from method information.""" 
+        """Test typedef collection from method information."""
         # Mock parameter info
         mock_param = Mock()
         mock_param.type_name = "size_t"
@@ -224,7 +238,7 @@ class TestTypeResolver:
 
         methods = [mock_method]
 
-        with patch.object(type_resolver, 'find_typedef') as mock_find:
+        with patch.object(type_resolver, "find_typedef") as mock_find:
             mock_find.return_value = None  # Nothing found in mock DWARF
 
             result = type_resolver.collect_used_typedefs([], methods)
@@ -268,7 +282,7 @@ class TestTypeResolver:
         # Basic search mode
         result1 = type_resolver.find_typedef("u32", deep_search=False)
 
-        # Deep search mode  
+        # Deep search mode
         result2 = type_resolver.find_typedef("u32", deep_search=True)
 
         # Both should work with mock DWARF (returning None since not found)
@@ -309,7 +323,7 @@ class TestTypeResolver:
         """Test that recursive type resolution has proper limits."""
         # Create circular reference
         mock_die1 = Mock()
-        mock_die2 = Mock() 
+        mock_die2 = Mock()
 
         mock_die1.tag = "DW_TAG_pointer_type"
         mock_die2.tag = "DW_TAG_pointer_type"

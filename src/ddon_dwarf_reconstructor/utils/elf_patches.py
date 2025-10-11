@@ -2,7 +2,7 @@
 
 This module provides comprehensive patches to handle PS4-specific ELF format issues:
 1. Non-standard section types that cause pyelftools to fail
-2. Dynamic sections with invalid sh_link pointing to NULL sections  
+2. Dynamic sections with invalid sh_link pointing to NULL sections
 3. PS4-specific SCE (Sony Computer Entertainment) dynamic tags and sections
 
 The patches are designed to be non-invasive and fallback gracefully while preserving
@@ -32,12 +32,11 @@ def patch_pyelftools_for_ps4() -> None:
     # Save original methods
     original_make_section = elffile.ELFFile._make_section
     original_get_section = elffile.ELFFile.get_section
-    original_dynamic_init = DynamicSection.__init__
 
     def patched_make_section(self: elffile.ELFFile, section_header: Any) -> Any:
         """
         Patched version of _make_section that handles PS4-specific issues.
-        
+
         Specifically handles unexpected section types by creating generic sections.
         """
         try:
@@ -61,7 +60,7 @@ def patch_pyelftools_for_ps4() -> None:
     ) -> Any:
         """
         Patched version of get_section that handles PS4-specific issues.
-        
+
         Specifically handles NULL section references in PS4 dynamic sections.
         """
         try:
@@ -77,8 +76,11 @@ def patch_pyelftools_for_ps4() -> None:
                 return Section(section_header, name, self)
 
             # Handle PS4 dynamic section linking to NULL section
-            if ("Unexpected section type SHT_NULL" in error_msg and type_filter and
-                ('SHT_STRTAB' in str(type_filter) or 'SHT_NOBITS' in str(type_filter))):
+            if (
+                "Unexpected section type SHT_NULL" in error_msg
+                and type_filter
+                and ("SHT_STRTAB" in str(type_filter) or "SHT_NOBITS" in str(type_filter))
+            ):
                 # PS4 ELFs may have dynamic sections with sh_link=0 (NULL section)
                 # In this case, return a NullSection to prevent crashes
                 section_header = self._get_section_header(section_index)
@@ -96,7 +98,7 @@ def patch_pyelftools_for_ps4() -> None:
     ) -> None:
         """
         Patched version of DynamicSection.__init__ that handles PS4-specific issues.
-        
+
         PS4 ELFs often have dynamic sections with sh_link=0, pointing to the NULL section
         instead of a proper string table. This patch handles that gracefully.
         """
@@ -104,23 +106,24 @@ def patch_pyelftools_for_ps4() -> None:
 
         try:
             # Try the normal path first
-            stringtable = elffile.get_section(header['sh_link'], ('SHT_STRTAB', 'SHT_NOBITS'))
+            stringtable = elffile.get_section(header["sh_link"], ("SHT_STRTAB", "SHT_NOBITS"))
         except ELFError as e:
             if "Unexpected section type SHT_NULL" in str(e):
                 # PS4 ELF: sh_link points to NULL section, use NullSection as fallback
-                stringtable = elffile.get_section(header['sh_link'])
+                stringtable = elffile.get_section(header["sh_link"])
             else:
                 raise
 
         # Import here to avoid circular imports
         from elftools.elf.dynamic import Dynamic
+
         Dynamic.__init__(
             self,
             self.stream,
             self.elffile,
             stringtable,
-            self['sh_offset'],
-            self['sh_type'] == 'SHT_NOBITS'
+            self["sh_offset"],
+            self["sh_type"] == "SHT_NOBITS",
         )
 
     # Apply patches

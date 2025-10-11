@@ -46,7 +46,7 @@ class ClassParser:
         self,
         type_resolver: "LazyTypeResolver",
         dwarf_info: "DWARFInfo",
-        lazy_index: "LazyDwarfIndexService | None" = None
+        lazy_index: "LazyDwarfIndexService | None" = None,
     ):
         """Initialize class parser with lazy type resolver and lazy index.
 

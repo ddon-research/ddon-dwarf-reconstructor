@@ -12,4 +12,3 @@ class ParameterInfo:
     name: str
     type_name: str
     default_value: str | None = None
-

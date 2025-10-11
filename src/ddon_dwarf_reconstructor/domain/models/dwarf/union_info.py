@@ -22,6 +22,3 @@ class UnionInfo:
     members: list[MemberInfo]
     nested_structs: list[StructInfo]
     die_offset: int | None = None
-
-
-

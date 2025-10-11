@@ -17,7 +17,7 @@ class PersistentSymbolCache:
 
     def __init__(self, cache_file: str | Path):
         """Initialize persistent cache.
-        
+
         Args:
             cache_file: Path to cache file
         """
@@ -27,16 +27,18 @@ class PersistentSymbolCache:
 
     def _load_cache(self) -> dict[str, Any]:
         """Load cached mappings from disk.
-        
+
         Returns:
             Cache data dictionary
         """
         try:
             if self.cache_file.exists():
-                with open(self.cache_file, encoding='utf-8') as f:
+                with open(self.cache_file, encoding="utf-8") as f:
                     data = json.load(f)
-                    logger.info(f"Loaded cache from {self.cache_file} "
-                              f"({len(data.get('symbol_to_offset', {}))} symbols)")
+                    logger.info(
+                        f"Loaded cache from {self.cache_file} "
+                        f"({len(data.get('symbol_to_offset', {}))} symbols)"
+                    )
                     # Migrate old cache format to new format
                     return self._migrate_cache_format(data)
         except (json.JSONDecodeError, OSError) as e:
@@ -47,7 +49,7 @@ class PersistentSymbolCache:
 
     def _create_empty_cache(self) -> dict[str, Any]:
         """Create empty cache structure with current format.
-        
+
         Returns:
             Empty cache dictionary
         """
@@ -61,15 +63,15 @@ class PersistentSymbolCache:
             "typedef_offsets": {},
             "class_offsets": {},
             "created": time(),
-            "last_updated": time()
+            "last_updated": time(),
         }
 
     def _migrate_cache_format(self, data: dict[str, Any]) -> dict[str, Any]:
         """Migrate cache data to current format.
-        
+
         Args:
             data: Loaded cache data
-            
+
         Returns:
             Migrated cache data
         """
@@ -98,10 +100,10 @@ class PersistentSymbolCache:
 
     def _cleanup_duplicate_keys(self, data: dict[str, Any]) -> dict[str, Any]:
         """Clean up duplicate keys in cu_offset_to_symbols.
-        
+
         Args:
             data: Cache data that may contain duplicate keys
-            
+
         Returns:
             Cleaned cache data with merged lists for duplicate keys
         """
@@ -136,15 +138,16 @@ class PersistentSymbolCache:
             data["cu_offset_to_symbols"] = {str(k): v for k, v in rebuilt_cu_symbols.items()}
 
             if rebuilt_cu_symbols:
-                logger.info(f"Cleaned up duplicate CU keys, rebuilt "
-                           f"{len(rebuilt_cu_symbols)} CU mappings")
+                logger.info(
+                    f"Cleaned up duplicate CU keys, rebuilt {len(rebuilt_cu_symbols)} CU mappings"
+                )
                 self._modified = True
 
         return data
 
     def get_elf_hash(self) -> str | None:
         """Get stored ELF file hash.
-        
+
         Returns:
             Stored ELF hash or None
         """
@@ -152,7 +155,7 @@ class PersistentSymbolCache:
 
     def set_elf_hash(self, elf_hash: str) -> None:
         """Set ELF file hash.
-        
+
         Args:
             elf_hash: Hash of ELF file
         """
@@ -162,11 +165,11 @@ class PersistentSymbolCache:
 
     def get_symbol_offset(self, symbol_name: str, symbol_type: str = "") -> int | None:
         """Get offset for symbol.
-        
+
         Args:
             symbol_name: Name of symbol
             symbol_type: Type prefix (e.g., "class", "typedef")
-            
+
         Returns:
             Symbol offset or None if not found
         """
@@ -175,7 +178,7 @@ class PersistentSymbolCache:
 
     def add_symbol(self, symbol_name: str, offset: int, symbol_type: str = "") -> None:
         """Add symbol→offset mapping.
-        
+
         Args:
             symbol_name: Name of symbol
             offset: DWARF offset
@@ -197,10 +200,10 @@ class PersistentSymbolCache:
 
     def get_symbol_by_offset(self, offset: int) -> str | None:
         """Get symbol name by offset.
-        
+
         Args:
             offset: DWARF offset
-            
+
         Returns:
             Symbol name or None if not found
         """
@@ -214,20 +217,22 @@ class PersistentSymbolCache:
                 self.data = self._cleanup_duplicate_keys(self.data)
 
                 self.cache_file.parent.mkdir(parents=True, exist_ok=True)
-                with open(self.cache_file, 'w', encoding='utf-8') as f:
+                with open(self.cache_file, "w", encoding="utf-8") as f:
                     json.dump(self.data, f, indent=2)
-                logger.info(f"Saved cache to {self.cache_file} "
-                          f"({len(self.data['symbol_to_offset'])} symbols)")
+                logger.info(
+                    f"Saved cache to {self.cache_file} "
+                    f"({len(self.data['symbol_to_offset'])} symbols)"
+                )
                 self._modified = False
             except OSError as e:
                 logger.error(f"Failed to save cache to {self.cache_file}: {e}")
 
     def get_symbol_cu_offset(self, symbol_name: str) -> int | None:
         """Get CU offset for symbol for efficient CU targeting.
-        
+
         Args:
             symbol_name: Name of symbol to look up
-            
+
         Returns:
             CU offset if found, None otherwise
         """
@@ -235,7 +240,7 @@ class PersistentSymbolCache:
 
     def add_symbol_cu_mapping(self, symbol_key: str, cu_offset: int, die_offset: int) -> None:
         """Add symbol to CU offset mapping for efficient targeting.
-        
+
         Args:
             symbol_key: Symbol key with type prefix (e.g., "class:MtObject", "typedef:u32")
             cu_offset: Offset of compilation unit containing the symbol
@@ -275,10 +280,10 @@ class PersistentSymbolCache:
 
     def get_cu_symbols(self, cu_offset: int) -> list[str]:
         """Get all symbols known to be in a specific CU.
-        
+
         Args:
             cu_offset: Offset of compilation unit
-            
+
         Returns:
             List of symbol names in the CU
         """
@@ -286,7 +291,7 @@ class PersistentSymbolCache:
 
     def get_statistics(self) -> dict[str, Any]:
         """Get cache statistics for monitoring.
-        
+
         Returns:
             Dictionary with cache statistics
         """
@@ -297,6 +302,5 @@ class PersistentSymbolCache:
             "typedefs": len(self.data["typedef_offsets"]),
             "classes": len(self.data["class_offsets"]),
             "file_size": self.cache_file.stat().st_size if self.cache_file.exists() else 0,
-            "last_updated": self.data.get("last_updated", 0)
+            "last_updated": self.data.get("last_updated", 0),
         }
-

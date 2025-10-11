@@ -4,10 +4,14 @@ Tests the core C++ header generation functionality.
 """
 
 import pytest
-from unittest.mock import Mock
 
+from ddon_dwarf_reconstructor.domain.models.dwarf import (
+    ClassInfo,
+    MemberInfo,
+    MethodInfo,
+    ParameterInfo,
+)
 from ddon_dwarf_reconstructor.domain.services.generation import HeaderGenerator
-from ddon_dwarf_reconstructor.domain.models.dwarf import ClassInfo, MemberInfo, MethodInfo, ParameterInfo
 
 
 class TestHeaderGenerator:
@@ -23,13 +27,13 @@ class TestHeaderGenerator:
         """Create a sample class for testing."""
         members = [
             MemberInfo(name="m_value", type_name="int", offset=0),
-            MemberInfo(name="m_name", type_name="std::string", offset=8)
+            MemberInfo(name="m_name", type_name="std::string", offset=8),
         ]
 
         methods = [
             MethodInfo(name="TestClass", return_type="", parameters=[], is_constructor=True),
             MethodInfo(name="getValue", return_type="int", parameters=[]),
-            MethodInfo(name="~TestClass", return_type="", parameters=[], is_destructor=True)
+            MethodInfo(name="~TestClass", return_type="", parameters=[], is_destructor=True),
         ]
 
         return ClassInfo(
@@ -41,15 +45,15 @@ class TestHeaderGenerator:
             enums=[],
             nested_structs=[],
             unions=[],
-            die_offset=0x1000
+            die_offset=0x1000,
         )
 
     @pytest.mark.unit
     def test_initialization(self, header_generator):
         """Test proper initialization of HeaderGenerator."""
         assert header_generator is not None
-        assert hasattr(header_generator, 'generate_header')
-        assert hasattr(header_generator, 'generate_hierarchy_header')
+        assert hasattr(header_generator, "generate_header")
+        assert hasattr(header_generator, "generate_hierarchy_header")
 
     @pytest.mark.unit
     def test_generate_header_basic_class(self, header_generator, sample_class):
@@ -89,7 +93,7 @@ class TestHeaderGenerator:
             enums=[],
             nested_structs=[],
             unions=[],
-            die_offset=0x2000
+            die_offset=0x2000,
         )
 
         header = header_generator.generate_header(derived_class)
@@ -122,10 +126,7 @@ class TestHeaderGenerator:
     @pytest.mark.unit
     def test_generate_header_with_typedefs(self, header_generator, sample_class):
         """Test header generation with typedef information."""
-        typedefs = {
-            "u32": "unsigned int",
-            "s32": "int"
-        }
+        typedefs = {"u32": "unsigned int", "s32": "int"}
 
         header = header_generator.generate_header(sample_class, typedefs=typedefs)
 
@@ -145,7 +146,7 @@ class TestHeaderGenerator:
             enums=[],
             nested_structs=[],
             unions=[],
-            die_offset=0x3000
+            die_offset=0x3000,
         )
 
         header = header_generator.generate_header(empty_class)
@@ -160,9 +161,10 @@ class TestHeaderGenerator:
         methods = [
             MethodInfo(name="MyClass", return_type="", parameters=[], is_constructor=True),
             MethodInfo(name="getValue", return_type="int", parameters=[]),
-            MethodInfo(name="setValue", return_type="void", 
-                      parameters=[ParameterInfo("value", "int")]),
-            MethodInfo(name="~MyClass", return_type="", parameters=[], is_destructor=True)
+            MethodInfo(
+                name="setValue", return_type="void", parameters=[ParameterInfo("value", "int")]
+            ),
+            MethodInfo(name="~MyClass", return_type="", parameters=[], is_destructor=True),
         ]
 
         test_class = ClassInfo(
@@ -174,7 +176,7 @@ class TestHeaderGenerator:
             enums=[],
             nested_structs=[],
             unions=[],
-            die_offset=0x4000
+            die_offset=0x4000,
         )
 
         header = header_generator.generate_header(test_class)

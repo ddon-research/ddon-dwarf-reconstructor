@@ -33,6 +33,3 @@ class ClassInfo:
     declaration_line: int | None = None
     die_offset: int | None = None
     packing_info: dict[str, int] | None = None  # packing, padding, alignment hints
-
-
-

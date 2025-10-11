@@ -9,13 +9,13 @@ from unittest.mock import Mock
 
 import pytest
 
+from src.ddon_dwarf_reconstructor.domain.models.dwarf import ClassInfo, MemberInfo
 from src.ddon_dwarf_reconstructor.generators.utils.packing_analyzer import (
     analyze_member_gaps,
     calculate_packing_info,
     estimate_member_size,
     suggest_pragma_pack,
 )
-from src.ddon_dwarf_reconstructor.domain.models.dwarf import ClassInfo, MemberInfo
 
 
 class TestPackingAnalyzer:

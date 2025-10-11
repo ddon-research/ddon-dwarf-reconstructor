@@ -21,6 +21,12 @@ Examples:
   # Generate header (quiet mode - default)
   python main.py resources/DDOORBIS.elf --generate MtObject
 
+  # Generate multiple headers
+  python main.py resources/DDOORBIS.elf --generate MtObject,MtVector4,rTbl2Base
+
+  # Generate with full hierarchy
+  python main.py resources/DDOORBIS.elf --generate MtPropertyList --full-hierarchy
+
   # Generate header (verbose mode with debug logs)
   python main.py resources/DDOORBIS.elf --generate MtObject --verbose
 
@@ -56,7 +62,8 @@ Examples:
         type=str,
         metavar="SYMBOL",
         required=True,
-        help="Generate C++ header file for the specified symbol",
+        help="Generate C++ header file for the specified symbol(s). "
+        "Supports comma-separated list: 'MtObject,MtVector4,rTbl2Base'",
     )
     parser.add_argument(
         "--full-hierarchy",
@@ -97,58 +104,97 @@ def main() -> NoReturn:
     # Ensure output directory exists
     config.ensure_output_dir()
 
-    # Generate header using pyelftools
-    symbol_name = args.generate
-    logger.info(f"Generating header for: {symbol_name}")
+    # Parse symbol list (support comma-separated symbols)
+    symbol_input = args.generate
+    symbols = [s.strip() for s in symbol_input.split(",") if s.strip()]
 
+    if not symbols:
+        logger.error("No symbols provided")
+        sys.exit(1)
+
+    logger.info(f"Generating headers for {len(symbols)} symbol(s)")
     logger.debug(f"Generation mode: {'full-hierarchy' if args.full_hierarchy else 'single-class'}")
-    logger.debug(f"Target symbol: {symbol_name}")
 
-    # Determine output path - use sanitized filename for safety
-    filename = create_header_filename(symbol_name)
-    output_file = config.output_dir / filename
+    # Track results
+    success_count = 0
+    failed_symbols = []
 
+    # Process each symbol
     try:
         with DwarfGenerator(config.elf_file_path) as generator:
-            if args.full_hierarchy:
-                header_content = generator.generate_complete_hierarchy_header(symbol_name)
-            else:
-                header_content = generator.generate_header(symbol_name)
+            for i, symbol_name in enumerate(symbols, 1):
+                logger.info(f"[{i}/{len(symbols)}] Processing: {symbol_name}")
 
-            # Write to output file
-            output_file.write_text(header_content, encoding="utf-8")
+                try:
+                    # Generate header
+                    if args.full_hierarchy:
+                        header_content = generator.generate_complete_hierarchy_header(
+                            symbol_name
+                        )
+                    else:
+                        header_content = generator.generate_header(symbol_name)
 
-            logger.info(f"[SUCCESS] Generated: {output_file}")
-            logger.info(f"Size: {len(header_content)} bytes")
+                    # Determine output path - use sanitized filename for safety
+                    filename = create_header_filename(symbol_name)
+                    output_file = config.output_dir / filename
 
-            # Calculate lines and provide summary statistics
-            lines = header_content.split("\n")
-            logger.debug(f"Generated header contains {len(lines)} lines")
+                    # Write to output file
+                    output_file.write_text(header_content, encoding="utf-8")
 
-            if config.verbose:
-                logger.debug("\nPreview (first 30 lines):")
-                logger.debug("=" * 60)
-                for line in lines[:30]:
-                    logger.debug(line)
-                if len(lines) > 30:
-                    logger.debug(f"... and {len(lines) - 30} more lines")
-                logger.debug("=" * 60)
+                    logger.info(f"[SUCCESS] Generated: {output_file}")
+                    logger.info(f"Size: {len(header_content)} bytes")
+                    success_count += 1
 
-    except ValueError as e:
-        logger.error(f"Error: {e}")
-        logger.debug("Main program terminating due to ValueError")
-        sys.exit(1)
+                    # Calculate lines and provide summary statistics
+                    lines = header_content.split("\n")
+                    logger.debug(f"Generated header contains {len(lines)} lines")
+
+                    if config.verbose and len(symbols) == 1:
+                        # Only show preview for single symbol in verbose mode
+                        logger.debug("\nPreview (first 30 lines):")
+                        logger.debug("=" * 60)
+                        for line in lines[:30]:
+                            logger.debug(line)
+                        if len(lines) > 30:
+                            logger.debug(f"... and {len(lines) - 30} more lines")
+                        logger.debug("=" * 60)
+
+                except ValueError as e:
+                    logger.error(f"[FAILED] {symbol_name}: {e}")
+                    failed_symbols.append((symbol_name, str(e)))
+                except Exception as e:
+                    logger.error(f"[FAILED] {symbol_name}: {e}")
+                    failed_symbols.append((symbol_name, str(e)))
+                    if config.verbose:
+                        import traceback
+
+                        traceback.print_exc()
+
     except Exception as e:
-        logger.error(f"Error: {e}")
-        logger.debug("Main program terminating due to unexpected exception")
+        logger.error(f"Fatal error during generation: {e}")
         if config.verbose:
             import traceback
 
             traceback.print_exc()
         sys.exit(1)
 
+    # Print summary
+    logger.info("=" * 70)
+    logger.info("GENERATION SUMMARY")
+    logger.info("=" * 70)
+    logger.info(f"Total symbols: {len(symbols)}")
+    logger.info(f"Successfully generated: {success_count}")
+    logger.info(f"Failed: {len(failed_symbols)}")
+
+    if failed_symbols:
+        logger.info("\nFailed symbols:")
+        for symbol_name, error in failed_symbols:
+            logger.info(f"  - {symbol_name}: {error}")
+
     logger.debug("Main program completed successfully")
-    sys.exit(0)
+
+    # Exit with error code if any symbols failed
+    sys.exit(0 if len(failed_symbols) == 0 else 1)
 
 
 if __name__ == "__main__":
