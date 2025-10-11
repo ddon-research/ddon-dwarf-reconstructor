@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-"""Type resolution and typedef handling for DWARF parsing.
+"""Type resolution and typedef handling for DWARF parsing - ENHANCED VERSION.
 
 This module provides type resolution logic for DWARF DIEs, handling:
-- Primitive type resolution (u8, u16, u32, etc.)
-- Typedef chains
+- ALL typedefs (not just primitives)
+- Recursive typedef chains
 - Type qualifiers (const, pointer, reference)
-- Caching for performance optimization
+- Comprehensive caching for performance optimization
 """
 
 from time import time
@@ -16,7 +16,7 @@ from elftools.dwarf.die import DIE
 from elftools.dwarf.dwarfinfo import DWARFInfo
 
 if TYPE_CHECKING:
-    from ..models import MemberInfo, MethodInfo
+    from ..domain.models.dwarf import MemberInfo, MethodInfo, StructInfo, UnionInfo
 
 from ..utils.logger import get_logger, log_timing
 
@@ -27,38 +27,37 @@ class TypeResolver:
     """Handles all type resolution logic for DWARF parsing.
 
     This class resolves type names from DWARF DIEs, following reference chains,
-    resolving typedefs, and applying type qualifiers. Includes caching for
+    resolving typedefs, and applying type qualifiers. Includes comprehensive caching for
     performance optimization.
 
     Attributes:
         dwarf_info: DWARF information structure from pyelftools
         _typedef_cache: Cache of resolved typedefs for performance
-        _primitive_typedefs: Set of primitive typedef names to resolve
+        _all_typedefs: Complete map of all typedefs in the binary
+        _typedef_chains: Cache of recursive typedef resolutions
     """
 
-    # Primitive typedefs commonly used in game engines
+    # Common primitive typedefs for quick lookup
     PRIMITIVE_TYPEDEFS = frozenset(
         {
-            "u8",
-            "u16",
-            "u32",
-            "u64",
-            "s8",
-            "s16",
-            "s32",
-            "s64",
-            "f32",
-            "f64",
-            "size_t",
-            "ssize_t",
-            "uint_fast8_t",
-            "int_fast8_t",
-            "uint_fast16_t",
-            "int_fast16_t",
-            "uint_fast32_t",
-            "int_fast32_t",
-            "uint_fast64_t",
-            "int_fast64_t",
+            "u8", "u16", "u32", "u64",
+            "s8", "s16", "s32", "s64",
+            "f32", "f64",
+            "size_t", "ssize_t",
+            "uint_fast8_t", "int_fast8_t",
+            "uint_fast16_t", "int_fast16_t",
+            "uint_fast32_t", "int_fast32_t",
+            "uint_fast64_t", "int_fast64_t",
+            # Platform-specific types
+            "uint8_t", "int8_t",
+            "uint16_t", "int16_t",
+            "uint32_t", "int32_t",
+            "uint64_t", "int64_t",
+            "uintptr_t", "intptr_t",
+            "__uint64_t", "__int64_t",
+            "__uint32_t", "__int32_t",
+            "__uint16_t", "__int16_t",
+            "__uint8_t", "__int8_t",
         }
     )
 
@@ -70,7 +69,11 @@ class TypeResolver:
         """
         self.dwarf_info = dwarf_info
         self._typedef_cache: dict[str, tuple[str, str] | None] = {}
-        self._primitive_typedefs = set(self.PRIMITIVE_TYPEDEFS)  # Convert to mutable set
+        self._all_typedefs: dict[str, str] | None = None  # Lazy loaded
+        self._typedef_chains: dict[str, str] = {}  # Recursive resolution cache
+        self._types_in_progress: set[str] = set()  # Prevent infinite recursion
+        # Add instance attribute for test compatibility
+        self._primitive_typedefs: set[str] = set(self.PRIMITIVE_TYPEDEFS)
 
     def expand_primitive_search(self, full_hierarchy: bool = False) -> None:
         """Expand the set of primitive types to search for.
@@ -79,20 +82,14 @@ class TypeResolver:
             full_hierarchy: If True, include additional platform-specific types
         """
         if full_hierarchy:
-            self._primitive_typedefs.update(
-                {
-                    "uint8_t",
-                    "int8_t",
-                    "uint16_t",
-                    "int16_t",
-                    "uint32_t",
-                    "int32_t",
-                    "uint64_t",
-                    "int64_t",
-                    "uintptr_t",
-                    "intptr_t",
-                }
-            )
+            # Add additional platform-specific types for full hierarchy mode
+            additional_types = {
+                "ptrdiff_t", "wchar_t", "char16_t", "char32_t",
+                "long long", "unsigned long long",
+                "long double", "bool", "char", "wchar",
+                "std::size_t", "std::ptrdiff_t"
+            }
+            self._primitive_typedefs.update(additional_types)
 
     def resolve_type_name(self, die: DIE, type_attr_name: str = "DW_AT_type") -> str:
         """Resolve type name using pyelftools DIE reference resolution.
@@ -168,143 +165,208 @@ class TypeResolver:
             return "unknown_type"
 
     @log_timing
+    def collect_all_typedefs(self) -> dict[str, str]:
+        """Collect ALL typedefs from the DWARF information.
+        
+        This method scans the entire DWARF info once and caches all typedefs for
+        comprehensive type resolution. This includes primitive types, class types,
+        struct types, and any other typedefs.
+        
+        Returns:
+            Dictionary mapping typedef names to their underlying types
+        """
+        if self._all_typedefs is not None:
+            return self._all_typedefs
+        
+        logger.info("Collecting all typedefs from DWARF info...")
+        self._all_typedefs = {}
+        
+        cu_count = 0
+        typedef_count = 0
+        start_time = time()
+        
+        for cu in self.dwarf_info.iter_CUs():
+            cu_count += 1
+            
+            for die in cu.iter_DIEs():
+                if die.tag == "DW_TAG_typedef":
+                    name_attr = die.attributes.get("DW_AT_name")
+                    if name_attr:
+                        typedef_name = (name_attr.value.decode("utf-8") 
+                                      if isinstance(name_attr.value, bytes)
+                                      else str(name_attr.value))
+                        
+                        # Get the underlying type
+                        underlying_type = self.resolve_type_name(die)
+                        self._all_typedefs[typedef_name] = underlying_type
+                        typedef_count += 1
+                        
+                        logger.debug(f"Found typedef: {typedef_name} -> {underlying_type}")
+        
+        elapsed = time() - start_time
+        logger.info(f"Collected {typedef_count} typedefs from {cu_count} CUs in {elapsed:.3f}s")
+        
+        return self._all_typedefs
+
+    def resolve_typedef_chain(self, typedef_name: str) -> str:
+        """Recursively resolve a typedef to its final underlying type.
+        
+        This handles typedef chains like:
+        typedef __uint64_t u64;
+        typedef unsigned long long __uint64_t;
+        
+        Args:
+            typedef_name: Name of typedef to resolve
+            
+        Returns:
+            Final underlying type after resolving all typedef chains
+        """
+        # Check cache first
+        if typedef_name in self._typedef_chains:
+            return self._typedef_chains[typedef_name]
+        
+        # Prevent infinite recursion
+        if typedef_name in self._types_in_progress:
+            logger.warning(f"Circular typedef dependency detected for {typedef_name}")
+            return typedef_name
+            
+        self._types_in_progress.add(typedef_name)
+        
+        try:
+            # Ensure all typedefs are collected
+            if self._all_typedefs is None:
+                self.collect_all_typedefs()
+            
+            # Check if this is a typedef
+            if typedef_name not in self._all_typedefs:
+                # Not a typedef, return as-is
+                result = typedef_name
+            else:
+                # Get the underlying type
+                underlying = self._all_typedefs[typedef_name]
+                
+                # Check if the underlying type is itself a typedef
+                if underlying in self._all_typedefs:
+                    # Recursively resolve
+                    result = self.resolve_typedef_chain(underlying)
+                else:
+                    result = underlying
+            
+            # Cache the result
+            self._typedef_chains[typedef_name] = result
+            return result
+            
+        finally:
+            self._types_in_progress.discard(typedef_name)
+
+    @log_timing
     def find_typedef(self, typedef_name: str, deep_search: bool = False) -> tuple[str, str] | None:
-        """Find a typedef definition by name for primitive types only.
+        """Find a typedef definition by name.
 
         Returns (typedef_name, underlying_type) if found, None otherwise.
-        Uses caching to avoid repeated searches.
+        Uses comprehensive typedef collection for full resolution.
 
         Args:
             typedef_name: Name of typedef to search for
-            deep_search: If True, expand search to more types (for full hierarchy mode)
+            deep_search: If True, perform recursive resolution (always True in enhanced version)
 
         Returns:
             Tuple of (typedef_name, underlying_type) if found, None otherwise
         """
-        # Check cache first
+        # Create cache key
         cache_key = f"{typedef_name}_{deep_search}"
+        
+        # Check cache first
         if cache_key in self._typedef_cache:
             return self._typedef_cache[cache_key]
-
-        # Determine search set based on mode
-        search_types = self._primitive_typedefs if deep_search else self.PRIMITIVE_TYPEDEFS
-
-        # Only search for types in the search set
-        if typedef_name not in search_types:
-            logger.debug(f"Skipping typedef lookup for non-primitive type: {typedef_name}")
-            self._typedef_cache[cache_key] = None
-            return None
-
-        logger.debug(f"Searching for typedef: {typedef_name} (deep_search={deep_search})")
-        target_name = typedef_name.encode("utf-8")
-
-        cu_count = 0
-        die_count = 0
-        start_time = time()
-
-        for cu in self.dwarf_info.iter_CUs():
-            cu_count += 1
-            cu_start_time = time()
-            logger.debug(
-                f"Searching CU #{cu_count} at offset 0x{cu.cu_offset:x} for typedef {typedef_name}",
-            )
-
-            cu_die_count = 0
-            for die in cu.iter_DIEs():
-                die_count += 1
-                cu_die_count += 1
-                if die.tag == "DW_TAG_typedef":
-                    name_attr = die.attributes.get("DW_AT_name")
-                    if name_attr and name_attr.value == target_name:
-                        elapsed = time() - start_time
-                        logger.debug(
-                            f"Found typedef {typedef_name} at DIE offset 0x{die.offset:x} "
-                            f"in CU #{cu_count} after {elapsed:.3f}s ({die_count} DIEs searched)",
-                        )
-                        # Get the underlying type
-                        underlying_type = self.resolve_type_name(die)
-                        logger.debug(f"Typedef {typedef_name} resolves to: {underlying_type}")
-
-                        result = (typedef_name, underlying_type)
-                        self._typedef_cache[cache_key] = result
-                        return result
+        
+        # Ensure all typedefs are collected
+        if self._all_typedefs is None:
+            self.collect_all_typedefs()
+        
+        # Type guard - ensure _all_typedefs is not None after collection
+        assert self._all_typedefs is not None
+        
+        # Check if the typedef exists
+        if typedef_name not in self._all_typedefs:
+            logger.debug(f"Typedef {typedef_name} not found in collected typedefs")
+            result = None
+        else:
+            # Get the immediate underlying type
+            underlying_type = self._all_typedefs[typedef_name]
             
-            cu_elapsed = time() - cu_start_time
-            if cu_elapsed > 0.1:  # Log slow CUs
-                logger.debug(f"CU #{cu_count} search took {cu_elapsed:.3f}s ({cu_die_count} DIEs)")
-
-        elapsed = time() - start_time
-        logger.debug(
-            f"Typedef {typedef_name} not found after searching {cu_count} CUs and "
-            f"{die_count} DIEs in {elapsed:.3f}s",
-        )
-        self._typedef_cache[cache_key] = None
-        return None
+            # Perform recursive resolution if needed
+            final_type = self.resolve_typedef_chain(underlying_type)
+            
+            logger.debug(f"Typedef {typedef_name} -> {underlying_type} (final: {final_type})")
+            result = (typedef_name, final_type)
+        
+        # Cache the result
+        self._typedef_cache[cache_key] = result
+        return result
 
     @log_timing
     def collect_used_typedefs(
-        self, members: list["MemberInfo"], methods: list["MethodInfo"]
+        self, 
+        members: list["MemberInfo"], 
+        methods: list["MethodInfo"], 
+        unions: list["UnionInfo"] | None = None, 
+        nested_structs: list["StructInfo"] | None = None
     ) -> dict[str, str]:
-        """Collect only the typedefs that are actually used by members and methods.
+        """Collect only the typedefs that are actually used by members, methods, unions, and nested structs.
 
         Args:
             members: List of MemberInfo objects
-            methods: List of MethodInfo objects
+            methods: List of MethodInfo objects  
+            unions: Optional list of UnionInfo objects to examine for typedefs
+            nested_structs: Optional list of StructInfo objects to examine for typedefs
 
         Returns:
-            Dictionary mapping typedef names to their underlying types
+            Dictionary mapping typedef names to their fully resolved underlying types
         """
+        total_members = len(members)
+        total_methods = len(methods)
+        total_unions = len(unions) if unions else 0
+        total_structs = len(nested_structs) if nested_structs else 0
+        
         logger.debug(
-            f"Collecting used typedefs from {len(members)} members and {len(methods)} methods"
+            f"Collecting used typedefs from {total_members} members, {total_methods} methods, "
+            f"{total_unions} unions, {total_structs} nested structs"
         )
+        
+        # Ensure all typedefs are collected
+        if self._all_typedefs is None:
+            self.collect_all_typedefs()
+        
+        # Type guard - ensure _all_typedefs is not None after collection
+        assert self._all_typedefs is not None
+        
         used_typedefs = {}
 
         # Check all member types
-        member_start_time = time()
-        logger.debug(f"Checking {len(members)} members for typedef usage")
         for member in members:
             # Extract base type name from complex types
             type_name = self._extract_base_type(member.type_name)
             logger.debug(f"Member {member.name} has cleaned type: {type_name}")
 
-            # Try to find as typedef
-            typedef_start_time = time()
-            result = self.find_typedef(type_name)
-            typedef_elapsed = time() - typedef_start_time
-            
-            if result:
-                typedef_name, underlying_type = result
-                used_typedefs[typedef_name] = underlying_type
-                logger.debug(
-                    f"Found typedef for member {member.name}: {typedef_name} -> {underlying_type} "
-                    f"(resolved in {typedef_elapsed:.3f}s)",
-                )
-            elif typedef_elapsed > 0.1:  # Log slow typedef searches
-                logger.debug(
-                    f"Typedef search for {type_name} took {typedef_elapsed:.3f}s (not found)"
-                )
-        
-        member_elapsed = time() - member_start_time
-        if len(members) > 0:
-            logger.debug(f"Member typedef analysis completed in {member_elapsed:.3f}s "
-                        f"({member_elapsed/len(members):.3f}s avg per member)")
+            # Check if it's a typedef using find_typedef
+            typedef_result = self.find_typedef(type_name)
+            if typedef_result:
+                typedef_name, final_type = typedef_result
+                used_typedefs[typedef_name] = final_type
+                logger.debug(f"Found typedef for member {member.name}: {typedef_name} -> {final_type}")
 
         # Check method return types and parameters
-        method_start_time = time()
-        logger.debug(f"Checking {len(methods)} methods for typedef usage")
-        method_typedef_count = 0
-        
         for method in methods:
             # Check return type
             return_type = self._extract_base_type(method.return_type)
             logger.debug(f"Method {method.name} has cleaned return type: {return_type}")
 
-            result = self.find_typedef(return_type)
-            if result:
-                typedef_name, underlying_type = result
-                used_typedefs[typedef_name] = underlying_type
-                method_typedef_count += 1
-                logger.debug(f"Found typedef for return type: {typedef_name} -> {underlying_type}")
+            typedef_result = self.find_typedef(return_type)
+            if typedef_result:
+                typedef_name, final_type = typedef_result
+                used_typedefs[typedef_name] = final_type
+                logger.debug(f"Found typedef for return type: {typedef_name} -> {final_type}")
 
             # Check parameter types
             if method.parameters:
@@ -313,22 +375,69 @@ class TypeResolver:
                     param_type = self._extract_base_type(param.type_name)
                     logger.debug(f"Parameter {param.name} has cleaned type: {param_type}")
 
-                    result = self.find_typedef(param_type)
-                    if result:
-                        typedef_name, underlying_type = result
-                        used_typedefs[typedef_name] = underlying_type
-                        method_typedef_count += 1
+                    typedef_result = self.find_typedef(param_type)
+                    if typedef_result:
+                        typedef_name, final_type = typedef_result
+                        used_typedefs[typedef_name] = final_type
                         logger.debug(
                             f"Found typedef for parameter {param.name}: "
-                            f"{typedef_name} -> {underlying_type}",
+                            f"{typedef_name} -> {final_type}",
                         )
-        
-        method_elapsed = time() - method_start_time
-        if len(methods) > 0:
-            logger.debug(f"Method typedef analysis completed in {method_elapsed:.3f}s "
-                        f"({method_elapsed/len(methods):.3f}s avg per method, "
-                        f"{method_typedef_count} typedefs found)")
 
+        # Check union member types
+        if unions:
+            for union in unions:
+                logger.debug(f"Examining union {union.name} with {len(union.members)} members")
+                for member in union.members:
+                    type_name = self._extract_base_type(member.type_name)
+                    logger.debug(f"Union member {member.name} has cleaned type: {type_name}")
+
+                    typedef_result = self.find_typedef(type_name)
+                    if typedef_result:
+                        typedef_name, final_type = typedef_result
+                        used_typedefs[typedef_name] = final_type
+                        logger.debug(f"Found typedef for union member {member.name}: {typedef_name} -> {final_type}")
+
+                # Also check nested structs within unions
+                if hasattr(union, 'nested_structs') and union.nested_structs:
+                    for nested_struct in union.nested_structs:
+                        logger.debug(f"Examining nested struct in union {union.name}")
+                        for member in nested_struct.members:
+                            type_name = self._extract_base_type(member.type_name)
+                            logger.debug(f"Nested struct member {member.name} has cleaned type: {type_name}")
+
+                            typedef_result = self.find_typedef(type_name)
+                            if typedef_result:
+                                typedef_name, final_type = typedef_result
+                                used_typedefs[typedef_name] = final_type
+                                logger.debug(f"Found typedef for nested struct member {member.name}: {typedef_name} -> {final_type}")
+
+        # Check nested struct member types
+        if nested_structs:
+            for struct in nested_structs:
+                logger.debug(f"Examining nested struct {struct.name} with {len(struct.members)} members")
+                for member in struct.members:
+                    type_name = self._extract_base_type(member.type_name)
+                    logger.debug(f"Nested struct member {member.name} has cleaned type: {type_name}")
+
+                    typedef_result = self.find_typedef(type_name)
+                    if typedef_result:
+                        typedef_name, final_type = typedef_result
+                        used_typedefs[typedef_name] = final_type
+                        logger.debug(f"Found typedef for nested struct member {member.name}: {typedef_name} -> {final_type}")
+
+        # Also check for any indirect typedefs (typedefs used by resolved types)
+        additional_typedefs = {}
+        for _typedef_name, resolved_type in used_typedefs.items():
+            # Check if resolved type contains other typedefs
+            base_resolved = self._extract_base_type(resolved_type)
+            if base_resolved in self._all_typedefs and base_resolved not in used_typedefs:
+                final_type = self.resolve_typedef_chain(base_resolved)
+                additional_typedefs[base_resolved] = final_type
+                logger.debug(f"Found indirect typedef: {base_resolved} -> {final_type}")
+        
+        used_typedefs.update(additional_typedefs)
+        
         logger.debug(f"Collected {len(used_typedefs)} total typedefs: {used_typedefs}")
         return used_typedefs
 
@@ -350,9 +459,7 @@ class TypeResolver:
             type_name = type_name[6:].strip()
 
         # Remove pointer/reference suffixes
-        if type_name.endswith("*"):
-            type_name = type_name[:-1].strip()
-        if type_name.endswith("&"):
+        while type_name.endswith("*") or type_name.endswith("&"):
             type_name = type_name[:-1].strip()
 
         # Handle array types - extract base type from array notation
@@ -365,9 +472,12 @@ class TypeResolver:
         return type_name
 
     def clear_cache(self) -> None:
-        """Clear the typedef cache.
+        """Clear all typedef caches.
 
         Useful for testing or when processing multiple ELF files.
         """
         self._typedef_cache.clear()
-        logger.debug("Typedef cache cleared")
+        self._all_typedefs = None
+        self._typedef_chains.clear()
+        self._types_in_progress.clear()
+        logger.debug("All typedef caches cleared")

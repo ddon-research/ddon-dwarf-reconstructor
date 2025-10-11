@@ -7,7 +7,7 @@ import pytest
 from unittest.mock import Mock
 
 from ddon_dwarf_reconstructor.generators.header_generator import HeaderGenerator
-from ddon_dwarf_reconstructor.models import ClassInfo, MemberInfo, MethodInfo, ParameterInfo
+from ddon_dwarf_reconstructor.domain.models.dwarf import ClassInfo, MemberInfo, MethodInfo, ParameterInfo
 
 
 class TestHeaderGenerator:

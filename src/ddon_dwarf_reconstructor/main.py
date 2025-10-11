@@ -8,6 +8,7 @@ from typing import NoReturn
 from .config import Config
 from .generators.dwarf_generator import DwarfGenerator
 from .utils import LoggerSetup, get_logger, log_timing
+from .utils.path_utils import create_header_filename
 
 
 def parse_args() -> argparse.Namespace:
@@ -103,8 +104,9 @@ def main() -> NoReturn:
     logger.debug(f"Generation mode: {'full-hierarchy' if args.full_hierarchy else 'single-class'}")
     logger.debug(f"Target symbol: {symbol_name}")
 
-    # Determine output path - always use <symbol>.h format
-    output_file = config.output_dir / f"{symbol_name}.h"
+    # Determine output path - use sanitized filename for safety
+    filename = create_header_filename(symbol_name)
+    output_file = config.output_dir / filename
 
     try:
         with DwarfGenerator(config.elf_file_path) as generator:

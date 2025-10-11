@@ -51,6 +51,7 @@ class TestDwarfGenerator:
         mock_die.tag = "DW_TAG_class_type"
         mock_die.offset = 0x84ED  # Real offset from sample-dump-MtObject.dwarfdump
         mock_die.has_children = True
+        mock_die.is_null.return_value = False
 
         # Realistic attributes based on actual MtObject DWARF data
         mock_die.attributes = {
@@ -172,6 +173,7 @@ class TestDwarfGenerator:
         mock_base_type_u32 = Mock()
         mock_base_type_u32.tag = "DW_TAG_base_type"
         mock_base_type_u32.offset = 0x4193
+        mock_base_type_u32.is_null.return_value = False
         mock_base_type_u32.attributes = {
             "DW_AT_name": Mock(value=b"unsigned int"),
             "DW_AT_encoding": Mock(value=7),  # DW_ATE_unsigned
@@ -181,6 +183,7 @@ class TestDwarfGenerator:
         mock_pointer_type = Mock()
         mock_pointer_type.tag = "DW_TAG_pointer_type"
         mock_pointer_type.offset = 0x8667
+        mock_pointer_type.is_null.return_value = False
         mock_pointer_type.attributes = {
             "DW_AT_type": Mock(value=0x84ED)  # Points to MtObject
         }
@@ -218,11 +221,12 @@ class TestDwarfGenerator:
 
     @pytest.mark.unit
     def test_context_manager_behavior(self, mocker, mock_elf_file):
-        """Test context manager enters and exits properly."""
+        """Test context manager enters and exits properly with lazy loading."""
         mock_path = Path("test.elf")
 
         # Mock file operations and ELF parsing
         mocker.patch("pathlib.Path.exists", return_value=True)
+        mocker.patch("pathlib.Path.mkdir", return_value=None)  # Mock cache directory creation
         mock_open_file = mocker.patch("builtins.open", mock_open())
         # Patch ELFFile where it's actually used (in base_generator)
         mocker.patch(
@@ -233,14 +237,15 @@ class TestDwarfGenerator:
         with DwarfGenerator(mock_path) as generator:
             assert generator.elf_file is not None
             assert generator.dwarf_info is not None
-            # Verify new module attributes are initialized
+            # Verify new lazy loading components are initialized
             assert generator.type_resolver is not None
             assert generator.class_parser is not None
             assert generator.header_generator is not None
             assert generator.hierarchy_builder is not None
+            assert generator.lazy_index is not None
 
-        # Verify file was opened and closed
-        mock_open_file.assert_called_once()
+        # Verify files were opened (ELF file + cache file)
+        assert mock_open_file.call_count >= 1
 
     @pytest.mark.unit
     def test_find_class_success(self, mocker, mock_elf_file, mock_compilation_unit, mock_die):
@@ -261,7 +266,8 @@ class TestDwarfGenerator:
             result = generator.find_class("MtObject")
 
         assert result == (mock_compilation_unit, mock_die)
-        mock_compilation_unit.iter_DIEs.assert_called_once()
+        # Lazy loading may call iter_DIEs multiple times for different search strategies
+        assert mock_compilation_unit.iter_DIEs.called
 
     # NOTE: We don't test find_class with non-existent classes because it would
     # scan through all CUs and DIEs, making tests extremely slow with real data.
@@ -345,6 +351,7 @@ class TestDwarfGenerator:
         mock_struct_die.tag = "DW_TAG_structure_type"
         mock_struct_die.offset = 0x52
         mock_struct_die.has_children = True
+        mock_struct_die.is_null.return_value = False
         mock_struct_die.attributes = {
             "DW_AT_name": Mock(value=b"div_t"),  # Not explicitly named in dump but inferred
             "DW_AT_byte_size": Mock(value=8),
@@ -410,6 +417,7 @@ class TestDwarfGenerator:
         mock_union_die.tag = "DW_TAG_union_type"
         mock_union_die.offset = 0x8EF
         mock_union_die.has_children = True
+        mock_union_die.is_null.return_value = False
         mock_union_die.attributes = {
             "DW_AT_name": Mock(value=b"__mbstate_union"),  # Inferred name
             "DW_AT_byte_size": Mock(value=128),  # -128 in dump means 128 bytes
@@ -475,6 +483,7 @@ class TestDwarfGenerator:
         mock_typedef_die.tag = "DW_TAG_typedef"
         mock_typedef_die.offset = 0x3486
         mock_typedef_die.has_children = False
+        mock_typedef_die.is_null.return_value = False
         mock_typedef_die.attributes = {
             "DW_AT_name": Mock(value=b"u32"),
             "DW_AT_type": Mock(value=0x3491),  # Points to unsigned int base type
@@ -522,6 +531,7 @@ class TestDwarfGenerator:
         mock_enum_die.tag = "DW_TAG_enumeration_type"
         mock_enum_die.offset = 0x32C
         mock_enum_die.has_children = True
+        mock_enum_die.is_null.return_value = False
         mock_enum_die.attributes = {
             "DW_AT_name": Mock(value=b"StatusCode"),
             "DW_AT_byte_size": Mock(value=4),  # Typical enum size
@@ -593,6 +603,7 @@ class TestDwarfGenerator:
         mock_array_die.tag = "DW_TAG_array_type"
         mock_array_die.offset = 0x90E
         mock_array_die.has_children = True
+        mock_array_die.is_null.return_value = False
         mock_array_die.attributes = {
             "DW_AT_name": Mock(value=b"char_array_128"),  # Inferred name
             "DW_AT_type": Mock(value=0x7E4),  # Points to char base type
@@ -650,6 +661,7 @@ class TestDwarfGenerator:
         mock_nested_class.tag = "DW_TAG_class_type"
         mock_nested_class.offset = 0x7880
         mock_nested_class.has_children = True
+        mock_nested_class.is_null.return_value = False
         mock_nested_class.attributes = {
             "DW_AT_name": Mock(value=b"MyDTI"),
             "DW_AT_containing_type": Mock(value=0x79E4),  # Points to MtDTI parent
@@ -747,6 +759,7 @@ class TestDwarfGenerator:
         mock_outer_struct.tag = "DW_TAG_structure_type"
         mock_outer_struct.offset = 0x200
         mock_outer_struct.has_children = True
+        mock_outer_struct.is_null.return_value = False
         mock_outer_struct.attributes = {
             "DW_AT_name": Mock(value=b"ConfigStruct"),
             "DW_AT_byte_size": Mock(value=16),
@@ -852,6 +865,7 @@ class TestDwarfGenerator:
         mock_complex_union.tag = "DW_TAG_union_type"
         mock_complex_union.offset = 0x300
         mock_complex_union.has_children = True
+        mock_complex_union.is_null.return_value = False
         mock_complex_union.attributes = {
             "DW_AT_name": Mock(value=b"DataUnion"),
             "DW_AT_byte_size": Mock(value=64),

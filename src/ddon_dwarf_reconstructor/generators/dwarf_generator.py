@@ -11,19 +11,23 @@ This is the main generator that orchestrates the modular components:
 """
 
 from pathlib import Path
+from time import time
+from typing import TYPE_CHECKING
 
 from elftools.dwarf.compileunit import CompileUnit
 from elftools.dwarf.die import DIE
 
-from ..models import ClassInfo
+from ..domain.models.dwarf import ClassInfo
 from ..utils.logger import get_logger, log_timing
-from time import time
 from .base_generator import BaseGenerator
 from .class_parser import ClassParser
 from .header_generator import HeaderGenerator
 from .hierarchy_builder import HierarchyBuilder
-from .type_resolver import TypeResolver
 from .utils.packing_analyzer import calculate_packing_info
+
+if TYPE_CHECKING:
+    from ..domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
+    from ..core.lazy_type_resolver import LazyTypeResolver
 
 logger = get_logger(__name__)
 
@@ -39,15 +43,16 @@ class DwarfGenerator(BaseGenerator):
     """
 
     def __init__(self, elf_path: Path):
-        """Initialize generator with ELF file path.
+        """Initialize generator with ELF file path using lazy loading.
 
         Args:
             elf_path: Path to ELF file containing DWARF information
         """
         super().__init__(elf_path)
-        self.type_resolver: TypeResolver | None = None
+        self.type_resolver: LazyTypeResolver | None = None
         self.class_parser: ClassParser | None = None
         self.header_generator: HeaderGenerator | None = None
+        self.lazy_index: LazyDwarfIndexService | None = None
         self.hierarchy_builder: HierarchyBuilder | None = None
 
     def __enter__(self) -> "DwarfGenerator":
@@ -58,30 +63,70 @@ class DwarfGenerator(BaseGenerator):
         initialization_start = time()
         assert self.dwarf_info is not None
         
-        # Initialize components with timing
+        # Initialize components with lazy loading (only approach)
+        self._initialize_components()
+
+        total_elapsed = time() - initialization_start
+        logger.info(f"DwarfGenerator initialized with modular architecture in {total_elapsed:.3f}s")
+        return self
+
+    def __exit__(
+        self, exc_type: type | None, exc_val: Exception | None, exc_tb: object | None
+    ) -> None:
+        """Context manager exit - saves cache and closes resources."""
+        # Save cache before parent cleanup
+        if self.lazy_index is not None:
+            logger.debug("Saving DWARF cache to disk")
+            self.lazy_index.save_cache()
+            logger.info("DWARF cache saved successfully")
+        
+        # Call parent cleanup
+        super().__exit__(exc_type, exc_val, exc_tb)
+
+    def _initialize_components(self) -> None:
+        """Initialize components with lazy loading and memory monitoring."""
+        from ..config.lazy_loading import get_config, get_cache_file_path
+        from ..core.lazy_type_resolver import LazyTypeResolver
+        from ..domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
+        from ..generators.class_parser import ClassParser
+        
+        assert self.dwarf_info is not None, "dwarf_info must be initialized"
+        config = get_config()
+        cache_file = get_cache_file_path(str(self.elf_path))
+        
+        # Initialize lazy index
+        lazy_start = time()
+        self.lazy_index = LazyDwarfIndexService(
+            self.dwarf_info,
+            str(cache_file),
+            die_cache_size=config["DIE_CACHE_SIZE"]
+        )
+        lazy_elapsed = time() - lazy_start
+        logger.debug(f"LazyDwarfIndex initialization: {lazy_elapsed:.3f}s")
+        
+        # Initialize lazy type resolver (the only type resolver now)
         resolver_start = time()
-        self.type_resolver = TypeResolver(self.dwarf_info)
+        self.type_resolver = LazyTypeResolver(self.dwarf_info, self.lazy_index)
         resolver_elapsed = time() - resolver_start
-        logger.debug(f"TypeResolver initialization: {resolver_elapsed:.3f}s")
+        logger.debug(f"LazyTypeResolver initialization: {resolver_elapsed:.3f}s")
         
+        # Initialize class parser with lazy index
         parser_start = time()
-        self.class_parser = ClassParser(self.type_resolver, self.dwarf_info)
+        self.class_parser = ClassParser(self.type_resolver, self.dwarf_info, self.lazy_index)
         parser_elapsed = time() - parser_start
-        logger.debug(f"ClassParser initialization: {parser_elapsed:.3f}s")
+        logger.debug(f"ClassParser with lazy loading initialization: {parser_elapsed:.3f}s")
         
+        # Initialize header generator
         header_start = time()
         self.header_generator = HeaderGenerator()
         header_elapsed = time() - header_start
         logger.debug(f"HeaderGenerator initialization: {header_elapsed:.3f}s")
         
+        # Initialize hierarchy builder
         hierarchy_start = time()
         self.hierarchy_builder = HierarchyBuilder(self.class_parser)
         hierarchy_elapsed = time() - hierarchy_start
         logger.debug(f"HierarchyBuilder initialization: {hierarchy_elapsed:.3f}s")
-
-        total_elapsed = time() - initialization_start
-        logger.info(f"DwarfGenerator initialized with modular architecture in {total_elapsed:.3f}s")
-        return self
 
     def generate(self, symbol: str, **options: bool) -> str:
         """Generate C++ header for the specified symbol.
@@ -179,6 +224,8 @@ class DwarfGenerator(BaseGenerator):
         typedefs = self.type_resolver.collect_used_typedefs(
             class_info.members,
             class_info.methods,
+            class_info.unions,
+            class_info.nested_structs,
         )
         typedef_elapsed = time() - typedef_start
         logger.debug(f"Collected {len(typedefs)} typedefs in {typedef_elapsed:.3f}s")
@@ -247,6 +294,8 @@ class DwarfGenerator(BaseGenerator):
             class_typedefs = self.type_resolver.collect_used_typedefs(
                 class_info.members,
                 class_info.methods,
+                class_info.unions,
+                class_info.nested_structs,
             )
             all_typedefs.update(class_typedefs)
         

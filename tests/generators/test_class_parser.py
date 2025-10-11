@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 
 from ddon_dwarf_reconstructor.generators.class_parser import ClassParser
 from ddon_dwarf_reconstructor.generators.type_resolver import TypeResolver
-from ddon_dwarf_reconstructor.models import ClassInfo, MemberInfo, MethodInfo, ParameterInfo
+from ddon_dwarf_reconstructor.domain.models.dwarf import ClassInfo, MemberInfo, MethodInfo, ParameterInfo
 
 
 class TestClassParser:
@@ -212,6 +212,8 @@ class TestClassParser:
         mock_die = Mock()
         mock_die.tag = "DW_TAG_class_type"
         mock_die.attributes = {'DW_AT_name': Mock(value=b'TestClass')}
+        mock_die.is_null.return_value = False
+        mock_die.has_children = True
 
         # Mock compilation unit
         mock_cu = Mock()

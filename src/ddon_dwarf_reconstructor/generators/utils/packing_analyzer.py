@@ -9,7 +9,7 @@ suggest appropriate packing attributes for C++ struct generation.
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...models import ClassInfo
+    from ...domain.models.dwarf import ClassInfo
 
 from ...utils.logger import get_logger
 

@@ -15,7 +15,7 @@ from src.ddon_dwarf_reconstructor.generators.utils.packing_analyzer import (
     estimate_member_size,
     suggest_pragma_pack,
 )
-from src.ddon_dwarf_reconstructor.models import ClassInfo, MemberInfo
+from src.ddon_dwarf_reconstructor.domain.models.dwarf import ClassInfo, MemberInfo
 
 
 class TestPackingAnalyzer:

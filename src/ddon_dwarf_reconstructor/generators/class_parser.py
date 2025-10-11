@@ -6,11 +6,13 @@ This module handles parsing of DWARF class/struct types into ClassInfo objects,
 including members, methods, enums, and nested types.
 """
 
+from typing import TYPE_CHECKING
+
 from elftools.dwarf.compileunit import CompileUnit
 from elftools.dwarf.die import DIE
 from elftools.dwarf.dwarfinfo import DWARFInfo
 
-from ..models import (
+from ..domain.models.dwarf import (
     ClassInfo,
     EnumeratorInfo,
     EnumInfo,
@@ -21,7 +23,9 @@ from ..models import (
     UnionInfo,
 )
 from ..utils.logger import get_logger, log_timing
-from .type_resolver import TypeResolver
+if TYPE_CHECKING:
+    from ..domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
+    from ..core.lazy_type_resolver import LazyTypeResolver
 
 logger = get_logger(__name__)
 
@@ -37,19 +41,29 @@ class ClassParser:
     - Inheritance relationships
     """
 
-    def __init__(self, type_resolver: TypeResolver, dwarf_info: "DWARFInfo"):
-        """Initialize class parser with type resolver.
+    def __init__(
+        self,
+        type_resolver: "LazyTypeResolver",
+        dwarf_info: "DWARFInfo",
+        lazy_index: "LazyDwarfIndexService | None" = None
+    ):
+        """Initialize class parser with lazy type resolver and lazy index.
 
         Args:
-            type_resolver: TypeResolver instance for type name resolution
+            type_resolver: LazyTypeResolver instance for memory-efficient type name resolution
             dwarf_info: DWARF information structure
+            lazy_index: Optional LazyDwarfIndex for memory-efficient lookups
         """
         self.type_resolver = type_resolver
         self.dwarf_info = dwarf_info
+        self.lazy_index = lazy_index
 
     @log_timing
     def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
-        """Find a type DIE by name using pyelftools iteration.
+        """Find a type DIE by name using lazy loading or full iteration.
+
+        When lazy_index is available, uses memory-efficient offset-based lookups.
+        Falls back to full DWARF iteration if lazy loading is unavailable.
 
         Supports classes, structs, unions, enums, typedefs, and arrays.
         Returns the first complete definition (with size > 0) found.
@@ -61,6 +75,17 @@ class ClassParser:
         Returns:
             Tuple of (CompileUnit, DIE) if found, None otherwise
         """
+        # Try lazy loading first (memory efficient)
+        if self.lazy_index:
+            result = self._find_class_lazy(class_name)
+            if result:
+                return result
+        
+        # Fall back to full iteration (memory intensive)
+        return self._find_class_full_scan(class_name)
+
+    def _find_class_full_scan(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
+        """Find class using full DWARF iteration (memory intensive fallback)."""
         target_name = class_name.encode("utf-8")
         fallback_candidate = None
 
@@ -108,7 +133,62 @@ class ClassParser:
             )
             return cu, die
 
+        logger.warning(f"Class {class_name} not found in DWARF info")
         return None
+
+    def _find_class_lazy(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
+        """Find class using lazy loading for memory efficiency with CU optimization."""
+        if not self.lazy_index:
+            return None
+            
+        try:
+            # Look for different type categories, checking cache first
+            for symbol_type in ["class", "struct", "union", "enum", "typedef"]:
+                # Check persistent cache first
+                offset = self.lazy_index.find_symbol_offset(class_name, symbol_type)
+                if offset is None:
+                    # Fallback to targeted search if not in cache
+                    offset = self.lazy_index.targeted_symbol_search(class_name, symbol_type)
+                if offset:
+                    # Find both DIE and CU in one search
+                    die_cu_result = self._find_die_and_cu_by_offset(offset)
+                    if die_cu_result:
+                        cu, die = die_cu_result
+                        logger.info(
+                            f"Found {class_name} via lazy loading at offset 0x{offset:x} "
+                            f"(type: {symbol_type})"
+                        )
+                        return cu, die
+            
+            logger.warning(f"Class {class_name} not found via lazy loading")
+            return None
+            
+        except Exception as e:
+            logger.warning(f"Lazy loading failed for {class_name}: {e}")
+            return None
+
+    def _find_die_and_cu_by_offset(self, offset: int) -> tuple[CompileUnit, DIE] | None:
+        """Find both DIE and its containing CU by offset."""
+        try:
+            # Search for the CU containing this offset
+            for cu in self.dwarf_info.iter_CUs():  # type: ignore
+                cu_start = cu.cu_offset
+                # Use header length instead of cu_length
+                cu_end = cu_start + cu["unit_length"] + 4  # +4 for length field itself
+                
+                if cu_start <= offset < cu_end:
+                    # Found the right CU, now find the DIE
+                    for die in cu.iter_DIEs():  # type: ignore
+                        if die.offset == offset:
+                            return cu, die
+                    break
+            
+            logger.warning(f"DIE not found at offset 0x{offset:x}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error finding DIE and CU at offset 0x{offset:x}: {e}")
+            return None
 
     @log_timing
     def parse_class_info(self, cu: CompileUnit, class_die: DIE) -> ClassInfo:

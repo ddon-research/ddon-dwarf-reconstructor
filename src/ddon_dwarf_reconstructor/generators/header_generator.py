@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 
-"""C++ header generation from DWARF ClassInfo structures.
+"""C++ header generation from DWARF ClassInfo structures - ENHANCED VERSION.
 
 This module generates C++ header files from parsed ClassInfo objects,
-handling formatting, forward declarations, and proper C++ syntax.
+handling formatting, forward declarations, and proper C++ syntax with
+correct array declaration handling.
 """
 
-from ..models import ClassInfo, EnumInfo, MethodInfo, StructInfo, UnionInfo
+import re
+from ..domain.models.dwarf import ClassInfo, EnumInfo, MethodInfo, StructInfo, UnionInfo, MemberInfo
 from ..utils.logger import get_logger, log_timing
+from ..utils.path_utils import sanitize_for_filesystem
 
 logger = get_logger(__name__)
 
@@ -19,7 +22,7 @@ class HeaderGenerator:
     - C++ header formatting with include guards
     - Forward declarations
     - Class definitions with proper inheritance
-    - Member and method declarations
+    - Member and method declarations with correct array syntax
     - Enum, struct, and union definitions
     - Metadata comments
     """
@@ -48,9 +51,10 @@ class HeaderGenerator:
             Complete C++ header file as string
         """
         class_name = class_info.name
+        sanitized_name = sanitize_for_filesystem(class_name).upper()
         lines = [
-            f"#ifndef {class_name.upper()}_H",
-            f"#define {class_name.upper()}_H",
+            f"#ifndef {sanitized_name}_H",
+            f"#define {sanitized_name}_H",
             "",
             "#include <cstdint>",
             "",
@@ -78,7 +82,7 @@ class HeaderGenerator:
         class_lines = self._generate_single_class(class_info, include_metadata)
         lines.extend([""] + class_lines)
 
-        lines.extend(["", f"#endif // {class_name.upper()}_H"])
+        lines.extend(["", f"#endif // {sanitized_name}_H"])
 
         return "\n".join(lines)
 
@@ -103,9 +107,10 @@ class HeaderGenerator:
         Returns:
             Complete C++ header file as string
         """
+        sanitized_target = sanitize_for_filesystem(target_class).upper()
         lines = [
-            f"#ifndef {target_class.upper()}_HIERARCHY_H",
-            f"#define {target_class.upper()}_HIERARCHY_H",
+            f"#ifndef {sanitized_target}_HIERARCHY_H",
+            f"#define {sanitized_target}_HIERARCHY_H",
             "",
             "#include <cstdint>",
             "",
@@ -160,7 +165,7 @@ class HeaderGenerator:
                 class_lines = self._generate_single_class(class_infos[cls_name], include_metadata)
                 lines.extend([""] + class_lines)
 
-        lines.extend(["", f"#endif // {target_class.upper()}_HIERARCHY_H"])
+        lines.extend(["", f"#endif // {sanitized_target}_HIERARCHY_H"])
 
         return "\n".join(lines)
 
@@ -215,38 +220,21 @@ class HeaderGenerator:
 
         # Primitive types to exclude
         primitives = {
-            "int",
-            "char",
-            "float",
-            "double",
-            "void",
-            "bool",
-            "unknown_type",
-            "u8",
-            "u16",
-            "u32",
-            "u64",
-            "s8",
-            "s16",
-            "s32",
-            "s64",
-            "f32",
-            "f64",
+            "int", "char", "float", "double", "void", "bool",
+            "unknown_type", "unsigned", "signed", "short", "long",
+            "u8", "u16", "u32", "u64",
+            "s8", "s16", "s32", "s64",
+            "f32", "f64",
         }
 
+        # Process class members
         for member in class_info.members:
             # Extract clean type name
-            clean_type = member.type_name
-            if clean_type.startswith("const "):
-                clean_type = clean_type[6:].strip()
-
-            # Skip pointers, references, arrays, primitives, and known types
+            clean_type = self._extract_base_type(member.type_name)
+            
+            # Skip primitives and known types
             if (
-                clean_type.endswith("*")
-                or clean_type.endswith("&")
-                or "[" in clean_type
-                or "]" in clean_type
-                or clean_type in primitives
+                clean_type in primitives
                 or clean_type in enum_names
                 or clean_type in struct_names
                 or clean_type in union_names
@@ -256,7 +244,101 @@ class HeaderGenerator:
 
             forward_decls.add(clean_type)
 
+        # Process method parameters and return types
+        for method in class_info.methods:
+            # Check return type
+            if hasattr(method, 'return_type') and method.return_type:
+                clean_type = self._extract_base_type(method.return_type)
+                if (
+                    clean_type not in primitives
+                    and clean_type not in enum_names
+                    and clean_type not in struct_names
+                    and clean_type not in union_names
+                    and clean_type not in typedef_names
+                ):
+                    forward_decls.add(clean_type)
+            
+            # Check method parameters
+            if hasattr(method, 'parameters') and method.parameters:
+                for param in method.parameters:
+                    if hasattr(param, 'type_name') and param.type_name:
+                        clean_type = self._extract_base_type(param.type_name)
+                        if (
+                            clean_type not in primitives
+                            and clean_type not in enum_names
+                            and clean_type not in struct_names
+                            and clean_type not in union_names
+                            and clean_type not in typedef_names
+                        ):
+                            forward_decls.add(clean_type)
+
         return forward_decls
+
+    def _extract_base_type(self, type_name: str) -> str:
+        """Extract base type name from complex type declarations."""
+        # Remove const prefix
+        if type_name.startswith("const "):
+            type_name = type_name[6:].strip()
+        
+        # Remove pointer/reference suffixes
+        while type_name.endswith("*") or type_name.endswith("&"):
+            type_name = type_name[:-1].strip()
+        
+        # Handle array types - extract base type
+        if "[" in type_name and "]" in type_name:
+            type_name = type_name.split("[")[0].strip()
+        
+        return type_name
+
+    def _format_member_declaration(self, member: MemberInfo) -> str:
+        """Format a member declaration with proper C++ syntax.
+        
+        Handles special cases like arrays and static members.
+        
+        Args:
+            member: MemberInfo object to format
+            
+        Returns:
+            Properly formatted C++ member declaration
+        """
+        type_name = member.type_name
+        member_name = member.name
+        
+        # Handle array types - need to reformat for C++ syntax
+        if "[" in type_name and "]" in type_name:
+            # Parse array declaration
+            match = re.match(r'^(.+?)(\[.+\])$', type_name)
+            if match:
+                base_type = match.group(1).strip()
+                dimensions = match.group(2)
+                
+                # Handle static arrays
+                if member.is_static:
+                    # Static array: static type name[dimensions];
+                    type_with_const = base_type
+                    if member.is_const and not base_type.startswith("const "):
+                        type_with_const = f"const {base_type}"
+                    
+                    return f"static {type_with_const} {member_name}{dimensions}"
+                else:
+                    # Regular array: type name[dimensions];
+                    return f"{base_type} {member_name}{dimensions}"
+        
+        # Handle static non-array members
+        if member.is_static:
+            type_with_const = type_name
+            if member.is_const and not type_name.startswith("const "):
+                type_with_const = f"const {type_name}"
+            
+            value_part = f" = {member.const_value}" if member.const_value is not None else ""
+            return f"static {type_with_const} {member_name}{value_part}"
+        
+        # Handle anonymous union/struct
+        if member_name == "":
+            return type_name
+        
+        # Regular member
+        return f"{type_name} {member_name}"
 
     def _generate_single_class(self, class_info: ClassInfo, include_metadata: bool) -> list[str]:
         """Generate a single class definition."""
@@ -340,13 +422,11 @@ class HeaderGenerator:
             # Regular members
             regular_members = [m for m in class_info.members if not m.is_static]
             for member in regular_members:
+                declaration = self._format_member_declaration(member)
                 offset_comment = (
                     f"  // offset: 0x{member.offset:x}" if member.offset is not None else ""
                 )
-                if member.name == "":  # Anonymous union/struct
-                    lines.append(f"    {member.type_name};{offset_comment}")
-                else:
-                    lines.append(f"    {member.type_name} {member.name};{offset_comment}")
+                lines.append(f"    {declaration};{offset_comment}")
 
             # Static members
             static_members = [m for m in class_info.members if m.is_static]
@@ -354,14 +434,8 @@ class HeaderGenerator:
                 lines.append("")
                 lines.append("    // Static members")
                 for member in static_members:
-                    type_with_const = member.type_name
-                    if member.is_const and not member.type_name.startswith("const "):
-                        type_with_const = f"const {member.type_name}"
-
-                    value_part = (
-                        f" = {member.const_value}" if member.const_value is not None else ""
-                    )
-                    lines.append(f"    static {type_with_const} {member.name}{value_part};")
+                    declaration = self._format_member_declaration(member)
+                    lines.append(f"    {declaration};")
 
         lines.append("};")
         return lines
@@ -372,9 +446,9 @@ class HeaderGenerator:
 
         if include_metadata:
             lines.append(f"    // Enum {enum.name} ({enum.byte_size} bytes)")
-            if enum.declaration_file:
+            if hasattr(enum, 'declaration_file') and enum.declaration_file:
                 lines.append(f"    // Declared in: {enum.declaration_file}")
-                if enum.declaration_line:
+                if hasattr(enum, 'declaration_line') and enum.declaration_line:
                     lines.append(f"    //   Line: {enum.declaration_line}")
 
         lines.append(f"    enum class {enum.name}")
@@ -390,9 +464,10 @@ class HeaderGenerator:
 
     def _generate_struct_definition(self, struct: StructInfo) -> list[str]:
         """Generate struct definition."""
+        struct_name = struct.name if struct.name else "anonymous_struct"
         lines = [
-            f"    // Struct {struct.name} ({struct.byte_size} bytes)",
-            f"    struct {struct.name}",
+            f"    // Struct {struct_name} ({struct.byte_size} bytes)",
+            f"    struct {struct_name}",
             "    {",
         ]
 
@@ -403,8 +478,9 @@ class HeaderGenerator:
         )
 
         for member in sorted_members:
+            declaration = self._format_member_declaration(member)
             offset_comment = f"  // offset {member.offset}" if member.offset is not None else ""
-            lines.append(f"        {member.type_name} {member.name};{offset_comment}")
+            lines.append(f"        {declaration};{offset_comment}")
 
         lines.extend(["    };", ""])
         return lines
@@ -428,26 +504,29 @@ class HeaderGenerator:
                 lines.append("        struct")
                 lines.append("        {")
                 for member in struct.members:
+                    declaration = self._format_member_declaration(member)
                     offset_comment = (
                         f"  // offset {member.offset}" if member.offset is not None else ""
                     )
-                    lines.append(f"            {member.type_name} {member.name};{offset_comment}")
+                    lines.append(f"            {declaration};{offset_comment}")
                 lines.append("        };")
             else:
                 lines.append(f"        struct {struct.name}")
                 lines.append("        {")
                 for member in struct.members:
+                    declaration = self._format_member_declaration(member)
                     offset_comment = (
                         f"  // offset {member.offset}" if member.offset is not None else ""
                     )
-                    lines.append(f"            {member.type_name} {member.name};{offset_comment}")
+                    lines.append(f"            {declaration};{offset_comment}")
                 lines.append(f"        }} {struct.name};")
 
         # Add regular members
         for member in union.members:
             if member.name:  # Skip anonymous placeholders
+                declaration = self._format_member_declaration(member)
                 offset_comment = f"  // offset {member.offset}" if member.offset is not None else ""
-                lines.append(f"        {member.type_name} {member.name};{offset_comment}")
+                lines.append(f"        {declaration};{offset_comment}")
 
         lines.extend(["    };", ""])
         return lines
