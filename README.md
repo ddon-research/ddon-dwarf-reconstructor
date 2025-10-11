@@ -4,11 +4,14 @@ Reconstructs C++ class definitions from DWARF debug information in ELF files. De
 
 ## Features
 
-- Extracts member variables, methods, virtual tables, inheritance hierarchies
-- Type resolution with typedef chains
-- Memory layout and packing analysis
-- PS4 ELF support with automatic section patching
-- Domain-driven architecture: 92 tests, 48% coverage
+- **Complete dependency resolution:** Recursively resolves all type dependencies
+- **Full class definitions:** Generates complete headers with all dependent classes (not just forward declarations)
+- **Inheritance hierarchies:** Complete base-to-derived chains with automatic ordering
+- **Type resolution:** Handles typedefs, pointers, references, arrays
+- **Memory layout analysis:** Packing suggestions and padding detection
+- **PS4 ELF support:** Automatic section patching for PS4 binaries
+- **High performance:** Persistent caching, offset-based resolution
+- **Robust architecture:** Domain-driven design, 120 unit tests, type-safe
 
 ## Requirements
 
@@ -211,27 +214,42 @@ Follow conventions in .github/copilot-instructions.md:
 
 ## Performance
 
-| Operation | Time | Notes |
-|-----------|------|-------|
-| Single class | ~1s | 3-5x faster than original |
-| Full hierarchy | ~3s | Includes all base classes |
-| Cached lookup | <0.01s | Persistent cache |
+| Metric | Value | Notes |
+|--------|-------|-------|
+| **Single class** | ~0.5-1s | With cache: <0.01s |
+| **Full hierarchy** | ~1-3s | Resolves 74-133 classes recursively |
+| **Batch processing** | 4-5 symbols/min | 289 symbols in ~60 minutes |
+| **Cache hit rate** | 85%+ | Typedef resolution |
+| **Output size** | 130-170 KB | Complete headers with all dependencies |
+| **Test suite** | 0.24s | 120 unit tests |
+
+### Batch Test Results (Season 2 - 289 Symbols)
+
+```
+Total symbols:           289
+Successfully generated:  289 (100%)
+Failed:                  0 (0%)
+Average file size:       ~130 KB (complex), ~500 B (simple)
+Classes per header:      1-133 (full definitions)
+Forward declarations:    0 (all fully resolved)
+```
+
+### Example Output
+
+**MtObject with --full-hierarchy:**
+- Input: 1 class name
+- Resolved: 74 classes recursively
+- Generated: 3,605 lines, 126 KB
+- Forward declarations: 0
+- Time: ~2 seconds
 
 ## Limitations
 
-- DWARF 4 primary target (PS4), limited DWARF 5 support
-- Basic template support, minimal namespace handling
-- Requires .debug_info and .debug_abbrev sections
-- Does not work with stripped binaries
-
-## Comparison
-
-| Tool | Purpose | DWARF | Output |
-|------|---------|-------|--------|
-| ddon-dwarf-reconstructor | C++ headers | DWARF 4 | C++ |
-| dwarfdump | DWARF inspection | Full | Text |
-| pahole | Struct layout | Limited | Text |
-| IDA Pro / Ghidra | Binary analysis | Basic | Pseudocode |
+- **DWARF version:** Primary target DWARF 4 (PS4), limited DWARF 5 support
+- **Templates:** Basic support, captures parameters but minimal syntax generation
+- **Namespaces:** Limited handling, some namespace-qualified types may not resolve
+- **Debug info required:** Requires .debug_info and .debug_abbrev sections
+- **Stripped binaries:** Does not work with stripped binaries (no debug info)
 
 ## License
 

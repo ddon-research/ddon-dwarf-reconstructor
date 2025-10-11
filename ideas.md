@@ -4,74 +4,62 @@
 # Feature
 - A special output to optimize Ghidra structures: identify alignment and packing hints per structure (CSV-like: struct class, packing)
 
-# TODO:
-Here are bugs and improvements I would like you to work on ultrathink
-Tell me if you need me to clarify something, but otherwise look into the README and docs folder ultrathink
-Analyze source code and create a detailed plan and track the todos before you begin ultrathink
+# Feature
+- Add namespace information to types, enums, classes etc.
 
+# Bug
+- rAbilityAddData is not found/understood, it is part of a namespace and generates an empty file
 
-    # Bug
-    The forward declarations need to be recursively traced and dumped, this can easily be verified with MtObject already that his feature is missing currently.
+# Bug
+- rStageList, rStageAdjoinList, rStaminaDecTbl, rStartPosArea is unexpectedly empty
+For example, according to IDA Pro it should roughly look like this:
+```
+struct __cppobj __attribute__((aligned(8))) rStageAdjoinList : cResource
+{
+  rStageAdjoinList::AdjoinInfoArray mAdjoinInfo;
+  rStageAdjoinList::JumpPositionArray mJumpPosition;
+  u16 mStageNo;
+};
+```
 
-    # Improvement
-    Only save the cache when it has actually changed compared to disk to save up on I/O
+# Bug
+- Array types are still generated with the wrong declaration syntax
+```
+class STRING
+{
+public:
+    s32 ref;  // offset: 0x0
+    u32 length;  // offset: 0x4
+    u8[] str;  // offset: 0x8
+};
+```
 
-    # Bug
-    There are type definitions that do not resolve, check rGUI
+# Bug
+- When a function has multiple "formal parameters", avoid generating the name "param", as that just leads to syntax errors and method signatures in declarations do not need any parameter names and we don't have access to them anyway => Question is how does IDA recover parameter names? e.g. "bool __fastcall cResource::convertEx(cResource *this, MtStream *, cResource::CONVERT_TYPE type);"
+- Reconstructing / providing vtable information via "DW_AT_vtable_elem_location" e.g. in 
+```
+0x0001326c:     DW_TAG_subprogram [55] * (0x00012e3f)
+                  DW_AT_name [DW_FORM_strp]     ( .debug_str[0x00006899] = "convertEx")
+                  DW_AT_decl_file [DW_FORM_data1]       ("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/cResource.h")
+                  DW_AT_decl_line [DW_FORM_data1]       (239)
+                  DW_AT_type [DW_FORM_ref4]     (cu + 0x12f2 => {0x00001f8f} "bool")
+                  DW_AT_virtuality [DW_FORM_data1]      (DW_VIRTUALITY_virtual)
+                  DW_AT_vtable_elem_location [DW_FORM_exprloc]  (DW_OP_constu 0xe)
+                  DW_AT_declaration [DW_FORM_flag_present]      (true)
+                  DW_AT_external [DW_FORM_flag_present] (true)
+                  DW_AT_accessibility [DW_FORM_data1]   (DW_ACCESS_protected)
+                  DW_AT_containing_type [DW_FORM_ref4]  (cu + 0x121a2 => {0x00012e3f} "cResource")
 
-    # Bug
-    There are some unhandled tags in different handlers. The most recent log is quite large and has a lot of information inside of it as it is now running a full dump on almost 300 symbols. Please analyze these issues.
+0x00013280:       DW_TAG_formal_parameter [6]   (0x0001326c)
+                    DW_AT_type [DW_FORM_ref4]   (cu + 0x1273b => {0x000133d8} "cResource *")
+                    DW_AT_artificial [DW_FORM_flag_present]     (true)
 
-    * The type_chain_traverser runs into the following unhandled tags:
-    DW_TAG_class_type
-    DW_TAG_ptr_to_member_type
-    DW_TAG_structure_type
-    DW_TAG_subroutine_type
-    DW_TAG_union_type
+0x00013285:       DW_TAG_formal_parameter [15]   (0x0001326c)
+                    DW_AT_type [DW_FORM_ref4]   (cu + 0x12740 => {0x000133dd} "MtStream &")
 
-    * The class_parser runs into the following unhandled tags:
-    DW_TAG_template_type_param
-    DW_TAG_template_value_param
+0x0001328a:       DW_TAG_formal_parameter [15]   (0x0001326c)
+                    DW_AT_type [DW_FORM_ref4]   (cu + 0x125f3 => {0x00013290} "cResource::CONVERT_TYPE")
 
+0x0001328f:       NULL
 
-
-# Q/A
-
-    1. It's in the logs folder, but it's rather large, you will have to use grepping tools: logs\ddon_reconstructor_20251011_222538.log.
-
-    The information which specific tags are causing warnings can be found via "unhandled" as a keyword.
-
-    In rGUI there is a typedef like "typedef InputLayouts HInputLayout;" where "InputLayouts is not defined.
-    In IDA Pro it generates this:
-    ```
-    typedef nDraw::InputLayouts *nDraw::HInputLayout;
-
-    struct nDraw::InputLayouts
-    {
-    u32 num;
-    nDraw::Layout *layouts;
-    };
-    ```
-
-    Also the typedef "typedef PixelShaderObject HPixelShader;" seems strange. This is what IDA Pro outputs:
-    ```
-    typedef nPS4::PixelShaderObject *nDraw::HPixelShader;
-
-    struct __cppobj nPS4::PixelShaderObject : nPS4::ShaderObject
-    {
-    sce::Gnmx::PsShader *mpPs;
-    sce::Gnmx::InputResourceOffsets mInputResourceOffsets;
-    };
-    ```
-    Also some of these void typedefs like "typedef void HVertexBuffer;" look like this in IDA Pro:
-    ```
-    typedef void *nDraw::HVertexBuffer;
-    ```
-
-    2. Recursion depth 5 should be good.
-
-    3. Go for it.
-
-    4. Please implement templates properly.
-
-    NEW: I have added the DWARF4.txt specification - you can reference the samples in there to get a better understanding of various tag handling problems.
+```
