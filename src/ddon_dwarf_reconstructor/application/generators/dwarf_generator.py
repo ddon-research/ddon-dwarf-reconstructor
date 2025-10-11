@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Refactored DWARF-to-C++ header generator using modular architecture.
+"""DWARF-to-C++ header generator orchestrator (Application Layer).
 
 This is the main generator that orchestrates the modular components:
 - TypeResolver: Type resolution and typedef handling
@@ -17,16 +17,16 @@ from typing import TYPE_CHECKING
 from elftools.dwarf.compileunit import CompileUnit
 from elftools.dwarf.die import DIE
 
-from ..domain.models.dwarf import ClassInfo
-from ..infrastructure.logging import get_logger, log_timing
-from .base_generator import BaseGenerator
-from ..domain.services.parsing import ClassParser
-from ..domain.services.generation import HeaderGenerator, HierarchyBuilder
-from .utils.packing_analyzer import calculate_packing_info
+from ...domain.models.dwarf import ClassInfo
+from ...domain.services.generation import HeaderGenerator, HierarchyBuilder
+from ...domain.services.parsing import ClassParser
+from ...generators.base_generator import BaseGenerator
+from ...generators.utils.packing_analyzer import calculate_packing_info
+from ...infrastructure.logging import get_logger, log_timing
 
 if TYPE_CHECKING:
-    from ..domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
-    from ..core.lazy_type_resolver import LazyTypeResolver
+    from ...core.lazy_type_resolver import LazyTypeResolver
+    from ...domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
 
 logger = get_logger(__name__)
 
@@ -61,7 +61,7 @@ class DwarfGenerator(BaseGenerator):
         # Initialize modules (dwarf_info is guaranteed non-None after __enter__)
         initialization_start = time()
         assert self.dwarf_info is not None
-        
+
         # Initialize components with lazy loading (only approach)
         self._initialize_components()
 
@@ -78,21 +78,21 @@ class DwarfGenerator(BaseGenerator):
             logger.debug("Saving DWARF cache to disk")
             self.lazy_index.save_cache()
             logger.info("DWARF cache saved successfully")
-        
+
         # Call parent cleanup
         super().__exit__(exc_type, exc_val, exc_tb)
 
     def _initialize_components(self) -> None:
         """Initialize components with lazy loading and memory monitoring."""
-        from ..config.lazy_loading import get_cache_file_path, get_config
-        from ..core.lazy_type_resolver import LazyTypeResolver
-        from ..domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
-        from ..domain.services.parsing import ClassParser
+        from ...core.lazy_type_resolver import LazyTypeResolver
+        from ...domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
+        from ...domain.services.parsing import ClassParser
+        from ...infrastructure.config import get_cache_file_path, get_config
 
         assert self.dwarf_info is not None, "dwarf_info must be initialized"
         config = get_config()
         cache_file = get_cache_file_path(str(self.elf_path))
-        
+
         # Initialize lazy index
         lazy_start = time()
         self.lazy_index = LazyDwarfIndexService(
@@ -102,25 +102,25 @@ class DwarfGenerator(BaseGenerator):
         )
         lazy_elapsed = time() - lazy_start
         logger.debug(f"LazyDwarfIndex initialization: {lazy_elapsed:.3f}s")
-        
+
         # Initialize lazy type resolver (the only type resolver now)
         resolver_start = time()
         self.type_resolver = LazyTypeResolver(self.dwarf_info, self.lazy_index)
         resolver_elapsed = time() - resolver_start
         logger.debug(f"LazyTypeResolver initialization: {resolver_elapsed:.3f}s")
-        
+
         # Initialize class parser with lazy index
         parser_start = time()
         self.class_parser = ClassParser(self.type_resolver, self.dwarf_info, self.lazy_index)
         parser_elapsed = time() - parser_start
         logger.debug(f"ClassParser with lazy loading initialization: {parser_elapsed:.3f}s")
-        
+
         # Initialize header generator
         header_start = time()
         self.header_generator = HeaderGenerator()
         header_elapsed = time() - header_start
         logger.debug(f"HeaderGenerator initialization: {header_elapsed:.3f}s")
-        
+
         # Initialize hierarchy builder
         hierarchy_start = time()
         self.hierarchy_builder = HierarchyBuilder(self.class_parser)
@@ -199,7 +199,7 @@ class DwarfGenerator(BaseGenerator):
         result = self.find_class(class_name)
         find_elapsed = time() - find_start
         logger.debug(f"Class search completed in {find_elapsed:.3f}s")
-        
+
         if not result:
             logger.warning(f"Class {class_name} not found")
             return self._generate_not_found_header(class_name)
@@ -211,7 +211,7 @@ class DwarfGenerator(BaseGenerator):
         class_info = self.parse_class_info(cu, class_die)
         parse_elapsed = time() - parse_start
         logger.debug(f"Class parsing completed in {parse_elapsed:.3f}s")
-        
+
         logger.info(
             f"Parsed {class_name}: {class_info.byte_size} bytes, "
             f"{len(class_info.members)} members, {len(class_info.methods)} methods",
@@ -297,7 +297,7 @@ class DwarfGenerator(BaseGenerator):
                 class_info.nested_structs,
             )
             all_typedefs.update(class_typedefs)
-        
+
         packing_elapsed = time() - packing_start
         logger.debug(f"Packing analysis and typedef collection completed in {packing_elapsed:.3f}s")
 

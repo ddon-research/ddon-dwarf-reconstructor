@@ -12,6 +12,7 @@ from elftools.dwarf.compileunit import CompileUnit
 from elftools.dwarf.die import DIE
 from elftools.dwarf.dwarfinfo import DWARFInfo
 
+from ....infrastructure.logging import get_logger, log_timing
 from ...models.dwarf import (
     ClassInfo,
     EnumeratorInfo,
@@ -22,10 +23,10 @@ from ...models.dwarf import (
     StructInfo,
     UnionInfo,
 )
-from ....infrastructure.logging import get_logger, log_timing
+
 if TYPE_CHECKING:
-    from ..lazy_dwarf_index_service import LazyDwarfIndexService
     from ....core.lazy_type_resolver import LazyTypeResolver
+    from ..lazy_dwarf_index_service import LazyDwarfIndexService
 
 logger = get_logger(__name__)
 
@@ -80,7 +81,7 @@ class ClassParser:
             result = self._find_class_lazy(class_name)
             if result:
                 return result
-        
+
         # Fall back to full iteration (memory intensive)
         return self._find_class_full_scan(class_name)
 
@@ -140,7 +141,7 @@ class ClassParser:
         """Find class using lazy loading for memory efficiency with CU optimization."""
         if not self.lazy_index:
             return None
-            
+
         try:
             # Look for different type categories, checking cache first
             for symbol_type in ["class", "struct", "union", "enum", "typedef"]:
@@ -159,10 +160,10 @@ class ClassParser:
                             f"(type: {symbol_type})"
                         )
                         return cu, die
-            
+
             logger.warning(f"Class {class_name} not found via lazy loading")
             return None
-            
+
         except Exception as e:
             logger.warning(f"Lazy loading failed for {class_name}: {e}")
             return None
@@ -175,17 +176,17 @@ class ClassParser:
                 cu_start = cu.cu_offset
                 # Use header length instead of cu_length
                 cu_end = cu_start + cu["unit_length"] + 4  # +4 for length field itself
-                
+
                 if cu_start <= offset < cu_end:
                     # Found the right CU, now find the DIE
                     for die in cu.iter_DIEs():  # type: ignore
                         if die.offset == offset:
                             return cu, die
                     break
-            
+
             logger.warning(f"DIE not found at offset 0x{offset:x}")
             return None
-            
+
         except Exception as e:
             logger.error(f"Error finding DIE and CU at offset 0x{offset:x}: {e}")
             return None

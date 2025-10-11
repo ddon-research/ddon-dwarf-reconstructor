@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from ddon_dwarf_reconstructor.config import Config
+from ddon_dwarf_reconstructor.infrastructure.config import Config
 
 
 @pytest.mark.unit

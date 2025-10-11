@@ -1,4 +1,4 @@
-"""Configuration management for the DWARF reconstructor."""
+"""Application configuration management for the DWARF reconstructor."""
 
 import os
 from dataclasses import dataclass
@@ -7,7 +7,7 @@ from pathlib import Path
 
 @dataclass
 class Config:
-    """Configuration for the DWARF reconstructor."""
+    """Configuration for the DWARF reconstructor application."""
 
     elf_file_path: Path
     output_dir: Path

@@ -14,7 +14,7 @@ from typing import Any
 from elftools.common.exceptions import ELFError
 from elftools.elf import elffile
 from elftools.elf.dynamic import DynamicSection
-from elftools.elf.sections import Section, NullSection
+from elftools.elf.sections import NullSection, Section
 
 
 def patch_pyelftools_for_ps4() -> None:
@@ -44,13 +44,13 @@ def patch_pyelftools_for_ps4() -> None:
             return original_make_section(self, section_header)
         except ELFError as e:
             error_msg = str(e)
-            
+
             # Handle unexpected section types
             if "Unexpected section type" in error_msg:
                 # Return a generic Section instead of failing
                 name = self._get_section_name(section_header)
                 return Section(section_header, name, self)
-            
+
             # Re-raise other ELF errors
             raise
 
@@ -68,14 +68,14 @@ def patch_pyelftools_for_ps4() -> None:
             return original_get_section(self, section_index, type_filter)
         except ELFError as e:
             error_msg = str(e)
-            
+
             # Handle unexpected section types when no specific type is required
             if "Unexpected section type" in error_msg and type_filter is None:
                 # Try to create a generic section
                 section_header = self._get_section_header(section_index)
                 name = self._get_section_name(section_header)
                 return Section(section_header, name, self)
-            
+
             # Handle PS4 dynamic section linking to NULL section
             if ("Unexpected section type SHT_NULL" in error_msg and type_filter and
                 ('SHT_STRTAB' in str(type_filter) or 'SHT_NOBITS' in str(type_filter))):
@@ -84,7 +84,7 @@ def patch_pyelftools_for_ps4() -> None:
                 section_header = self._get_section_header(section_index)
                 name = self._get_section_name(section_header)
                 return NullSection(section_header, name, self)
-            
+
             # Re-raise other ELF errors
             raise
 
@@ -101,7 +101,7 @@ def patch_pyelftools_for_ps4() -> None:
         instead of a proper string table. This patch handles that gracefully.
         """
         Section.__init__(self, header, name, elffile)
-        
+
         try:
             # Try the normal path first
             stringtable = elffile.get_section(header['sh_link'], ('SHT_STRTAB', 'SHT_NOBITS'))
@@ -111,7 +111,7 @@ def patch_pyelftools_for_ps4() -> None:
                 stringtable = elffile.get_section(header['sh_link'])
             else:
                 raise
-        
+
         # Import here to avoid circular imports
         from elftools.elf.dynamic import Dynamic
         Dynamic.__init__(

@@ -8,8 +8,8 @@ all classes in an inheritance hierarchy for full hierarchy header generation.
 
 from elftools.dwarf.die import DIE
 
-from ...models.dwarf import ClassInfo
 from ....infrastructure.logging import get_logger, log_timing
+from ...models.dwarf import ClassInfo
 from ..parsing.class_parser import ClassParser
 
 logger = get_logger(__name__)

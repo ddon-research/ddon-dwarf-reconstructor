@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from ddon_dwarf_reconstructor.generators.dwarf_generator import DwarfGenerator
+from ddon_dwarf_reconstructor.application.generators import DwarfGenerator
 
 
 class TestDwarfGeneratorIntegration:

@@ -8,9 +8,10 @@ correct array declaration handling.
 """
 
 import re
-from ...models.dwarf import ClassInfo, EnumInfo, MethodInfo, StructInfo, UnionInfo, MemberInfo
+
 from ....infrastructure.logging import get_logger, log_timing
 from ....utils.path_utils import sanitize_for_filesystem
+from ...models.dwarf import ClassInfo, EnumInfo, MemberInfo, MethodInfo, StructInfo, UnionInfo
 
 logger = get_logger(__name__)
 
@@ -231,7 +232,7 @@ class HeaderGenerator:
         for member in class_info.members:
             # Extract clean type name
             clean_type = self._extract_base_type(member.type_name)
-            
+
             # Skip primitives and known types
             if (
                 clean_type in primitives
@@ -257,7 +258,7 @@ class HeaderGenerator:
                     and clean_type not in typedef_names
                 ):
                     forward_decls.add(clean_type)
-            
+
             # Check method parameters
             if hasattr(method, 'parameters') and method.parameters:
                 for param in method.parameters:
@@ -279,15 +280,15 @@ class HeaderGenerator:
         # Remove const prefix
         if type_name.startswith("const "):
             type_name = type_name[6:].strip()
-        
+
         # Remove pointer/reference suffixes
         while type_name.endswith("*") or type_name.endswith("&"):
             type_name = type_name[:-1].strip()
-        
+
         # Handle array types - extract base type
         if "[" in type_name and "]" in type_name:
             type_name = type_name.split("[")[0].strip()
-        
+
         return type_name
 
     def _format_member_declaration(self, member: MemberInfo) -> str:
@@ -303,7 +304,7 @@ class HeaderGenerator:
         """
         type_name = member.type_name
         member_name = member.name
-        
+
         # Handle array types - need to reformat for C++ syntax
         if "[" in type_name and "]" in type_name:
             # Parse array declaration
@@ -311,32 +312,32 @@ class HeaderGenerator:
             if match:
                 base_type = match.group(1).strip()
                 dimensions = match.group(2)
-                
+
                 # Handle static arrays
                 if member.is_static:
                     # Static array: static type name[dimensions];
                     type_with_const = base_type
                     if member.is_const and not base_type.startswith("const "):
                         type_with_const = f"const {base_type}"
-                    
+
                     return f"static {type_with_const} {member_name}{dimensions}"
                 else:
                     # Regular array: type name[dimensions];
                     return f"{base_type} {member_name}{dimensions}"
-        
+
         # Handle static non-array members
         if member.is_static:
             type_with_const = type_name
             if member.is_const and not type_name.startswith("const "):
                 type_with_const = f"const {type_name}"
-            
+
             value_part = f" = {member.const_value}" if member.const_value is not None else ""
             return f"static {type_with_const} {member_name}{value_part}"
-        
+
         # Handle anonymous union/struct
         if member_name == "":
             return type_name
-        
+
         # Regular member
         return f"{type_name} {member_name}"
 

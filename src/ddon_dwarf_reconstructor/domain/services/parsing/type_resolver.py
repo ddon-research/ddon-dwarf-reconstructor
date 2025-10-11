@@ -177,35 +177,35 @@ class TypeResolver:
         """
         if self._all_typedefs is not None:
             return self._all_typedefs
-        
+
         logger.info("Collecting all typedefs from DWARF info...")
         self._all_typedefs = {}
-        
+
         cu_count = 0
         typedef_count = 0
         start_time = time()
-        
+
         for cu in self.dwarf_info.iter_CUs():
             cu_count += 1
-            
+
             for die in cu.iter_DIEs():
                 if die.tag == "DW_TAG_typedef":
                     name_attr = die.attributes.get("DW_AT_name")
                     if name_attr:
-                        typedef_name = (name_attr.value.decode("utf-8") 
+                        typedef_name = (name_attr.value.decode("utf-8")
                                       if isinstance(name_attr.value, bytes)
                                       else str(name_attr.value))
-                        
+
                         # Get the underlying type
                         underlying_type = self.resolve_type_name(die)
                         self._all_typedefs[typedef_name] = underlying_type
                         typedef_count += 1
-                        
+
                         logger.debug(f"Found typedef: {typedef_name} -> {underlying_type}")
-        
+
         elapsed = time() - start_time
         logger.info(f"Collected {typedef_count} typedefs from {cu_count} CUs in {elapsed:.3f}s")
-        
+
         return self._all_typedefs
 
     def resolve_typedef_chain(self, typedef_name: str) -> str:
@@ -224,19 +224,19 @@ class TypeResolver:
         # Check cache first
         if typedef_name in self._typedef_chains:
             return self._typedef_chains[typedef_name]
-        
+
         # Prevent infinite recursion
         if typedef_name in self._types_in_progress:
             logger.warning(f"Circular typedef dependency detected for {typedef_name}")
             return typedef_name
-            
+
         self._types_in_progress.add(typedef_name)
-        
+
         try:
             # Ensure all typedefs are collected
             if self._all_typedefs is None:
                 self.collect_all_typedefs()
-            
+
             # Check if this is a typedef
             if typedef_name not in self._all_typedefs:
                 # Not a typedef, return as-is
@@ -244,18 +244,18 @@ class TypeResolver:
             else:
                 # Get the underlying type
                 underlying = self._all_typedefs[typedef_name]
-                
+
                 # Check if the underlying type is itself a typedef
                 if underlying in self._all_typedefs:
                     # Recursively resolve
                     result = self.resolve_typedef_chain(underlying)
                 else:
                     result = underlying
-            
+
             # Cache the result
             self._typedef_chains[typedef_name] = result
             return result
-            
+
         finally:
             self._types_in_progress.discard(typedef_name)
 
@@ -275,18 +275,18 @@ class TypeResolver:
         """
         # Create cache key
         cache_key = f"{typedef_name}_{deep_search}"
-        
+
         # Check cache first
         if cache_key in self._typedef_cache:
             return self._typedef_cache[cache_key]
-        
+
         # Ensure all typedefs are collected
         if self._all_typedefs is None:
             self.collect_all_typedefs()
-        
+
         # Type guard - ensure _all_typedefs is not None after collection
         assert self._all_typedefs is not None
-        
+
         # Check if the typedef exists
         if typedef_name not in self._all_typedefs:
             logger.debug(f"Typedef {typedef_name} not found in collected typedefs")
@@ -294,23 +294,23 @@ class TypeResolver:
         else:
             # Get the immediate underlying type
             underlying_type = self._all_typedefs[typedef_name]
-            
+
             # Perform recursive resolution if needed
             final_type = self.resolve_typedef_chain(underlying_type)
-            
+
             logger.debug(f"Typedef {typedef_name} -> {underlying_type} (final: {final_type})")
             result = (typedef_name, final_type)
-        
+
         # Cache the result
         self._typedef_cache[cache_key] = result
         return result
 
     @log_timing
     def collect_used_typedefs(
-        self, 
-        members: list["MemberInfo"], 
-        methods: list["MethodInfo"], 
-        unions: list["UnionInfo"] | None = None, 
+        self,
+        members: list["MemberInfo"],
+        methods: list["MethodInfo"],
+        unions: list["UnionInfo"] | None = None,
         nested_structs: list["StructInfo"] | None = None
     ) -> dict[str, str]:
         """Collect only the typedefs that are actually used by members, methods, unions, and nested structs.
@@ -328,19 +328,19 @@ class TypeResolver:
         total_methods = len(methods)
         total_unions = len(unions) if unions else 0
         total_structs = len(nested_structs) if nested_structs else 0
-        
+
         logger.debug(
             f"Collecting used typedefs from {total_members} members, {total_methods} methods, "
             f"{total_unions} unions, {total_structs} nested structs"
         )
-        
+
         # Ensure all typedefs are collected
         if self._all_typedefs is None:
             self.collect_all_typedefs()
-        
+
         # Type guard - ensure _all_typedefs is not None after collection
         assert self._all_typedefs is not None
-        
+
         used_typedefs = {}
 
         # Check all member types
@@ -435,9 +435,9 @@ class TypeResolver:
                 final_type = self.resolve_typedef_chain(base_resolved)
                 additional_typedefs[base_resolved] = final_type
                 logger.debug(f"Found indirect typedef: {base_resolved} -> {final_type}")
-        
+
         used_typedefs.update(additional_typedefs)
-        
+
         logger.debug(f"Collected {len(used_typedefs)} total typedefs: {used_typedefs}")
         return used_typedefs
 

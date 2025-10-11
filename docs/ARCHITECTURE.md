@@ -1,511 +1,450 @@
-# DDON DWARF Reconstructor - Architecture Documentation
+﻿# Architecture
+
+Domain-driven architecture for DWARF-to-C++ header reconstruction.
 
 ## System Overview
 
-The DDON DWARF Reconstructor implements a **modular, pipeline-based architecture** for converting DWARF debug information into compilable C++ headers. The system is designed around **separation of concerns**, **performance optimization**, and **maintainability**.
-
-### Core Design Principles
-
-1. **Single Responsibility:** Each module handles exactly one concern
-2. **Dependency Injection:** Clean interfaces, testable components  
-3. **Performance First:** Caching, lazy loading, early exit patterns
-4. **Type Safety:** Full mypy compliance with proper annotations
-5. **Observability:** Comprehensive logging with timing analysis
-
----
-
-## Module Architecture
-
-### High-Level Data Flow
-
 ```
-ELF File → BaseGenerator → DwarfGenerator → Generated Header
-             ↓
-        [DWARF Info] → ClassParser → TypeResolver
-             ↓              ↓          ↓
-        [Class DIEs] → HierarchyBuilder → HeaderGenerator
-             ↓              ↓          ↓  
-        [ClassInfo] → PackingAnalyzer → [C++ Code]
+ELF File  DWARF Info  Parsed Models  C++ Headers
+           
+    Application Layer (Orchestration)
+           
+    Domain Layer (Business Logic)
+           
+    Infrastructure Layer (Config, Logging)
 ```
 
-### Module Breakdown (9 Modules)
+## Directory Structure
 
-#### 1. `base_generator.py`
-**Purpose:** Foundation for all generators with ELF file management
+```
+src/ddon_dwarf_reconstructor/
+ application/
+    generators/
+        dwarf_generator.py      # Main orchestrator
+
+ domain/
+    models/dwarf/               # Data structures
+       class_info.py           # Class representation
+       member_info.py          # Member variables
+       method_info.py          # Method signatures
+       enum_info.py            # Enumerations
+       struct_info.py          # Nested types
+   
+    repositories/cache/
+       lru_cache.py            # Fast in-memory cache
+       persistent_symbol_cache.py  # Disk-based cache
+   
+    services/
+        parsing/
+           class_parser.py     # DWARF parsing
+           array_parser.py     # Array type parsing
+           type_resolver.py    # Type resolution
+       
+        generation/
+            base_generator.py   # ELF management
+            header_generator.py # C++ code generation
+            hierarchy_builder.py # Inheritance chains
+            packing_analyzer.py # Memory layout
+
+ infrastructure/
+     config/
+        application_config.py   # App settings
+        dwarf_config.py         # DWARF constants
+    
+     logging/
+         logger_setup.py         # Logging config
+         progress_tracker.py     # Performance tracking
+```
+
+## Core Components
+
+### Application Layer
+
+**dwarf_generator.py** - Main orchestrator
+- Coordinates all domain services
+- Provides public API (generate_header, generate_complete_hierarchy_header)
+- Handles PS4 ELF compatibility automatically
+- Manages component lifecycle
+
+```python
+class DwarfGenerator(BaseGenerator):
+    def __init__(self, elf_path: Path):
+        self.type_resolver: TypeResolver
+        self.class_parser: ClassParser
+        self.hierarchy_builder: HierarchyBuilder
+        self.header_generator: HeaderGenerator
+    
+    @log_timing
+    def generate_header(self, class_name: str) -> str:
+        """Single class generation pipeline."""
+    
+    @log_timing
+    def generate_complete_hierarchy_header(self, class_name: str) -> str:
+        """Full inheritance hierarchy pipeline."""
+```
+
+### Domain Layer - Models
+
+**Data Structures** (src/domain/models/dwarf/)
+
+```python
+@dataclass
+class ClassInfo:
+    name: str
+    size: int
+    members: list[MemberInfo]
+    methods: list[MethodInfo]
+    enums: list[EnumInfo]
+    structs: list[StructInfo]
+    unions: list[UnionInfo]
+    base_classes: list[str]
+    vtable_ptr_offset: int | None
+
+@dataclass  
+class MemberInfo:
+    name: str
+    type_name: str
+    offset: int
+    bit_size: int | None
+    bit_offset: int | None
+
+@dataclass
+class MethodInfo:
+    name: str
+    return_type: str
+    parameters: list[ParameterInfo]
+    is_virtual: bool
+    vtable_index: int | None
+```
+
+### Domain Layer - Services
+
+**Parsing Services** (src/domain/services/parsing/)
+
+**class_parser.py** - DWARF parsing
+- Finds classes in compilation units (early exit optimization)
+- Parses members, methods, nested types
+- Handles anonymous unions, virtual methods
+- No generation logic (separation of concerns)
+
+```python
+class ClassParser:
+    @log_timing
+    def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
+        """Efficient class discovery with early exit."""
+    
+    @log_timing
+    def parse_class_info(self, cu: CompileUnit, class_die: DIE) -> ClassInfo:
+        """Complete class parsing."""
+```
+
+**type_resolver.py** - Type resolution with caching
+- Resolves typedefs, pointers, references
+- Caches typedef lookups (85% hit rate)
+- Configurable search scope (basic vs full hierarchy)
+- Expands primitive typedefs for complex hierarchies
+
+```python
+class TypeResolver:
+    def resolve_type_name(self, die: DIE) -> str:
+        """Main type resolution with recursive handling."""
+    
+    def find_typedef(self, typedef_name: str) -> tuple[str, str] | None:
+        """Cached typedef lookup."""
+    
+    def expand_primitive_search(self, full_hierarchy: bool = False):
+        """Expand search scope for full hierarchy mode."""
+```
+
+**array_parser.py** - Array type parsing
+- Multi-dimensional arrays: int[10][20][30]
+- Bounds extraction from DWARF subrange DIEs
+- Element type resolution
+
+**Generation Services** (src/domain/services/generation/)
+
+**base_generator.py** - ELF management
+- ELF file loading with context management
+- DWARF info extraction (pyelftools)
+- PS4 ELF patching (automatic detection)
+- Resource cleanup
 
 ```python
 class BaseGenerator(ABC):
-    """Abstract base class providing ELF file context management."""
-    
     def __enter__(self) -> "BaseGenerator":
-        # Load ELF file
-        # Extract DWARF info  
-        # Apply enhanced PS4 patches (automatic detection & error recovery)
-        
+        # Load ELF, extract DWARF, apply PS4 patches
+    
     def __exit__(self):
         # Clean resource cleanup
-        
+    
     @abstractmethod
     def generate(self, symbol: str) -> str:
         """Implemented by concrete generators."""
 ```
 
-**Responsibilities:**
-- ELF file loading and context management
-- DWARF info extraction via pyelftools
-- PS4-specific ELF patching application
-- Resource cleanup and exception handling
-
-**Dependencies:** `pyelftools.ELFFile`, `utils.elf_patches` (enhanced PS4 support)
-
-**PS4 ELF Compatibility:**
-- **Automatic Detection:** Identifies PS4 ELF files by type (0xfe10) and OS/ABI (FreeBSD)
-- **Dynamic Section Fixes:** Handles sh_link=0 pointing to NULL sections instead of string tables
-- **Section Type Fallbacks:** Creates generic sections for unknown PS4-specific types
-- **Non-Invasive Patching:** Only activates on actual errors, preserves normal ELF behavior
-
----
-
-#### 2. `dwarf_generator.py`
-**Purpose:** Main orchestrator coordinating all generation modules
-
-```python
-class DwarfGenerator(BaseGenerator):
-    """Main generator orchestrating modular components."""
-    
-    def __init__(self, elf_path: Path):
-        # Initialize component references
-        
-    def __enter__(self) -> "DwarfGenerator":
-        super().__enter__()
-        # Initialize all modules with enhanced PS4 support
-        self.type_resolver = TypeResolver(self.dwarf_info)
-        self.class_parser = ClassParser(self.type_resolver, self.dwarf_info)
-        # ... other modules
-        
-    @log_timing
-    def generate_header(self, class_name: str) -> str:
-        # Single class generation pipeline
-        
-    @log_timing  
-    def generate_complete_hierarchy_header(self, class_name: str) -> str:
-        # Full hierarchy generation pipeline
-```
-
-**Responsibilities:**
-- Module initialization and coordination
-- Generation pipeline orchestration  
-- Public API surface (`generate_header`, `generate_complete_hierarchy_header`)
-- Performance monitoring with `@log_timing`
-- PS4 ELF compatibility (automatically applied)
-
-**Dependencies:** All other generator modules
-
----
-
-#### 3. `type_resolver.py`
-**Purpose:** Centralized type resolution with intelligent caching
-
-```python
-class TypeResolver:
-    """Handles all type resolution with performance optimization."""
-    
-    def __init__(self, dwarf_info: DWARFInfo):
-        self._typedef_cache: dict[str, str] = {}
-        self._primitive_typedefs = set(self.PRIMITIVE_TYPEDEFS)
-        
-    def resolve_type_name(self, die: DIE) -> str:
-        """Main type resolution with recursive handling."""
-        
-    def find_typedef(self, typedef_name: str) -> tuple[str, str] | None:
-        """Cached typedef lookup with configurable search scope."""
-        
-    def expand_primitive_search(self, full_hierarchy: bool = False):
-        """Expand search scope for full hierarchy mode."""
-        
-    def collect_used_typedefs(self, members, methods) -> dict[str, str]:
-        """Collect typedefs from class components."""
-```
-
-**Key Features:**
-- **Performance Caching:** Eliminates redundant DWARF searches
-- **Configurable Search:** Basic vs full hierarchy typedef resolution  
-- **Primitive Type Expansion:** Extended search for complex hierarchies
-- **Cross-Component Collection:** Gathers typedefs from members, methods, parameters
-
----
-
-#### 4. `class_parser.py`
-**Purpose:** Pure DWARF parsing logic separated from generation concerns
-
-```python
-class ClassParser:
-    """Parses DWARF information into structured ClassInfo objects."""
-    
-    @log_timing
-    def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
-        """Efficient class discovery with early exit."""
-        
-    @log_timing
-    def parse_class_info(self, cu: CompileUnit, class_die: DIE) -> ClassInfo:
-        """Complete class parsing including members, methods, nested types."""
-        
-    def _parse_members(self, class_die: DIE) -> list[MemberInfo]:
-        """Parse member variables with anonymous union detection."""
-        
-    def _parse_methods(self, class_die: DIE) -> list[MethodInfo]:
-        """Parse methods with parameter extraction."""
-```
-
-**Parsing Capabilities:**
-- **Class/Struct/Union Types:** Complete definition parsing
-- **Member Variables:** Including anonymous union detection
-- **Method Signatures:** Parameters, return types, virtual method detection
-- **Nested Types:** Enums, structs, unions within classes
-- **Inheritance:** Base class relationship extraction
-- **Array Types:** Multi-dimensional array parsing with bounds
-
----
-
-#### 5. `header_generator.py` (419 lines)  
-**Purpose:** Pure C++ code generation with no DWARF dependencies
+**header_generator.py** - C++ code generation
+- Include guards, forward declarations
+- Class definitions with members/methods
+- Typedef integration
+- Memory layout comments
+- No DWARF dependencies (pure generation)
 
 ```python
 class HeaderGenerator:
-    """Generates C++ headers from parsed ClassInfo objects."""
-    
     def generate_single_class_header(self, class_info: ClassInfo) -> str:
         """Generate header for individual class."""
-        
+    
     def generate_hierarchy_header(self, class_infos: dict, order: list) -> str:
         """Generate complete inheritance hierarchy header."""
-        
-    def _generate_forward_declarations(self, dependencies: set) -> str:
-        """Smart forward declaration generation."""
-        
-    def _generate_class_definition(self, class_info: ClassInfo) -> str:
-        """Complete class definition with members and methods."""
 ```
 
-**Generation Features:**
-- **Include Guards:** Automatic `#ifndef` generation
-- **Forward Declarations:** Minimal dependency management
-- **Typedef Integration:** Proper typedef placement and usage
-- **Metadata Comments:** Optional DWARF debug information inclusion
-- **Memory Layout:** Offset comments and packing suggestions
-- **Inheritance:** Proper base class specification and ordering
-
----
-
-#### 6. `hierarchy_builder.py`
-**Purpose:** Inheritance hierarchy management and dependency resolution
+**hierarchy_builder.py** - Inheritance management
+- Complete inheritance chain discovery
+- Dependency resolution for forward declarations
+- Cycle detection
+- Base-to-derived ordering
 
 ```python
 class HierarchyBuilder:
-    """Builds complete inheritance hierarchies."""
-    
     @log_timing
     def build_full_hierarchy(self, class_name: str) -> tuple[dict[str, ClassInfo], list[str]]:
-        """Build complete inheritance chain with dependency resolution."""
-        
-    @log_timing  
-    def build_hierarchy_chain(self, class_name: str) -> list[str]:
-        """Simple inheritance chain discovery."""
-        
-    def collect_hierarchy_with_dependencies(self, hierarchy: list[str]) -> dict[str, ClassInfo]:
-        """Parse all classes with dependency type discovery."""
+        """Build complete inheritance chain."""
 ```
 
-**Hierarchy Management:**
-- **Complete Chain Discovery:** From derived class to root base class
-- **Dependency Resolution:** Forward declaration requirements
-- **Cycle Detection:** Prevents infinite inheritance loops
-- **Ordering Logic:** Proper base-to-derived generation order
-- **Type Collection:** Gathers all dependency types for forward declarations
-
----
-
-#### 7. `utils/array_parser.py`
-**Purpose:** Specialized array type parsing for complex DWARF array structures
-
-```python
-def parse_array_type(die: DIE, type_resolver: TypeResolver) -> str:
-    """Parse complex array types including multi-dimensional arrays."""
-    
-def extract_array_bounds(die: DIE) -> tuple[int, int]:
-    """Extract array bounds from DWARF subrange information."""
-```
-
-**Array Parsing Capabilities:**
-- Multi-dimensional array support: `int[10][20][30]`
-- Bounds extraction from DWARF subrange DIEs
-- Element type resolution through TypeResolver integration
-- Total element count calculation for memory layout
-
----
-
-#### 8. `utils/packing_analyzer.py`
-**Purpose:** Memory layout analysis and struct packing optimization
+**packing_analyzer.py** - Memory layout analysis
+- Natural vs actual size comparison
+- Padding detection
+- #pragma pack suggestions
+- Memory efficiency calculations
 
 ```python
 def calculate_packing_info(class_info: ClassInfo) -> PackingInfo:
     """Analyze memory layout and suggest optimizations."""
-    
-class PackingInfo:
-    natural_size: int      # Size with natural alignment  
-    actual_size: int       # Actual DWARF-reported size
-    padding_bytes: int     # Wasted space due to padding
-    suggested_pack: int    # Recommended #pragma pack value
-    efficiency: float      # Memory utilization percentage
-```
 
-**Analysis Features:**
-- **Natural vs Actual Size:** Comparison of expected vs DWARF-reported sizes
-- **Padding Detection:** Identification of wasted memory space
-- **Packing Suggestions:** Automatic `#pragma pack` recommendations
-- **Memory Efficiency:** Percentage utilization calculations
-- **Alignment Analysis:** Member alignment requirement detection
-
-**Generated Comments:**
-```cpp
-// DWARF Debug Information:
-// - Size: 16 bytes, Natural: 8 bytes, Padding: 8 bytes
-// - Suggested Packing: 1 bytes  
-// - Memory efficiency: 50% (8 bytes wasted)
-```
-
----
-
-#### 9. `models.py`
-**Purpose:** Clean data structures with type safety
-
-```python
-@dataclass  
-class ClassInfo:
-    """Complete class information from DWARF parsing."""
-    name: str
-    size: int
-    members: list[MemberInfo]
-    methods: list[MethodInfo]
-    enums: list[EnumInfo] 
-    # ... additional fields
-    
 @dataclass
-class MemberInfo:
-    """Member variable information."""
-    name: str
-    type_name: str
-    offset: int
-    # ... additional fields
+class PackingInfo:
+    natural_size: int
+    actual_size: int
+    padding_bytes: int
+    suggested_pack: int
+    efficiency: float
 ```
 
-**Data Structures:**
-- **ClassInfo:** Complete class representation
-- **MemberInfo:** Member variables with offset information
-- **MethodInfo:** Method signatures with parameters
-- **EnumInfo/EnumeratorInfo:** Enumeration definitions
-- **ParameterInfo:** Method parameter details
-- **StructInfo/UnionInfo:** Nested type definitions
+### Domain Layer - Repositories
 
----
+**Cache Services** (src/domain/repositories/cache/)
 
-## Enhanced Logging System
+**lru_cache.py** - Fast in-memory LRU cache
+- O(1) get/put operations
+- Configurable size limits
+- Thread-safe
 
-### ProgressTracker Integration
+**persistent_symbol_cache.py** - Disk-based symbol cache
+- Persists parsed class information
+- Speeds up repeated lookups
+- JSON serialization
 
-```python
-class ProgressTracker:
-    """Comprehensive operation tracking and performance monitoring."""
-    
-    @contextmanager
-    def track_operation(self, operation_name: str):
-        """High-level operation tracking with timing."""
-        
-    @contextmanager  
-    def track_cu(self, cu: CompileUnit):
-        """Compilation unit processing with detailed metrics."""
-        
-    def report_summary(self):
-        """Final statistics and performance summary."""
-```
+### Infrastructure Layer
 
-### Logging Features
+**Configuration** (src/infrastructure/config/)
+- application_config.py: App settings, paths, verbose mode
+- dwarf_config.py: DWARF constants, type mappings
 
-**@log_timing Decorators:**
-- Applied to all major generation methods
-- Automatic execution time reporting
-- Performance regression detection
-- Module-level timing granularity
+**Logging** (src/infrastructure/logging/)
+- logger_setup.py: Structured logging configuration
+- progress_tracker.py: Performance tracking, operation timing
 
-**Structured Progress Logging:**
-```
-DEBUG: Starting DwarfGenerator.generate_header
-DEBUG: Starting ClassParser.find_class  
-INFO: Found MtObject in CU at offset 0xc9d (size: 8 bytes)
-DEBUG: Completed ClassParser.find_class in 0.04s
-DEBUG: Starting ClassParser.parse_class_info
-DEBUG: Completed ClassParser.parse_class_info in 0.01s  
-DEBUG: Completed DwarfGenerator.generate_header in 0.06s
-```
-
-**Detailed Operation Tracking:**
-- CU-level processing statistics
-- Memory usage monitoring (optional psutil integration)
-- DIE traversal counting
-- Type resolution cache hit/miss reporting
-
----
-
-## Performance Characteristics
-
-### Optimizations Implemented
-
-1. **Typedef Caching (TypeResolver)**
-   - Eliminates redundant DWARF searches
-   - Cache hit rate: ~85% on complex hierarchies
-   - Performance improvement: 3-5x faster type resolution
-
-2. **Early Exit Patterns (ClassParser)**  
-   - Stops iteration on first complete class definition
-   - Prioritizes complete definitions over forward declarations
-   - Reduces average search time by 60-80%
-
-3. **Lazy Loading (BaseGenerator)**
-   - ELF sections loaded on-demand
-   - DWARF info parsed incrementally  
-   - Memory footprint reduced by ~40%
-
-4. **Mutable Primitive Sets (TypeResolver)**
-   - Configurable search scope for different generation modes
-   - Efficient set operations vs frozenset recreation
-   - Enables expanded typedef search for full hierarchy mode
-
----
-
-## Data Flow Examples
+## Data Flow
 
 ### Single Class Generation
 
 ```
 1. DwarfGenerator.generate_header("MtObject")
-2. ClassParser.find_class("MtObject")  
-   → Searches CUs with early exit
-   → Returns (CompileUnit, DIE) tuple
+2. ClassParser.find_class("MtObject")
+    Searches compilation units
+    Returns (CompileUnit, DIE)
 3. ClassParser.parse_class_info(cu, die)
-   → Parses members, methods, nested types
-   → Returns ClassInfo object  
+    Parses members, methods, nested types
+    Returns ClassInfo
 4. TypeResolver.collect_used_typedefs(class_info)
-   → Extracts types from members/methods
-   → Returns typedef dictionary
+    Extracts types from members/methods
+    Returns typedef dict
 5. HeaderGenerator.generate_single_class_header(class_info, typedefs)
-   → Generates C++ code
-   → Returns complete header string
+    Generates C++ code
+    Returns header string
 ```
 
-### Full Hierarchy Generation  
+### Full Hierarchy Generation
 
 ```
 1. DwarfGenerator.generate_complete_hierarchy_header("MtPropertyList")
 2. HierarchyBuilder.build_full_hierarchy("MtPropertyList")
-   → Discovers inheritance chain: MtObject → MtPropertyList
-   → Parses all classes in hierarchy  
-   → Returns {class_name: ClassInfo} dict + ordered list
+    Discovers chain: MtObject  MtPropertyList
+    Parses all classes
+    Returns {class_name: ClassInfo} + ordered list
 3. TypeResolver.expand_primitive_search(full_hierarchy=True)
-   → Extends typedef search scope for complex hierarchies
+    Extends typedef search scope
 4. TypeResolver.collect_used_typedefs(all_classes)
-   → Gathers typedefs from entire hierarchy
-   → Returns comprehensive typedef dictionary
+    Gathers typedefs from entire hierarchy
 5. HeaderGenerator.generate_hierarchy_header(class_infos, order, typedefs)
-   → Generates complete inheritance chain
-   → Returns full hierarchy header
+    Generates complete inheritance chain
+    Returns hierarchy header
 ```
 
----
+## Performance Optimizations
 
-## Error Handling Strategy
+| Optimization | Component | Improvement |
+|--------------|-----------|-------------|
+| Typedef caching | TypeResolver | 3-5x faster type resolution |
+| Early exit search | ClassParser | 60-80% faster class discovery |
+| Lazy loading | BaseGenerator | 40% memory reduction |
+| LRU caching | LRUCache | O(1) lookups |
+| Persistent cache | PersistentSymbolCache | Skip re-parsing |
 
-### Exception Hierarchy
+### Caching Strategy
+
+**TypeResolver Cache:**
+- Key: typedef name
+- Value: resolved type string
+- Hit rate: ~85% on complex hierarchies
+- Lifetime: per-generation session
+
+**Symbol Cache:**
+- Key: (ELF path, class name)
+- Value: serialized ClassInfo
+- Storage: JSON files
+- Persistence: across sessions
+
+## PS4 ELF Compatibility
+
+**Automatic Detection:**
+- Identifies PS4 ELF by type (0xfe10) and OS/ABI (FreeBSD)
+- Non-invasive: only activates on actual errors
+
+**Fixes Applied:**
+- Dynamic section sh_link=0 handling
+- Unknown section type fallbacks
+- String table resolution
+
+**Implementation:** infrastructure/utils/elf_patches.py
+
+## Error Handling
 
 ```python
 class DwarfReconstructorError(Exception):
-    """Base exception for all reconstructor errors."""
+    """Base exception."""
 
-class ELFLoadError(DwarfReconstructorError):  
-    """ELF file loading/parsing failures."""
-    
+class ELFLoadError(DwarfReconstructorError):
+    """ELF loading failures."""
+
 class ClassNotFoundError(DwarfReconstructorError):
-    """Target class not found in DWARF info."""
-    
+    """Class not found in DWARF."""
+
 class TypeResolutionError(DwarfReconstructorError):
     """Type resolution failures."""
 ```
 
-### Error Recovery
+**Recovery Strategies:**
+- Graceful fallbacks to forward declarations
+- Partial generation (log missing types)
+- Context preservation for debugging
+- Guaranteed cleanup via context managers
 
-- **Graceful Fallbacks:** Forward declarations when complete definitions unavailable
-- **Partial Generation:** Generate what's possible, log what's missing
-- **Context Preservation:** Maintain operation context for debugging
-- **Resource Cleanup:** Guaranteed cleanup via context managers
+## Testing Strategy
 
----
+**Unit Tests** (92 tests, 48% coverage)
+- Mocked DWARF structures
+- Fast execution (<1s)
+- Component isolation
 
-## Testing Architecture
-
-### Test Categories
-
-1. **Unit Tests (22 tests):** Fast mocked component testing
-2. **Integration Tests (2 tests):** End-to-end with real ELF files
-3. **Performance Tests:** Benchmark regression detection
-4. **Quality Tests:** MyPy, Ruff, coverage validation
-
-### Mock Strategy
-
-**Realistic Mocks:** Based on actual DWARF dump structures
 ```python
 @pytest.mark.unit
 def test_find_class_success(mocker):
-    """Unit test with realistic DWARF mocks."""
     mock_die = Mock()
     mock_die.tag = "DW_TAG_class_type"
     mock_die.attributes = {'DW_AT_name': Mock(value=b'MtObject')}
-    # ... realistic mock structure
+    # Realistic DWARF structure
 ```
 
-**Integration Validation:** 
-```python  
+**Integration Tests**
+- Real ELF files
+- End-to-end validation
+- Slower execution (~3s)
+
+```python
 @pytest.mark.integration
 def test_mtpropertylist_full_hierarchy():
-    """Integration test with real ELF file."""
     with DwarfGenerator(ELF_PATH) as gen:
         header = gen.generate_complete_hierarchy_header("MtPropertyList")
-        # Verify typedef resolution
         assert "typedef unsigned short u16;" in header
-        assert "typedef unsigned int u32;" in header
 ```
 
----
+## Design Principles
 
-## Future Architecture Considerations
+**Separation of Concerns:**
+- Parsing (ClassParser) separate from generation (HeaderGenerator)
+- Type resolution (TypeResolver) centralized
+- ELF management (BaseGenerator) isolated
 
-### Phase 5-6 Planned Enhancements
+**Dependency Injection:**
+- TypeResolver injected into ClassParser
+- All services initialized in DwarfGenerator
+- Testable with mocks
 
-1. **Enhanced Testing (Phase 6)**
-   - Module-specific test suites
-   - Performance benchmark automation  
-   - >80% test coverage target
-   - Automated regression detection
+**Performance First:**
+- Caching at multiple levels
+- Lazy loading
+- Early exit patterns
+- O(1) cache lookups
 
-2. **Plugin Architecture** (Future)
-   - Custom generator plugins
-   - Configurable output formats
-   - Extensible type resolution strategies
+**Type Safety:**
+- Full type hints on all functions
+- MyPy compliance
+- Dataclass models with frozen types
 
-3. **Interactive Mode** (Future)
-   - REPL for DWARF exploration
-   - Real-time class discovery
-   - Interactive hierarchy visualization
+**Observability:**
+- @log_timing decorators on major operations
+- ProgressTracker for detailed metrics
+- Structured logging
 
-4. **IDE Integration** (Future)  
-   - VS Code extension
-   - IntelliSense integration
-   - Real-time header preview
+## Extension Points
+
+**Custom Generators:**
+- Subclass BaseGenerator
+- Implement generate() method
+- Reuse domain services
+
+**Custom Type Resolution:**
+- Extend TypeResolver
+- Override resolve_type_name()
+- Add custom type mappings
+
+**Custom Output Formats:**
+- Implement new generator service
+- Use existing parsed models
+- Example: JSON, XML, Protobuf output
+
+## Limitations
+
+**DWARF Support:**
+- Primary: DWARF 4 (PS4)
+- Limited: DWARF 5
+- Requires .debug_info, .debug_abbrev sections
+
+**C++ Features:**
+- Basic template support
+- Minimal namespace handling
+- No concept support
+- No C++20 modules
+
+**Binary Requirements:**
+- Must have debug information
+- Does not work with stripped binaries
+- Requires complete DWARF data
+
+## References
+
+- [TESTING.md](TESTING.md) - Testing guide
+- [REFACTORING_PLAN.md](../REFACTORING_PLAN.md) - Refactoring history
+- [pyelftools documentation](https://github.com/eliben/pyelftools)
+- [DWARF 4 specification](http://dwarfstd.org/)

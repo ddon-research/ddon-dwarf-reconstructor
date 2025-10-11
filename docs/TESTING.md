@@ -1,213 +1,352 @@
-# Testing Setup and CI/CD Pipeline
+﻿# Testing
 
-This document describes the comprehensive testing setup for the DDON DWARF Reconstructor project, including xUnit-style reporting, code coverage, and automated CI/CD pipelines.
+Professional testing infrastructure with xUnit reporting, code coverage, and CI/CD automation.
 
-## Test Configuration
+## Quick Start
 
-The project uses `pytest` with several plugins for comprehensive testing and reporting:
+```bash
+# Fast unit tests (recommended)
+uv run pytest -m unit
 
-### Dependencies
+# All tests
+uv run pytest
 
-- **pytest**: Main testing framework
-- **pytest-cov**: Code coverage measurement
-- **pytest-html**: HTML test reports
-- **pytest-mock**: Mocking utilities
-- **pytest-timeout**: Test timeout management
+# With HTML coverage
+uv run pytest -m unit --cov-report=html
+# Open htmlcov/index.html
 
-### Configuration
+# Integration tests
+uv run pytest -m integration
 
-Test configuration is primarily located in `pyproject.toml` under `[tool.pytest.ini_options]`:
+# Makefile shortcuts
+make test          # Unit tests only
+make coverage      # HTML coverage report
+make ci            # Full CI suite (lint + typecheck + test)
+```
 
+## Test Categories
+
+**Markers:**
+- @pytest.mark.unit - Fast mocked tests (<1s, preferred)
+- @pytest.mark.integration - Real ELF file tests (~3s)
+- @pytest.mark.slow - Long-running tests
+- @pytest.mark.performance - Performance benchmarks
+
+**Usage:**
+```bash
+uv run pytest -m "unit"              # Unit tests only
+uv run pytest -m "not slow"          # Skip slow tests
+uv run pytest -m "unit or integration" # Both categories
+```
+
+## Test Structure
+
+```
+tests/
+ application/
+    generators/
+        test_dwarf_generator.py        # Main orchestrator tests
+        test_dwarf_integration.py      # End-to-end tests
+
+ domain/
+    models/
+       dwarf/
+           test_class_info.py         # Model tests
+   
+    services/
+        parsing/
+           test_class_parser.py       # DWARF parsing tests
+           test_array_parser.py       # Array type tests
+           test_type_resolver.py      # Type resolution tests
+       
+        generation/
+            test_header_generator.py   # C++ generation tests
+            test_hierarchy_builder.py  # Inheritance tests
+            test_packing_analyzer.py   # Memory layout tests
+
+ infrastructure/
+     config/
+         test_application_config.py     # Config tests
+```
+
+## Configuration
+
+**pyproject.toml:**
 ```toml
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = [
-    "-v",                                    # Verbose output
-    "--tb=short",                           # Short traceback format
-    "--strict-markers",                     # Strict marker enforcement
-    "--color=yes",                         # Colored output
-    "--cov=src/ddon_dwarf_reconstructor",  # Coverage source
-    "--cov-report=term-missing",           # Terminal coverage report
-    "--cov-report=xml:coverage.xml",       # XML coverage for CI
-    "--cov-report=html:htmlcov",           # HTML coverage report
-    "--junit-xml=test-results.xml",        # JUnit XML for CI
-    "--cov-branch",                        # Branch coverage
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "--cov=src/ddon_dwarf_reconstructor",
+    "--cov-report=term-missing",
+    "--cov-report=xml:coverage.xml",
+    "--cov-report=html:htmlcov",
+    "--junit-xml=test-results.xml",
+    "--cov-branch",
 ]
 markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests as integration tests", 
+    "slow: marks tests as slow",
+    "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
     "performance: marks tests as performance benchmarks",
 ]
 ```
 
-## Test Categories
+## Writing Tests
 
-Tests are organized using pytest markers:
+### Unit Tests (Preferred)
 
-- **`@pytest.mark.unit`**: Fast unit tests with mocks (preferred for CI)
-- **`@pytest.mark.integration`**: Integration tests using real files
-- **`@pytest.mark.slow`**: Long-running tests
-- **`@pytest.mark.performance`**: Performance benchmarks
+**Use mocks for external dependencies:**
 
-## Running Tests
-
-### Unit Tests Only (Recommended for Development)
-```bash
-uv run pytest -m "unit"
+```python
+@pytest.mark.unit
+def test_find_class_success(mocker):
+    """Test finding a class with realistic mocks."""
+    # Mock DWARF structure based on actual dumps
+    mock_die = Mock()
+    mock_die.tag = "DW_TAG_class_type"
+    mock_die.attributes = {'DW_AT_name': Mock(value=b'MtObject')}
+    
+    mock_cu = Mock()
+    mock_cu.iter_DIEs.return_value = [mock_die]
+    
+    mock_elf = Mock()
+    mock_elf.get_dwarf_info.return_value.iter_CUs.return_value = [mock_cu]
+    
+    mocker.patch("builtins.open")
+    mocker.patch("pyelftools.elf.elffile.ELFFile", return_value=mock_elf)
+    
+    with DwarfGenerator("test.elf") as generator:
+        result = generator.find_class("MtObject")
+        assert result == (mock_cu, mock_die)
 ```
 
-### All Tests
-```bash
-uv run pytest
+**Best Practices:**
+- Base mocks on actual DWARF dump structures
+- Mock at module boundaries (ELFFile, not internal functions)
+- Test one component at a time
+- Include edge cases and error conditions
+
+### Integration Tests
+
+**Use real ELF files when needed:**
+
+```python
+@pytest.mark.integration
+def test_mtpropertylist_full_hierarchy():
+    """Integration test with real ELF file."""
+    with DwarfGenerator(ELF_PATH) as generator:
+        header = generator.generate_complete_hierarchy_header("MtPropertyList")
+        
+        # Verify typedef resolution
+        assert "typedef unsigned short u16;" in header
+        assert "typedef unsigned int u32;" in header
+        
+        # Verify inheritance chain
+        assert "class MtObject" in header
+        assert "class MtPropertyList : public MtObject" in header
+        
+        # Verify member parsing
+        assert "u16 mPropCount;" in header
 ```
 
-### With Coverage Report
+**When to use:**
+- End-to-end workflow validation
+- Complex DWARF structures
+- Real-world header generation
+- Regression testing
+
+## Coverage
+
+**Current Status:**
+- Unit tests: 48% coverage
+- Integration tests: +40% coverage
+- Total: 88% coverage
+- Branch coverage: Enabled
+
+**Coverage Reports:**
+1. **Terminal** - Quick summary during test run
+2. **HTML** - Detailed line-by-line (htmlcov/index.html)
+3. **XML** - Machine-readable (coverage.xml)
+4. **JUnit** - CI integration (test-results.xml)
+
+**Viewing Coverage:**
 ```bash
-uv run pytest -m "unit" --cov-report=html
-# Opens htmlcov/index.html for detailed coverage view
+# Generate HTML report
+uv run pytest -m unit --cov-report=html
+
+# Open in browser (Windows)
+start htmlcov/index.html
+
+# Show missing lines in terminal
+uv run pytest -m unit --cov-report=term-missing
 ```
 
-### Integration Tests Only
-```bash
-uv run pytest -m "integration"
+## CI/CD Pipeline
+
+### GitHub Actions Workflows
+
+**1. Unit Tests and Coverage** (.github/workflows/test.yml)
+
+```yaml
+Trigger: Push to main, Pull Requests
+Matrix: Python 3.13, ubuntu-latest
+Steps:
+  1. Checkout code
+  2. Setup Python and uv
+  3. Install dependencies (uv sync)
+  4. Run unit tests (pytest -m unit --cov)
+  5. Upload coverage to Codecov
+  6. Upload test artifacts (30 days)
+  7. Publish test results
 ```
 
-## Generated Reports
+**Coverage Requirements:**
+- Minimum: 30% (enforced)
+- Target: 80%+
+- Scope: src/ddon_dwarf_reconstructor/ only
 
-The test suite generates several reports:
+**2. Code Quality** (.github/workflows/quality.yml)
 
-### 1. JUnit XML Report (`test-results.xml`)
-- **Purpose**: xUnit-style test results for CI/CD systems
-- **Format**: Standard JUnit XML format
-- **Contains**: Test names, execution times, pass/fail status
-- **Usage**: GitHub Actions, Azure DevOps, Jenkins integration
+```yaml
+Trigger: Push to main, Pull Requests
+Steps:
+  1. Ruff linter (uv run ruff check)
+  2. Ruff formatter (uv run ruff format --check)
+  3. MyPy type checker (uv run mypy src/)
+```
 
-### 2. Coverage XML Report (`coverage.xml`)
-- **Purpose**: Machine-readable coverage data
-- **Format**: Cobertura XML format
-- **Contains**: Line and branch coverage percentages
-- **Usage**: Codecov, SonarQube, coverage badges
+### CI Artifacts
 
-### 3. HTML Coverage Report (`htmlcov/`)
-- **Purpose**: Human-readable coverage visualization
-- **Format**: Interactive HTML pages
-- **Contains**: Line-by-line coverage highlighting, missing lines
-- **Usage**: Local development, detailed coverage analysis
+**Generated and uploaded:**
+- test-results.xml (JUnit XML)
+- coverage.xml (Cobertura XML)
+- htmlcov/ (HTML coverage report)
 
-### 4. Terminal Coverage Report
-- **Purpose**: Quick coverage summary
-- **Format**: Text table in terminal
-- **Contains**: File-by-file coverage percentages
-- **Usage**: Development feedback, CI logs
+**Retention:** 30 days
 
-## GitHub Actions CI/CD Pipeline
+## Development Workflow
 
-The project includes two GitHub Actions workflows:
+**Recommended cycle:**
 
-### 1. Unit Tests and Coverage (`.github/workflows/test.yml`)
+```bash
+# 1. Make changes
+vim src/domain/services/parsing/class_parser.py
 
-**Triggers**: Push to `main`, Pull Requests
-**Matrix**: Python 3.13
-**Steps**:
-1. Checkout code
-2. Setup Python and uv
-3. Install dependencies
-4. Run unit tests with coverage (minimum 80%)
-5. Upload coverage to Codecov
-6. Upload test artifacts
-7. Publish test results
+# 2. Run fast unit tests
+uv run pytest -m unit
 
-**Artifacts**:
-- Test results XML
-- Coverage reports
-- HTML coverage report
+# 3. Check coverage
+uv run pytest -m unit --cov-report=html
+start htmlcov/index.html
 
-### 2. Code Quality (`.github/workflows/quality.yml`)
+# 4. Fix uncovered code
+# Add tests for new functionality
 
-**Triggers**: Push to `main`, Pull Requests
-**Steps**:
-1. Checkout code
-2. Setup Python and uv
-3. Install dependencies
-4. Run ruff linter
-5. Run ruff formatter check
-6. Run mypy type checker
+# 5. Run integration tests before commit
+uv run pytest -m integration
 
-## Coverage Requirements
+# 6. Full CI locally
+make ci
+```
 
-- **Minimum Coverage**: 30% for unit tests (enforced in CI)
-- **Target Coverage**: 80%+ when including integration tests
-- **Branch Coverage**: Enabled
-- **Coverage Scope**: `src/ddon_dwarf_reconstructor/` package only
+## Performance
 
-Note: Unit tests alone provide ~38% coverage. The remaining coverage comes from integration tests that use real ELF files.
+| Test Category | Count | Execution Time | Coverage |
+|---------------|-------|----------------|----------|
+| Unit tests | 92 | <1s | 48% |
+| Integration tests | 2 | ~3s | +40% |
+| Total | 94 | ~4s | 88% |
 
-## Best Practices
-
-### Writing Tests
-
-1. **Prefer Unit Tests**: Use mocks for external dependencies
-2. **Mark Tests Appropriately**: Use `@pytest.mark.unit` for fast tests
-3. **Realistic Mocks**: Base mocks on actual DWARF dump structures
-4. **Test Edge Cases**: Include error conditions and boundary cases
-
-### Development Workflow
-
-1. **Run Unit Tests Frequently**: `uv run pytest -m "unit"`
-2. **Check Coverage**: Review `htmlcov/index.html` after test runs
-3. **Fix Coverage Issues**: Aim for >90% coverage on new code
-4. **Integration Tests**: Run before committing significant changes
-
-### CI/CD Integration
-
-1. **Unit Tests Only**: CI runs only unit tests for speed
-2. **Coverage Enforcement**: CI fails if coverage drops below 80%
-3. **Python 3.13 Only**: Tests run exclusively on Python 3.13
-4. **Artifact Preservation**: Test results saved for 30 days
+**Optimization:**
+- Unit tests use mocks (no file I/O)
+- Integration tests cached with pytest-cache
+- Parallel execution possible with pytest-xdist
 
 ## Troubleshooting
 
-### Common Issues
+**Common Issues:**
 
-1. **Marker Warnings**: Ensure markers are defined in `pyproject.toml`
-2. **Coverage Not Generated**: Check `--cov` paths match source structure
-3. **JUnit XML Invalid**: Verify test names don't contain invalid XML characters
-4. **CI Failures**: Check coverage minimum thresholds and Python version compatibility
+1. **Marker warnings:**
+   ```bash
+   # Check markers are defined
+   uv run pytest --markers
+   ```
 
-### Debugging Commands
+2. **Coverage not generated:**
+   ```bash
+   # Verify coverage source path
+   uv run pytest --cov=src/ddon_dwarf_reconstructor --cov-report=term
+   ```
+
+3. **Import errors:**
+   ```bash
+   # Install in editable mode
+   uv sync
+   ```
+
+4. **CI failures:**
+   ```bash
+   # Run exactly what CI runs
+   uv run pytest -m unit --cov --cov-fail-under=30
+   ```
+
+**Debugging:**
 
 ```bash
-# Check pytest configuration
-uv run pytest --help
-
 # Verbose test discovery
 uv run pytest --collect-only -v
 
-# Run specific test file
-uv run pytest tests/generators/test_dwarf_generator.py -v
+# Run specific test
+uv run pytest tests/domain/services/parsing/test_class_parser.py::test_find_class_success -v
 
-# Coverage report with missing lines
-uv run pytest -m "unit" --cov-report=term-missing
+# Show print statements
+uv run pytest -s
+
+# Stop on first failure
+uv run pytest -x
+
+# Show local variables on failure
+uv run pytest -l
 ```
 
-## File Structure
+## Dependencies
 
-```
-.github/workflows/
-├── test.yml          # Unit tests and coverage pipeline
-└── quality.yml       # Code quality checks
+**Required:**
+- pytest - Testing framework
+- pytest-cov - Coverage measurement
+- pytest-mock - Mocking utilities
 
-tests/
-├── config/           # Configuration tests
-├── generators/       # Core functionality tests
-└── utils/           # Utility function tests
+**Optional:**
+- pytest-timeout - Test timeouts
+- pytest-xdist - Parallel execution
+- pytest-html - HTML reports
 
-Generated Reports:
-├── test-results.xml  # JUnit XML report
-├── coverage.xml      # Coverage XML report
-├── htmlcov/         # HTML coverage report
-└── .coverage        # Coverage database
+**Installation:**
+```bash
+uv sync  # Installs all dev dependencies
 ```
 
-This setup provides comprehensive testing with proper CI/CD integration, ensuring code quality and reliability while maintaining fast feedback loops for developers.
+## Quality Gates
+
+**Pre-commit checks:**
+- All unit tests pass
+- Coverage >30%
+- Ruff linting passes
+- MyPy type checking passes
+- Ruff formatting correct
+
+**Pre-merge checks:**
+- All tests pass (including integration)
+- Coverage >80%
+- No regression in performance tests
+- Documentation updated
+
+## References
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System design
+- [pytest documentation](https://docs.pytest.org/)
+- [pytest-cov documentation](https://pytest-cov.readthedocs.io/)
+- [GitHub Actions workflows](../.github/workflows/)

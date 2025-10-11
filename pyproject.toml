@@ -43,7 +43,6 @@ classifiers = [
 "Source Code" = "https://github.com/your-username/ddon-dwarf-reconstructor"
 "Bug Tracker" = "https://github.com/your-username/ddon-dwarf-reconstructor/issues"
 Documentation = "https://github.com/your-username/ddon-dwarf-reconstructor/tree/main/docs"
-Changelog = "https://github.com/your-username/ddon-dwarf-reconstructor/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [

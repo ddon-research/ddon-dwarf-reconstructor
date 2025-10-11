@@ -1,7 +1,10 @@
-"""Generators module initialization."""
+"""Generator utilities and base classes.
 
-from .dwarf_generator import DwarfGenerator
+Note: DwarfGenerator has been moved to application.generators.
+"""
+
+from .base_generator import BaseGenerator
 
 __all__ = [
-    "DwarfGenerator",
+    "BaseGenerator",
 ]

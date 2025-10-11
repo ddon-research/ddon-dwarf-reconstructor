@@ -3,7 +3,7 @@
 """DWARF parsing domain models."""
 
 from .class_info import ClassInfo
-from .enum_info import EnumInfo, EnumeratorInfo
+from .enum_info import EnumeratorInfo, EnumInfo
 from .member_info import MemberInfo
 from .method_info import MethodInfo
 from .parameter_info import ParameterInfo

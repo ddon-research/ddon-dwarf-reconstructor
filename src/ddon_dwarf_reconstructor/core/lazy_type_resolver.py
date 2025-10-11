@@ -27,7 +27,7 @@ class LazyTypeResolver:
     3. Implementing lazy typedef discovery with persistent caching
     4. Providing recursive type chain resolution with cycle detection
     """
-    
+
     # Common primitive typedefs for quick lookup
     PRIMITIVE_TYPEDEFS = frozenset({
         "u8", "u16", "u32", "u64",
@@ -49,7 +49,7 @@ class LazyTypeResolver:
         "__uint16_t", "__int16_t",
         "__uint8_t", "__int8_t",
     })
-    
+
     def __init__(self, dwarf_info: DWARFInfo, lazy_index: LazyDwarfIndexService):
         """Initialize lazy type resolver.
         
@@ -59,20 +59,20 @@ class LazyTypeResolver:
         """
         self.dwarf_info = dwarf_info
         self.index = lazy_index
-        
+
         # Runtime caches (offset-based)
         self._typedef_cache: dict[int, str] = {}  # offset → resolved typedef
         self._type_name_cache: dict[int, str] = {}  # offset → resolved type name
         self._typedef_chains: dict[str, str] = {}  # name → final resolved type
-        
+
         # Recursion tracking
         self._types_in_progress: set[str] = set()
-        
+
         # Add instance attribute for test compatibility
         self._primitive_typedefs: set[str] = set(self.PRIMITIVE_TYPEDEFS)
-        
+
         logger.info("Initialized LazyTypeResolver with offset-based caching")
-    
+
     def expand_primitive_search(self, full_hierarchy: bool = False) -> None:
         """Expand the set of primitive types to search for.
         
@@ -87,7 +87,7 @@ class LazyTypeResolver:
                 "std::size_t", "std::ptrdiff_t"
             }
             self._primitive_typedefs.update(additional_types)
-    
+
     def resolve_type_name(self, die: DIE, type_attr_name: str = "DW_AT_type") -> str:
         """Resolve type name using offset-based caching.
         
@@ -103,29 +103,29 @@ class LazyTypeResolver:
             if type_attr_name not in die.attributes:
                 logger.debug(f"DIE {die.tag} has no {type_attr_name} attribute")
                 return "void"
-            
+
             # Use pyelftools' efficient offset resolution
             type_die = die.get_DIE_from_attribute(type_attr_name)
             if not type_die:
                 logger.debug(f"Could not resolve {type_attr_name} reference")
                 return "unknown_type"
-            
+
             # Check cache first
             if type_die.offset in self._type_name_cache:
                 return self._type_name_cache[type_die.offset]
-            
+
             # Resolve type name
             resolved_name = self._resolve_die_type_name(type_die)
-            
+
             # Cache the result
             self._type_name_cache[type_die.offset] = resolved_name
-            
+
             return resolved_name
-            
+
         except Exception as e:
             logger.warning(f"Failed to resolve type reference for {die.tag}: {e}")
             return "unknown_type"
-    
+
     def _resolve_die_type_name(self, type_die: DIE) -> str:
         """Resolve type name from a type DIE.
         
@@ -141,36 +141,36 @@ class LazyTypeResolver:
             if isinstance(name_attr.value, bytes):
                 return name_attr.value.decode("utf-8")
             return str(name_attr.value)
-        
+
         # Handle different type tags without names
         if type_die.tag == "DW_TAG_pointer_type":
             pointed_type = self.resolve_type_name(type_die)
             return f"{pointed_type}*" if pointed_type != "unknown_type" else "void*"
-        
+
         if type_die.tag == "DW_TAG_const_type":
             base_type = self.resolve_type_name(type_die)
             return f"const {base_type}"
-        
+
         if type_die.tag == "DW_TAG_reference_type":
             base_type = self.resolve_type_name(type_die)
             return f"{base_type}&"
-        
+
         if type_die.tag == "DW_TAG_rvalue_reference_type":
             base_type = self.resolve_type_name(type_die)
             return f"{base_type}&&"
-        
+
         if type_die.tag == "DW_TAG_array_type":
             # Simplified array handling for now
             element_type = self.resolve_type_name(type_die)
             return f"{element_type}[]"
-        
+
         if type_die.tag == "DW_TAG_base_type":
             return str(type_die.tag).replace("DW_TAG_", "")
-        
+
         # For unnamed types, use the tag name
         logger.debug(f"Unnamed type with tag: {type_die.tag}")
         return str(type_die.tag).replace("DW_TAG_", "")
-    
+
     def find_typedef(self, typedef_name: str) -> tuple[str, str] | None:
         """Find typedef using lazy loading and caching.
         
@@ -183,7 +183,7 @@ class LazyTypeResolver:
         # Check if this is a known primitive
         if typedef_name in self._primitive_typedefs:
             return typedef_name, typedef_name
-        
+
         # Check persistent cache first
         offset = self.index.find_symbol_offset(typedef_name, "typedef")
         if offset is not None:
@@ -192,7 +192,7 @@ class LazyTypeResolver:
                 underlying = self._typedef_cache[offset]
                 logger.debug(f"Found cached typedef: {typedef_name} -> {underlying}")
                 return typedef_name, underlying
-            
+
             # Resolve typedef from DIE
             die = self.index.get_die_by_offset(offset)
             if die and die.tag == "DW_TAG_typedef":
@@ -200,7 +200,7 @@ class LazyTypeResolver:
                 self._typedef_cache[offset] = underlying
                 logger.debug(f"Resolved typedef: {typedef_name} -> {underlying}")
                 return typedef_name, underlying
-        
+
         # Check persistent cache first, then fallback to targeted search
         offset = self.index.find_symbol_offset(typedef_name, "typedef")
         if offset is None:
@@ -212,10 +212,10 @@ class LazyTypeResolver:
                 self._typedef_cache[offset] = underlying
                 logger.debug(f"Found and cached typedef: {typedef_name} -> {underlying}")
                 return typedef_name, underlying
-        
+
         logger.debug(f"Typedef not found: {typedef_name}")
         return None
-    
+
     def resolve_typedef_chain(self, typedef_name: str) -> str:
         """Recursively resolve typedef to its final underlying type.
         
@@ -228,14 +228,14 @@ class LazyTypeResolver:
         # Check cache first
         if typedef_name in self._typedef_chains:
             return self._typedef_chains[typedef_name]
-        
+
         # Prevent infinite recursion
         if typedef_name in self._types_in_progress:
             logger.warning(f"Circular typedef dependency detected for {typedef_name}")
             return typedef_name
-        
+
         self._types_in_progress.add(typedef_name)
-        
+
         try:
             # Find the typedef
             typedef_result = self.find_typedef(typedef_name)
@@ -244,7 +244,7 @@ class LazyTypeResolver:
                 result = typedef_name
             else:
                 _, underlying = typedef_result
-                
+
                 # Check if the underlying type is itself a typedef
                 underlying_result = self.find_typedef(underlying)
                 if underlying_result is not None:
@@ -253,15 +253,15 @@ class LazyTypeResolver:
                 else:
                     # Final type reached
                     result = underlying
-            
+
             # Cache the result
             self._typedef_chains[typedef_name] = result
-            
+
             return result
-            
+
         finally:
             self._types_in_progress.discard(typedef_name)
-    
+
     def collect_typedefs_from_die(self, class_die: DIE) -> set[str]:
         """Collect typedefs used by a class DIE, resolving them lazily.
         
@@ -272,25 +272,25 @@ class LazyTypeResolver:
             Set of resolved typedef names used by the class
         """
         used_typedefs = set()
-        
+
         try:
             # Process all member DIEs
             for child_die in class_die.iter_children():
                 if child_die.tag == "DW_TAG_member":
                     # Get member type
                     member_type = self.resolve_type_name(child_die)
-                    
+
                     # Check if it's a typedef we should resolve
                     if self.find_typedef(member_type) is not None:
                         resolved_type = self.resolve_typedef_chain(member_type)
                         used_typedefs.add(resolved_type)
                         logger.debug(f"Found used typedef: {member_type} -> {resolved_type}")
-        
+
         except Exception as e:
             logger.warning(f"Error collecting typedefs from class: {e}")
-        
+
         return used_typedefs
-    
+
     def get_cache_stats(self) -> dict[str, Any]:
         """Get statistics about cache usage and performance.
         
@@ -299,12 +299,12 @@ class LazyTypeResolver:
         """
         return {
             "typedef_cache_size": len(self._typedef_cache),
-            "type_name_cache_size": len(self._type_name_cache), 
+            "type_name_cache_size": len(self._type_name_cache),
             "typedef_chains_size": len(self._typedef_chains),
             "types_in_progress": len(self._types_in_progress),
             "primitive_typedefs": len(self._primitive_typedefs)
         }
-    
+
     def clear_caches(self) -> None:
         """Clear all runtime caches."""
         self._typedef_cache.clear()
@@ -314,10 +314,10 @@ class LazyTypeResolver:
         logger.info("LazyTypeResolver caches cleared")
 
     def collect_used_typedefs(
-        self, 
-        members: list, 
-        methods: list, 
-        unions: list | None = None, 
+        self,
+        members: list,
+        methods: list,
+        unions: list | None = None,
         nested_structs: list | None = None
     ) -> dict[str, str]:
         """Collect typedefs used by members, methods, unions, and nested structs with lazy resolution.
@@ -341,7 +341,7 @@ class LazyTypeResolver:
             f"Collecting typedefs from {len(members)} members, {len(methods)} methods, "
             f"{total_unions} unions, {total_structs} nested structs"
         )
-        
+
         # Collect type names from members using DWARF DIE traversal
         type_names = set()
         for member in members:
@@ -356,7 +356,7 @@ class LazyTypeResolver:
                     base_type = self._extract_base_type(member.type_name)
                     type_names.add(base_type)
                     logger.debug(f"Member {member.name}: {member.type_name} -> {base_type} (string fallback)")
-        
+
         # Collect type names from methods (parameters and return types)
         for method in methods:
             if hasattr(method, 'return_type') and method.return_type:
@@ -372,7 +372,7 @@ class LazyTypeResolver:
                     logger.debug(
                         f"Method return type: {method.return_type} -> {base_type} (string fallback)"
                     )
-            
+
             if hasattr(method, 'parameters'):
                 for param in method.parameters:
                     if hasattr(param, 'type_name') and param.type_name:
@@ -390,7 +390,7 @@ class LazyTypeResolver:
                             logger.debug(
                                 f"Method param {param.name}: {param.type_name} -> {base_type} (string fallback)"
                             )
-        
+
         # Collect type names from union members
         if unions:
             for union in unions:
@@ -400,7 +400,7 @@ class LazyTypeResolver:
                         base_type = self._extract_base_type(member.type_name)
                         type_names.add(base_type)
                         logger.debug(f"Union member {member.name}: {member.type_name} -> {base_type}")
-                
+
                 # Check nested structs within unions
                 if hasattr(union, 'nested_structs') and union.nested_structs:
                     for nested_struct in union.nested_structs:
@@ -409,8 +409,8 @@ class LazyTypeResolver:
                                 base_type = self._extract_base_type(member.type_name)
                                 type_names.add(base_type)
                                 logger.debug(f"Nested struct member {member.name}: {member.type_name} -> {base_type}")
-        
-        # Collect type names from nested struct members  
+
+        # Collect type names from nested struct members
         if nested_structs:
             for struct in nested_structs:
                 logger.debug(f"Examining nested struct {struct.name} for typedefs")
@@ -419,7 +419,7 @@ class LazyTypeResolver:
                         base_type = self._extract_base_type(member.type_name)
                         type_names.add(base_type)
                         logger.debug(f"Nested struct member {member.name}: {member.type_name} -> {base_type}")
-        
+
         # Look for primitive typedefs in the collected type names
         for type_name in type_names:
             if type_name in self._primitive_typedefs:
@@ -431,7 +431,7 @@ class LazyTypeResolver:
                     logger.debug(f"Resolved primitive typedef: {type_name} -> {resolved_type}")
                 elif resolved_type == type_name:
                     logger.debug(f"Skipping base type {type_name} (not a typedef)")
-        
+
         logger.debug(f"Collected {len(found_typedefs)} primitive typedefs")
         return found_typedefs
 
@@ -447,13 +447,13 @@ class LazyTypeResolver:
         if not self.index:
             logger.debug(f"No index available for type resolution: {typedef_name}")
             return None
-            
+
         try:
             # Check persistent cache first for both typedef and base_type
             offset = self.index.find_symbol_offset(typedef_name, "typedef")
             if offset is None:
                 offset = self.index.find_symbol_offset(typedef_name, "base_type")
-            
+
             # If not in cache, use targeted search for both typedef and base_type simultaneously
             if offset is None:
                 offset = self.index.targeted_symbol_search(typedef_name, "primitive_type")
@@ -464,12 +464,12 @@ class LazyTypeResolver:
                 logger.debug(f"get_die_by_offset returned: {die is not None}")
                 if die:
                     logger.debug(f"Retrieved DIE for {typedef_name}: tag={die.tag}")
-                    
+
                     # Handle base types directly - they are the final type
                     if die.tag == "DW_TAG_base_type":
                         logger.debug(f"Found base type {typedef_name}, returning as-is")
                         return typedef_name
-                    
+
                     # Handle typedefs - resolve to underlying type
                     elif die.tag == "DW_TAG_typedef":
                         type_attr = die.attributes.get("DW_AT_type")
@@ -489,14 +489,14 @@ class LazyTypeResolver:
                     logger.debug(f"Could not retrieve DIE at offset 0x{offset:x} for {typedef_name}")
             else:
                 logger.debug(f"No offset found for typedef: {typedef_name}")
-            
+
             logger.debug(f"Could not resolve primitive typedef: {typedef_name}")
             return None
-            
+
         except Exception as e:
             logger.warning(f"Error resolving primitive typedef {typedef_name}: {e}")
             return None
-    
+
     def _get_primitive_base_type_name(self, type_die: DIE) -> str:
         """Get the name of a primitive base type from DIE with recursive resolution.
         
@@ -513,7 +513,7 @@ class LazyTypeResolver:
                 if isinstance(name_attr.value, bytes):
                     return name_attr.value.decode("utf-8")
                 return str(name_attr.value)
-        
+
         # Handle typedefs by recursively resolving
         if type_die.tag == "DW_TAG_typedef":
             type_attr = type_die.attributes.get("DW_AT_type")
@@ -522,7 +522,7 @@ class LazyTypeResolver:
                 if target_die:
                     # Recursively resolve the typedef chain
                     return self._get_primitive_base_type_name(target_die)
-        
+
         # Handle const/volatile/pointer/reference types by following their type
         if type_die.tag in ("DW_TAG_const_type", "DW_TAG_volatile_type", "DW_TAG_pointer_type", "DW_TAG_reference_type"):
             type_attr = type_die.attributes.get("DW_AT_type")
@@ -530,7 +530,7 @@ class LazyTypeResolver:
                 target_die = type_die.get_DIE_from_attribute("DW_AT_type")
                 if target_die:
                     return self._get_primitive_base_type_name(target_die)
-        
+
         # Fallback to tag name without DW_TAG_ prefix
         return str(type_die.tag).replace("DW_TAG_", "")
 
@@ -560,9 +560,7 @@ class LazyTypeResolver:
         while (type_name.endswith("&&") or type_name.endswith("&") or type_name.endswith("*")):
             if type_name.endswith("&&"):
                 type_name = type_name[:-2].strip()
-            elif type_name.endswith("&"):
-                type_name = type_name[:-1].strip()
-            elif type_name.endswith("*"):
+            elif type_name.endswith("&") or type_name.endswith("*"):
                 type_name = type_name[:-1].strip()
 
         # Handle array types with dimensions [N] or []

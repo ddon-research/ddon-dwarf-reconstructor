@@ -5,8 +5,8 @@ import sys
 from pathlib import Path
 from typing import NoReturn
 
-from .config import Config
-from .generators.dwarf_generator import DwarfGenerator
+from .application.generators import DwarfGenerator
+from .infrastructure.config import Config
 from .infrastructure.logging import LoggerSetup, get_logger, log_timing
 from .utils.path_utils import create_header_filename
 
@@ -71,7 +71,7 @@ def main() -> NoReturn:
     """Main entry point for DWARF-to-C++ header generation using pyelftools."""
     logger = get_logger(__name__)
     logger.debug("Starting DDON DWARF Reconstructor main program")
-    
+
     args = parse_args()
 
     # Load configuration
@@ -100,7 +100,7 @@ def main() -> NoReturn:
     # Generate header using pyelftools
     symbol_name = args.generate
     logger.info(f"Generating header for: {symbol_name}")
-    
+
     logger.debug(f"Generation mode: {'full-hierarchy' if args.full_hierarchy else 'single-class'}")
     logger.debug(f"Target symbol: {symbol_name}")
 
@@ -120,7 +120,7 @@ def main() -> NoReturn:
 
             logger.info(f"[SUCCESS] Generated: {output_file}")
             logger.info(f"Size: {len(header_content)} bytes")
-            
+
             # Calculate lines and provide summary statistics
             lines = header_content.split("\n")
             logger.debug(f"Generated header contains {len(lines)} lines")

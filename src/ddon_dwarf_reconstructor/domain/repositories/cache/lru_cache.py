@@ -8,7 +8,7 @@ from typing import Any
 
 class LRUCache:
     """Simple LRU cache implementation with configurable size limits."""
-    
+
     def __init__(self, max_size: int = 10000):
         """Initialize LRU cache with maximum size.
         
@@ -19,7 +19,7 @@ class LRUCache:
         self.cache: OrderedDict[int, Any] = OrderedDict()
         self.hits = 0
         self.misses = 0
-    
+
     def get(self, key: int) -> Any | None:
         """Get item from cache, moving it to end (most recently used).
         
@@ -35,10 +35,10 @@ class LRUCache:
             self.cache[key] = value
             self.hits += 1
             return value
-        
+
         self.misses += 1
         return None
-    
+
     def put(self, key: int, value: Any) -> None:
         """Add item to cache, evicting oldest if necessary.
         
@@ -52,15 +52,15 @@ class LRUCache:
         elif len(self.cache) >= self.max_size:
             # Remove oldest item (first in OrderedDict)
             self.cache.popitem(last=False)
-        
+
         self.cache[key] = value
-    
+
     def clear(self) -> None:
         """Clear all cached items."""
         self.cache.clear()
         self.hits = 0
         self.misses = 0
-    
+
     def stats(self) -> dict[str, Any]:
         """Get cache statistics.
         
@@ -69,7 +69,7 @@ class LRUCache:
         """
         total_requests = self.hits + self.misses
         hit_rate = (self.hits / total_requests * 100) if total_requests > 0 else 0.0
-        
+
         return {
             "size": len(self.cache),
             "max_size": self.max_size,
@@ -77,11 +77,11 @@ class LRUCache:
             "misses": self.misses,
             "hit_rate": f"{hit_rate:.1f}%"
         }
-    
+
     def __len__(self) -> int:
         """Return current cache size."""
         return len(self.cache)
-    
+
     def __contains__(self, key: int) -> bool:
         """Check if key exists in cache without affecting LRU order."""
         return key in self.cache
