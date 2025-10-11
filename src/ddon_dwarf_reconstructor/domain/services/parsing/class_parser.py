@@ -143,23 +143,43 @@ class ClassParser:
             return None
 
         try:
-            # Look for different type categories, checking cache first
-            for symbol_type in ["class", "struct", "union", "enum", "typedef"]:
-                # Check persistent cache first
+            # Try cache first for all symbol types
+            for symbol_type in ["namespace", "class", "struct", "union", "enum", "typedef"]:
                 offset = self.lazy_index.find_symbol_offset(class_name, symbol_type)
-                if offset is None:
-                    # Fallback to targeted search if not in cache
-                    offset = self.lazy_index.targeted_symbol_search(class_name, symbol_type)
                 if offset:
-                    # Find both DIE and CU in one search
+                    # Found in cache, retrieve it
                     die_cu_result = self._find_die_and_cu_by_offset(offset)
                     if die_cu_result:
                         cu, die = die_cu_result
                         logger.info(
-                            f"Found {class_name} via lazy loading at offset 0x{offset:x} "
+                            f"Found {class_name} via cache at offset 0x{offset:x} "
                             f"(type: {symbol_type})"
                         )
                         return cu, die
+
+            # Not in cache - do targeted search looking for ANY matching type
+            # This searches once through CUs checking all tags simultaneously
+            offset = self.lazy_index.targeted_symbol_search(class_name, "")
+            if offset:
+                die_cu_result = self._find_die_and_cu_by_offset(offset)
+                if die_cu_result:
+                    cu, die = die_cu_result
+                    # Determine what type we actually found
+                    tag = die.tag
+                    if tag == "DW_TAG_namespace":
+                        symbol_type = "namespace"
+                    elif tag in ("DW_TAG_class_type", "DW_TAG_structure_type"):
+                        symbol_type = "class"
+                    elif tag == "DW_TAG_typedef":
+                        symbol_type = "typedef"
+                    else:
+                        symbol_type = "type"
+                    
+                    logger.info(
+                        f"Found {class_name} via lazy loading at offset 0x{offset:x} "
+                        f"(type: {symbol_type})"
+                    )
+                    return cu, die
 
             logger.warning(f"Class {class_name} not found via lazy loading")
             return None

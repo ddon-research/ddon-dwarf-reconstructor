@@ -159,6 +159,17 @@ class DwarfGenerator(BaseGenerator):
         assert self.class_parser is not None
         return self.class_parser.find_class(class_name)
 
+    def is_namespace(self, die: DIE) -> bool:
+        """Check if a DIE represents a namespace.
+
+        Args:
+            die: DIE to check
+
+        Returns:
+            True if DIE is a namespace, False otherwise
+        """
+        return die.tag == "DW_TAG_namespace"
+
     def parse_class_info(self, cu: CompileUnit, class_die: DIE) -> ClassInfo:
         """Parse class information from DIE.
 
@@ -181,10 +192,10 @@ class DwarfGenerator(BaseGenerator):
 
     @log_timing
     def generate_header(self, class_name: str, include_metadata: bool = True) -> str:
-        """Generate C++ header for a single class.
+        """Generate C++ header for a single class or namespace.
 
         Args:
-            class_name: Name of the class to generate header for
+            class_name: Name of the class/namespace to generate header for
             include_metadata: Whether to include DWARF metadata comments
 
         Returns:
@@ -203,6 +214,11 @@ class DwarfGenerator(BaseGenerator):
             return self._generate_not_found_header(class_name)
 
         cu, class_die = result
+
+        # Check if this is a namespace
+        if self.is_namespace(class_die):
+            logger.info(f"{class_name} is a namespace, generating namespace header")
+            return self._generate_namespace_header(class_name, cu, class_die)
 
         # Parse class with timing
         parse_start = time()
@@ -349,3 +365,91 @@ class DwarfGenerator(BaseGenerator):
 
 #endif // {class_name.upper()}_H
 """
+
+    def _generate_namespace_header(self, namespace_name: str, cu: CompileUnit, namespace_die: DIE) -> str:
+        """Generate header for a namespace with proper C++ namespace syntax.
+
+        Args:
+            namespace_name: Name of the namespace
+            cu: Compilation unit containing the namespace
+            namespace_die: DIE representing the namespace
+
+        Returns:
+            C++ header documenting the namespace with forward declarations
+        """
+        from ...utils.path_utils import sanitize_for_filesystem
+
+        # Collect child classes and their types
+        child_items = []
+        try:
+            for child in namespace_die.iter_children():  # type: ignore
+                if child.tag in ("DW_TAG_class_type", "DW_TAG_structure_type"):
+                    name_attr = child.attributes.get("DW_AT_name")
+                    if name_attr:
+                        if isinstance(name_attr.value, bytes):
+                            class_name = name_attr.value.decode("utf-8")
+                        else:
+                            class_name = str(name_attr.value)
+                        
+                        # Determine if it's a class or struct
+                        item_type = "class" if child.tag == "DW_TAG_class_type" else "struct"
+                        child_items.append((item_type, class_name))
+        except Exception as e:
+            logger.warning(f"Error iterating namespace children: {e}")
+
+        child_items.sort(key=lambda x: x[1])  # Sort by name
+
+        # Generate header
+        sanitized_name = sanitize_for_filesystem(namespace_name).upper()
+        lines = [
+            f"#ifndef {sanitized_name}_NAMESPACE_H",
+            f"#define {sanitized_name}_NAMESPACE_H",
+            "",
+            "#include <cstdint>",
+            "",
+            "// Generated from DWARF debug information using pyelftools",
+            f"// Target namespace: {namespace_name}",
+            "",
+            "// DWARF Debug Information:",
+            f"// - DIE Offset: 0x{namespace_die.offset:08x}",
+            f"// - Source CU: 0x{cu.cu_offset:08x}",
+        ]
+
+        # Add source file info if available
+        decl_file = namespace_die.attributes.get("DW_AT_decl_file")
+        decl_line = namespace_die.attributes.get("DW_AT_decl_line")
+        if decl_file and decl_line:
+            lines.append(f"// - Declaration: {decl_file.value}")
+            lines.append(f"//   Line: {decl_line.value}")
+
+        lines.extend([
+            "",
+            f"// Namespace: {namespace_name}",
+            f"// Contains {len(child_items)} type(s)",
+            "",
+        ])
+
+        # Generate C++ namespace with forward declarations
+        lines.append(f"namespace {namespace_name} {{")
+        lines.append("")
+
+        if child_items:
+            lines.append("// Forward declarations")
+            for item_type, class_name in child_items:
+                lines.append(f"{item_type} {class_name};")
+            lines.append("")
+            lines.append("// To generate full headers for these classes, use:")
+            for _, class_name in child_items:
+                lines.append(f"//   --generate {namespace_name}::{class_name}")
+        else:
+            lines.append("// No classes found in this namespace")
+
+        lines.extend([
+            "",
+            f"}}  // namespace {namespace_name}",
+            "",
+            f"#endif // {sanitized_name}_NAMESPACE_H",
+            ""
+        ])
+
+        return "\n".join(lines)

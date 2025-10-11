@@ -183,6 +183,8 @@ class LazyDwarfIndexService:
             return "typedef"
         elif die_tag in ("DW_TAG_class_type", "DW_TAG_structure_type"):
             return "class"
+        elif die_tag == "DW_TAG_namespace":
+            return "namespace"
         else:
             return "type"
 
@@ -266,11 +268,13 @@ class LazyDwarfIndexService:
         # Check if we have a CU hint for this symbol
         cu_offset = self.persistent_cache.get_symbol_cu_offset(symbol_name)
 
-        # Convert symbol_type to DIE tags
+        # Determine target DIE tags based on symbol type
         if symbol_type == "typedef":
             target_tags = {"DW_TAG_typedef"}
         elif symbol_type == "class":
             target_tags = {"DW_TAG_class_type", "DW_TAG_structure_type"}
+        elif symbol_type == "namespace":
+            target_tags = {"DW_TAG_namespace"}
         elif symbol_type == "base_type":
             target_tags = {"DW_TAG_base_type"}
         elif symbol_type == "primitive_type":
@@ -279,7 +283,8 @@ class LazyDwarfIndexService:
         else:
             target_tags = {
                 "DW_TAG_class_type", "DW_TAG_structure_type", "DW_TAG_union_type",
-                "DW_TAG_typedef", "DW_TAG_enumeration_type", "DW_TAG_base_type"
+                "DW_TAG_typedef", "DW_TAG_enumeration_type", "DW_TAG_base_type",
+                "DW_TAG_namespace"
             }
 
         target_name = symbol_name.encode("utf-8")

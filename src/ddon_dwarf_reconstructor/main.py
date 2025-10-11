@@ -145,6 +145,11 @@ def main() -> NoReturn:
                     logger.info(f"Size: {len(header_content)} bytes")
                     success_count += 1
 
+                    # Save cache after each successful generation
+                    if generator.lazy_index is not None:
+                        generator.lazy_index.save_cache()
+                        logger.debug("Cache saved after successful generation")
+
                     # Calculate lines and provide summary statistics
                     lines = header_content.split("\n")
                     logger.debug(f"Generated header contains {len(lines)} lines")
