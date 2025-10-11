@@ -2,7 +2,7 @@
 name = "ddon-dwarf-reconstructor"
 version = "0.1.0"
 description = "Reconstructs C/C++ header structures from DWARF debug symbols in PS4 ELF files"
-readme = {file = "README.adoc", content-type = "text/plain"}
+readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.13"
 dependencies = [
     "pyelftools>=0.31",
