@@ -10,9 +10,9 @@ from typing import TYPE_CHECKING
 from elftools.dwarf.die import DIE
 
 if TYPE_CHECKING:
-    from ..type_resolver import TypeResolver
+    from ...domain.services.parsing import TypeResolver
 
-from ...utils.logger import get_logger
+from ...infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
 

@@ -16,9 +16,9 @@ from elftools.dwarf.die import DIE
 from elftools.dwarf.dwarfinfo import DWARFInfo
 
 if TYPE_CHECKING:
-    from ..domain.models.dwarf import MemberInfo, MethodInfo, StructInfo, UnionInfo
+    from ...models.dwarf import MemberInfo, MethodInfo, StructInfo, UnionInfo
 
-from ..utils.logger import get_logger, log_timing
+from ....infrastructure.logging import get_logger, log_timing
 
 logger = get_logger(__name__)
 

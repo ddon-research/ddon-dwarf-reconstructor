@@ -7,7 +7,7 @@ from typing import NoReturn
 
 from .config import Config
 from .generators.dwarf_generator import DwarfGenerator
-from .utils import LoggerSetup, get_logger, log_timing
+from .infrastructure.logging import LoggerSetup, get_logger, log_timing
 from .utils.path_utils import create_header_filename
 
 

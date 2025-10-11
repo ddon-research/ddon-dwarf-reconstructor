@@ -149,3 +149,8 @@ def test_real_elf_processing(elf_file_path):
         assert "#ifndef MTOBJECT_H" in header
         assert "class MtObject" in header
 ```
+
+### Summaries
+
+- Avoid generating exhaustive summaries after small changes or to track minor progress.
+- Keep summaries technical, professional, and concise, no emojis or casual language.

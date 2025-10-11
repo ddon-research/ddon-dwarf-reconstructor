@@ -9,7 +9,7 @@ expansion, and cross-hierarchy typedef collection.
 import pytest
 from unittest.mock import Mock, patch
 
-from src.ddon_dwarf_reconstructor.generators.type_resolver import TypeResolver
+from ddon_dwarf_reconstructor.domain.services.parsing import TypeResolver
 
 
 class TestTypeResolver:

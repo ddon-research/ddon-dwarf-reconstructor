@@ -18,11 +18,10 @@ from elftools.dwarf.compileunit import CompileUnit
 from elftools.dwarf.die import DIE
 
 from ..domain.models.dwarf import ClassInfo
-from ..utils.logger import get_logger, log_timing
+from ..infrastructure.logging import get_logger, log_timing
 from .base_generator import BaseGenerator
-from .class_parser import ClassParser
-from .header_generator import HeaderGenerator
-from .hierarchy_builder import HierarchyBuilder
+from ..domain.services.parsing import ClassParser
+from ..domain.services.generation import HeaderGenerator, HierarchyBuilder
 from .utils.packing_analyzer import calculate_packing_info
 
 if TYPE_CHECKING:
@@ -85,11 +84,11 @@ class DwarfGenerator(BaseGenerator):
 
     def _initialize_components(self) -> None:
         """Initialize components with lazy loading and memory monitoring."""
-        from ..config.lazy_loading import get_config, get_cache_file_path
+        from ..config.lazy_loading import get_cache_file_path, get_config
         from ..core.lazy_type_resolver import LazyTypeResolver
         from ..domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
-        from ..generators.class_parser import ClassParser
-        
+        from ..domain.services.parsing import ClassParser
+
         assert self.dwarf_info is not None, "dwarf_info must be initialized"
         config = get_config()
         cache_file = get_cache_file_path(str(self.elf_path))

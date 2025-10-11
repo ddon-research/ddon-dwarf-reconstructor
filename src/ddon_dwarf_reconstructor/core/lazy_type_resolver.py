@@ -13,7 +13,7 @@ from elftools.dwarf.die import DIE
 from elftools.dwarf.dwarfinfo import DWARFInfo
 
 from ..domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
-from ..utils.logger import get_logger
+from ..infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
 

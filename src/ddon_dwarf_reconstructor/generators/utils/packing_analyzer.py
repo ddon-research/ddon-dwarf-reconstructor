@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ...domain.models.dwarf import ClassInfo
 
-from ...utils.logger import get_logger
+from ...infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
 

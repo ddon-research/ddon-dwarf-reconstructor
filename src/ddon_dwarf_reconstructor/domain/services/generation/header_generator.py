@@ -8,9 +8,9 @@ correct array declaration handling.
 """
 
 import re
-from ..domain.models.dwarf import ClassInfo, EnumInfo, MethodInfo, StructInfo, UnionInfo, MemberInfo
-from ..utils.logger import get_logger, log_timing
-from ..utils.path_utils import sanitize_for_filesystem
+from ...models.dwarf import ClassInfo, EnumInfo, MethodInfo, StructInfo, UnionInfo, MemberInfo
+from ....infrastructure.logging import get_logger, log_timing
+from ....utils.path_utils import sanitize_for_filesystem
 
 logger = get_logger(__name__)
 

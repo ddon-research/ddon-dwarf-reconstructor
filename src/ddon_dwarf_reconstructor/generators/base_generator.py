@@ -12,8 +12,8 @@ from pathlib import Path
 from elftools.dwarf.dwarfinfo import DWARFInfo
 from elftools.elf.elffile import ELFFile
 
+from ..infrastructure.logging import get_logger
 from ..utils.elf_patches import patch_pyelftools_for_ps4
-from ..utils.logger import get_logger
 
 # Apply PS4 ELF patches globally
 patch_pyelftools_for_ps4()

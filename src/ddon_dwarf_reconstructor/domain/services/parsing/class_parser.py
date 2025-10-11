@@ -12,7 +12,7 @@ from elftools.dwarf.compileunit import CompileUnit
 from elftools.dwarf.die import DIE
 from elftools.dwarf.dwarfinfo import DWARFInfo
 
-from ..domain.models.dwarf import (
+from ...models.dwarf import (
     ClassInfo,
     EnumeratorInfo,
     EnumInfo,
@@ -22,10 +22,10 @@ from ..domain.models.dwarf import (
     StructInfo,
     UnionInfo,
 )
-from ..utils.logger import get_logger, log_timing
+from ....infrastructure.logging import get_logger, log_timing
 if TYPE_CHECKING:
-    from ..domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
-    from ..core.lazy_type_resolver import LazyTypeResolver
+    from ..lazy_dwarf_index_service import LazyDwarfIndexService
+    from ....core.lazy_type_resolver import LazyTypeResolver
 
 logger = get_logger(__name__)
 

@@ -7,7 +7,7 @@ from pathlib import Path
 from time import time
 from typing import Any, cast
 
-from ....utils.logger import get_logger
+from ....infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
 

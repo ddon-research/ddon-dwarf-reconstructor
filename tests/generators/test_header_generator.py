@@ -6,7 +6,7 @@ Tests the core C++ header generation functionality.
 import pytest
 from unittest.mock import Mock
 
-from ddon_dwarf_reconstructor.generators.header_generator import HeaderGenerator
+from ddon_dwarf_reconstructor.domain.services.generation import HeaderGenerator
 from ddon_dwarf_reconstructor.domain.models.dwarf import ClassInfo, MemberInfo, MethodInfo, ParameterInfo
 
 

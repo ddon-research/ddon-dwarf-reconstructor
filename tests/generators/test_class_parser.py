@@ -6,8 +6,7 @@ Tests the core DWARF class parsing functionality with proper mocks.
 import pytest
 from unittest.mock import Mock, patch
 
-from ddon_dwarf_reconstructor.generators.class_parser import ClassParser
-from ddon_dwarf_reconstructor.generators.type_resolver import TypeResolver
+from ddon_dwarf_reconstructor.domain.services.parsing import ClassParser, TypeResolver
 from ddon_dwarf_reconstructor.domain.models.dwarf import ClassInfo, MemberInfo, MethodInfo, ParameterInfo
 
 
