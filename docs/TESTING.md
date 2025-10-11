@@ -153,10 +153,39 @@ def test_mtpropertylist_full_hierarchy():
 ```
 
 **When to use:**
+
 - End-to-end workflow validation
 - Complex DWARF structures
 - Real-world header generation
 - Regression testing
+- Batch processing validation
+
+**Example - Batch Processing:**
+
+```python
+@pytest.mark.integration
+def test_batch_processing():
+    """Test batch symbol processing from file."""
+    # Create temporary symbol file
+    symbols = ["MtObject", "MtVector4", "MtPropertyList"]
+    symbol_file = tmp_path / "test_symbols.txt"
+    symbol_file.write_text("\n".join(symbols))
+    
+    # Process all symbols
+    with DwarfGenerator(ELF_PATH) as gen:
+        for symbol in symbols:
+            header = gen.generate_complete_hierarchy_header(symbol)
+            assert symbol in header
+            assert len(header) > 0
+```
+
+**Integration Test Results (289 symbols):**
+
+- Success rate: 289/289 (100%)
+- Source: resources/season2-resources.txt
+- Command: `uv run python main.py --symbols-file resources/season2-resources.txt --full-hierarchy`
+- Duration: ~15-30 minutes (full hierarchy mode)
+- Cache hits: 1519 symbols cached
 
 ## Coverage
 

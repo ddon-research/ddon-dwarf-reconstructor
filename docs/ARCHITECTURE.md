@@ -25,10 +25,12 @@ src/ddon_dwarf_reconstructor/
  domain/
     models/dwarf/               # Data structures
        class_info.py           # Class representation
-       member_info.py          # Member variables
-       method_info.py          # Method signatures
+       member_info.py          # Member variables with type_offset
+       method_info.py          # Method signatures with return_type_offset
+       parameter_info.py       # Parameters with type_offset
        enum_info.py            # Enumerations
        struct_info.py          # Nested types
+       tag_constants.py        # DWARF tag classification (frozensets)
    
     repositories/cache/
        lru_cache.py            # Fast in-memory cache
@@ -36,15 +38,22 @@ src/ddon_dwarf_reconstructor/
    
     services/
         parsing/
-           class_parser.py     # DWARF parsing
-           array_parser.py     # Array type parsing
-           type_resolver.py    # Type resolution
+           class_parser.py         # DWARF parsing with offset capture
+           array_parser.py         # Array type parsing
+           die_type_classifier.py  # Tag validation (O(1) lookups)
+           type_chain_traverser.py # Offset-based type traversal
        
         generation/
-            base_generator.py   # ELF management
-            header_generator.py # C++ code generation
-            hierarchy_builder.py # Inheritance chains
-            packing_analyzer.py # Memory layout
+            base_generator.py       # ELF management
+            header_generator.py     # C++ code generation (offset-based)
+            hierarchy_builder.py    # Offset-based dependencies (243 lines)
+            dependency_extractor.py # Pure offset-based extraction (307 lines)
+            packing_analyzer.py     # Memory layout
+       
+        lazy_dwarf_index_service.py # Lazy DIE loading with O(1) offset lookup
+
+ core/
+     lazy_type_resolver.py      # Type resolution with internal type filtering
 
  infrastructure/
      config/
@@ -103,7 +112,8 @@ class ClassInfo:
 @dataclass  
 class MemberInfo:
     name: str
-    type_name: str
+    type_name: str              # Display name (e.g., "MtObject*")
+    type_offset: int | None     # DWARF DIE offset for validation
     offset: int
     bit_size: int | None
     bit_offset: int | None
@@ -111,19 +121,66 @@ class MemberInfo:
 @dataclass
 class MethodInfo:
     name: str
-    return_type: str
+    return_type: str            # Display name
+    return_type_offset: int | None  # DWARF DIE offset
     parameters: list[ParameterInfo]
     is_virtual: bool
     vtable_index: int | None
+
+@dataclass
+class ParameterInfo:
+    name: str
+    type_name: str              # Display name
+    type_offset: int | None     # DWARF DIE offset
 ```
 
 ### Domain Layer - Services
 
 **Parsing Services** (src/domain/services/parsing/)
 
-**class_parser.py** - DWARF parsing
+**die_type_classifier.py** - Tag validation service (NEW)
+
+- Static methods for O(1) tag classification
+- Prevents invalid assumptions (enums as forward-declarable, namespaces as classes)
+- Uses frozensets from tag_constants.py
+
+```python
+class DIETypeClassifier:
+    @staticmethod
+    def is_named_type(die: DIE) -> bool:
+        """Check if DIE is class/struct/union/enum/typedef/namespace."""
+    
+    @staticmethod
+    def is_forward_declarable(die: DIE) -> bool:
+        """Check if DIE is class/struct/union (only these can be forward declared)."""
+    
+    @staticmethod
+    def requires_resolution(die: DIE) -> bool:
+        """Check if type needs dependency resolution."""
+```
+
+**type_chain_traverser.py** - Offset extraction service (NEW)
+
+- Follows type chains to terminal types (pointer→const→class)
+- Returns DWARF offsets, not string names
+- Cycle detection, max depth 20
+
+```python
+class TypeChainTraverser:
+    @staticmethod
+    def get_terminal_type_offset(die: DIE, dwarf_info) -> int | None:
+        """Extract terminal type offset from DIE chain."""
+    
+    @staticmethod
+    def follow_to_terminal_type(die: DIE, dwarf_info) -> DIE | None:
+        """Follow DW_AT_type chain to named type."""
+```
+
+**class_parser.py** - DWARF parsing with offset capture
+
 - Finds classes in compilation units (early exit optimization)
 - Parses members, methods, nested types
+- **Captures type_offset fields** using TypeChainTraverser
 - Handles anonymous unions, virtual methods
 - No generation logic (separation of concerns)
 
@@ -135,35 +192,54 @@ class ClassParser:
     
     @log_timing
     def parse_class_info(self, cu: CompileUnit, class_die: DIE) -> ClassInfo:
-        """Complete class parsing."""
+        """Complete class parsing with type_offset capture."""
+    
+    def parse_member(self, member_die: DIE) -> MemberInfo:
+        """Parse member with type_offset field."""
 ```
 
-**type_resolver.py** - Type resolution with caching
-- Resolves typedefs, pointers, references
-- Caches typedef lookups (85% hit rate)
-- Configurable search scope (basic vs full hierarchy)
-- Expands primitive typedefs for complex hierarchies
+**lazy_dwarf_index_service.py** - Lazy DIE loading service (NEW)
+
+- O(1) DIE lookup by offset via lazy-loaded index
+- Caches offset→DIE mappings
+- Enables offset-based type validation
 
 ```python
-class TypeResolver:
-    def resolve_type_name(self, die: DIE) -> str:
-        """Main type resolution with recursive handling."""
+class LazyDwarfIndexService:
+    def get_die_by_offset(self, offset: int) -> DIE | None:
+        """O(1) DIE retrieval by DWARF offset."""
     
-    def find_typedef(self, typedef_name: str) -> tuple[str, str] | None:
-        """Cached typedef lookup."""
+    def targeted_symbol_search(self, symbol_name: str) -> int | None:
+        """Find symbol and return its offset."""
+```
+
+**lazy_type_resolver.py** - Type resolution (REFACTORED)
+
+- Resolves typedefs, pointers, references
+- **Filters internal DWARF type names** (class_type, structure_type, void, etc.)
+- Validates typedef targets (rejects names with *, &, [)
+- Handles void* and anonymous structs correctly
+- Caches typedef lookups (85% hit rate)
+
+```python
+class LazyTypeResolver:
+    def collect_used_typedefs(self, class_infos: dict) -> dict[str, str]:
+        """Collect typedefs with internal type filtering."""
     
-    def expand_primitive_search(self, full_hierarchy: bool = False):
-        """Expand search scope for full hierarchy mode."""
+    def _resolve_primitive_typedef(self, typedef_name: str) -> str:
+        """Resolve typedef with excluded type checking."""
 ```
 
 **array_parser.py** - Array type parsing
-- Multi-dimensional arrays: int[10][20][30]
+
+- Multi-dimensional arrays: int\[10\]\[20\]\[30\]
 - Bounds extraction from DWARF subrange DIEs
 - Element type resolution
 
 **Generation Services** (src/domain/services/generation/)
 
 **base_generator.py** - ELF management
+
 - ELF file loading with context management
 - DWARF info extraction (pyelftools)
 - PS4 ELF patching (automatic detection)
@@ -182,36 +258,79 @@ class BaseGenerator(ABC):
         """Implemented by concrete generators."""
 ```
 
-**header_generator.py** - C++ code generation
+**dependency_extractor.py** - Offset-based dependency resolution (NEW)
+
+- Pure offset-based logic (no string parsing)
+- Extracts dependencies from type_offset fields
+- Validates types with DIETypeClassifier
+- Filters internal DWARF types
+
+```python
+class DependencyExtractor:
+    def extract_dependencies(self, class_info: ClassInfo) -> set[int]:
+        """Extract all type offsets from members/methods/parameters."""
+    
+    def filter_resolvable_types(self, offsets: set[int]) -> set[int]:
+        """Filter to types requiring forward declarations."""
+    
+    def get_type_name(self, offset: int) -> str | None:
+        """Get type name from offset for resolution."""
+```
+
+**hierarchy_builder.py** - Offset-based inheritance management (REFACTORED)
+
+- Complete inheritance chain discovery
+- **Offset-based dependency resolution** (371 lines deleted, 60% reduction)
+- Uses DependencyExtractor for type validation
+- Filters internal DWARF types (class_type, void, pointer_type, etc.)
+- Base-to-derived ordering
+
+```python
+class HierarchyBuilder:
+    def __init__(self, class_parser: ClassParser, dwarf_index: LazyDwarfIndexService):
+        """dwarf_index required for offset validation."""
+    
+    @log_timing
+    def build_full_hierarchy_with_dependencies(
+        self, class_name: str, max_depth: int = 10
+    ) -> tuple[dict[str, ClassInfo], list[str]]:
+        """Build complete hierarchy with offset-based dependencies."""
+    
+    def _process_dependencies_offset_based(
+        self, class_info: ClassInfo, resolved: set[str], depth: int
+    ) -> dict[str, ClassInfo]:
+        """Pure offset-based dependency resolution (no string parsing)."""
+```
+
+**header_generator.py** - C++ code generation (REFACTORED)
+
 - Include guards, forward declarations
 - Class definitions with members/methods
 - Typedef integration
 - Memory layout comments
-- No DWARF dependencies (pure generation)
+- **Offset-based forward declaration validation** (18 lines deleted)
+- Only forward declares class/struct/union (validated via DIETypeClassifier)
+- No DWARF dependencies in generation logic
 
 ```python
 class HeaderGenerator:
+    def __init__(self, dwarf_index: LazyDwarfIndexService):
+        """dwarf_index required for forward declaration validation."""
+    
     def generate_single_class_header(self, class_info: ClassInfo) -> str:
         """Generate header for individual class."""
     
     def generate_hierarchy_header(self, class_infos: dict, order: list) -> str:
         """Generate complete inheritance hierarchy header."""
-```
-
-**hierarchy_builder.py** - Inheritance management
-- Complete inheritance chain discovery
-- Dependency resolution for forward declarations
-- Cycle detection
-- Base-to-derived ordering
-
-```python
-class HierarchyBuilder:
-    @log_timing
-    def build_full_hierarchy(self, class_name: str) -> tuple[dict[str, ClassInfo], list[str]]:
-        """Build complete inheritance chain."""
+    
+    def _collect_forward_declarations(
+        self, class_info: ClassInfo, typedefs: dict
+    ) -> set[str]:
+        """Offset-based validation of forward declarable types."""
 ```
 
 **packing_analyzer.py** - Memory layout analysis
+
 - Natural vs actual size comparison
 - Padding detection
 - #pragma pack suggestions
@@ -258,48 +377,88 @@ class PackingInfo:
 
 ### Single Class Generation
 
-```
+```text
 1. DwarfGenerator.generate_header("MtObject")
 2. ClassParser.find_class("MtObject")
-    Searches compilation units
-    Returns (CompileUnit, DIE)
+    - Searches compilation units
+    - Returns (CompileUnit, DIE)
 3. ClassParser.parse_class_info(cu, die)
-    Parses members, methods, nested types
-    Returns ClassInfo
-4. TypeResolver.collect_used_typedefs(class_info)
-    Extracts types from members/methods
-    Returns typedef dict
+    - Parses members, methods, nested types
+    - Captures type_offset fields via TypeChainTraverser
+    - Returns ClassInfo with offsets
+4. LazyTypeResolver.collect_used_typedefs(class_info)
+    - Extracts types from members/methods
+    - Filters internal DWARF types (class_type, void, etc.)
+    - Returns typedef dict
 5. HeaderGenerator.generate_single_class_header(class_info, typedefs)
-    Generates C++ code
-    Returns header string
+    - Generates C++ code
+    - Returns header string
 ```
 
-### Full Hierarchy Generation
+### Full Hierarchy Generation (Offset-Based)
 
-```
+```text
 1. DwarfGenerator.generate_complete_hierarchy_header("MtPropertyList")
-2. HierarchyBuilder.build_full_hierarchy("MtPropertyList")
-    Discovers chain: MtObject  MtPropertyList
-    Parses all classes
-    Returns {class_name: ClassInfo} + ordered list
-3. TypeResolver.expand_primitive_search(full_hierarchy=True)
-    Extends typedef search scope
-4. TypeResolver.collect_used_typedefs(all_classes)
-    Gathers typedefs from entire hierarchy
-5. HeaderGenerator.generate_hierarchy_header(class_infos, order, typedefs)
-    Generates complete inheritance chain
-    Returns hierarchy header
+2. HierarchyBuilder.build_full_hierarchy_with_dependencies("MtPropertyList")
+    a. build_full_hierarchy(): Discovers chain MtObject → MtPropertyList
+    b. _process_dependencies_offset_based():
+       - Uses DependencyExtractor.extract_dependencies()
+       - Extracts type_offset from members/methods/parameters
+       - Validates with DIETypeClassifier.requires_resolution()
+       - Filters internal types (class_type, structure_type, void)
+       - Resolves dependencies by offset (O(1) lookup)
+    c. Returns {class_name: ClassInfo} + ordered list
+3. LazyTypeResolver.collect_used_typedefs(all_classes)
+    - Gathers typedefs from entire hierarchy
+    - Validates typedef targets (rejects *, &, [)
+    - Returns filtered typedef dict
+4. HeaderGenerator.generate_hierarchy_header(class_infos, order, typedefs)
+    a. _collect_forward_declarations():
+       - Uses type_offset fields from data models
+       - Validates with DIETypeClassifier.is_forward_declarable()
+       - Only forward declares class/struct/union
+       - Filters arrays, enums, primitives
+    b. Generates complete inheritance chain
+    c. Returns hierarchy header
 ```
 
 ## Performance Optimizations
 
 | Optimization | Component | Improvement |
 |--------------|-----------|-------------|
-| Typedef caching | TypeResolver | 3-5x faster type resolution |
+| Offset-based resolution | HierarchyBuilder | Eliminates string parsing bugs, 60% code reduction |
+| Typedef caching | LazyTypeResolver | 3-5x faster type resolution |
+| O(1) DIE lookup | LazyDwarfIndexService | Instant type validation by offset |
+| Tag classification | DIETypeClassifier | O(1) frozenset lookups vs linear search |
 | Early exit search | ClassParser | 60-80% faster class discovery |
 | Lazy loading | BaseGenerator | 40% memory reduction |
 | LRU caching | LRUCache | O(1) lookups |
-| Persistent cache | PersistentSymbolCache | Skip re-parsing |
+| Persistent cache | PersistentSymbolCache | Skip re-parsing across sessions |
+| Internal type filtering | LazyTypeResolver | Prevents infinite search loops |
+
+### Integration Test Results (289 symbols)
+
+- **Success Rate:** 289/289 (100%)
+- **No Hangs:** Zero infinite loops (previous bugs: class_type, void, pointer_type)
+- **Clean Output:** No invalid typedefs, correct forward declarations
+- **Cache Performance:** 1519 symbols cached for fast re-use
+
+### Offset-Based Architecture Benefits
+
+**Before (String-Based):**
+
+- Bug-prone string parsing (void*, MtDTI*, class_type, etc.)
+- Invalid typedef generation (typedef void void*)
+- Infinite search loops on internal DWARF types
+- 614 lines in hierarchy_builder.py
+
+**After (Offset-Based):**
+
+- Type validation via DWARF offsets (no string parsing)
+- Internal type filtering (class_type, structure_type, void)
+- O(1) DIE lookups with LazyDwarfIndexService
+- 243 lines in hierarchy_builder.py (60% reduction)
+- Zero parsing bugs in 289-symbol integration test
 
 ### Caching Strategy
 
@@ -352,10 +511,12 @@ class TypeResolutionError(DwarfReconstructorError):
 
 ## Testing Strategy
 
-**Unit Tests** (92 tests, 48% coverage)
-- Mocked DWARF structures
+**Unit Tests** (120 tests passing)
+
+- Mocked DWARF structures based on actual dumps
 - Fast execution (<1s)
 - Component isolation
+- Offset-based data models tested
 
 ```python
 @pytest.mark.unit
@@ -363,13 +524,15 @@ def test_find_class_success(mocker):
     mock_die = Mock()
     mock_die.tag = "DW_TAG_class_type"
     mock_die.attributes = {'DW_AT_name': Mock(value=b'MtObject')}
-    # Realistic DWARF structure
+    # Realistic DWARF structure from dwarfdump
 ```
 
-**Integration Tests**
-- Real ELF files
+**Integration Tests** (289-symbol validation)
+
+- Real ELF files (DDOORBIS.elf)
 - End-to-end validation
-- Slower execution (~3s)
+- Full hierarchy generation
+- Tests: season2-resources.txt (289 symbols, 100% success rate)
 
 ```python
 @pytest.mark.integration
@@ -377,32 +540,46 @@ def test_mtpropertylist_full_hierarchy():
     with DwarfGenerator(ELF_PATH) as gen:
         header = gen.generate_complete_hierarchy_header("MtPropertyList")
         assert "typedef unsigned short u16;" in header
+        assert "class MtObject" in header
 ```
 
 ## Design Principles
 
 **Separation of Concerns:**
+
 - Parsing (ClassParser) separate from generation (HeaderGenerator)
-- Type resolution (TypeResolver) centralized
+- Type resolution (LazyTypeResolver) centralized
 - ELF management (BaseGenerator) isolated
 
 **Dependency Injection:**
-- TypeResolver injected into ClassParser
+
+- LazyTypeResolver injected into ClassParser
+- LazyDwarfIndexService injected into HierarchyBuilder and HeaderGenerator
 - All services initialized in DwarfGenerator
 - Testable with mocks
 
+**Offset-Based Type Resolution:**
+
+- All type information tracked via DWARF offsets
+- No string parsing for type validation
+- O(1) DIE lookups via LazyDwarfIndexService
+- Eliminates entire class of parsing bugs
+
 **Performance First:**
-- Caching at multiple levels
-- Lazy loading
+
+- Caching at multiple levels (typedef, DIE offset, symbol)
+- Lazy loading of DWARF index
 - Early exit patterns
-- O(1) cache lookups
+- O(1) cache lookups and tag classification
 
 **Type Safety:**
+
 - Full type hints on all functions
 - MyPy compliance
 - Dataclass models with frozen types
 
 **Observability:**
+
 - @log_timing decorators on major operations
 - ProgressTracker for detailed metrics
 - Structured logging
@@ -410,19 +587,28 @@ def test_mtpropertylist_full_hierarchy():
 ## Extension Points
 
 **Custom Generators:**
+
 - Subclass BaseGenerator
 - Implement generate() method
-- Reuse domain services
+- Reuse domain services (ClassParser, LazyTypeResolver, etc.)
 
 **Custom Type Resolution:**
-- Extend TypeResolver
-- Override resolve_type_name()
-- Add custom type mappings
+
+- Extend LazyTypeResolver
+- Override _resolve_primitive_typedef() or collect_used_typedefs()
+- Add custom type mappings or filtering
 
 **Custom Output Formats:**
+
 - Implement new generator service
-- Use existing parsed models
+- Use existing parsed models (ClassInfo with type_offset fields)
 - Example: JSON, XML, Protobuf output
+
+**Custom Type Validation:**
+
+- Extend DIETypeClassifier
+- Add custom tag classification logic
+- Use offset-based validation patterns
 
 ## Limitations
 

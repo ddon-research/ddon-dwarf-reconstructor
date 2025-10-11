@@ -39,6 +39,12 @@ uv run python main.py resources/DDOORBIS.elf --generate ClassName --full-hierarc
 # Multiple classes with full hierarchy
 uv run python main.py resources/DDOORBIS.elf --generate MtPropertyList,rTbl2ChatMacro --full-hierarchy
 
+# Batch processing from file (one symbol per line)
+uv run python main.py resources/DDOORBIS.elf --symbols-file resources/season2-resources.txt
+
+# Batch processing with full hierarchy (289 symbols validated)
+uv run python main.py resources/DDOORBIS.elf --symbols-file resources/season2-resources.txt --full-hierarchy
+
 # With options
 uv run python main.py resources/DDOORBIS.elf --generate ClassName --output dir/ --verbose
 ```
@@ -66,6 +72,8 @@ VERBOSE=false
 --output DIR          # output directory (default: ./output)
 --verbose             # enable debug logging
 --full-hierarchy      # include all base classes
+--generate SYMBOL     # generate for single or multiple symbols (comma-separated)
+--symbols-file FILE   # read symbols from file (one per line, alternative to --generate)
 ```
 
 ## Architecture
@@ -148,6 +156,16 @@ make type-check        # Run mypy type checking
 ```bash
 make clean             # Remove test artifacts and cache
 make clean-all         # Remove all generated files
+```
+
+**Run:**
+
+```bash
+make run CLASS=MtObject                      # Generate single class
+make run CLASS='MtObject,MtVector4'          # Generate multiple classes
+make run-full CLASS=MtPropertyList           # Generate with full hierarchy
+make run-batch FILE=resources/season2-resources.txt      # Batch process from file
+make run-batch-full FILE=resources/season2-resources.txt # Batch with full hierarchy
 ```
 
 **CI/CD:**

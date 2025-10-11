@@ -2,7 +2,7 @@
 # 
 # Common development tasks for testing, linting, and CI/CD
 
-.PHONY: help install sync test test-unit test-integration test-all coverage coverage-open lint format format-check type-check clean clean-all ci run run-full build build-setup
+.PHONY: help install sync test test-unit test-integration test-all coverage coverage-open lint format format-check type-check clean clean-all ci run run-full run-batch run-batch-full build build-setup
 
 # Default target
 help:
@@ -42,6 +42,8 @@ help:
 	@echo "                   Supports multiple: make run CLASS='MtObject,MtVector4'"
 	@echo "  run-full       - Run with full hierarchy (make run-full CLASS=MtPropertyList)"
 	@echo "                   Supports multiple: make run-full CLASS='MtObject,MtVector4'"
+	@echo "  run-batch      - Process symbols from file (make run-batch FILE=resources/season2-resources.txt)"
+	@echo "  run-batch-full - Process symbols from file with full hierarchy"
 
 # Development setup
 install:
@@ -131,3 +133,9 @@ run:
 
 run-full:
 	@if not defined CLASS (echo Error: CLASS not set. Usage: make run-full CLASS=MtPropertyList) else (uv run python main.py resources/DDOORBIS.elf --generate $(CLASS) --full-hierarchy)
+
+run-batch:
+	@if not defined FILE (echo Error: FILE not set. Usage: make run-batch FILE=resources/season2-resources.txt) else (uv run python main.py resources/DDOORBIS.elf --symbols-file $(FILE))
+
+run-batch-full:
+	@if not defined FILE (echo Error: FILE not set. Usage: make run-batch-full FILE=resources/season2-resources.txt) else (uv run python main.py resources/DDOORBIS.elf --symbols-file $(FILE) --full-hierarchy)

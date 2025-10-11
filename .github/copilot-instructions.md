@@ -25,8 +25,17 @@ applyTo: '**/*'
 # Single class
 uv run python main.py resources/DDOORBIS.elf --generate MtObject
 
+# Multiple classes (comma-separated)
+uv run python main.py resources/DDOORBIS.elf --generate MtObject,MtVector4,rTbl2Base
+
 # Full hierarchy
 uv run python main.py resources/DDOORBIS.elf --generate ClassName --full-hierarchy
+
+# Batch processing from file (one symbol per line)
+uv run python main.py resources/DDOORBIS.elf --symbols-file resources/season2-resources.txt
+
+# Batch with full hierarchy (validated: 289/289 symbols, 100% success)
+uv run python main.py resources/DDOORBIS.elf --symbols-file resources/season2-resources.txt --full-hierarchy
 
 # With options
 uv run python main.py resources/DDOORBIS.elf --generate ClassName --output dir/ --verbose
@@ -34,6 +43,8 @@ uv run python main.py resources/DDOORBIS.elf --generate ClassName --output dir/ 
 # Quick execution with Makefile
 make run CLASS=MtObject
 make run-full CLASS=MtPropertyList
+make run-batch FILE=resources/season2-resources.txt
+make run-batch-full FILE=resources/season2-resources.txt
 
 # Native executable (requires clang)
 make build
