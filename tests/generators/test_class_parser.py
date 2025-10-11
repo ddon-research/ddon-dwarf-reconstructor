@@ -49,9 +49,11 @@ class TestClassParser:
             "DW_AT_type": Mock(value=0x2000),
         }
 
-        # Mock type DIE for member
+        # Mock type DIE for member (terminal base type)
         mock_type_die = Mock()
         mock_type_die.tag = "DW_TAG_base_type"
+        mock_type_die.offset = 0x2000  # Add offset for TypeChainTraverser
+        mock_type_die.attributes = {"DW_AT_name": Mock(value=b"int")}
 
         mock_class_die.iter_children.return_value = [mock_member_die]
         mock_member_die.get_DIE_from_attribute.return_value = mock_type_die
@@ -64,6 +66,7 @@ class TestClassParser:
         assert len(result.members) == 1
         assert result.members[0].name == "m_value"
         assert result.members[0].type_name == "int"
+        assert result.members[0].type_offset == 0x2000  # Verify offset captured
 
     @pytest.mark.unit
     def test_parse_class_info_with_inheritance(self, class_parser):
@@ -114,9 +117,11 @@ class TestClassParser:
             "DW_AT_type": Mock(value=0x1111),
         }
 
-        # Mock type DIE
+        # Mock type DIE (terminal base type)
         mock_type = Mock()
         mock_type.tag = "DW_TAG_base_type"
+        mock_type.offset = 0x1111  # Add offset for TypeChainTraverser
+        mock_type.attributes = {"DW_AT_name": Mock(value=b"int")}
         mock_member.get_DIE_from_attribute.return_value = mock_type
 
         class_parser.type_resolver.resolve_type_name.return_value = "int"
@@ -127,6 +132,7 @@ class TestClassParser:
         assert member.name == "m_int"
         assert member.type_name == "int"
         assert member.offset == 0
+        assert member.type_offset == 0x1111  # Verify offset captured
 
     @pytest.mark.unit
     def test_parse_member_with_bitfields(self, class_parser):
@@ -144,6 +150,8 @@ class TestClassParser:
 
         mock_type = Mock()
         mock_type.tag = "DW_TAG_base_type"
+        mock_type.offset = 0x3333  # Add offset for TypeChainTraverser
+        mock_type.attributes = {"DW_AT_name": Mock(value=b"unsigned char")}
         mock_bitfield.get_DIE_from_attribute.return_value = mock_type
 
         class_parser.type_resolver.resolve_type_name.return_value = "unsigned char"
@@ -152,6 +160,7 @@ class TestClassParser:
         assert member is not None
         assert member.name == "m_flag"
         assert member.type_name == "unsigned char"
+        assert member.type_offset == 0x3333  # Verify offset captured
         # Note: bit_size and bit_offset not stored in MemberInfo model
 
     @pytest.mark.unit
@@ -165,9 +174,11 @@ class TestClassParser:
             "DW_AT_type": Mock(value=0x4444),
         }
 
-        # Mock return type
+        # Mock return type (terminal base type)
         mock_return_type = Mock()
         mock_return_type.tag = "DW_TAG_base_type"
+        mock_return_type.offset = 0x4444  # Add offset for TypeChainTraverser
+        mock_return_type.attributes = {"DW_AT_name": Mock(value=b"int")}
 
         mock_method.get_DIE_from_attribute.return_value = mock_return_type
         mock_method.iter_children.return_value = []  # No parameters
@@ -179,6 +190,7 @@ class TestClassParser:
         assert method is not None
         assert method.name == "getValue"
         assert method.return_type == "int"
+        assert method.return_type_offset == 0x4444  # Verify offset captured
         assert len(method.parameters) == 0
 
     @pytest.mark.unit
@@ -192,9 +204,11 @@ class TestClassParser:
             "DW_AT_type": Mock(value=0x5555),
         }
 
-        # Mock type
+        # Mock type (terminal base type)
         mock_param_type = Mock()
         mock_param_type.tag = "DW_TAG_base_type"
+        mock_param_type.offset = 0x5555  # Add offset for TypeChainTraverser
+        mock_param_type.attributes = {"DW_AT_name": Mock(value=b"int")}
         mock_param.get_DIE_from_attribute.return_value = mock_param_type
 
         class_parser.type_resolver.resolve_type_name.return_value = "int"
@@ -203,6 +217,7 @@ class TestClassParser:
         assert param is not None
         assert param.name == "value"
         assert param.type_name == "int"
+        assert param.type_offset == 0x5555  # Verify offset captured
 
     @pytest.mark.unit
     def test_find_class_success(self, class_parser):

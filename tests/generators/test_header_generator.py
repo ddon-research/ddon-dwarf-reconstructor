@@ -3,6 +3,8 @@ Simplified unit tests for HeaderGenerator module.
 Tests the core C++ header generation functionality.
 """
 
+from unittest.mock import Mock
+
 import pytest
 
 from ddon_dwarf_reconstructor.domain.models.dwarf import (
@@ -18,9 +20,14 @@ class TestHeaderGenerator:
     """Test suite for HeaderGenerator functionality."""
 
     @pytest.fixture
-    def header_generator(self):
-        """HeaderGenerator instance."""
-        return HeaderGenerator()
+    def mock_dwarf_index(self):
+        """Mock DWARF index for testing."""
+        return Mock()
+
+    @pytest.fixture
+    def header_generator(self, mock_dwarf_index):
+        """HeaderGenerator instance with mock dwarf_index."""
+        return HeaderGenerator(mock_dwarf_index)
 
     @pytest.fixture
     def sample_class(self):

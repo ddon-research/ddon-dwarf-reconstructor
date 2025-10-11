@@ -33,6 +33,12 @@ Examples:
   # Custom output directory
   python main.py resources/DDOORBIS.elf --generate MtObject -o headers/
 
+  # Generate from file (289 symbols)
+  python main.py resources/DDOORBIS.elf --symbols-file resources/season2-resources.txt
+
+  # Generate from file with full hierarchy
+  python main.py resources/DDOORBIS.elf --symbols-file my-symbols.txt --full-hierarchy
+
   # Using .env file for configuration
   echo 'ELF_FILE_PATH=resources/DDOORBIS.elf' > .env
   python main.py --generate MtObject
@@ -61,9 +67,15 @@ Examples:
         "--generate",
         type=str,
         metavar="SYMBOL",
-        required=True,
         help="Generate C++ header file for the specified symbol(s). "
         "Supports comma-separated list: 'MtObject,MtVector4,rTbl2Base'",
+    )
+    parser.add_argument(
+        "--symbols-file",
+        type=Path,
+        metavar="FILE",
+        help="Read symbols from file (one symbol per line). "
+        "Alternative to --generate for processing large lists",
     )
     parser.add_argument(
         "--full-hierarchy",
@@ -104,9 +116,33 @@ def main() -> NoReturn:
     # Ensure output directory exists
     config.ensure_output_dir()
 
-    # Parse symbol list (support comma-separated symbols)
-    symbol_input = args.generate
-    symbols = [s.strip() for s in symbol_input.split(",") if s.strip()]
+    # Parse symbol list (support both --generate and --symbols-file)
+    symbols = []
+    
+    if args.generate and args.symbols_file:
+        logger.error("Cannot use both --generate and --symbols-file options")
+        sys.exit(1)
+    elif args.generate:
+        # Parse comma-separated symbols
+        symbols = [s.strip() for s in args.generate.split(",") if s.strip()]
+    elif args.symbols_file:
+        # Read symbols from file
+        try:
+            with open(args.symbols_file, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#"):  # Skip empty lines and comments
+                        symbols.append(line)
+            logger.info(f"Read {len(symbols)} symbols from {args.symbols_file}")
+        except FileNotFoundError:
+            logger.error(f"Symbols file not found: {args.symbols_file}")
+            sys.exit(1)
+        except Exception as e:
+            logger.error(f"Error reading symbols file: {e}")
+            sys.exit(1)
+    else:
+        logger.error("Must provide either --generate or --symbols-file option")
+        sys.exit(1)
 
     if not symbols:
         logger.error("No symbols provided")
@@ -128,9 +164,7 @@ def main() -> NoReturn:
                 try:
                     # Generate header
                     if args.full_hierarchy:
-                        header_content = generator.generate_complete_hierarchy_header(
-                            symbol_name
-                        )
+                        header_content = generator.generate_complete_hierarchy_header(symbol_name)
                     else:
                         header_content = generator.generate_header(symbol_name)
 

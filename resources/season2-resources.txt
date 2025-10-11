@@ -9,10 +9,11 @@ rAISensor
 rAbilityList
 rAchievement
 rAchievementHeader
-rAcquirement::rAbilityAddData
-rAcquirement::rAbilityData
-rAcquirement::rCustomSkillData
-rAcquirement::rNormalSkillData
+rAcquirement
+rAbilityAddData
+rAbilityData
+rCustomSkillData
+rNormalSkillData
 rActorLight
 rAdjLimitParam
 rAdjustParam

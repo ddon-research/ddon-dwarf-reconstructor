@@ -11,4 +11,5 @@ class ParameterInfo:
 
     name: str
     type_name: str
+    type_offset: int | None = None  # DIE offset of parameter type (for resolution)
     default_value: str | None = None

@@ -216,7 +216,7 @@ class LazyTypeResolver:
             return typedef_name, typedef_name
 
         # Check persistent cache first
-        offset = self.index.find_symbol_offset(typedef_name, "typedef")
+        offset = self.index.find_symbol_offset(typedef_name)
         if offset is not None:
             # Get cached typedef
             if offset in self._typedef_cache:
@@ -233,9 +233,9 @@ class LazyTypeResolver:
                 return typedef_name, underlying
 
         # Check persistent cache first, then fallback to targeted search
-        offset = self.index.find_symbol_offset(typedef_name, "typedef")
+        offset = self.index.find_symbol_offset(typedef_name)
         if offset is None:
-            offset = self.index.targeted_symbol_search(typedef_name, "typedef")
+            offset = self.index.targeted_symbol_search(typedef_name)
         if offset is not None:
             die = self.index.get_die_by_offset(offset)
             if die and die.tag == "DW_TAG_typedef":
@@ -373,56 +373,50 @@ class LazyTypeResolver:
             f"{total_unions} unions, {total_structs} nested structs"
         )
 
-        # Collect type names from members using DWARF DIE traversal
+        # Types that should be excluded from typedef collection
+        excluded_types = {
+            "void", "int", "char", "float", "double", "bool",
+            "unsigned", "signed", "short", "long",
+            "unknown_type",
+            "class_type",  # Internal DWARF name for anonymous classes
+            "structure_type",  # Internal DWARF name for anonymous structs
+            "union_type",  # Internal DWARF name for anonymous unions
+            "subroutine_type",  # Internal DWARF name for function pointers
+        }
+
+        # Collect type names from members using simple string extraction
+        # Do NOT resolve typedefs here - we want to keep the typedef names
         type_names = set()
         for member in members:
             if hasattr(member, "type_name") and member.type_name:
-                # Try to get base type via DWARF DIE traversal first
-                base_type = self._get_base_type_from_typename(member.type_name)
-                if base_type:
+                # Extract base type name (removes const, *, &, etc.)
+                base_type = self._extract_base_type(member.type_name)
+                if base_type not in excluded_types:
                     type_names.add(base_type)
-                    logger.debug(f"Member {member.name}: {member.type_name} -> {base_type} (DWARF)")
+                    logger.debug(f"Member {member.name}: {member.type_name} -> {base_type}")
                 else:
-                    # Fallback to string extraction if DIE traversal fails
-                    base_type = self._extract_base_type(member.type_name)
-                    type_names.add(base_type)
-                    logger.debug(
-                        f"Member {member.name}: {member.type_name} -> {base_type} (string fallback)"
-                    )
+                    logger.debug(f"Skipping excluded type from member {member.name}: {base_type}")
 
         # Collect type names from methods (parameters and return types)
+        # Use simple string extraction to preserve typedef names
         for method in methods:
             if hasattr(method, "return_type") and method.return_type:
-                # Try DWARF DIE traversal first for return type
-                base_type = self._get_base_type_from_typename(method.return_type)
-                if base_type:
+                base_type = self._extract_base_type(method.return_type)
+                if base_type not in excluded_types:
                     type_names.add(base_type)
-                    logger.debug(f"Method return type: {method.return_type} -> {base_type} (DWARF)")
+                    logger.debug(f"Method return type: {method.return_type} -> {base_type}")
                 else:
-                    # Fallback to string extraction
-                    base_type = self._extract_base_type(method.return_type)
-                    type_names.add(base_type)
-                    logger.debug(
-                        f"Method return type: {method.return_type} -> {base_type} (string fallback)"
-                    )
+                    logger.debug(f"Skipping excluded type from method return: {base_type}")
 
             if hasattr(method, "parameters"):
                 for param in method.parameters:
                     if hasattr(param, "type_name") and param.type_name:
-                        # Try DWARF DIE traversal first for parameter type
-                        base_type = self._get_base_type_from_typename(param.type_name)
-                        if base_type:
+                        base_type = self._extract_base_type(param.type_name)
+                        if base_type not in excluded_types:
                             type_names.add(base_type)
-                            logger.debug(
-                                f"Method param {param.name}: {param.type_name} -> {base_type} (DWARF)"
-                            )
+                            logger.debug(f"Method param {param.name}: {param.type_name} -> {base_type}")
                         else:
-                            # Fallback to string extraction
-                            base_type = self._extract_base_type(param.type_name)
-                            type_names.add(base_type)
-                            logger.debug(
-                                f"Method param {param.name}: {param.type_name} -> {base_type} (string fallback)"
-                            )
+                            logger.debug(f"Skipping excluded type from param {param.name}: {base_type}")
 
         # Collect type names from union members
         if unions:
@@ -431,10 +425,13 @@ class LazyTypeResolver:
                 for member in union.members:
                     if hasattr(member, "type_name") and member.type_name:
                         base_type = self._extract_base_type(member.type_name)
-                        type_names.add(base_type)
-                        logger.debug(
-                            f"Union member {member.name}: {member.type_name} -> {base_type}"
-                        )
+                        if base_type not in excluded_types:
+                            type_names.add(base_type)
+                            logger.debug(
+                                f"Union member {member.name}: {member.type_name} -> {base_type}"
+                            )
+                        else:
+                            logger.debug(f"Skipping excluded type from union member {member.name}: {base_type}")
 
                 # Check nested structs within unions
                 if hasattr(union, "nested_structs") and union.nested_structs:
@@ -442,10 +439,15 @@ class LazyTypeResolver:
                         for member in nested_struct.members:
                             if hasattr(member, "type_name") and member.type_name:
                                 base_type = self._extract_base_type(member.type_name)
-                                type_names.add(base_type)
-                                logger.debug(
-                                    f"Nested struct member {member.name}: {member.type_name} -> {base_type}"
-                                )
+                                if base_type not in excluded_types:
+                                    type_names.add(base_type)
+                                    logger.debug(
+                                        f"Nested struct member {member.name}: {member.type_name} -> {base_type}"
+                                    )
+                                else:
+                                    logger.debug(
+                                        f"Skipping excluded type from nested struct member {member.name}: {base_type}"
+                                    )
 
         # Collect type names from nested struct members
         if nested_structs:
@@ -454,24 +456,50 @@ class LazyTypeResolver:
                 for member in struct.members:
                     if hasattr(member, "type_name") and member.type_name:
                         base_type = self._extract_base_type(member.type_name)
-                        type_names.add(base_type)
-                        logger.debug(
-                            f"Nested struct member {member.name}: {member.type_name} -> {base_type}"
-                        )
+                        if base_type not in excluded_types:
+                            type_names.add(base_type)
+                            logger.debug(
+                                f"Nested struct member {member.name}: {member.type_name} -> {base_type}"
+                            )
+                        else:
+                            logger.debug(f"Skipping excluded type from nested struct member {member.name}: {base_type}")
 
-        # Look for primitive typedefs in the collected type names
+        # Look for any typedefs in the collected type names
+        # (excluded types have already been filtered out during collection)
+        invalid_resolved_types = {
+            "unknown_type",
+            "class_type",
+            "structure_type",
+            "union_type",
+            "pointer_type",
+            "subroutine_type",
+            "ptr_to_member_type",
+        }
+        
         for type_name in type_names:
-            if type_name in self._primitive_typedefs:
-                resolved_type = self._resolve_primitive_typedef(type_name)
-                if resolved_type and resolved_type != type_name:
-                    # Only add if it's a real typedef (resolves to a different type)
-                    # Skip base types that resolve to themselves (bool -> bool)
-                    found_typedefs[type_name] = resolved_type
-                    logger.debug(f"Resolved primitive typedef: {type_name} -> {resolved_type}")
-                elif resolved_type == type_name:
-                    logger.debug(f"Skipping base type {type_name} (not a typedef)")
+            # Skip type names with qualifiers (pointers, references)
+            # Typedef names should never contain these characters
+            if "*" in type_name or "&" in type_name or "[" in type_name:
+                logger.debug(f"Skipping type name with qualifiers: {type_name}")
+                continue
+                
+            # Try to resolve each type name to see if it's a typedef
+            resolved_type = self._resolve_primitive_typedef(type_name)
+            if resolved_type and resolved_type != type_name:
+                # Skip invalid resolved types (internal DWARF names)
+                if resolved_type in invalid_resolved_types:
+                    logger.debug(
+                        f"Skipping typedef with invalid target: {type_name} -> {resolved_type}"
+                    )
+                    continue
+                    
+                # Only add if it's a real typedef (resolves to a different type)
+                found_typedefs[type_name] = resolved_type
+                logger.debug(f"Resolved typedef: {type_name} -> {resolved_type}")
+            elif resolved_type == type_name:
+                logger.debug(f"Skipping base type {type_name} (not a typedef)")
 
-        logger.debug(f"Collected {len(found_typedefs)} primitive typedefs")
+        logger.debug(f"Collected {len(found_typedefs)} typedefs")
         return found_typedefs
 
     def _resolve_primitive_typedef(self, typedef_name: str) -> str | None:
@@ -487,21 +515,53 @@ class LazyTypeResolver:
             logger.debug(f"No index available for type resolution: {typedef_name}")
             return None
 
-        try:
-            # Check persistent cache first for both typedef and base_type
-            offset = self.index.find_symbol_offset(typedef_name, "typedef")
-            if offset is None:
-                offset = self.index.find_symbol_offset(typedef_name, "base_type")
+        # Strip any pointer/reference qualifiers - we only search for base type names
+        # Typedefs are always named types without qualifiers
+        search_name = typedef_name.rstrip("*&").strip()
+        if search_name != typedef_name:
+            logger.debug(f"Stripped qualifiers: '{typedef_name}' -> '{search_name}'")
+            typedef_name = search_name
 
-            # If not in cache, use targeted search for both typedef and base_type simultaneously
+        # Check if this is a primitive or internal type that shouldn't be searched
+        excluded_types = {
+            "void", "int", "char", "float", "double", "bool",
+            "unsigned", "signed", "short", "long",
+            "unknown_type",
+            "class_type",
+            "structure_type",
+            "union_type",
+            "subroutine_type",
+        }
+        if typedef_name in excluded_types:
+            logger.debug(f"Skipping excluded type: {typedef_name}")
+            return typedef_name  # Return as-is, not a typedef
+
+        try:
+            # Check persistent cache first
+            offset = self.index.find_symbol_offset(typedef_name)
+
+            # If not in cache, do targeted search
             if offset is None:
-                offset = self.index.targeted_symbol_search(typedef_name, "primitive_type")
+                offset = self.index.targeted_symbol_search(typedef_name)
             if offset:
                 logger.debug(f"Found {typedef_name} at offset 0x{offset:x}")
                 # Get the DIE and determine how to resolve it
                 die = self.index.get_die_by_offset(offset)
                 logger.debug(f"get_die_by_offset returned: {die is not None}")
                 if die:
+                    # TRACE: Dump DIE details for debugging
+                    logger.debug(f"TRACE: DIE for '{typedef_name}':")
+                    logger.debug(f"  - Tag: {die.tag}")
+                    logger.debug(f"  - Offset: 0x{die.offset:x}")
+                    if hasattr(die, "attributes"):
+                        logger.debug(f"  - Attributes: {list(die.attributes.keys())}")
+                        if "DW_AT_name" in die.attributes:
+                            name_val = die.attributes["DW_AT_name"].value
+                            if isinstance(name_val, bytes):
+                                name_val = name_val.decode("utf-8", errors="replace")
+                            logger.debug(f"    * DW_AT_name: {name_val}")
+                        if "DW_AT_type" in die.attributes:
+                            logger.debug(f"    * DW_AT_type: {die.attributes['DW_AT_type']}")
                     logger.debug(f"Retrieved DIE for {typedef_name}: tag={die.tag}")
 
                     # Handle base types directly - they are the final type
@@ -580,9 +640,29 @@ class LazyTypeResolver:
                 target_die = type_die.get_DIE_from_attribute("DW_AT_type")
                 if target_die:
                     return self._get_primitive_base_type_name(target_die)
+            else:
+                # Pointer/reference with no target = void* (implicit void)
+                if type_die.tag in ("DW_TAG_pointer_type", "DW_TAG_reference_type"):
+                    return "void"
 
-        # Fallback to tag name without DW_TAG_ prefix
-        return str(type_die.tag).replace("DW_TAG_", "")
+        # Check if this is a named class/struct/union type
+        if type_die.tag in (
+            "DW_TAG_class_type",
+            "DW_TAG_structure_type",
+            "DW_TAG_union_type",
+        ):
+            name_attr = type_die.attributes.get("DW_AT_name")
+            if name_attr:
+                if isinstance(name_attr.value, bytes):
+                    return name_attr.value.decode("utf-8")
+                return str(name_attr.value)
+            # Anonymous struct/class/union - not a valid typedef target
+            logger.debug(f"Encountered anonymous {type_die.tag}, not a valid typedef")
+            return "unknown_type"
+
+        # For any other unhandled type, return unknown_type (not internal DWARF names)
+        logger.debug(f"Unhandled type DIE tag: {type_die.tag}")
+        return "unknown_type"
 
     def _extract_base_type(self, type_name: str) -> str:
         """Extract base type name from complex type declarations.
@@ -643,15 +723,14 @@ class LazyTypeResolver:
             # for the actual type. For now, let's try a few strategies to find the DIE
 
             # Strategy 1: Try to find a class/struct with this exact name
-            for symbol_type in ["class", "struct", "union", "typedef", "base_type"]:
-                offset = self.index.find_symbol_offset(type_name, symbol_type)
-                if offset is not None:
-                    die = self.index.get_die_by_offset(offset)
-                    if die:
-                        # Use the existing DWARF traversal logic
-                        base_type = self._get_primitive_base_type_name(die)
-                        logger.debug(f"DWARF traversal: {type_name} -> {base_type}")
-                        return base_type
+            offset = self.index.find_symbol_offset(type_name)
+            if offset is not None:
+                die = self.index.get_die_by_offset(offset)
+                if die:
+                    # Use the existing DWARF traversal logic
+                    base_type = self._get_primitive_base_type_name(die)
+                    logger.debug(f"DWARF traversal: {type_name} -> {base_type}")
+                    return base_type
 
             # Strategy 2: For complex qualified types, we'd need more
             # sophisticated parsing. This would involve parsing the qualified

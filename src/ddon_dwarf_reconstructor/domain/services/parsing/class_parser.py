@@ -23,6 +23,7 @@ from ...models.dwarf import (
     StructInfo,
     UnionInfo,
 )
+from .type_chain_traverser import TypeChainTraverser
 
 if TYPE_CHECKING:
     from ....core.lazy_type_resolver import LazyTypeResolver
@@ -143,29 +144,25 @@ class ClassParser:
             return None
 
         try:
-            # Try cache first for all symbol types
-            for symbol_type in ["namespace", "class", "struct", "union", "enum", "typedef"]:
-                offset = self.lazy_index.find_symbol_offset(class_name, symbol_type)
-                if offset:
-                    # Found in cache, retrieve it
-                    die_cu_result = self._find_die_and_cu_by_offset(offset)
-                    if die_cu_result:
-                        cu, die = die_cu_result
-                        logger.info(
-                            f"Found {class_name} via cache at offset 0x{offset:x} "
-                            f"(type: {symbol_type})"
-                        )
-                        return cu, die
+            # Try cache first - simple symbol name lookup
+            offset = self.lazy_index.find_symbol_offset(class_name)
+            if offset:
+                # Found in cache, retrieve it
+                die_cu_result = self._find_die_and_cu_by_offset(offset)
+                if die_cu_result:
+                    cu, die = die_cu_result
+                    logger.info(f"Found {class_name} via cache at offset 0x{offset:x}")
+                    return cu, die
 
             # Not in cache - do targeted search looking for ANY matching type
             # This searches once through CUs checking all tags simultaneously
-            offset = self.lazy_index.targeted_symbol_search(class_name, "")
+            offset = self.lazy_index.targeted_symbol_search(class_name)
             if offset:
                 die_cu_result = self._find_die_and_cu_by_offset(offset)
                 if die_cu_result:
                     cu, die = die_cu_result
                     # Determine what type we actually found
-                    tag = die.tag
+                    tag = str(die.tag) if die.tag else "unknown"
                     if tag == "DW_TAG_namespace":
                         symbol_type = "namespace"
                     elif tag in ("DW_TAG_class_type", "DW_TAG_structure_type"):
@@ -174,7 +171,7 @@ class ClassParser:
                         symbol_type = "typedef"
                     else:
                         symbol_type = "type"
-                    
+
                     logger.info(
                         f"Found {class_name} via lazy loading at offset 0x{offset:x} "
                         f"(type: {symbol_type})"
@@ -367,15 +364,26 @@ class ClassParser:
         Returns:
             MemberInfo object if valid, None otherwise
         """
-        # Resolve member type first
+        # Resolve member type first (for display)
         type_name = self.type_resolver.resolve_type_name(member_die)
+
+        # Capture terminal type offset for dependency resolution
+        type_offset = TypeChainTraverser.get_terminal_type_offset(member_die)
+        if type_offset:
+            logger.debug(
+                f"Captured type offset 0x{type_offset:x} for member type '{type_name}'"
+            )
 
         # Get member name (handle anonymous members)
         name_attr = member_die.attributes.get("DW_AT_name")
         if name_attr:
             member_name = name_attr.value.decode("utf-8")
+        elif "union_type" in type_name or "structure_type" in type_name:
+            # Skip unnamed unions/structs - they should be handled by _parse_member_or_anonymous
+            logger.debug(f"Skipping unnamed union/struct member: {type_name}")
+            return None
         elif "union" in type_name.lower() or "struct" in type_name.lower():
-            member_name = ""  # Anonymous member
+            member_name = ""  # Anonymous member with a proper type name
         else:
             return None
 
@@ -406,6 +414,7 @@ class ClassParser:
         return MemberInfo(
             name=member_name,
             type_name=type_name,
+            type_offset=type_offset,  # NEW: Store terminal type offset
             offset=offset,
             is_static=is_static,
             is_const=const_value is not None,
@@ -427,8 +436,16 @@ class ClassParser:
             return None
         method_name = name_attr.value.decode("utf-8")
 
-        # Get return type
+        # Get return type (for display)
         return_type = self.type_resolver.resolve_type_name(method_die)
+
+        # Capture terminal return type offset for dependency resolution
+        return_type_offset = TypeChainTraverser.get_terminal_type_offset(method_die)
+        if return_type_offset:
+            logger.debug(
+                f"Captured return type offset 0x{return_type_offset:x} for method "
+                f"'{method_name}' returning '{return_type}'"
+            )
 
         # Check if virtual
         is_virtual = method_die.attributes.get("DW_AT_virtuality") is not None
@@ -464,6 +481,7 @@ class ClassParser:
         return MethodInfo(
             name=method_name,
             return_type=return_type,
+            return_type_offset=return_type_offset,  # Store terminal type offset
             parameters=parameters,
             is_virtual=is_virtual,
             vtable_index=vtable_index,
@@ -487,8 +505,16 @@ class ClassParser:
         name_attr = param_die.attributes.get("DW_AT_name")
         param_name = name_attr.value.decode("utf-8") if name_attr else "param"
 
-        # Get parameter type
+        # Get parameter type (for display)
         param_type = self.type_resolver.resolve_type_name(param_die)
+
+        # Capture terminal type offset for dependency resolution
+        type_offset = TypeChainTraverser.get_terminal_type_offset(param_die)
+        if type_offset:
+            logger.debug(
+                f"Captured type offset 0x{type_offset:x} for parameter '{param_name}': "
+                f"'{param_type}'"
+            )
 
         # Get default value if present
         default_value = None
@@ -500,7 +526,12 @@ class ClassParser:
         if is_artificial:
             param_name = "__artificial__"
 
-        return ParameterInfo(name=param_name, type_name=param_type, default_value=default_value)
+        return ParameterInfo(
+            name=param_name,
+            type_name=param_type,
+            type_offset=type_offset,  # Store terminal type offset
+            default_value=default_value,
+        )
 
     def parse_enum(self, enum_die: DIE) -> EnumInfo | None:
         """Parse an enumeration using pyelftools.

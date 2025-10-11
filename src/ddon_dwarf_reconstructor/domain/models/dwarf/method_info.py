@@ -13,6 +13,7 @@ class MethodInfo:
 
     name: str
     return_type: str
+    return_type_offset: int | None = None  # DIE offset of return type (for resolution)
     parameters: list[ParameterInfo] | None = None
     is_virtual: bool = False
     vtable_index: int | None = None

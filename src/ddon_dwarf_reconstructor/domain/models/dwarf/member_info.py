@@ -11,6 +11,7 @@ class MemberInfo:
 
     name: str
     type_name: str
+    type_offset: int | None = None  # DIE offset of terminal type (for resolution)
     offset: int | None = None
     is_static: bool = False
     is_const: bool = False

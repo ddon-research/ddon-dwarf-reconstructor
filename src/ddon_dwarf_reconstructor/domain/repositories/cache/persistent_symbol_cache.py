@@ -22,46 +22,93 @@ class PersistentSymbolCache:
             cache_file: Path to cache file
         """
         self.cache_file = Path(cache_file)
-        self.data = self._load_cache()
-        self._modified = False
+        self._modified = False  # Initialize before loading
+        self.data = self._load_cache()  # May set _modified during cleanup
 
     def _load_cache(self) -> dict[str, Any]:
         """Load cached mappings from disk.
 
         Returns:
             Cache data dictionary
+
+        Raises:
+            ValueError: If cache contains corrupted data (duplicate keys detected)
         """
         try:
             if self.cache_file.exists():
                 with open(self.cache_file, encoding="utf-8") as f:
-                    data = json.load(f)
+                    data: dict[str, Any] = json.load(f)
+                    # Validate cache integrity
+                    self._validate_cache_integrity(data)
                     logger.info(
                         f"Loaded cache from {self.cache_file} "
                         f"({len(data.get('symbol_to_offset', {}))} symbols)"
                     )
-                    # Migrate old cache format to new format
-                    return self._migrate_cache_format(data)
+                    return data
         except (json.JSONDecodeError, OSError) as e:
             logger.warning(f"Failed to load cache from {self.cache_file}: {e}")
 
         # Return empty cache structure
         return self._create_empty_cache()
 
+    def _validate_cache_integrity(self, data: dict[str, Any]) -> None:
+        """Validate cache data integrity.
+
+        Checks that cu_offset_to_symbols is consistent with symbol_to_cu_offset.
+        If inconsistencies are detected (e.g., from duplicate keys), raises an error.
+
+        Args:
+            data: Cache data to validate
+
+        Raises:
+            ValueError: If cache is corrupted (duplicate keys or inconsistent data)
+        """
+        if "symbol_to_cu_offset" not in data or "cu_offset_to_symbols" not in data:
+            return  # Empty or incomplete cache, nothing to validate
+
+        # Rebuild expected mapping from symbol_to_cu_offset
+        expected: dict[str, set[str]] = {}
+        for symbol, cu_offset in data["symbol_to_cu_offset"].items():
+            cu_key = str(cu_offset)
+            if cu_key not in expected:
+                expected[cu_key] = set()
+            expected[cu_key].add(symbol)
+
+        # Check actual mapping
+        actual: dict[str, set[str]] = {
+            cu_key: set(symbols) for cu_key, symbols in data["cu_offset_to_symbols"].items()
+        }
+
+        # Find discrepancies
+        if expected != actual:
+            missing_symbols = []
+            for cu_key, exp_symbols in expected.items():
+                act_symbols = actual.get(cu_key, set())
+                if exp_symbols != act_symbols:
+                    missing = exp_symbols - act_symbols
+                    if missing:
+                        missing_symbols.append(f"CU {cu_key}: missing {missing}")
+
+            error_msg = (
+                f"Cache file is corrupted (likely from duplicate keys).\n"
+                f"Delete the cache file and regenerate: {self.cache_file}\n"
+                f"Inconsistencies found:\n  " + "\n  ".join(missing_symbols)
+            )
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+
     def _create_empty_cache(self) -> dict[str, Any]:
-        """Create empty cache structure with current format.
+        """Create empty cache structure with simplified format.
 
         Returns:
             Empty cache dictionary
         """
         return {
-            "version": "1.1",  # Current version with CU mapping support
-            "elf_hash": None,
+            "version": "2.0",  # Simplified version without legacy sections
             "symbol_to_offset": {},
             "offset_to_symbol": {},
-            "symbol_to_cu_offset": {},  # NEW: symbol -> CU offset mapping
-            "cu_offset_to_symbols": {},  # NEW: CU offset -> symbols list mapping
-            "typedef_offsets": {},
-            "class_offsets": {},
+            "symbol_to_cu_offset": {},
+            "cu_offset_to_symbols": {},
             "created": time(),
             "last_updated": time(),
         }
@@ -93,110 +140,32 @@ class PersistentSymbolCache:
                 data[key] = default_value
                 self._modified = True
 
-        # Clean up any duplicate keys that might exist from JSON parsing issues
-        data = self._cleanup_duplicate_keys(data)
-
         return data
 
-    def _cleanup_duplicate_keys(self, data: dict[str, Any]) -> dict[str, Any]:
-        """Clean up duplicate keys in cu_offset_to_symbols.
-
-        Args:
-            data: Cache data that may contain duplicate keys
-
-        Returns:
-            Cleaned cache data with merged lists for duplicate keys
-        """
-        # The cu_offset_to_symbols section is the one that can have duplicate keys
-        cu_symbols = data.get("cu_offset_to_symbols", {})
-
-        # Since JSON parsing only keeps the last value for duplicate keys,
-        # we need to reconstruct this mapping from the other mappings
-        if cu_symbols:
-            # Rebuild cu_offset_to_symbols from symbol_to_cu_offset to ensure consistency
-            symbol_to_cu = data.get("symbol_to_cu_offset", {})
-            symbol_to_offset = data.get("symbol_to_offset", {})
-
-            # Build a proper mapping without duplicates
-            rebuilt_cu_symbols: dict[int, list[str]] = {}
-
-            for symbol, cu_offset in symbol_to_cu.items():
-                # Find all full symbol keys (with type prefix) for this symbol
-                matching_keys = []
-                for key in symbol_to_offset:
-                    if key.endswith(f":{symbol}") or key == symbol:
-                        matching_keys.append(key)
-
-                # Add all matching keys to the CU mapping
-                for full_key in matching_keys:
-                    if cu_offset not in rebuilt_cu_symbols:
-                        rebuilt_cu_symbols[cu_offset] = []
-                    if full_key not in rebuilt_cu_symbols[cu_offset]:
-                        rebuilt_cu_symbols[cu_offset].append(full_key)
-
-            # Convert back to string keys for JSON compatibility
-            data["cu_offset_to_symbols"] = {str(k): v for k, v in rebuilt_cu_symbols.items()}
-
-            if rebuilt_cu_symbols:
-                logger.info(
-                    f"Cleaned up duplicate CU keys, rebuilt {len(rebuilt_cu_symbols)} CU mappings"
-                )
-                self._modified = True
-
-        return data
-
-    def get_elf_hash(self) -> str | None:
-        """Get stored ELF file hash.
-
-        Returns:
-            Stored ELF hash or None
-        """
-        return self.data.get("elf_hash")
-
-    def set_elf_hash(self, elf_hash: str) -> None:
-        """Set ELF file hash.
-
-        Args:
-            elf_hash: Hash of ELF file
-        """
-        if self.data.get("elf_hash") != elf_hash:
-            self.data["elf_hash"] = elf_hash
-            self._modified = True
-
-    def get_symbol_offset(self, symbol_name: str, symbol_type: str = "") -> int | None:
+    def get_symbol_offset(self, symbol_name: str) -> int | None:
         """Get offset for symbol.
 
         Args:
             symbol_name: Name of symbol
-            symbol_type: Type prefix (e.g., "class", "typedef")
 
         Returns:
             Symbol offset or None if not found
         """
-        key = f"{symbol_type}:{symbol_name}" if symbol_type else symbol_name
-        return self.data["symbol_to_offset"].get(key)
+        result = self.data["symbol_to_offset"].get(symbol_name)
+        return int(result) if result is not None else None
 
-    def add_symbol(self, symbol_name: str, offset: int, symbol_type: str = "") -> None:
+    def add_symbol(self, symbol_name: str, offset: int) -> None:
         """Add symbol→offset mapping.
 
         Args:
             symbol_name: Name of symbol
             offset: DWARF offset
-            symbol_type: Type prefix (e.g., "class", "typedef")
         """
-        key = f"{symbol_type}:{symbol_name}" if symbol_type else symbol_name
-
-        if key not in self.data["symbol_to_offset"]:
-            self.data["symbol_to_offset"][key] = offset
-            self.data["offset_to_symbol"][offset] = key
+        if symbol_name not in self.data["symbol_to_offset"]:
+            self.data["symbol_to_offset"][symbol_name] = offset
+            self.data["offset_to_symbol"][str(offset)] = symbol_name
             self.data["last_updated"] = time()
             self._modified = True
-
-            # Add to type-specific index
-            if symbol_type == "typedef":
-                self.data["typedef_offsets"][symbol_name] = offset
-            elif symbol_type == "class":
-                self.data["class_offsets"][symbol_name] = offset
 
     def get_symbol_by_offset(self, offset: int) -> str | None:
         """Get symbol name by offset.
@@ -207,15 +176,13 @@ class PersistentSymbolCache:
         Returns:
             Symbol name or None if not found
         """
-        return self.data["offset_to_symbol"].get(offset)
+        result = self.data["offset_to_symbol"].get(str(offset))
+        return str(result) if result is not None else None
 
     def save(self) -> None:
         """Save cache to disk if modified."""
         if self._modified:
             try:
-                # Clean up any duplicate keys before saving
-                self.data = self._cleanup_duplicate_keys(self.data)
-
                 self.cache_file.parent.mkdir(parents=True, exist_ok=True)
                 with open(self.cache_file, "w", encoding="utf-8") as f:
                     json.dump(self.data, f, indent=2)
@@ -236,44 +203,29 @@ class PersistentSymbolCache:
         Returns:
             CU offset if found, None otherwise
         """
-        return self.data["symbol_to_cu_offset"].get(symbol_name)
+        result = self.data["symbol_to_cu_offset"].get(symbol_name)
+        return int(result) if result is not None else None
 
-    def add_symbol_cu_mapping(self, symbol_key: str, cu_offset: int, die_offset: int) -> None:
+    def add_symbol_cu_mapping(self, symbol_name: str, cu_offset: int, die_offset: int) -> None:
         """Add symbol to CU offset mapping for efficient targeting.
 
         Args:
-            symbol_key: Symbol key with type prefix (e.g., "class:MtObject", "typedef:u32")
+            symbol_name: Symbol name (e.g., "MtObject", "u32")
             cu_offset: Offset of compilation unit containing the symbol
             die_offset: Offset of DIE within the CU
         """
+        # Convert cu_offset to string for consistent JSON key handling
+        cu_key = str(cu_offset)
 
-        # Store both CU and DIE mappings using the full key
-        self.data["symbol_to_offset"][symbol_key] = die_offset
-        self.data["offset_to_symbol"][die_offset] = symbol_key
+        # Store both CU and DIE mappings using the symbol name
+        self.data["symbol_to_offset"][symbol_name] = die_offset
+        self.data["offset_to_symbol"][str(die_offset)] = symbol_name
+        self.data["symbol_to_cu_offset"][symbol_name] = cu_offset
 
-        # Extract symbol name and type from key
-        if ":" in symbol_key:
-            symbol_type, symbol_name = symbol_key.split(":", 1)
-
-            # Store CU mapping using the symbol name for targeted search compatibility
-            self.data["symbol_to_cu_offset"][symbol_name] = cu_offset
-
-            # Track symbols per CU using the full key to maintain consistency
-            cu_symbols = self.data["cu_offset_to_symbols"].setdefault(cu_offset, [])
-            if symbol_key not in cu_symbols:
-                cu_symbols.append(symbol_key)
-
-            # Update type-specific indexes
-            if symbol_type == "typedef":
-                self.data["typedef_offsets"][symbol_name] = die_offset
-            elif symbol_type == "class":
-                self.data["class_offsets"][symbol_name] = die_offset
-        else:
-            # Fallback for keys without type prefix
-            self.data["symbol_to_cu_offset"][symbol_key] = cu_offset
-            cu_symbols = self.data["cu_offset_to_symbols"].setdefault(cu_offset, [])
-            if symbol_key not in cu_symbols:
-                cu_symbols.append(symbol_key)
+        # Track symbols per CU using string key
+        cu_symbols = self.data["cu_offset_to_symbols"].setdefault(cu_key, [])
+        if symbol_name not in cu_symbols:
+            cu_symbols.append(symbol_name)
 
         self.data["last_updated"] = time()
         self._modified = True
@@ -287,7 +239,10 @@ class PersistentSymbolCache:
         Returns:
             List of symbol names in the CU
         """
-        return self.data["cu_offset_to_symbols"].get(cu_offset, [])
+        # Convert to string key for consistent lookup
+        cu_key = str(cu_offset)
+        result = self.data["cu_offset_to_symbols"].get(cu_key, [])
+        return list(result) if isinstance(result, list) else []
 
     def get_statistics(self) -> dict[str, Any]:
         """Get cache statistics for monitoring.
@@ -299,8 +254,6 @@ class PersistentSymbolCache:
             "symbols": len(self.data["symbol_to_offset"]),
             "cu_mappings": len(self.data["symbol_to_cu_offset"]),
             "compilation_units": len(self.data["cu_offset_to_symbols"]),
-            "typedefs": len(self.data["typedef_offsets"]),
-            "classes": len(self.data["class_offsets"]),
             "file_size": self.cache_file.stat().st_size if self.cache_file.exists() else 0,
             "last_updated": self.data.get("last_updated", 0),
         }

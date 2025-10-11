@@ -113,15 +113,15 @@ class DwarfGenerator(BaseGenerator):
         parser_elapsed = time() - parser_start
         logger.debug(f"ClassParser with lazy loading initialization: {parser_elapsed:.3f}s")
 
-        # Initialize header generator
+        # Initialize header generator with DWARF index
         header_start = time()
-        self.header_generator = HeaderGenerator()
+        self.header_generator = HeaderGenerator(self.lazy_index)
         header_elapsed = time() - header_start
         logger.debug(f"HeaderGenerator initialization: {header_elapsed:.3f}s")
 
         # Initialize hierarchy builder
         hierarchy_start = time()
-        self.hierarchy_builder = HierarchyBuilder(self.class_parser)
+        self.hierarchy_builder = HierarchyBuilder(self.class_parser, self.lazy_index)
         hierarchy_elapsed = time() - hierarchy_start
         logger.debug(f"HierarchyBuilder initialization: {hierarchy_elapsed:.3f}s")
 
@@ -285,10 +285,12 @@ class DwarfGenerator(BaseGenerator):
         typedef_expand_elapsed = time() - typedef_expand_start
         logger.debug(f"Typedef search expansion completed in {typedef_expand_elapsed:.3f}s")
 
-        # Build full hierarchy with timing
+        # Build full hierarchy with dependencies (timing included)
         hierarchy_start = time()
         assert self.hierarchy_builder is not None
-        class_infos, hierarchy_order = self.hierarchy_builder.build_full_hierarchy(class_name)
+        class_infos, hierarchy_order = self.hierarchy_builder.build_full_hierarchy_with_dependencies(
+            class_name, max_depth=10
+        )
         hierarchy_elapsed = time() - hierarchy_start
         logger.debug(f"Hierarchy building completed in {hierarchy_elapsed:.3f}s")
 
@@ -366,7 +368,9 @@ class DwarfGenerator(BaseGenerator):
 #endif // {class_name.upper()}_H
 """
 
-    def _generate_namespace_header(self, namespace_name: str, cu: CompileUnit, namespace_die: DIE) -> str:
+    def _generate_namespace_header(
+        self, namespace_name: str, cu: CompileUnit, namespace_die: DIE
+    ) -> str:
         """Generate header for a namespace with proper C++ namespace syntax.
 
         Args:
@@ -390,7 +394,7 @@ class DwarfGenerator(BaseGenerator):
                             class_name = name_attr.value.decode("utf-8")
                         else:
                             class_name = str(name_attr.value)
-                        
+
                         # Determine if it's a class or struct
                         item_type = "class" if child.tag == "DW_TAG_class_type" else "struct"
                         child_items.append((item_type, class_name))
@@ -422,12 +426,14 @@ class DwarfGenerator(BaseGenerator):
             lines.append(f"// - Declaration: {decl_file.value}")
             lines.append(f"//   Line: {decl_line.value}")
 
-        lines.extend([
-            "",
-            f"// Namespace: {namespace_name}",
-            f"// Contains {len(child_items)} type(s)",
-            "",
-        ])
+        lines.extend(
+            [
+                "",
+                f"// Namespace: {namespace_name}",
+                f"// Contains {len(child_items)} type(s)",
+                "",
+            ]
+        )
 
         # Generate C++ namespace with forward declarations
         lines.append(f"namespace {namespace_name} {{")
@@ -444,12 +450,14 @@ class DwarfGenerator(BaseGenerator):
         else:
             lines.append("// No classes found in this namespace")
 
-        lines.extend([
-            "",
-            f"}}  // namespace {namespace_name}",
-            "",
-            f"#endif // {sanitized_name}_NAMESPACE_H",
-            ""
-        ])
+        lines.extend(
+            [
+                "",
+                f"}}  // namespace {namespace_name}",
+                "",
+                f"#endif // {sanitized_name}_NAMESPACE_H",
+                "",
+            ]
+        )
 
         return "\n".join(lines)

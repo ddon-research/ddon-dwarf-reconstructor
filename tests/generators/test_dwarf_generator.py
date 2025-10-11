@@ -75,6 +75,12 @@ class TestDwarfGenerator:
             "DW_AT_accessibility": Mock(value=1),  # DW_ACCESS_public
             "DW_AT_artificial": Mock(value=True),
         }
+        # Mock type DIE for vtable (terminal type)
+        mock_vtable_type = Mock()
+        mock_vtable_type.tag = "DW_TAG_base_type"
+        mock_vtable_type.offset = 0x8667
+        mock_vtable_type.attributes = {"DW_AT_name": Mock(value=b"void*")}
+        mock_vtable_member.get_DIE_from_attribute = Mock(return_value=mock_vtable_type)
 
         mock_static_member = Mock()
         mock_static_member.tag = "DW_TAG_member"
@@ -89,6 +95,12 @@ class TestDwarfGenerator:
             "DW_AT_accessibility": Mock(value=1),  # DW_ACCESS_public
             "DW_AT_const_value": Mock(value=0),
         }
+        # Mock type DIE for static member (terminal u32)
+        mock_u32_type = Mock()
+        mock_u32_type.tag = "DW_TAG_base_type"
+        mock_u32_type.offset = 0x4193
+        mock_u32_type.attributes = {"DW_AT_name": Mock(value=b"u32")}
+        mock_static_member.get_DIE_from_attribute = Mock(return_value=mock_u32_type)
 
         mock_dti_member = Mock()
         mock_dti_member.tag = "DW_TAG_member"
@@ -102,6 +114,12 @@ class TestDwarfGenerator:
             "DW_AT_declaration": Mock(value=True),
             "DW_AT_accessibility": Mock(value=1),  # DW_ACCESS_public
         }
+        # Mock type DIE for DTI (terminal class type)
+        mock_dti_type = Mock()
+        mock_dti_type.tag = "DW_TAG_class_type"
+        mock_dti_type.offset = 0x851D
+        mock_dti_type.attributes = {"DW_AT_name": Mock(value=b"MyDTI")}
+        mock_dti_member.get_DIE_from_attribute = Mock(return_value=mock_dti_type)
 
         # Add realistic method DIEs based on actual MtObject methods
         mock_destructor = Mock()
@@ -132,6 +150,18 @@ class TestDwarfGenerator:
             "DW_AT_declaration": Mock(value=True),
             "DW_AT_accessibility": Mock(value=1),  # DW_ACCESS_public
         }
+        # Mock return type DIE for createUI (terminal pointer to MtUI)
+        mock_ui_ptr = Mock()
+        mock_ui_ptr.tag = "DW_TAG_pointer_type"
+        mock_ui_ptr.offset = 0x89C0
+        mock_ui_ptr.attributes = {"DW_AT_type": Mock(value=0x89C5)}
+        # Terminal type (MtUI class)
+        mock_ui_class = Mock()
+        mock_ui_class.tag = "DW_TAG_class_type"
+        mock_ui_class.offset = 0x89C5
+        mock_ui_class.attributes = {"DW_AT_name": Mock(value=b"MtUI")}
+        mock_ui_ptr.get_DIE_from_attribute = Mock(return_value=mock_ui_class)
+        mock_create_ui.get_DIE_from_attribute = Mock(return_value=mock_ui_ptr)
 
         mock_operator_new = Mock()
         mock_operator_new.tag = "DW_TAG_subprogram"
@@ -146,6 +176,12 @@ class TestDwarfGenerator:
             "DW_AT_declaration": Mock(value=True),
             "DW_AT_accessibility": Mock(value=1),  # DW_ACCESS_public
         }
+        # Mock return type for operator new (void*)
+        mock_void_ptr = Mock()
+        mock_void_ptr.tag = "DW_TAG_pointer_type"
+        mock_void_ptr.offset = 0xA622
+        mock_void_ptr.attributes = {}  # void* has no DW_AT_type (incomplete)
+        mock_operator_new.get_DIE_from_attribute = Mock(return_value=mock_void_ptr)
 
         mock_die.iter_children.return_value = [
             mock_vtable_member,

@@ -12,6 +12,8 @@ import re
 from ....infrastructure.logging import get_logger, log_timing
 from ....utils.path_utils import sanitize_for_filesystem
 from ...models.dwarf import ClassInfo, EnumInfo, MemberInfo, MethodInfo, StructInfo, UnionInfo
+from ..lazy_dwarf_index_service import LazyDwarfIndexService
+from ..parsing.die_type_classifier import DIETypeClassifier
 
 logger = get_logger(__name__)
 
@@ -21,16 +23,20 @@ class HeaderGenerator:
 
     This class handles:
     - C++ header formatting with include guards
-    - Forward declarations
+    - Forward declarations (using offset-based validation)
     - Class definitions with proper inheritance
     - Member and method declarations with correct array syntax
     - Enum, struct, and union definitions
     - Metadata comments
     """
 
-    def __init__(self) -> None:
-        """Initialize header generator."""
-        pass
+    def __init__(self, dwarf_index: LazyDwarfIndexService) -> None:
+        """Initialize header generator with DWARF index.
+
+        Args:
+            dwarf_index: DWARF index for offset-based type validation
+        """
+        self.dwarf_index = dwarf_index
 
     @log_timing
     def generate_header(
@@ -77,7 +83,10 @@ class HeaderGenerator:
             lines.append("")
             lines.append("// Forward declarations")
             for decl in sorted(forward_decls):
-                lines.append(f"struct {decl};")
+                # Note: Using 'class' for all forward declarations
+                # In C++, forward declaring a struct as class (or vice versa) is allowed
+                # and will compile correctly, though semantically inconsistent
+                lines.append(f"class {decl};")
 
         # Generate class definition
         class_lines = self._generate_single_class(class_info, include_metadata)
@@ -149,7 +158,7 @@ class HeaderGenerator:
         # Collect forward declarations from all classes
         forward_decls = set()
         for class_info in class_infos.values():
-            forward_decls.update(self._collect_forward_declarations(class_info, {}))
+            forward_decls.update(self._collect_forward_declarations(class_info, typedefs or {}))
 
         # Remove classes that are in the hierarchy
         forward_decls = {decl for decl in forward_decls if decl not in hierarchy_order}
@@ -158,7 +167,10 @@ class HeaderGenerator:
             lines.append("")
             lines.append("// Forward declarations")
             for decl in sorted(forward_decls):
-                lines.append(f"struct {decl};")
+                # Note: Using 'class' for all forward declarations
+                # In C++, forward declaring a struct as class (or vice versa) is allowed
+                # and will compile correctly, though semantically inconsistent
+                lines.append(f"class {decl};")
 
         # Generate all classes in hierarchy order (base to derived)
         for cls_name in hierarchy_order:
@@ -210,7 +222,11 @@ class HeaderGenerator:
         class_info: ClassInfo,
         typedefs: dict[str, str],
     ) -> set[str]:
-        """Collect forward declarations needed for this class."""
+        """Collect forward declarations needed for this class using offset-based validation.
+        
+        Uses type_offset fields from members/methods to validate that types are
+        actually forward-declarable (class/struct/union) before including them.
+        """
         forward_decls = set()
 
         # Get names to exclude
@@ -244,68 +260,79 @@ class HeaderGenerator:
             "f64",
         }
 
+        # Helper to check if a type should be forward declared
+        def should_forward_declare(type_name: str | None, type_offset: int | None) -> bool:
+            if not type_name or not type_offset:
+                return False
+
+            # Strip qualifiers from type name
+            clean_name = type_name.strip()
+            if clean_name.startswith("const "):
+                clean_name = clean_name[6:].strip()
+            clean_name = clean_name.rstrip("*&").strip()
+            
+            # Skip arrays - they don't need forward declarations
+            if "[" in clean_name or "]" in clean_name:
+                return False
+
+            # Skip if in exclusion sets
+            if (
+                clean_name in primitives
+                or clean_name in enum_names
+                or clean_name in struct_names
+                or clean_name in union_names
+                or clean_name in typedef_names
+            ):
+                return False
+
+            # Use offset to validate type is forward-declarable
+            die = self.dwarf_index.get_die_by_offset(type_offset)
+            if not die:
+                return False
+
+            # Only forward declare class/struct/union types
+            return DIETypeClassifier.is_forward_declarable(die)
+
         # Process class members
         for member in class_info.members:
-            # Extract clean type name
-            clean_type = self._extract_base_type(member.type_name)
+            if should_forward_declare(member.type_name, member.type_offset):
+                # Extract clean name for declaration (strip qualifiers and arrays)
+                clean_name = member.type_name.strip()
+                if clean_name.startswith("const "):
+                    clean_name = clean_name[6:].strip()
+                clean_name = clean_name.rstrip("*&").strip()
+                # Handle arrays - extract base type
+                if "[" in clean_name:
+                    clean_name = clean_name.split("[")[0].strip()
+                forward_decls.add(clean_name)
 
-            # Skip primitives and known types
-            if (
-                clean_type in primitives
-                or clean_type in enum_names
-                or clean_type in struct_names
-                or clean_type in union_names
-                or clean_type in typedef_names
-            ):
-                continue
-
-            forward_decls.add(clean_type)
-
-        # Process method parameters and return types
+        # Process method return types and parameters
         for method in class_info.methods:
             # Check return type
-            if hasattr(method, "return_type") and method.return_type:
-                clean_type = self._extract_base_type(method.return_type)
-                if (
-                    clean_type not in primitives
-                    and clean_type not in enum_names
-                    and clean_type not in struct_names
-                    and clean_type not in union_names
-                    and clean_type not in typedef_names
-                ):
-                    forward_decls.add(clean_type)
+            if hasattr(method, "return_type_offset"):
+                if should_forward_declare(method.return_type, method.return_type_offset):
+                    clean_name = method.return_type.strip()
+                    if clean_name.startswith("const "):
+                        clean_name = clean_name[6:].strip()
+                    clean_name = clean_name.rstrip("*&").strip()
+                    if "[" in clean_name:
+                        clean_name = clean_name.split("[")[0].strip()
+                    forward_decls.add(clean_name)
 
             # Check method parameters
             if hasattr(method, "parameters") and method.parameters:
                 for param in method.parameters:
-                    if hasattr(param, "type_name") and param.type_name:
-                        clean_type = self._extract_base_type(param.type_name)
-                        if (
-                            clean_type not in primitives
-                            and clean_type not in enum_names
-                            and clean_type not in struct_names
-                            and clean_type not in union_names
-                            and clean_type not in typedef_names
-                        ):
-                            forward_decls.add(clean_type)
+                    if hasattr(param, "type_offset"):
+                        if should_forward_declare(param.type_name, param.type_offset):
+                            clean_name = param.type_name.strip()
+                            if clean_name.startswith("const "):
+                                clean_name = clean_name[6:].strip()
+                            clean_name = clean_name.rstrip("*&").strip()
+                            if "[" in clean_name:
+                                clean_name = clean_name.split("[")[0].strip()
+                            forward_decls.add(clean_name)
 
         return forward_decls
-
-    def _extract_base_type(self, type_name: str) -> str:
-        """Extract base type name from complex type declarations."""
-        # Remove const prefix
-        if type_name.startswith("const "):
-            type_name = type_name[6:].strip()
-
-        # Remove pointer/reference suffixes
-        while type_name.endswith("*") or type_name.endswith("&"):
-            type_name = type_name[:-1].strip()
-
-        # Handle array types - extract base type
-        if "[" in type_name and "]" in type_name:
-            type_name = type_name.split("[")[0].strip()
-
-        return type_name
 
     def _format_member_declaration(self, member: MemberInfo) -> str:
         """Format a member declaration with proper C++ syntax.

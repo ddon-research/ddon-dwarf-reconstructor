@@ -1,0 +1,3296 @@
+0x000eb448:   DW_TAG_class_type
+                DW_AT_containing_type	(0x000084ed "MtObject")
+                DW_AT_name	("rGUI")
+                DW_AT_byte_size	(0xf8)
+                DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                DW_AT_decl_line	(34)
+
+0x000eb455:     DW_TAG_inheritance
+                  DW_AT_type	(0x00012e3f "cResource")
+                  DW_AT_data_member_location	(0x00)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb45c:     DW_TAG_member
+                  DW_AT_name	("DTI")
+                  DW_AT_type	(0x000eb46a "rGUI::MyDTI")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(43)
+                  DW_AT_external	(true)
+                  DW_AT_declaration	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb46a:     DW_TAG_class_type
+                  DW_AT_containing_type	(0x00008681 "MtDTI")
+                  DW_AT_name	("MyDTI")
+                  DW_AT_byte_size	(0x38)
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(43)
+
+0x000eb477:       DW_TAG_inheritance
+                    DW_AT_type	(0x00008681 "MtDTI")
+                    DW_AT_data_member_location	(0x00)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb47e:       DW_TAG_subprogram
+                    DW_AT_name	("MyDTI")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(43)
+                    DW_AT_declaration	(true)
+                    DW_AT_external	(true)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb487:         DW_TAG_formal_parameter
+                      DW_AT_type	(0x000ec742 "rGUI::MyDTI *")
+                      DW_AT_artificial	(true)
+
+0x000eb48c:         DW_TAG_formal_parameter
+                      DW_AT_type	(0x0000893d "MT_CTSTR")
+
+0x000eb491:         DW_TAG_formal_parameter
+                      DW_AT_type	(0x00008966 "MtDTI *")
+
+0x000eb496:         DW_TAG_formal_parameter
+                      DW_AT_type	(0x0000897c "size_t")
+
+0x000eb49b:         DW_TAG_formal_parameter
+                      DW_AT_type	(0x00004123 "u32")
+
+0x000eb4a0:         DW_TAG_formal_parameter
+                      DW_AT_type	(0x00004123 "u32")
+
+0x000eb4a5:         NULL
+
+0x000eb4a6:       NULL
+
+0x000eb4a7:     DW_TAG_member
+                  DW_AT_name	("VERSION")
+                  DW_AT_type	(0x00004193 "const u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(45)
+                  DW_AT_external	(true)
+                  DW_AT_declaration	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+                  DW_AT_const_value	(139027)
+
+0x000eb4b7:     DW_TAG_member
+                  DW_AT_name	("mpHeader")
+                  DW_AT_type	(0x000ec747 "rGUI::HEADER *")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(715)
+                  DW_AT_data_member_location	(0x70)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000eb4c6:     DW_TAG_structure_type
+                  DW_AT_name	("HEADER")
+                  DW_AT_byte_size	(0x01a8)
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(52)
+
+0x000eb4d1:       DW_TAG_member
+                    DW_AT_name	("magic")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(54)
+                    DW_AT_data_member_location	(0x00)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb4df:       DW_TAG_member
+                    DW_AT_name	("version")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(55)
+                    DW_AT_data_member_location	(0x04)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb4ed:       DW_TAG_member
+                    DW_AT_name	("size")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(56)
+                    DW_AT_data_member_location	(0x08)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb4fb:       DW_TAG_member
+                    DW_AT_name	("attr")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(57)
+                    DW_AT_data_member_location	(0x0c)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb509:       DW_TAG_member
+                    DW_AT_name	("updateTime")
+                    DW_AT_type	(0x0000cb64 "t64")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(58)
+                    DW_AT_data_member_location	(0x10)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb517:       DW_TAG_member
+                    DW_AT_name	("instanceId")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(60)
+                    DW_AT_data_member_location	(0x18)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb525:       DW_TAG_member
+                    DW_AT_name	("flowId")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(61)
+                    DW_AT_data_member_location	(0x1c)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb533:       DW_TAG_member
+                    DW_AT_name	("variableId")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(62)
+                    DW_AT_data_member_location	(0x20)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb541:       DW_TAG_member
+                    DW_AT_name	("startInstanceIndex")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(63)
+                    DW_AT_data_member_location	(0x24)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb54f:       DW_TAG_member
+                    DW_AT_name	("animationNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(65)
+                    DW_AT_data_member_location	(0x28)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb55d:       DW_TAG_member
+                    DW_AT_name	("sequenceNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(66)
+                    DW_AT_data_member_location	(0x2c)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb56b:       DW_TAG_member
+                    DW_AT_name	("objectNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(67)
+                    DW_AT_data_member_location	(0x30)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb579:       DW_TAG_member
+                    DW_AT_name	("objSequenceNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(68)
+                    DW_AT_data_member_location	(0x34)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb587:       DW_TAG_member
+                    DW_AT_name	("initParamNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(69)
+                    DW_AT_data_member_location	(0x38)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb595:       DW_TAG_member
+                    DW_AT_name	("paramNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(70)
+                    DW_AT_data_member_location	(0x3c)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb5a3:       DW_TAG_member
+                    DW_AT_name	("keyNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(71)
+                    DW_AT_data_member_location	(0x40)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb5b1:       DW_TAG_member
+                    DW_AT_name	("instanceNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(72)
+                    DW_AT_data_member_location	(0x44)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb5bf:       DW_TAG_member
+                    DW_AT_name	("flowNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(73)
+                    DW_AT_data_member_location	(0x48)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb5cd:       DW_TAG_member
+                    DW_AT_name	("flowProcessNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(74)
+                    DW_AT_data_member_location	(0x4c)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb5db:       DW_TAG_member
+                    DW_AT_name	("flowInputNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(75)
+                    DW_AT_data_member_location	(0x50)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb5e9:       DW_TAG_member
+                    DW_AT_name	("flowSwitchNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(76)
+                    DW_AT_data_member_location	(0x54)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb5f7:       DW_TAG_member
+                    DW_AT_name	("flowFunctionNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(77)
+                    DW_AT_data_member_location	(0x58)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb605:       DW_TAG_member
+                    DW_AT_name	("actionNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(78)
+                    DW_AT_data_member_location	(0x5c)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb613:       DW_TAG_member
+                    DW_AT_name	("inputConditionNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(79)
+                    DW_AT_data_member_location	(0x60)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb621:       DW_TAG_member
+                    DW_AT_name	("switchConditionNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(80)
+                    DW_AT_data_member_location	(0x64)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb62f:       DW_TAG_member
+                    DW_AT_name	("switchOperatorNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(81)
+                    DW_AT_data_member_location	(0x68)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb63d:       DW_TAG_member
+                    DW_AT_name	("variableNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(82)
+                    DW_AT_data_member_location	(0x6c)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb64b:       DW_TAG_member
+                    DW_AT_name	("textureNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(83)
+                    DW_AT_data_member_location	(0x70)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb659:       DW_TAG_member
+                    DW_AT_name	("fontNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(84)
+                    DW_AT_data_member_location	(0x74)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb667:       DW_TAG_member
+                    DW_AT_name	("fontFilterNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(85)
+                    DW_AT_data_member_location	(0x78)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb675:       DW_TAG_member
+                    DW_AT_name	("messageNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(86)
+                    DW_AT_data_member_location	(0x7c)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb683:       DW_TAG_member
+                    DW_AT_name	("guiResourceNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(87)
+                    DW_AT_data_member_location	(0x80)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb691:       DW_TAG_member
+                    DW_AT_name	("generalResourceNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(88)
+                    DW_AT_data_member_location	(0x84)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb69f:       DW_TAG_member
+                    DW_AT_name	("cameraSettingNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(89)
+                    DW_AT_data_member_location	(0x88)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb6ad:       DW_TAG_member
+                    DW_AT_name	("instExeParamNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(90)
+                    DW_AT_data_member_location	(0x8c)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb6bb:       DW_TAG_member
+                    DW_AT_name	("vertexBufferSize")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(91)
+                    DW_AT_data_member_location	(0x90)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb6c9:       DW_TAG_member
+                    DW_AT_name	("baseZ")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(92)
+                    DW_AT_byte_size	(0x04)
+                    DW_AT_bit_size	(0x02)
+                    DW_AT_bit_offset	(0x1e)
+                    DW_AT_data_member_location	(0x94)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb6db:       DW_TAG_member
+                    DW_AT_name	("framerateMode")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(93)
+                    DW_AT_byte_size	(0x04)
+                    DW_AT_bit_size	(0x01)
+                    DW_AT_bit_offset	(0x1d)
+                    DW_AT_data_member_location	(0x94)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb6ed:       DW_TAG_member
+                    DW_AT_name	("languageSettingNo")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(94)
+                    DW_AT_byte_size	(0x04)
+                    DW_AT_bit_size	(0x02)
+                    DW_AT_bit_offset	(0x1b)
+                    DW_AT_data_member_location	(0x94)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb6ff:       DW_TAG_member
+                    DW_AT_name	("padding")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(95)
+                    DW_AT_byte_size	(0x04)
+                    DW_AT_bit_size	(0x1b)
+                    DW_AT_bit_offset	(0x00)
+                    DW_AT_data_member_location	(0x94)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb711:       DW_TAG_member
+                    DW_AT_name	("viewSize")
+                    DW_AT_type	(0x000089dc "MtSize")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(96)
+                    DW_AT_data_member_location	(0x98)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb71f:       DW_TAG_member
+                    DW_AT_type	(0x000eb72a "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(98)
+                    DW_AT_data_member_location	(0xa0)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb72a:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(98)
+
+0x000eb730:         DW_TAG_member
+                      DW_AT_name	("startFlowIndex")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(100)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb73e:         DW_TAG_member
+                      DW_AT_name	("startFlowAdrs")
+                      DW_AT_type	(0x000ec74c "nGUI::FLOW *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(101)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb74c:         NULL
+
+0x000eb74d:       DW_TAG_member
+                    DW_AT_type	(0x000eb758 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(104)
+                    DW_AT_data_member_location	(0xa8)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb758:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(104)
+
+0x000eb75e:         DW_TAG_member
+                      DW_AT_name	("animationOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(106)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb76c:         DW_TAG_member
+                      DW_AT_name	("pAnimation")
+                      DW_AT_type	(0x000ec76f "nGUI::ANIMATION *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(107)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb77a:         NULL
+
+0x000eb77b:       DW_TAG_member
+                    DW_AT_type	(0x000eb786 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(109)
+                    DW_AT_data_member_location	(0xb0)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb786:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(109)
+
+0x000eb78c:         DW_TAG_member
+                      DW_AT_name	("sequenceOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(111)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb79a:         DW_TAG_member
+                      DW_AT_name	("pSequence")
+                      DW_AT_type	(0x000ec774 "nGUI::SEQUENCE *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(112)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb7a8:         NULL
+
+0x000eb7a9:       DW_TAG_member
+                    DW_AT_type	(0x000eb7b4 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(114)
+                    DW_AT_data_member_location	(0xb8)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb7b4:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(114)
+
+0x000eb7ba:         DW_TAG_member
+                      DW_AT_name	("objectOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(116)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb7c8:         DW_TAG_member
+                      DW_AT_name	("pObject")
+                      DW_AT_type	(0x000ec779 "nGUI::OBJECT *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(117)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb7d6:         NULL
+
+0x000eb7d7:       DW_TAG_member
+                    DW_AT_type	(0x000eb7e2 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(119)
+                    DW_AT_data_member_location	(0xc0)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb7e2:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(119)
+
+0x000eb7e8:         DW_TAG_member
+                      DW_AT_name	("objSequenceOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(121)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb7f6:         DW_TAG_member
+                      DW_AT_name	("pObjSequence")
+                      DW_AT_type	(0x000ec78d "nGUI::OBJ_SEQUENCE *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(122)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb804:         NULL
+
+0x000eb805:       DW_TAG_member
+                    DW_AT_type	(0x000eb810 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(124)
+                    DW_AT_data_member_location	(0xc8)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb810:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(124)
+
+0x000eb816:         DW_TAG_member
+                      DW_AT_name	("initParamOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(126)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb824:         DW_TAG_member
+                      DW_AT_name	("pInitParam")
+                      DW_AT_type	(0x000ec77e "nGUI::INIT_PARAM *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(127)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb832:         NULL
+
+0x000eb833:       DW_TAG_member
+                    DW_AT_type	(0x000eb83e "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(129)
+                    DW_AT_data_member_location	(0xd0)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb83e:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(129)
+
+0x000eb844:         DW_TAG_member
+                      DW_AT_name	("paramOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(131)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb852:         DW_TAG_member
+                      DW_AT_name	("pParam")
+                      DW_AT_type	(0x000ec792 "nGUI::PARAM *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(132)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb860:         NULL
+
+0x000eb861:       DW_TAG_member
+                    DW_AT_type	(0x000eb86c "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(134)
+                    DW_AT_data_member_location	(0xd8)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb86c:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(134)
+
+0x000eb872:         DW_TAG_member
+                      DW_AT_name	("instanceOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(136)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb880:         DW_TAG_member
+                      DW_AT_name	("pInstance")
+                      DW_AT_type	(0x000ec79c "nGUI::INSTANCE *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(137)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb88e:         NULL
+
+0x000eb88f:       DW_TAG_member
+                    DW_AT_type	(0x000eb89a "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(139)
+                    DW_AT_data_member_location	(0xe0)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb89a:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(139)
+
+0x000eb8a0:         DW_TAG_member
+                      DW_AT_name	("flowOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(141)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb8ae:         DW_TAG_member
+                      DW_AT_name	("pFlow")
+                      DW_AT_type	(0x000ec74c "nGUI::FLOW *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(142)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb8bc:         NULL
+
+0x000eb8bd:       DW_TAG_member
+                    DW_AT_type	(0x000eb8c8 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(144)
+                    DW_AT_data_member_location	(0xe8)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb8c8:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(144)
+
+0x000eb8ce:         DW_TAG_member
+                      DW_AT_name	("flowProcessOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(146)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb8dc:         DW_TAG_member
+                      DW_AT_name	("pFlowProcess")
+                      DW_AT_type	(0x000ec7a1 "nGUI::FLOW_PROCESS *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(147)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb8ea:         NULL
+
+0x000eb8eb:       DW_TAG_member
+                    DW_AT_type	(0x000eb8f6 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(149)
+                    DW_AT_data_member_location	(0xf0)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb8f6:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(149)
+
+0x000eb8fc:         DW_TAG_member
+                      DW_AT_name	("flowInputOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(151)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb90a:         DW_TAG_member
+                      DW_AT_name	("pFlowInput")
+                      DW_AT_type	(0x000ec751 "nGUI::FLOW_INPUT *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(152)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb918:         NULL
+
+0x000eb919:       DW_TAG_member
+                    DW_AT_type	(0x000eb924 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(154)
+                    DW_AT_data_member_location	(0xf8)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb924:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(154)
+
+0x000eb92a:         DW_TAG_member
+                      DW_AT_name	("flowSwitchOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(156)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb938:         DW_TAG_member
+                      DW_AT_name	("pFlowSwitch")
+                      DW_AT_type	(0x000ec75b "nGUI::FLOW_SWITCH *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(157)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb946:         NULL
+
+0x000eb947:       DW_TAG_member
+                    DW_AT_type	(0x000eb953 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(159)
+                    DW_AT_data_member_location	(0x0100)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb953:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(159)
+
+0x000eb959:         DW_TAG_member
+                      DW_AT_name	("flowFunctionOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(161)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb967:         DW_TAG_member
+                      DW_AT_name	("pFlowFunction")
+                      DW_AT_type	(0x000ec76a "nGUI::FLOW_FUNCTION *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(162)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb975:         NULL
+
+0x000eb976:       DW_TAG_member
+                    DW_AT_type	(0x000eb982 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(164)
+                    DW_AT_data_member_location	(0x0108)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb982:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(164)
+
+0x000eb988:         DW_TAG_member
+                      DW_AT_name	("actionOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(166)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb996:         DW_TAG_member
+                      DW_AT_name	("pAction")
+                      DW_AT_type	(0x000ec7a6 "nGUI::ACTION *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(167)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb9a4:         NULL
+
+0x000eb9a5:       DW_TAG_member
+                    DW_AT_type	(0x000eb9b1 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(169)
+                    DW_AT_data_member_location	(0x0110)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb9b1:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(169)
+
+0x000eb9b7:         DW_TAG_member
+                      DW_AT_name	("inputConditionOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(171)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb9c5:         DW_TAG_member
+                      DW_AT_name	("pInputCondition")
+                      DW_AT_type	(0x000ec756 "nGUI::INPUT_CONDITION *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(172)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb9d3:         NULL
+
+0x000eb9d4:       DW_TAG_member
+                    DW_AT_type	(0x000eb9e0 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(174)
+                    DW_AT_data_member_location	(0x0118)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb9e0:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(174)
+
+0x000eb9e6:         DW_TAG_member
+                      DW_AT_name	("switchOperatorOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(176)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eb9f4:         DW_TAG_member
+                      DW_AT_name	("pSwitchOperator")
+                      DW_AT_type	(0x000ec765 "nGUI::SWITCH_OPERATOR *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(177)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eba02:         NULL
+
+0x000eba03:       DW_TAG_member
+                    DW_AT_type	(0x000eba0f "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(179)
+                    DW_AT_data_member_location	(0x0120)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eba0f:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(179)
+
+0x000eba15:         DW_TAG_member
+                      DW_AT_name	("switchConditionOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(181)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eba23:         DW_TAG_member
+                      DW_AT_name	("pSwitchCondition")
+                      DW_AT_type	(0x000ec760 "nGUI::SWITCH_CONDITION *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(182)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eba31:         NULL
+
+0x000eba32:       DW_TAG_member
+                    DW_AT_type	(0x000eba3e "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(184)
+                    DW_AT_data_member_location	(0x0128)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eba3e:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(184)
+
+0x000eba44:         DW_TAG_member
+                      DW_AT_name	("variableOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(186)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eba52:         DW_TAG_member
+                      DW_AT_name	("pVariable")
+                      DW_AT_type	(0x000ec7ab "nGUI::VARIABLE *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(187)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eba60:         NULL
+
+0x000eba61:       DW_TAG_member
+                    DW_AT_type	(0x000eba6d "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(189)
+                    DW_AT_data_member_location	(0x0130)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eba6d:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(189)
+
+0x000eba73:         DW_TAG_member
+                      DW_AT_name	("textureOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(191)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eba81:         DW_TAG_member
+                      DW_AT_name	("pTexture")
+                      DW_AT_type	(0x000ec7b0 "nGUI::TEXTURE *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(192)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eba8f:         NULL
+
+0x000eba90:       DW_TAG_member
+                    DW_AT_type	(0x000eba9c "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(194)
+                    DW_AT_data_member_location	(0x0138)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000eba9c:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(194)
+
+0x000ebaa2:         DW_TAG_member
+                      DW_AT_name	("fontOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(196)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebab0:         DW_TAG_member
+                      DW_AT_name	("pFont")
+                      DW_AT_type	(0x000ec7b5 "nGUI::FONT *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(197)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebabe:         NULL
+
+0x000ebabf:       DW_TAG_member
+                    DW_AT_type	(0x000ebacb "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(199)
+                    DW_AT_data_member_location	(0x0140)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebacb:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(199)
+
+0x000ebad1:         DW_TAG_member
+                      DW_AT_name	("fontFilterOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(201)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebadf:         DW_TAG_member
+                      DW_AT_name	("pFontFilter")
+                      DW_AT_type	(0x0000a622 "void *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(202)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebaed:         NULL
+
+0x000ebaee:       DW_TAG_member
+                    DW_AT_type	(0x000ebafa "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(204)
+                    DW_AT_data_member_location	(0x0148)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebafa:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(204)
+
+0x000ebb00:         DW_TAG_member
+                      DW_AT_name	("messageOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(206)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebb0e:         DW_TAG_member
+                      DW_AT_name	("pMessage")
+                      DW_AT_type	(0x000ec7ba "nGUI::MESSAGE *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(207)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebb1c:         NULL
+
+0x000ebb1d:       DW_TAG_member
+                    DW_AT_type	(0x000ebb29 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(209)
+                    DW_AT_data_member_location	(0x0150)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebb29:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(209)
+
+0x000ebb2f:         DW_TAG_member
+                      DW_AT_name	("guiResourceOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(211)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebb3d:         DW_TAG_member
+                      DW_AT_name	("pGUIResource")
+                      DW_AT_type	(0x000ec7bf "nGUI::GUIRESOURCE *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(212)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebb4b:         NULL
+
+0x000ebb4c:       DW_TAG_member
+                    DW_AT_type	(0x000ebb58 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(214)
+                    DW_AT_data_member_location	(0x0158)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebb58:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(214)
+
+0x000ebb5e:         DW_TAG_member
+                      DW_AT_name	("generalResourceOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(216)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebb6c:         DW_TAG_member
+                      DW_AT_name	("pGeneralResource")
+                      DW_AT_type	(0x000ec7c4 "nGUI::GENERALRESOURCE *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(217)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebb7a:         NULL
+
+0x000ebb7b:       DW_TAG_member
+                    DW_AT_type	(0x000ebb87 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(219)
+                    DW_AT_data_member_location	(0x0160)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebb87:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(219)
+
+0x000ebb8d:         DW_TAG_member
+                      DW_AT_name	("cameraSettingOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(221)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebb9b:         DW_TAG_member
+                      DW_AT_name	("pCameraSetting")
+                      DW_AT_type	(0x000ec7c9 "nGUI::CAMERA_SETTING *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(222)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebba9:         NULL
+
+0x000ebbaa:       DW_TAG_member
+                    DW_AT_type	(0x000ebbb6 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(224)
+                    DW_AT_data_member_location	(0x0168)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebbb6:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(224)
+
+0x000ebbbc:         DW_TAG_member
+                      DW_AT_name	("stringOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(226)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebbca:         DW_TAG_member
+                      DW_AT_name	("pString")
+                      DW_AT_type	(0x0000b0bf "MT_STR")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(227)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebbd8:         NULL
+
+0x000ebbd9:       DW_TAG_member
+                    DW_AT_type	(0x000ebbe5 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(229)
+                    DW_AT_data_member_location	(0x0170)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebbe5:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(229)
+
+0x000ebbeb:         DW_TAG_member
+                      DW_AT_name	("keyOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(231)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebbf9:         DW_TAG_member
+                      DW_AT_name	("pKey")
+                      DW_AT_type	(0x000ec797 "nGUI::KEY *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(232)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebc07:         NULL
+
+0x000ebc08:       DW_TAG_member
+                    DW_AT_type	(0x000ebc14 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(234)
+                    DW_AT_data_member_location	(0x0178)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebc14:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(234)
+
+0x000ebc1a:         DW_TAG_member
+                      DW_AT_name	("keyValue8Offset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(236)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebc28:         DW_TAG_member
+                      DW_AT_name	("pKeyValue8")
+                      DW_AT_type	(0x0000a6c8 "u8 *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(237)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebc36:         NULL
+
+0x000ebc37:       DW_TAG_member
+                    DW_AT_type	(0x000ebc43 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(239)
+                    DW_AT_data_member_location	(0x0180)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebc43:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(239)
+
+0x000ebc49:         DW_TAG_member
+                      DW_AT_name	("keyValue32Offset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(241)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebc57:         DW_TAG_member
+                      DW_AT_name	("pKeyValue32")
+                      DW_AT_type	(0x0000a6c8 "u8 *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(242)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebc65:         NULL
+
+0x000ebc66:       DW_TAG_member
+                    DW_AT_type	(0x000ebc72 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(244)
+                    DW_AT_data_member_location	(0x0188)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebc72:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(244)
+
+0x000ebc78:         DW_TAG_member
+                      DW_AT_name	("keyValue128Offset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(246)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebc86:         DW_TAG_member
+                      DW_AT_name	("pKeyValue128")
+                      DW_AT_type	(0x0000a6c8 "u8 *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(247)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebc94:         NULL
+
+0x000ebc95:       DW_TAG_member
+                    DW_AT_type	(0x000ebca1 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(249)
+                    DW_AT_data_member_location	(0x0190)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebca1:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(249)
+
+0x000ebca7:         DW_TAG_member
+                      DW_AT_name	("extendDataOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(251)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebcb5:         DW_TAG_member
+                      DW_AT_name	("pExtendData")
+                      DW_AT_type	(0x0000a6c8 "u8 *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(252)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebcc3:         NULL
+
+0x000ebcc4:       DW_TAG_member
+                    DW_AT_type	(0x000ebcd0 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(254)
+                    DW_AT_data_member_location	(0x0198)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebcd0:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(254)
+
+0x000ebcd6:         DW_TAG_member
+                      DW_AT_name	("instExeParamOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(256)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebce5:         DW_TAG_member
+                      DW_AT_name	("pInstExeParam")
+                      DW_AT_type	(0x000ec792 "nGUI::PARAM *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(257)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebcf4:         NULL
+
+0x000ebcf5:       DW_TAG_member
+                    DW_AT_type	(0x000ebd02 "rGUI::HEADER::union ")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(259)
+                    DW_AT_data_member_location	(0x01a0)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebd02:       DW_TAG_union_type
+                    DW_AT_byte_size	(0x08)
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(259)
+
+0x000ebd09:         DW_TAG_member
+                      DW_AT_name	("vertexOffset")
+                      DW_AT_type	(0x00004123 "u32")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(261)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebd18:         DW_TAG_member
+                      DW_AT_name	("pVertex")
+                      DW_AT_type	(0x000ec7ce "nGUI::VERTEX *")
+                      DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                      DW_AT_decl_line	(262)
+                      DW_AT_data_member_location	(0x00)
+                      DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebd27:         NULL
+
+0x000ebd28:       NULL
+
+0x000ebd29:     DW_TAG_member
+                  DW_AT_name	("mAttr")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(716)
+                  DW_AT_data_member_location	(0x78)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebd38:     DW_TAG_member
+                  DW_AT_name	("mIsSetData")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(717)
+                  DW_AT_byte_size	(0x04)
+                  DW_AT_bit_size	(0x01)
+                  DW_AT_bit_offset	(0x1f)
+                  DW_AT_data_member_location	(0x7c)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebd4b:     DW_TAG_member
+                  DW_AT_name	("mBaseZ")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(718)
+                  DW_AT_byte_size	(0x04)
+                  DW_AT_bit_size	(0x02)
+                  DW_AT_bit_offset	(0x1d)
+                  DW_AT_data_member_location	(0x7c)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebd5e:     DW_TAG_member
+                  DW_AT_name	("mFramerateMode")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(719)
+                  DW_AT_byte_size	(0x04)
+                  DW_AT_bit_size	(0x01)
+                  DW_AT_bit_offset	(0x1c)
+                  DW_AT_data_member_location	(0x7c)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebd71:     DW_TAG_member
+                  DW_AT_name	("mLanguageSettingNo")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(720)
+                  DW_AT_byte_size	(0x04)
+                  DW_AT_bit_size	(0x02)
+                  DW_AT_bit_offset	(0x1a)
+                  DW_AT_data_member_location	(0x7c)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebd84:     DW_TAG_member
+                  DW_AT_name	("padding")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(721)
+                  DW_AT_byte_size	(0x04)
+                  DW_AT_bit_size	(0x1a)
+                  DW_AT_bit_offset	(0x00)
+                  DW_AT_data_member_location	(0x7c)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebd97:     DW_TAG_member
+                  DW_AT_name	("mViewSize")
+                  DW_AT_type	(0x000089dc "MtSize")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(722)
+                  DW_AT_data_member_location	(0x80)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebda6:     DW_TAG_member
+                  DW_AT_name	("mPreviewUnitName")
+                  DW_AT_type	(0x0000a75f "MtString")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(723)
+                  DW_AT_data_member_location	(0x88)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebdb5:     DW_TAG_member
+                  DW_AT_name	("mpFontFilter")
+                  DW_AT_type	(0x000ec7d3 "cGUIFontFilter **")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(724)
+                  DW_AT_data_member_location	(0x90)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebdc4:     DW_TAG_member
+                  DW_AT_name	("mpVertexBuffer")
+                  DW_AT_type	(0x000245c2 "nDraw::VertexBuffer *")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(725)
+                  DW_AT_data_member_location	(0x98)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebdd3:     DW_TAG_member
+                  DW_AT_name	("mpInstanceNeedObjectInfo")
+                  DW_AT_type	(0x000ecaea "rGUI::InstanceNeedObjectInfo *")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(729)
+                  DW_AT_data_member_location	(0xa0)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebde2:     DW_TAG_structure_type
+                  DW_AT_name	("InstanceNeedObjectInfo")
+                  DW_AT_byte_size	(0x30)
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(271)
+
+0x000ebdec:       DW_TAG_member
+                    DW_AT_name	("objTextNeedNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(273)
+                    DW_AT_data_member_location	(0x00)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebdfb:       DW_TAG_member
+                    DW_AT_name	("objMessageNeedNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(274)
+                    DW_AT_data_member_location	(0x04)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebe0a:       DW_TAG_member
+                    DW_AT_name	("objChildAnimationRootNeedNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(275)
+                    DW_AT_data_member_location	(0x08)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebe19:       DW_TAG_member
+                    DW_AT_name	("objNullNeedNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(276)
+                    DW_AT_data_member_location	(0x0c)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebe28:       DW_TAG_member
+                    DW_AT_name	("objTextureSetNeedNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(277)
+                    DW_AT_data_member_location	(0x10)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebe37:       DW_TAG_member
+                    DW_AT_name	("objTextureNeedNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(278)
+                    DW_AT_data_member_location	(0x14)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebe46:       DW_TAG_member
+                    DW_AT_name	("objPolygonNeedNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(279)
+                    DW_AT_data_member_location	(0x18)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebe55:       DW_TAG_member
+                    DW_AT_name	("objScissorMaskNeedNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(280)
+                    DW_AT_data_member_location	(0x1c)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebe64:       DW_TAG_member
+                    DW_AT_name	("objColorAdjustNeedNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(281)
+                    DW_AT_data_member_location	(0x20)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebe73:       DW_TAG_member
+                    DW_AT_name	("objRootNeedNum")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(282)
+                    DW_AT_data_member_location	(0x24)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebe82:       DW_TAG_member
+                    DW_AT_name	("createAnimationBufferSize")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(283)
+                    DW_AT_data_member_location	(0x28)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebe91:       DW_TAG_member
+                    DW_AT_name	("objRootNeedSetObjectBufferSize")
+                    DW_AT_type	(0x00004123 "u32")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(284)
+                    DW_AT_data_member_location	(0x2c)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebea0:       DW_TAG_subprogram
+                    DW_AT_name	("operator new")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(286)
+                    DW_AT_type	(0x0000a622 "void *")
+                    DW_AT_declaration	(true)
+                    DW_AT_external	(true)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebeae:         DW_TAG_formal_parameter
+                      DW_AT_type	(0x0000897c "size_t")
+
+0x000ebeb3:         NULL
+
+0x000ebeb4:       DW_TAG_subprogram
+                    DW_AT_name	("operator new[]")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(287)
+                    DW_AT_type	(0x0000a622 "void *")
+                    DW_AT_declaration	(true)
+                    DW_AT_external	(true)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebec2:         DW_TAG_formal_parameter
+                      DW_AT_type	(0x0000897c "size_t")
+
+0x000ebec7:         NULL
+
+0x000ebec8:       DW_TAG_subprogram
+                    DW_AT_name	("operator new")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(288)
+                    DW_AT_type	(0x0000a622 "void *")
+                    DW_AT_declaration	(true)
+                    DW_AT_external	(true)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebed6:         DW_TAG_formal_parameter
+                      DW_AT_type	(0x0000897c "size_t")
+
+0x000ebedb:         DW_TAG_formal_parameter
+                      DW_AT_type	(0x0000a622 "void *")
+
+0x000ebee0:         NULL
+
+0x000ebee1:       DW_TAG_subprogram
+                    DW_AT_name	("operator new[]")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(289)
+                    DW_AT_type	(0x0000a622 "void *")
+                    DW_AT_declaration	(true)
+                    DW_AT_external	(true)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebeef:         DW_TAG_formal_parameter
+                      DW_AT_type	(0x0000897c "size_t")
+
+0x000ebef4:         DW_TAG_formal_parameter
+                      DW_AT_type	(0x0000a622 "void *")
+
+0x000ebef9:         NULL
+
+0x000ebefa:       DW_TAG_subprogram
+                    DW_AT_name	("operator delete")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(290)
+                    DW_AT_declaration	(true)
+                    DW_AT_external	(true)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebf04:         DW_TAG_formal_parameter
+                      DW_AT_type	(0x0000a622 "void *")
+
+0x000ebf09:         NULL
+
+0x000ebf0a:       DW_TAG_subprogram
+                    DW_AT_name	("operator delete[]")
+                    DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                    DW_AT_decl_line	(291)
+                    DW_AT_declaration	(true)
+                    DW_AT_external	(true)
+                    DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ebf14:         DW_TAG_formal_parameter
+                      DW_AT_type	(0x0000a622 "void *")
+
+0x000ebf19:         NULL
+
+0x000ebf1a:       NULL
+
+0x000ebf1b:     DW_TAG_member
+                  DW_AT_name	("mInstanceNullNeedNum")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(731)
+                  DW_AT_data_member_location	(0xa8)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebf2a:     DW_TAG_member
+                  DW_AT_name	("mInstanceScissorMaskNeedNum")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(732)
+                  DW_AT_data_member_location	(0xac)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebf39:     DW_TAG_member
+                  DW_AT_name	("mInstanceAnimationNeedNum")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(733)
+                  DW_AT_data_member_location	(0xb0)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebf48:     DW_TAG_member
+                  DW_AT_name	("mInstanceAnimVariableNeedNum")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(734)
+                  DW_AT_data_member_location	(0xb4)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebf57:     DW_TAG_member
+                  DW_AT_name	("mInstanceAnimControlNeedNum")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(735)
+                  DW_AT_data_member_location	(0xb8)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebf66:     DW_TAG_member
+                  DW_AT_name	("mGUIObjTextNeedNum")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(737)
+                  DW_AT_data_member_location	(0xbc)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebf75:     DW_TAG_member
+                  DW_AT_name	("mGUIObjMessageNeedNum")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(738)
+                  DW_AT_data_member_location	(0xc0)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebf84:     DW_TAG_member
+                  DW_AT_name	("mGUIObjChildAnimationRootNeedNum")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(739)
+                  DW_AT_data_member_location	(0xc4)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebf93:     DW_TAG_member
+                  DW_AT_name	("mGUIObjNullNeedNum")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(740)
+                  DW_AT_data_member_location	(0xc8)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebfa2:     DW_TAG_member
+                  DW_AT_name	("mGUIObjTextureSetNeedNum")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(741)
+                  DW_AT_data_member_location	(0xcc)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebfb1:     DW_TAG_member
+                  DW_AT_name	("mGUIObjTextureNeedNum")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(742)
+                  DW_AT_data_member_location	(0xd0)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebfc0:     DW_TAG_member
+                  DW_AT_name	("mGUIObjPolygonNeedNum")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(743)
+                  DW_AT_data_member_location	(0xd4)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebfcf:     DW_TAG_member
+                  DW_AT_name	("mGUIObjScissorMaskNeedNum")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(744)
+                  DW_AT_data_member_location	(0xd8)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebfde:     DW_TAG_member
+                  DW_AT_name	("mGUIObjColorAdjustNeedNum")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(745)
+                  DW_AT_data_member_location	(0xdc)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebfed:     DW_TAG_member
+                  DW_AT_name	("mGUIObjRootNeedNum")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(746)
+                  DW_AT_data_member_location	(0xe0)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ebffc:     DW_TAG_member
+                  DW_AT_name	("mGUIVarIntNeedNum")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(748)
+                  DW_AT_data_member_location	(0xe4)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ec00b:     DW_TAG_member
+                  DW_AT_name	("mGUIVarFloatNeedNum")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(749)
+                  DW_AT_data_member_location	(0xe8)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ec01a:     DW_TAG_member
+                  DW_AT_name	("mCreateAnimationBufferSize")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(754)
+                  DW_AT_data_member_location	(0xec)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ec029:     DW_TAG_member
+                  DW_AT_name	("mObjRootNeedSetObjectBufferSize")
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(755)
+                  DW_AT_data_member_location	(0xf0)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ec038:     DW_TAG_member
+                  DW_AT_name	("ATTR_USE_ALPHA_MASK")
+                  DW_AT_type	(0x00004193 "const u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(761)
+                  DW_AT_external	(true)
+                  DW_AT_declaration	(true)
+                  DW_AT_accessibility	(DW_ACCESS_private)
+                  DW_AT_const_value	(1)
+
+0x000ec048:     DW_TAG_member
+                  DW_AT_name	("ATTR_3D")
+                  DW_AT_type	(0x00004193 "const u32")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(762)
+                  DW_AT_external	(true)
+                  DW_AT_declaration	(true)
+                  DW_AT_accessibility	(DW_ACCESS_private)
+                  DW_AT_const_value	(2)
+
+0x000ec058:     DW_TAG_subprogram
+                  DW_AT_name	("getMyDTIPtr")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(43)
+                  DW_AT_type	(0x00008966 "MtDTI *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec066:     DW_TAG_subprogram
+                  DW_AT_name	("getDTI")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(43)
+                  DW_AT_type	(0x0000899d "const MtDTI &")
+                  DW_AT_virtuality	(DW_VIRTUALITY_virtual)
+                  DW_AT_vtable_elem_location	(DW_OP_constu 0x5)
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+                  DW_AT_containing_type	(0x000eb448 "rGUI")
+
+0x000ec07b:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec080:       NULL
+
+0x000ec081:     DW_TAG_subprogram
+                  DW_AT_name	("getAllocator")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(43)
+                  DW_AT_type	(0x0000abec "MtAllocator *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec08f:     DW_TAG_subprogram
+                  DW_AT_name	("setAllocator")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(43)
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec098:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x00004123 "u32")
+
+0x000ec09d:       NULL
+
+0x000ec09e:     DW_TAG_subprogram
+                  DW_AT_name	("getExt")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(320)
+                  DW_AT_type	(0x0000893d "MT_CTSTR")
+                  DW_AT_virtuality	(DW_VIRTUALITY_virtual)
+                  DW_AT_vtable_elem_location	(DW_OP_constu 0x7)
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+                  DW_AT_containing_type	(0x000eb448 "rGUI")
+
+0x000ec0b5:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec0ba:       NULL
+
+0x000ec0bb:     DW_TAG_subprogram
+                  DW_AT_name	("isSetData")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(332)
+                  DW_AT_type	(0x00001f8f "bool")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec0c9:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec0ce:       NULL
+
+0x000ec0cf:     DW_TAG_subprogram
+                  DW_AT_name	("getBaseZ")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(335)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec0dd:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec0e2:       NULL
+
+0x000ec0e3:     DW_TAG_subprogram
+                  DW_AT_name	("getLanguageSettingNo")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(338)
+                  DW_AT_type	(0x000e447e "nGUI::LANGUAGE_SETTING")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec0f1:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec0f6:       NULL
+
+0x000ec0f7:     DW_TAG_subprogram
+                  DW_AT_name	("getVertexBuffer")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(341)
+                  DW_AT_type	(0x000245c2 "nDraw::VertexBuffer *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec105:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec10a:       NULL
+
+0x000ec10b:     DW_TAG_subprogram
+                  DW_AT_name	("getUpdateTime2")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(344)
+                  DW_AT_type	(0x0000cb64 "t64")
+                  DW_AT_virtuality	(DW_VIRTUALITY_virtual)
+                  DW_AT_vtable_elem_location	(DW_OP_constu 0x11)
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+                  DW_AT_containing_type	(0x000eb448 "rGUI")
+
+0x000ec122:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec127:       NULL
+
+0x000ec128:     DW_TAG_subprogram
+                  DW_AT_name	("getInstanceId")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(351)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec136:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec13b:       NULL
+
+0x000ec13c:     DW_TAG_subprogram
+                  DW_AT_name	("getFlowId")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(354)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec14a:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec14f:       NULL
+
+0x000ec150:     DW_TAG_subprogram
+                  DW_AT_name	("getVariableId")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(357)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec15e:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec163:       NULL
+
+0x000ec164:     DW_TAG_subprogram
+                  DW_AT_name	("getSequenceNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(365)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec172:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec177:       NULL
+
+0x000ec178:     DW_TAG_subprogram
+                  DW_AT_name	("getSequenceAdrs")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(371)
+                  DW_AT_type	(0x000ec774 "nGUI::SEQUENCE *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec186:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec18b:       NULL
+
+0x000ec18c:     DW_TAG_subprogram
+                  DW_AT_name	("getInitParamNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(379)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec19a:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec19f:       NULL
+
+0x000ec1a0:     DW_TAG_subprogram
+                  DW_AT_name	("getInitParam")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(382)
+                  DW_AT_type	(0x000ec77e "nGUI::INIT_PARAM *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec1ae:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec1b3:       NULL
+
+0x000ec1b4:     DW_TAG_subprogram
+                  DW_AT_name	("getParamNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(385)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec1c2:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec1c7:       NULL
+
+0x000ec1c8:     DW_TAG_subprogram
+                  DW_AT_name	("getParam")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(388)
+                  DW_AT_type	(0x000ec792 "nGUI::PARAM *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec1d6:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec1db:       NULL
+
+0x000ec1dc:     DW_TAG_subprogram
+                  DW_AT_name	("getObjectNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(391)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec1ea:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec1ef:       NULL
+
+0x000ec1f0:     DW_TAG_subprogram
+                  DW_AT_name	("getObjectAdrs")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(394)
+                  DW_AT_type	(0x000ec779 "nGUI::OBJECT *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec1fe:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec203:       NULL
+
+0x000ec204:     DW_TAG_subprogram
+                  DW_AT_name	("getAnimationNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(397)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec212:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec217:       NULL
+
+0x000ec218:     DW_TAG_subprogram
+                  DW_AT_name	("getAnimationAdrs")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(400)
+                  DW_AT_type	(0x000ec76f "nGUI::ANIMATION *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec226:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec22b:       NULL
+
+0x000ec22c:     DW_TAG_subprogram
+                  DW_AT_name	("getInstanceNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(411)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec23a:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec23f:       NULL
+
+0x000ec240:     DW_TAG_subprogram
+                  DW_AT_name	("getStartInstanceIndex")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(414)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec24e:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec253:       NULL
+
+0x000ec254:     DW_TAG_subprogram
+                  DW_AT_name	("getInstanceAdrs")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(417)
+                  DW_AT_type	(0x000ec79c "nGUI::INSTANCE *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec262:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec267:       NULL
+
+0x000ec268:     DW_TAG_subprogram
+                  DW_AT_name	("getStartFlow")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(428)
+                  DW_AT_type	(0x000ec74c "nGUI::FLOW *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec276:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec27b:       NULL
+
+0x000ec27c:     DW_TAG_subprogram
+                  DW_AT_name	("getFlowNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(431)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec28a:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec28f:       NULL
+
+0x000ec290:     DW_TAG_subprogram
+                  DW_AT_name	("getFlowAdrs")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(434)
+                  DW_AT_type	(0x000ec74c "nGUI::FLOW *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec29e:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec2a3:       NULL
+
+0x000ec2a4:     DW_TAG_subprogram
+                  DW_AT_name	("getFlowProcessNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(437)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec2b2:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec2b7:       NULL
+
+0x000ec2b8:     DW_TAG_subprogram
+                  DW_AT_name	("getFlowProcessAdrs")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(440)
+                  DW_AT_type	(0x000ec7a1 "nGUI::FLOW_PROCESS *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec2c6:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec2cb:       NULL
+
+0x000ec2cc:     DW_TAG_subprogram
+                  DW_AT_name	("getFlowSwitchNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(443)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec2da:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec2df:       NULL
+
+0x000ec2e0:     DW_TAG_subprogram
+                  DW_AT_name	("getFlowSwitchAdrs")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(446)
+                  DW_AT_type	(0x000ec75b "nGUI::FLOW_SWITCH *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec2ee:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec2f3:       NULL
+
+0x000ec2f4:     DW_TAG_subprogram
+                  DW_AT_name	("getFlowFunctionNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(449)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec302:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec307:       NULL
+
+0x000ec308:     DW_TAG_subprogram
+                  DW_AT_name	("getFlowFunctionAdrs")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(452)
+                  DW_AT_type	(0x000ec76a "nGUI::FLOW_FUNCTION *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec316:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec31b:       NULL
+
+0x000ec31c:     DW_TAG_subprogram
+                  DW_AT_name	("getVariableNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(460)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec32a:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec32f:       NULL
+
+0x000ec330:     DW_TAG_subprogram
+                  DW_AT_name	("getVariableAdrs")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(463)
+                  DW_AT_type	(0x000ec7ab "nGUI::VARIABLE *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec33e:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec343:       NULL
+
+0x000ec344:     DW_TAG_subprogram
+                  DW_AT_name	("getTextureNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(471)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec352:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec357:       NULL
+
+0x000ec358:     DW_TAG_subprogram
+                  DW_AT_name	("getFontNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(488)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec366:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec36b:       NULL
+
+0x000ec36c:     DW_TAG_subprogram
+                  DW_AT_name	("getFontFilterNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(499)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_virtuality	(DW_VIRTUALITY_virtual)
+                  DW_AT_vtable_elem_location	(DW_OP_constu 0x12)
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+                  DW_AT_containing_type	(0x000eb448 "rGUI")
+
+0x000ec383:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec388:       NULL
+
+0x000ec389:     DW_TAG_subprogram
+                  DW_AT_name	("getMessageNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(510)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec397:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec39c:       NULL
+
+0x000ec39d:     DW_TAG_subprogram
+                  DW_AT_name	("getGUIResourceNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(521)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec3ab:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec3b0:       NULL
+
+0x000ec3b1:     DW_TAG_subprogram
+                  DW_AT_name	("getGeneralResourceNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(532)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec3bf:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec3c4:       NULL
+
+0x000ec3c5:     DW_TAG_subprogram
+                  DW_AT_name	("getCameraSettingNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(543)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec3d3:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec3d8:       NULL
+
+0x000ec3d9:     DW_TAG_subprogram
+                  DW_AT_name	("getCameraSettingAdrs")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(546)
+                  DW_AT_type	(0x000ec7c9 "nGUI::CAMERA_SETTING *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec3e7:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec3ec:       NULL
+
+0x000ec3ed:     DW_TAG_subprogram
+                  DW_AT_name	("getInstExeParamNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(557)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec3fb:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec400:       NULL
+
+0x000ec401:     DW_TAG_subprogram
+                  DW_AT_name	("getInstExeParamAdrs")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(560)
+                  DW_AT_type	(0x000ec792 "nGUI::PARAM *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec40f:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec414:       NULL
+
+0x000ec415:     DW_TAG_subprogram
+                  DW_AT_name	("setViewSize")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(564)
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec41f:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaf9 "rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec424:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x00008bbc "const MtSize &")
+
+0x000ec429:       NULL
+
+0x000ec42a:     DW_TAG_subprogram
+                  DW_AT_name	("getViewSize")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(567)
+                  DW_AT_type	(0x000089dc "MtSize")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec438:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec43d:       NULL
+
+0x000ec43e:     DW_TAG_subprogram
+                  DW_AT_name	("setPreviewUnitName")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(570)
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec448:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaf9 "rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec44d:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x0000b0d5 "const MtString &")
+
+0x000ec452:       NULL
+
+0x000ec453:     DW_TAG_subprogram
+                  DW_AT_name	("getPreviewUnitName")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(573)
+                  DW_AT_type	(0x0000893d "MT_CTSTR")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec461:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec466:       NULL
+
+0x000ec467:     DW_TAG_subprogram
+                  DW_AT_name	("isUseAlphaMask")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(588)
+                  DW_AT_type	(0x00001f8f "bool")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec475:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec47a:       NULL
+
+0x000ec47b:     DW_TAG_subprogram
+                  DW_AT_name	("is3D")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(591)
+                  DW_AT_type	(0x00001f8f "bool")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec489:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec48e:       NULL
+
+0x000ec48f:     DW_TAG_subprogram
+                  DW_AT_name	("getFramerateMode")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(594)
+                  DW_AT_type	(0x000e44a1 "nGUI::FRAMERATE_MODE")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec49d:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec4a2:       NULL
+
+0x000ec4a3:     DW_TAG_subprogram
+                  DW_AT_name	("setFramerateMode")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(597)
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec4ad:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaf9 "rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec4b2:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000e44a1 "nGUI::FRAMERATE_MODE")
+
+0x000ec4b7:       NULL
+
+0x000ec4b8:     DW_TAG_subprogram
+                  DW_AT_name	("getInstanceNullNeedNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(602)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec4c6:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec4cb:       NULL
+
+0x000ec4cc:     DW_TAG_subprogram
+                  DW_AT_name	("getInstanceScissorMaskNeedNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(604)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec4da:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec4df:       NULL
+
+0x000ec4e0:     DW_TAG_subprogram
+                  DW_AT_name	("getInstanceAnimationNeedNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(606)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec4ee:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec4f3:       NULL
+
+0x000ec4f4:     DW_TAG_subprogram
+                  DW_AT_name	("getInstanceAnimVariableNeedNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(608)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec502:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec507:       NULL
+
+0x000ec508:     DW_TAG_subprogram
+                  DW_AT_name	("getInstanceAnimControlNeedNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(610)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec516:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec51b:       NULL
+
+0x000ec51c:     DW_TAG_subprogram
+                  DW_AT_name	("getGUIObjTextNeedNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(613)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec52a:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec52f:       NULL
+
+0x000ec530:     DW_TAG_subprogram
+                  DW_AT_name	("getGUIObjMessageNeedNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(615)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec53e:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec543:       NULL
+
+0x000ec544:     DW_TAG_subprogram
+                  DW_AT_name	("getGUIObjChildAnimationRootNeedNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(617)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec552:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec557:       NULL
+
+0x000ec558:     DW_TAG_subprogram
+                  DW_AT_name	("getGUIObjNullNeedNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(619)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec566:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec56b:       NULL
+
+0x000ec56c:     DW_TAG_subprogram
+                  DW_AT_name	("getGUIObjTextureSetNeedNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(621)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec57a:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec57f:       NULL
+
+0x000ec580:     DW_TAG_subprogram
+                  DW_AT_name	("getGUIObjTextureNeedNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(623)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec58e:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec593:       NULL
+
+0x000ec594:     DW_TAG_subprogram
+                  DW_AT_name	("getGUIObjPolygonNeedNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(625)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec5a2:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec5a7:       NULL
+
+0x000ec5a8:     DW_TAG_subprogram
+                  DW_AT_name	("getGUIObjScissorMaskNeedNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(627)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec5b6:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec5bb:       NULL
+
+0x000ec5bc:     DW_TAG_subprogram
+                  DW_AT_name	("getGUIObjColorAdjustNeedNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(629)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec5ca:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec5cf:       NULL
+
+0x000ec5d0:     DW_TAG_subprogram
+                  DW_AT_name	("getGUIObjRootNeedNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(631)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec5de:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec5e3:       NULL
+
+0x000ec5e4:     DW_TAG_subprogram
+                  DW_AT_name	("getGUIVarIntNeedNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(634)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec5f2:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec5f7:       NULL
+
+0x000ec5f8:     DW_TAG_subprogram
+                  DW_AT_name	("getGUIVarFloatNeedNum")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(636)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec606:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec60b:       NULL
+
+0x000ec60c:     DW_TAG_subprogram
+                  DW_AT_name	("getCreateAnimationBufferSize")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(646)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec61a:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec61f:       NULL
+
+0x000ec620:     DW_TAG_subprogram
+                  DW_AT_name	("getObjRootNeedSetObjectBufferSize")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(648)
+                  DW_AT_type	(0x00004123 "u32")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_public)
+
+0x000ec62e:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec633:       NULL
+
+0x000ec634:     DW_TAG_subprogram
+                  DW_AT_name	("setIsSetData")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(656)
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ec63e:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaf9 "rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec643:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x00001f8f "bool")
+
+0x000ec648:       NULL
+
+0x000ec649:     DW_TAG_subprogram
+                  DW_AT_name	("setBaseZ")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(659)
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ec653:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaf9 "rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec658:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x00004123 "u32")
+
+0x000ec65d:       NULL
+
+0x000ec65e:     DW_TAG_subprogram
+                  DW_AT_name	("setLanguageSettingNo")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(662)
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ec668:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaf9 "rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec66d:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x00004123 "u32")
+
+0x000ec672:       NULL
+
+0x000ec673:     DW_TAG_subprogram
+                  DW_AT_name	("setUseAlphaMask")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(665)
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ec67d:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaf9 "rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec682:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x00001f8f "bool")
+
+0x000ec687:       NULL
+
+0x000ec688:     DW_TAG_subprogram
+                  DW_AT_name	("set3D")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(668)
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+
+0x000ec692:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaf9 "rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec697:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x00001f8f "bool")
+
+0x000ec69c:       NULL
+
+0x000ec69d:     DW_TAG_subprogram
+                  DW_AT_name	("memAlloc")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(671)
+                  DW_AT_type	(0x0000a622 "void *")
+                  DW_AT_virtuality	(DW_VIRTUALITY_virtual)
+                  DW_AT_vtable_elem_location	(DW_OP_constu 0x14)
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+                  DW_AT_containing_type	(0x000eb448 "rGUI")
+
+0x000ec6b4:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaf9 "rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec6b9:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x00004123 "u32")
+
+0x000ec6be:       NULL
+
+0x000ec6bf:     DW_TAG_subprogram
+                  DW_AT_name	("memFree")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(674)
+                  DW_AT_virtuality	(DW_VIRTUALITY_virtual)
+                  DW_AT_vtable_elem_location	(DW_OP_constu 0x15)
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_protected)
+                  DW_AT_containing_type	(0x000eb448 "rGUI")
+
+0x000ec6d2:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaf9 "rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec6d7:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x0000a622 "void *")
+
+0x000ec6dc:       NULL
+
+0x000ec6dd:     DW_TAG_subprogram
+                  DW_AT_name	("getTextureAdrs")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(765)
+                  DW_AT_type	(0x000ec7b0 "nGUI::TEXTURE *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_private)
+
+0x000ec6eb:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec6f0:       NULL
+
+0x000ec6f1:     DW_TAG_subprogram
+                  DW_AT_name	("getFontAdrs")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(768)
+                  DW_AT_type	(0x000ec7b5 "nGUI::FONT *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_private)
+
+0x000ec6ff:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec704:       NULL
+
+0x000ec705:     DW_TAG_subprogram
+                  DW_AT_name	("getGUIResourceAdrs")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(771)
+                  DW_AT_type	(0x000ec7bf "nGUI::GUIRESOURCE *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_private)
+
+0x000ec713:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec718:       NULL
+
+0x000ec719:     DW_TAG_subprogram
+                  DW_AT_name	("getGeneralResourceAdrs")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(774)
+                  DW_AT_type	(0x000ec7c4 "nGUI::GENERALRESOURCE *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_private)
+
+0x000ec727:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec72c:       NULL
+
+0x000ec72d:     DW_TAG_subprogram
+                  DW_AT_name	("getMessageAdrs")
+                  DW_AT_decl_file	("D:\publishDDO_PS4_02_02_Master\DDO_02_02\DD_ONLINE/..\capdev200\XFramework/rGUI.h")
+                  DW_AT_decl_line	(777)
+                  DW_AT_type	(0x000ec7ba "nGUI::MESSAGE *")
+                  DW_AT_declaration	(true)
+                  DW_AT_external	(true)
+                  DW_AT_accessibility	(DW_ACCESS_private)
+
+0x000ec73b:       DW_TAG_formal_parameter
+                    DW_AT_type	(0x000ecaef "const rGUI *")
+                    DW_AT_artificial	(true)
+
+0x000ec740:       NULL
+
+0x000ec741:     NULL
+
+0x000ec742:   DW_TAG_pointer_type
+                DW_AT_type	(0x000eb46a "rGUI::MyDTI")
+
+0x000ec747:   DW_TAG_pointer_type
+                DW_AT_type	(0x000eb4c6 "rGUI::HEADER")
+
+0x000ec74c:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e45b4 "nGUI::FLOW")
+
+0x000ec751:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e46c9 "nGUI::FLOW_INPUT")
+
+0x000ec756:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e4715 "nGUI::INPUT_CONDITION")
+
+0x000ec75b:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e4752 "nGUI::FLOW_SWITCH")
+
+0x000ec760:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e479e "nGUI::SWITCH_CONDITION")
+
+0x000ec765:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e483b "nGUI::SWITCH_OPERATOR")
+
+0x000ec76a:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e4873 "nGUI::FLOW_FUNCTION")
+
+0x000ec76f:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e48e2 "nGUI::ANIMATION")
+
+0x000ec774:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e49bb "nGUI::SEQUENCE")
+
+0x000ec779:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e4a16 "nGUI::OBJECT")
+
+0x000ec77e:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e4b81 "nGUI::INIT_PARAM")
+
+0x000ec783:   DW_TAG_pointer_type
+                DW_AT_type	(0x000ec788 "const nGUI::PROP_SETTER")
+
+0x000ec788:   DW_TAG_const_type
+                DW_AT_type	(0x000e4c30 "nGUI::PROP_SETTER")
+
+0x000ec78d:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e4c8a "nGUI::OBJ_SEQUENCE")
+
+0x000ec792:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e4d78 "nGUI::PARAM")
+
+0x000ec797:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e4e5d "nGUI::KEY")
+
+0x000ec79c:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e4ec0 "nGUI::INSTANCE")
+
+0x000ec7a1:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e4fee "nGUI::FLOW_PROCESS")
+
+0x000ec7a6:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e50dd "nGUI::ACTION")
+
+0x000ec7ab:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e516a "nGUI::VARIABLE")
+
+0x000ec7b0:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e5291 "nGUI::TEXTURE")
+
+0x000ec7b5:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e53ae "nGUI::FONT")
+
+0x000ec7ba:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e5409 "nGUI::MESSAGE")
+
+0x000ec7bf:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e5464 "nGUI::GUIRESOURCE")
+
+0x000ec7c4:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e54bf "nGUI::GENERALRESOURCE")
+
+0x000ec7c9:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e5529 "nGUI::CAMERA_SETTING")
+
+0x000ec7ce:   DW_TAG_pointer_type
+                DW_AT_type	(0x000e55cc "nGUI::VERTEX")
+
+0x000ec7d3:   DW_TAG_pointer_type
+                DW_AT_type	(0x000ec7d8 "cGUIFontFilter *")
+
+0x000ec7d8:   DW_TAG_pointer_type
+                DW_AT_type	(0x000ec7dd "cGUIFontFilter")
