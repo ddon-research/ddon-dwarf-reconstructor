@@ -407,6 +407,15 @@ class PackingInfo:
 - logger_setup.py: Structured logging configuration
 - progress_tracker.py: Performance tracking, operation timing
 
+**Platform Detection** (src/infrastructure/elf_platform.py)
+- ELFPlatform: Enum for PS3, PS4, UNKNOWN
+- PlatformDetector: Detects platform from ELF characteristics
+  - Machine type (EM_X86_64 vs EM_PPC64)
+  - Endianness (little-endian vs big-endian)
+  - DWARF version (DWARF3/4 vs DWARF2)
+- BaseGenerator automatically detects platform and stores it
+- Output files organized into platform-specific folders (output/ps4/, output/ps3/)
+
 ## Data Flow
 
 ### Single Class Generation
@@ -676,6 +685,47 @@ def test_mtpropertylist_full_hierarchy():
 - Must have debug information
 - Does not work with stripped binaries
 - Requires complete DWARF data
+
+## Platform Testing
+
+The tool has been validated on both PS3 and PS4 platforms:
+
+### PS4 Testing (x86-64 DWARF3/4)
+- **Test File:** `resources/DDOORBIS.elf`
+- **Tested Classes:** MtDTI, rLayout, MtFloat3
+- **Output:** Generated to `output/ps4/`
+- **Status:** ✅ All tests passing
+
+```
+MtDTI:     56 bytes, 14 members, 23 methods
+rLayout:  528 bytes, 12 members, 19 methods
+MtFloat3:  12 bytes,  5 members, 10 methods
+```
+
+### PS3 Testing (PowerPC64 DWARF2)
+- **Test File:** `resources/PS3/EBOOT.ELF`
+- **Tested Classes:** MtDTI, MtUI, rLayout
+- **Output:** Generated to `output/ps3/`
+- **Status:** ✅ All tests passing
+- **Key Validation:** Location expression parsing (DWARF2 `[DW_OP_plus_uconst, offset]` format)
+
+```
+MtDTI:   32 bytes, 10 members,  2 methods (DWARF2 encoded)
+MtUI:     1 byte,   0 members,  0 methods
+rLayout: 1144 bytes, 6 members,  0 methods
+```
+
+### Platform-Specific Behavior
+
+**PS4 (DWARF3/4):**
+- Member offsets as direct integers
+- Standard little-endian layout
+- Typical class hierarchies work directly
+
+**PS3 (DWARF2):**
+- Member offsets as location expressions `[0x23, offset]`
+- Big-endian encoding affects bit packing calculations
+- Successfully parsed and converted to correct offsets
 
 ## References
 

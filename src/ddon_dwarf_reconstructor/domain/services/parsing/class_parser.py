@@ -25,6 +25,7 @@ from ...models.dwarf import (
     TemplateValueParam,
     UnionInfo,
 )
+from ddon_dwarf_reconstructor.generators.utils.dwarf_location_parser import parse_location_offset
 from .type_chain_traverser import TypeChainTraverser
 
 if TYPE_CHECKING:
@@ -418,7 +419,7 @@ class ClassParser:
         offset = None
         offset_attr = member_die.attributes.get("DW_AT_data_member_location")
         if offset_attr:
-            offset = offset_attr.value
+            offset = parse_location_offset(offset_attr.value)
 
         # Special handling for vtable pointers
         if member_name.startswith("_vptr$") and (

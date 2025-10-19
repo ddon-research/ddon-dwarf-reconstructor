@@ -1519,7 +1519,8 @@
     "MtArrayTemplate<cDynamicBVHCollision::Node *, false, 2>": 65020,
     "MtDtiObject": 64771,
     "stContentsDrawInfo": 356897,
-    "cNodeStackArray": 225815
+    "cNodeStackArray": 225815,
+    "unsigned char": 1949
   },
   "offset_to_symbol": {
     "963656": "rGUI",
@@ -3040,7 +3041,8 @@
     "65020": "MtArrayTemplate<cDynamicBVHCollision::Node *, false, 2>",
     "64771": "MtDtiObject",
     "356897": "stContentsDrawInfo",
-    "225815": "cNodeStackArray"
+    "225815": "cNodeStackArray",
+    "1949": "unsigned char"
   },
   "symbol_to_cu_offset": {
     "rGUI": 3229,
@@ -4561,7 +4563,8 @@
     "MtArrayTemplate<cDynamicBVHCollision::Node *, false, 2>": 3229,
     "MtDtiObject": 3229,
     "stContentsDrawInfo": 3229,
-    "cNodeStackArray": 3229
+    "cNodeStackArray": 3229,
+    "unsigned char": 0
   },
   "cu_offset_to_symbols": {
     "3229": [
@@ -5705,7 +5708,8 @@
       "uint16_t",
       "unsigned int",
       "unsigned short",
-      "pthread"
+      "pthread",
+      "unsigned char"
     ],
     "25252129": [
       "rAIPawnActNoSwitch",
@@ -6193,5 +6197,5 @@
     ]
   },
   "created": 1760212345.55422,
-  "last_updated": 1760216648.8187902
+  "last_updated": 1760833825.8416786
 }

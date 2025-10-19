@@ -13,6 +13,7 @@ from elftools.dwarf.dwarfinfo import DWARFInfo
 from elftools.elf.elffile import ELFFile
 
 from ..infrastructure.logging import get_logger
+from ..infrastructure.elf_platform import ELFPlatform, PlatformDetector
 from ..utils.elf_patches import patch_pyelftools_for_ps4
 
 # Apply PS4 ELF patches globally
@@ -40,6 +41,7 @@ class BaseGenerator(ABC):
         self.elf_path = elf_path
         self.elf_file: ELFFile | None = None
         self.dwarf_info: DWARFInfo | None = None
+        self.platform: ELFPlatform = ELFPlatform.UNKNOWN
 
     def __enter__(self) -> "BaseGenerator":
         """Context manager entry - opens ELF file and validates DWARF info.
@@ -53,6 +55,9 @@ class BaseGenerator(ABC):
         logger.debug(f"Opening ELF file: {self.elf_path}")
         self.file_handle = open(self.elf_path, "rb")
         self.elf_file = ELFFile(self.file_handle)  # type: ignore[no-untyped-call]
+
+        # Detect platform
+        self.platform = PlatformDetector.detect(str(self.elf_path))
 
         if not self.elf_file.has_dwarf_info():  # type: ignore[no-untyped-call]
             raise ValueError(f"No DWARF info found in {self.elf_path}")

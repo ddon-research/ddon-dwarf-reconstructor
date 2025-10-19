@@ -39,7 +39,15 @@ def sanitize_for_filesystem(name: str, replacement: str = "_") -> str:
 
 
 def create_header_filename(class_name: str, suffix: str = "") -> str:
-    """Create a safe header filename for a class."""
+    """Create a safe header filename for a class.
+
+    Args:
+        class_name: The class name to use as base filename
+        suffix: Optional suffix to append before .h extension
+
+    Returns:
+        Safe filename with .h extension
+    """
     base_name = sanitize_for_filesystem(class_name)
     if suffix:
         suffix = sanitize_for_filesystem(suffix)

@@ -191,7 +191,21 @@ class LazyTypeResolver:
             return f"{base_type}&&"
 
         if type_die.tag == "DW_TAG_array_type":
-            # Simplified array handling for now
+            # Array handling delegated to separate method
+            try:
+                from src.ddon_dwarf_reconstructor.generators.utils.array_parser import (
+                    parse_array_type,
+                )
+
+                array_info = parse_array_type(type_die, self)  # type: ignore
+                if array_info:
+                    return str(array_info["name"])
+            except ImportError as e:
+                logger.debug(f"Failed to import array_parser: {e}")
+            except Exception as e:
+                logger.debug(f"Error in array parsing: {e}")
+
+            # Fallback if parsing fails
             element_type = self.resolve_type_name(type_die)
             return f"{element_type}[]"
 

@@ -9,9 +9,11 @@ Reconstructs C++ class definitions from DWARF debug information in ELF files. De
 - **Inheritance hierarchies:** Complete base-to-derived chains with automatic ordering
 - **Type resolution:** Handles typedefs, pointers, references, arrays
 - **Memory layout analysis:** Packing suggestions and padding detection
+- **Platform support:** PS4 (x86-64, DWARF3/4) and PS3 (PowerPC64, DWARF2) with automatic detection
+- **Output organization:** Platform-specific output folders (output/ps4/, output/ps3/)
 - **PS4 ELF support:** Automatic section patching for PS4 binaries
 - **High performance:** Persistent caching, offset-based resolution
-- **Robust architecture:** Domain-driven design, 120 unit tests, type-safe
+- **Robust architecture:** Domain-driven design, 155+ unit tests, type-safe
 
 ## Requirements
 
@@ -30,22 +32,27 @@ uv run pytest -m unit  # verify
 ### Python Script
 
 ```bash
-# Single class
+```bash
+# Single class (PS4)
 uv run python main.py resources/DDOORBIS.elf --generate MtObject
 
-# Multiple classes (comma-separated)
+# Multiple classes (PS4)
 uv run python main.py resources/DDOORBIS.elf --generate MtObject,MtVector4,rTbl2Base
 
-# Full inheritance hierarchy
+# Full inheritance hierarchy (PS4)
 uv run python main.py resources/DDOORBIS.elf --generate ClassName --full-hierarchy
 
-# Multiple classes with full hierarchy
-uv run python main.py resources/DDOORBIS.elf --generate MtPropertyList,rTbl2ChatMacro --full-hierarchy
+# PS3 single class
+uv run python main.py resources/PS3/EBOOT.ELF --generate MtDTI
 
-# Batch processing from file (one symbol per line)
+# PS3 multiple classes
+uv run python main.py resources/PS3/EBOOT.ELF --generate MtUI,rLayout
+
+# Batch processing from file (PS4, one symbol per line)
 uv run python main.py resources/DDOORBIS.elf --symbols-file resources/season2-resources.txt
 
-# Batch processing with full hierarchy (289 symbols validated)
+# Batch processing with full hierarchy (289 symbols validated, PS4)
+````
 uv run python main.py resources/DDOORBIS.elf --symbols-file resources/season2-resources.txt --full-hierarchy
 
 # With options
@@ -97,6 +104,39 @@ src/ddon_dwarf_reconstructor/
 ```
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
+
+## Platform Support
+
+The tool automatically detects and handles different ELF platforms:
+
+| Platform | Architecture | Endianness | DWARF Version | Detection | Output Folder | Test File |
+|----------|-------------|-----------|---------------|-----------|---------------|-----------|
+| **PS4** | x86-64 | Little-endian | DWARF3/4 | Automatic | `output/ps4/` | `resources/DDOORBIS.elf` |
+| **PS3** | PowerPC64 | Big-endian | DWARF2 | Automatic | `output/ps3/` | `resources/PS3/EBOOT.ELF` |
+| **Unknown** | Other | - | - | Fallback | `output/unknown/` | - |
+
+Platform detection happens automatically during ELF loading. Output files are organized into platform-specific subdirectories to prevent file collisions when generating from multiple sources.
+
+### Testing Platform Support
+
+```bash
+# Test PS4 support
+uv run python main.py resources/DDOORBIS.elf --generate MtDTI,rLayout,MtFloat3
+
+# Test PS3 support
+uv run python main.py resources/PS3/EBOOT.ELF --generate MtDTI,MtUI,rLayout
+
+# Verify output organization
+ls output/ps4/        # PS4 generated headers
+ls output/ps3/        # PS3 generated headers
+```
+
+### DWARF Format Differences
+
+- **DWARF2 (PS3):** Member offsets encoded as location expressions `[DW_OP_plus_uconst, offset]`
+- **DWARF3/4 (PS4):** Member offsets stored as integers directly
+
+The location expression parser handles both formats transparently. See [dwarf_location_parser.py](src/ddon_dwarf_reconstructor/generators/utils/dwarf_location_parser.py) for implementation details.
 
 ## Development
 

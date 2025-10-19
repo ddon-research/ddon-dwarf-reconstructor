@@ -168,9 +168,13 @@ def main() -> NoReturn:
                     else:
                         header_content = generator.generate_header(symbol_name)
 
-                    # Determine output path - use sanitized filename for safety
+                    # Determine output path - use platform-specific subdirectory to avoid file collisions
+                    platform_str = generator.platform.value if generator.platform else "unknown"
+                    platform_dir = config.output_dir / platform_str
+                    platform_dir.mkdir(parents=True, exist_ok=True)
+
                     filename = create_header_filename(symbol_name)
-                    output_file = config.output_dir / filename
+                    output_file = platform_dir / filename
 
                     # Write to output file
                     output_file.write_text(header_content, encoding="utf-8")

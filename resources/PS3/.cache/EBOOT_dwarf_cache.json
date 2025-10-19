@@ -1,0 +1,65 @@
+{
+  "version": "2.0",
+  "symbol_to_offset": {
+    "MtDTI": 490,
+    "MtObject": 3859,
+    "MT_CTSTR": 329,
+    "u32": 299,
+    "MtUI": 793,
+    "rLayout": 407840,
+    "TYPE": 2649,
+    "stSplitID": 455633,
+    "stLayoutID": 455465,
+    "SetInfo": 407943,
+    "u8": 475,
+    "unsigned char": 87
+  },
+  "offset_to_symbol": {
+    "490": "MtDTI",
+    "3859": "MtObject",
+    "329": "MT_CTSTR",
+    "299": "u32",
+    "793": "MtUI",
+    "407840": "rLayout",
+    "2649": "TYPE",
+    "455633": "stSplitID",
+    "455465": "stLayoutID",
+    "407943": "SetInfo",
+    "475": "u8",
+    "87": "unsigned char"
+  },
+  "symbol_to_cu_offset": {
+    "MtDTI": 0,
+    "MtObject": 0,
+    "MT_CTSTR": 0,
+    "u32": 0,
+    "MtUI": 0,
+    "rLayout": 33019,
+    "TYPE": 0,
+    "stSplitID": 33019,
+    "stLayoutID": 33019,
+    "SetInfo": 33019,
+    "u8": 0,
+    "unsigned char": 0
+  },
+  "cu_offset_to_symbols": {
+    "0": [
+      "MtDTI",
+      "MtObject",
+      "MT_CTSTR",
+      "u32",
+      "MtUI",
+      "TYPE",
+      "u8",
+      "unsigned char"
+    ],
+    "33019": [
+      "rLayout",
+      "stSplitID",
+      "stLayoutID",
+      "SetInfo"
+    ]
+  },
+  "created": 1760831406.363296,
+  "last_updated": 1760833812.2389252
+}

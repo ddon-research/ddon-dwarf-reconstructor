@@ -172,11 +172,17 @@ class TypeResolver:
 
             if type_die.tag == "DW_TAG_array_type":
                 # Array handling delegated to separate method
-                from .utils.array_parser import parse_array_type
+                try:
+                    from ....generators.utils.array_parser import parse_array_type
 
-                array_info = parse_array_type(type_die, self)
-                if array_info:
-                    return str(array_info["name"])
+                    array_info = parse_array_type(type_die, self)
+                    if array_info:
+                        return str(array_info["name"])
+                except ImportError as e:
+                    logger.debug(f"Failed to import array_parser: {e}")
+                except Exception as e:
+                    logger.debug(f"Error in array parsing: {e}")
+
                 # Fallback if parsing fails
                 element_type = self.resolve_type_name(type_die)
                 return f"{element_type}[]"

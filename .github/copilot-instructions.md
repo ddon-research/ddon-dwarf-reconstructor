@@ -400,6 +400,7 @@ python -m pytest  # Wrong - use uv run
 - No emojis or casual language
 - Focus on what was done, not motivational language
 - Include specific metrics when relevant
+- Keep the amount of summary files to a minimum
 
 ### When Making Changes
 

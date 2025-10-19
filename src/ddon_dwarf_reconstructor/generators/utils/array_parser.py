@@ -32,15 +32,30 @@ def parse_array_type(
     """
     logger.debug(f"Parsing array type at DIE offset 0x{array_die.offset:x}")
 
-    # Get the element type
-    element_type = type_resolver.resolve_type_name(array_die)
+    # Get the element type by following DW_AT_type attribute
+    if "DW_AT_type" not in array_die.attributes:
+        logger.debug("Array has no DW_AT_type attribute")
+        return None
+
+    try:
+        element_die = array_die.get_DIE_from_attribute("DW_AT_type")  # type: ignore
+    except Exception as e:
+        logger.debug(f"Failed to get element DIE: {e}")
+        return None
+
+    try:
+        element_type = type_resolver.resolve_type_name(element_die)
+    except Exception as e:
+        logger.debug(f"Failed to resolve element type: {e}")
+        return None
+
     logger.debug(f"Array element type: {element_type}")
 
     # Calculate total array size from subrange children
     dimensions = []
     total_elements = 1
 
-    for child in array_die.iter_children():
+    for child in array_die.iter_children():  # type: ignore
         if child.tag == "DW_TAG_subrange_type":
             logger.debug(f"Found subrange at offset 0x{child.offset:x}")
 
