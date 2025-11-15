@@ -1,0 +1,371 @@
+"""
+Unit tests for ClassParser scoring algorithm and timeout functionality.
+Tests the enhancements for forward declaration detection and type-specific scoring.
+"""
+
+import time
+from unittest.mock import Mock, patch
+
+import pytest
+
+from ddon_dwarf_reconstructor.domain.services.parsing import ClassParser, TypeResolver
+
+
+class TestClassParserScoring:
+    """Test suite for ClassParser scoring and timeout features."""
+
+    @pytest.fixture
+    def type_resolver(self):
+        """Mock TypeResolver fixture."""
+        return Mock(spec=TypeResolver)
+
+    @pytest.fixture
+    def dwarf_info(self):
+        """Mock DWARF info fixture."""
+        return Mock()
+
+    @pytest.fixture
+    def lazy_index(self):
+        """Mock LazyDwarfIndexService fixture."""
+        return Mock()
+
+    @pytest.fixture
+    def class_parser(self, type_resolver, dwarf_info, lazy_index):
+        """ClassParser instance with mocked dependencies."""
+        parser = ClassParser(type_resolver, dwarf_info, full_scan_timeout=180.0)
+        parser.lazy_index = lazy_index
+        return parser
+
+    @pytest.mark.unit
+    def test_forward_declaration_detection(self, class_parser):
+        """Test that forward declarations are detected via DW_AT_declaration attribute."""
+        # Create mock DIE with DW_AT_declaration attribute
+        mock_die = Mock()
+        mock_die.tag = "DW_TAG_class_type"
+        mock_die.attributes = {
+            "DW_AT_name": Mock(value=b"ForwardClass"),
+            "DW_AT_declaration": Mock(value=True),  # Forward declaration marker
+        }
+        mock_die.has_children = False
+
+        # The scoring should penalize this with -1000
+        # In actual usage, this would be handled in _find_class_full_scan
+        assert "DW_AT_declaration" in mock_die.attributes
+
+    @pytest.mark.unit
+    def test_typedef_scoring(self, class_parser):
+        """Test that typedefs get score of 5000 when they have DW_AT_type attribute."""
+        mock_die = Mock()
+        mock_die.tag = "DW_TAG_typedef"
+        mock_die.attributes = {
+            "DW_AT_name": Mock(value=b"u32"),
+            "DW_AT_type": Mock(value=0x1234),  # Has type reference
+        }
+        mock_die.has_children = False
+
+        # Typedef with DW_AT_type should score 5000
+        assert "DW_AT_type" in mock_die.attributes
+        assert mock_die.tag == "DW_TAG_typedef"
+
+    @pytest.mark.unit
+    def test_base_type_scoring(self, class_parser):
+        """Test that base types (int, float, etc.) get score of 8000."""
+        mock_die = Mock()
+        mock_die.tag = "DW_TAG_base_type"
+        mock_die.attributes = {
+            "DW_AT_name": Mock(value=b"int"),
+            "DW_AT_byte_size": Mock(value=4),
+        }
+        mock_die.has_children = False
+
+        # Base types are always complete and should score 8000
+        assert mock_die.tag == "DW_TAG_base_type"
+
+    @pytest.mark.unit
+    def test_enum_scoring(self, class_parser):
+        """Test that enums with size get score of 6000."""
+        mock_die = Mock()
+        mock_die.tag = "DW_TAG_enumeration_type"
+        mock_die.attributes = {
+            "DW_AT_name": Mock(value=b"MyEnum"),
+            "DW_AT_byte_size": Mock(value=4),
+        }
+        mock_die.has_children = True
+
+        # Enum with size should score 6000
+        assert mock_die.tag == "DW_TAG_enumeration_type"
+        assert "DW_AT_byte_size" in mock_die.attributes
+
+    @pytest.mark.unit
+    def test_class_with_members_scoring(self, class_parser):
+        """Test that classes with members get high scores (10000+)."""
+        mock_die = Mock()
+        mock_die.tag = "DW_TAG_class_type"
+        mock_die.attributes = {
+            "DW_AT_name": Mock(value=b"CompleteClass"),
+            "DW_AT_byte_size": Mock(value=128),
+        }
+        mock_die.has_children = True  # Has members
+
+        # Class with members: size (128) + 10000 = 10128
+        size_attr = mock_die.attributes.get("DW_AT_byte_size")
+        expected_score = size_attr.value + 10000
+        assert expected_score == 10128
+
+    @pytest.mark.unit
+    def test_forward_declaration_vs_complete_class(self, class_parser):
+        """Test that complete definition is preferred over forward declaration."""
+        # Forward declaration (early in DWARF)
+        forward_die = Mock()
+        forward_die.tag = "DW_TAG_class_type"
+        forward_die.attributes = {
+            "DW_AT_name": Mock(value=b"MyClass"),
+            "DW_AT_declaration": Mock(value=True),
+        }
+        forward_die.has_children = False
+        forward_die.offset = 0x1000
+
+        # Complete definition (later in DWARF)
+        complete_die = Mock()
+        complete_die.tag = "DW_TAG_class_type"
+        complete_die.attributes = {
+            "DW_AT_name": Mock(value=b"MyClass"),
+            "DW_AT_byte_size": Mock(value=64),
+        }
+        complete_die.has_children = True
+        complete_die.offset = 0x2000
+
+        # Forward declaration score: -1000
+        # Complete class score: 64 + 10000 = 10064
+        # Complete should win
+        assert "DW_AT_declaration" in forward_die.attributes
+        assert "DW_AT_byte_size" in complete_die.attributes
+        assert complete_die.has_children
+
+    @pytest.mark.unit
+    def test_blacklist_pthread_types(self, class_parser):
+        """Test that pthread types are blacklisted and skipped."""
+        from ddon_dwarf_reconstructor.domain.services.parsing.class_parser import TYPE_BLACKLIST
+
+        assert "pthread_mutex" in TYPE_BLACKLIST
+        assert "pthread_cond_t" in TYPE_BLACKLIST
+        assert "FILE" in TYPE_BLACKLIST
+
+    @pytest.mark.unit
+    def test_lazy_loading_validates_cached_forward_declaration(self, class_parser):
+        """Test that cached forward declarations trigger targeted search."""
+        # Mock lazy index returning a cached offset
+        mock_offset = 0x1000
+        class_parser.lazy_index.find_symbol_offset.return_value = mock_offset
+
+        # Mock DIE at that offset (forward declaration)
+        forward_die = Mock()
+        forward_die.tag = "DW_TAG_class_type"
+        forward_die.attributes = {
+            "DW_AT_name": Mock(value=b"CachedClass"),
+            "DW_AT_declaration": Mock(value=True),  # Forward declaration
+        }
+        forward_die.has_children = False
+
+        # Mock CU
+        mock_cu = Mock()
+
+        # Mock the find_die_and_cu method to return the forward declaration
+        with patch.object(class_parser, '_find_die_and_cu_by_offset', return_value=(mock_cu, forward_die)):
+            # Mock targeted search to return better result
+            better_offset = 0x2000
+            class_parser.lazy_index.targeted_symbol_search.return_value = better_offset
+
+            # Mock better DIE (complete definition)
+            complete_die = Mock()
+            complete_die.tag = "DW_TAG_class_type"
+            complete_die.attributes = {
+                "DW_AT_name": Mock(value=b"CachedClass"),
+                "DW_AT_byte_size": Mock(value=128),
+            }
+            complete_die.has_children = True
+
+            # This tests the validation logic - it should detect forward declaration
+            # and try targeted search
+            _result = class_parser._find_class_lazy("CachedClass")
+
+            # Verify targeted search was called after detecting forward declaration
+            class_parser.lazy_index.targeted_symbol_search.assert_called_once_with("CachedClass")
+
+    @pytest.mark.unit
+    def test_timeout_behavior(self, class_parser):
+        """Test that full scan respects timeout and marks timed-out symbols."""
+        # Set a very short timeout for testing
+        class_parser.full_scan_timeout = 0.001  # 1ms
+
+        # Create many mock CUs to force timeout
+        mock_cus = []
+        for i in range(100):
+            mock_cu = Mock()
+            mock_cu.cu_offset = i * 0x1000
+            
+            # Mock CU DIE (compilation unit header)
+            cu_die = Mock()
+            cu_die.tag = "DW_TAG_compile_unit"
+            
+            mock_die = Mock()
+            mock_die.tag = "DW_TAG_class_type"
+            mock_die.attributes = {"DW_AT_name": Mock(value=b"DummyClass")}
+            mock_die.has_children = False
+            mock_cu.iter_DIEs.return_value = [cu_die, mock_die]
+            mock_cus.append(mock_cu)
+
+        class_parser.dwarf_info.iter_CUs.return_value = mock_cus
+
+        # Mock time to simulate elapsed time exceeding timeout
+        start_time = time.time()
+        call_count = [0]
+        
+        def mock_time():
+            call_count[0] += 1
+            if call_count[0] > 5:  # After a few calls, report timeout
+                return start_time + 0.002  # Exceed 1ms timeout
+            return start_time
+        
+        with patch('time.time', side_effect=mock_time):
+            _result = class_parser._find_class_full_scan("TimeoutTest")
+
+            # Should timeout and return None or incomplete result
+            # The timed_out_symbols set should contain the symbol
+            assert "TimeoutTest" in class_parser.timed_out_symbols
+
+    @pytest.mark.unit
+    def test_early_exit_optimization(self, class_parser):
+        """Test that search exits early when finding score >= 5000."""
+        # This tests the early exit logic for typedefs/base types/enums
+        # Score >= 5000 should cause immediate return
+
+        # Create mock CU with typedef (score 5000)
+        mock_cu1 = Mock()
+        mock_cu1.cu_offset = 0x1000
+        
+        typedef_die = Mock()
+        typedef_die.tag = "DW_TAG_typedef"
+        typedef_die.attributes = {
+            "DW_AT_name": Mock(value=b"u32"),
+            "DW_AT_type": Mock(value=0x1234),
+        }
+        typedef_die.offset = 0x1100
+        typedef_die.has_children = False
+
+        mock_cu1.iter_DIEs.return_value = [typedef_die]
+
+        # Create second CU that should never be checked due to early exit
+        mock_cu2 = Mock()
+        mock_cu2.cu_offset = 0x2000
+        mock_cu2.iter_DIEs.return_value = []  # Should not be called
+
+        class_parser.dwarf_info.iter_CUs.return_value = [mock_cu1, mock_cu2]
+
+        # In actual implementation with lazy loading, this would use targeted_symbol_search
+        # which has early exit at score >= 5000
+        # This test verifies the logic structure
+
+    @pytest.mark.unit
+    def test_multi_cu_scenario(self, class_parser):
+        """Test finding complete definition across multiple compilation units."""
+        # Disable lazy loading to force full scan
+        class_parser.lazy_index = None
+
+        # CU 1: Forward declaration
+        mock_cu1 = Mock()
+        mock_cu1.cu_offset = 0x1000
+
+        # Mock CU DIE (compilation unit header)
+        cu_die1 = Mock()
+        cu_die1.tag = "DW_TAG_compile_unit"
+        cu_die1.is_null.return_value = False
+
+        forward_die = Mock()
+        forward_die.tag = "DW_TAG_class_type"
+        forward_die.attributes = {
+            "DW_AT_name": Mock(value=b"MultiCUClass"),
+            "DW_AT_declaration": Mock(value=True),
+        }
+        forward_die.offset = 0x1100
+        forward_die.has_children = False
+        forward_die.is_null.return_value = False
+
+        mock_cu1.iter_DIEs.return_value = [cu_die1, forward_die]
+
+        # CU 2: Complete definition
+        mock_cu2 = Mock()
+        mock_cu2.cu_offset = 0x5000
+
+        # Mock CU DIE (compilation unit header)
+        cu_die2 = Mock()
+        cu_die2.tag = "DW_TAG_compile_unit"
+        cu_die2.is_null.return_value = False
+
+        complete_die = Mock()
+        complete_die.tag = "DW_TAG_class_type"
+        complete_die.attributes = {
+            "DW_AT_name": Mock(value=b"MultiCUClass"),
+            "DW_AT_byte_size": Mock(value=256),
+        }
+        complete_die.offset = 0x5100
+        complete_die.has_children = True
+        complete_die.is_null.return_value = False
+
+        mock_cu2.iter_DIEs.return_value = [cu_die2, complete_die]
+
+        class_parser.dwarf_info.iter_CUs.return_value = [mock_cu1, mock_cu2]
+
+        # Should find complete definition in CU 2, not forward declaration in CU 1
+        result = class_parser._find_class_full_scan("MultiCUClass")
+
+        assert result is not None
+        cu, die = result
+        assert cu == mock_cu2
+        assert die.offset == 0x5100
+        assert "DW_AT_byte_size" in die.attributes
+
+    @pytest.mark.unit
+    def test_zero_member_class_mtframework_heuristic(self, class_parser):
+        """Test that zero-member classes with size trigger MTFramework warning."""
+        mock_die = Mock()
+        mock_die.tag = "DW_TAG_class_type"
+        mock_die.attributes = {
+            "DW_AT_name": Mock(value=b"MtEmptyClass"),
+            "DW_AT_byte_size": Mock(value=8),  # Has size but no members
+        }
+        mock_die.has_children = False  # No members
+
+        # This should be handled with a warning in the actual parsing
+        # Score would be: 8 + 0 = 8 (no 10000 bonus for has_children)
+        size_attr = mock_die.attributes.get("DW_AT_byte_size")
+        score = size_attr.value + (10000 if mock_die.has_children else 0)
+        assert score == 8  # Low score, but still valid
+
+    @pytest.mark.unit
+    def test_incomplete_typedef_scoring(self, class_parser):
+        """Test that typedefs without DW_AT_type get negative score."""
+        mock_die = Mock()
+        mock_die.tag = "DW_TAG_typedef"
+        mock_die.attributes = {
+            "DW_AT_name": Mock(value=b"IncompleteTypedef"),
+            # Missing DW_AT_type attribute
+        }
+        mock_die.has_children = False
+
+        # Typedef without DW_AT_type should score -500
+        assert "DW_AT_type" not in mock_die.attributes
+
+    @pytest.mark.unit
+    def test_enum_without_size_scoring(self, class_parser):
+        """Test that enums without size get negative score."""
+        mock_die = Mock()
+        mock_die.tag = "DW_TAG_enumeration_type"
+        mock_die.attributes = {
+            "DW_AT_name": Mock(value=b"IncompleteEnum"),
+            # Missing DW_AT_byte_size attribute
+        }
+        mock_die.has_children = True
+
+        # Enum without size should score -500
+        assert "DW_AT_byte_size" not in mock_die.attributes

@@ -7,13 +7,15 @@ Reconstructs C++ class definitions from DWARF debug information in ELF files. De
 - **Complete dependency resolution:** Recursively resolves all type dependencies
 - **Full class definitions:** Generates complete headers with all dependent classes (not just forward declarations)
 - **Inheritance hierarchies:** Complete base-to-derived chains with automatic ordering
+- **Multi-CU type resolution:** Searches all compilation units to find complete definitions, preferring them over forward declarations
+- **Type-aware scoring:** Distinguishes typedefs, base types, enums, and classes with intelligent completeness scoring
 - **Type resolution:** Handles typedefs, pointers, references, arrays
 - **Memory layout analysis:** Packing suggestions and padding detection
 - **Platform support:** PS4 (x86-64, DWARF3/4) and PS3 (PowerPC64, DWARF2) with automatic detection
 - **Output organization:** Platform-specific output folders (output/ps4/, output/ps3/)
 - **PS4 ELF support:** Automatic section patching for PS4 binaries
-- **High performance:** Persistent caching, offset-based resolution
-- **Robust architecture:** Domain-driven design, 155+ unit tests, type-safe
+- **High performance:** Persistent caching, offset-based resolution, timeout protection (180s default)
+- **Robust architecture:** Domain-driven design, 216 unit tests, type-safe
 
 ## Requirements
 

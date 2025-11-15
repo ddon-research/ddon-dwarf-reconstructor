@@ -235,9 +235,10 @@ class ClassParser:
                         # Early exit optimization: if we found a perfect match
                         # (classes with members, typedefs, base types, or enums)
                         if (has_members and has_size and not is_declaration) or score >= 5000:
+                            size_str = f"{size_attr.value} bytes" if size_attr else "no size"
                             logger.info(
                                 f"Found {class_name} in CU at offset 0x{cu.cu_offset:x} "
-                                f"(perfect match: size={size_attr.value} bytes, has_children=True, "
+                                f"(perfect match: size={size_str}, has_children={has_members}, "
                                 f"score={score})"
                             )
                             return cu, die

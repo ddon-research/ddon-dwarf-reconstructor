@@ -259,6 +259,86 @@ class DwarfGenerator(BaseGenerator):
         logger.info(f"Header generated successfully for {class_name}")
         return header
 
+    def _expand_typedef_search(self, full_hierarchy: bool = True) -> None:
+        """Expand typedef search for hierarchy generation.
+
+        Args:
+            full_hierarchy: Enable full hierarchy mode
+        """
+        typedef_expand_start = time()
+        assert self.type_resolver is not None
+        self.type_resolver.expand_primitive_search(full_hierarchy=full_hierarchy)
+        typedef_expand_elapsed = time() - typedef_expand_start
+        logger.debug(f"Typedef search expansion completed in {typedef_expand_elapsed:.3f}s")
+
+    def _build_hierarchy_with_timing(
+        self, class_name: str, max_depth: int = 10
+    ) -> tuple[dict[str, ClassInfo], list[str]]:
+        """Build full hierarchy with dependencies and timing.
+
+        Args:
+            class_name: Target class name
+            max_depth: Maximum inheritance depth
+
+        Returns:
+            Tuple of (class_infos dict, hierarchy_order list)
+        """
+        hierarchy_start = time()
+        assert self.hierarchy_builder is not None
+        class_infos, hierarchy_order = self.hierarchy_builder.build_full_hierarchy_with_dependencies(
+            class_name, max_depth=max_depth
+        )
+        hierarchy_elapsed = time() - hierarchy_start
+        logger.debug(f"Hierarchy building completed in {hierarchy_elapsed:.3f}s")
+        return class_infos, hierarchy_order
+
+    def _validate_hierarchy(self, class_infos: dict[str, ClassInfo], class_name: str) -> bool:
+        """Validate hierarchy is not empty.
+
+        Args:
+            class_infos: Dictionary of class information
+            class_name: Target class name
+
+        Returns:
+            True if valid, False if empty
+        """
+        if not class_infos:
+            logger.warning(f"No classes found in hierarchy for {class_name}")
+            return False
+        return True
+
+    def _collect_typedefs_and_packing(
+        self, class_infos: dict[str, ClassInfo]
+    ) -> dict[str, str]:
+        """Add packing info and collect all typedefs from classes.
+
+        Args:
+            class_infos: Dictionary of class information
+
+        Returns:
+            Dictionary of collected typedefs
+        """
+        packing_start = time()
+        all_typedefs: dict[str, str] = {}
+
+        for _cls_name, class_info in class_infos.items():
+            if class_info.packing_info is None:
+                class_info.packing_info = calculate_packing_info(class_info)
+
+            # Collect typedefs for this class
+            class_typedefs = self.type_resolver.collect_used_typedefs(
+                class_info.members,
+                class_info.methods,
+                class_info.unions,
+                class_info.nested_structs,
+            )
+            all_typedefs.update(class_typedefs)
+
+        packing_elapsed = time() - packing_start
+        logger.debug(f"Packing analysis and typedef collection completed in {packing_elapsed:.3f}s")
+
+        return all_typedefs
+
     @log_timing
     def generate_complete_hierarchy_header(
         self,
@@ -279,44 +359,18 @@ class DwarfGenerator(BaseGenerator):
         """
         logger.info(f"Generating complete hierarchy header for: {class_name}")
 
-        # Expand typedef search for full hierarchy mode
-        typedef_expand_start = time()
-        assert self.type_resolver is not None
-        self.type_resolver.expand_primitive_search(full_hierarchy=True)
-        typedef_expand_elapsed = time() - typedef_expand_start
-        logger.debug(f"Typedef search expansion completed in {typedef_expand_elapsed:.3f}s")
+        # Step 1: Expand typedef search
+        self._expand_typedef_search(full_hierarchy=True)
 
-        # Build full hierarchy with dependencies (timing included)
-        hierarchy_start = time()
-        assert self.hierarchy_builder is not None
-        class_infos, hierarchy_order = self.hierarchy_builder.build_full_hierarchy_with_dependencies(
-            class_name, max_depth=10
-        )
-        hierarchy_elapsed = time() - hierarchy_start
-        logger.debug(f"Hierarchy building completed in {hierarchy_elapsed:.3f}s")
+        # Step 2: Build full hierarchy with dependencies
+        class_infos, hierarchy_order = self._build_hierarchy_with_timing(class_name, max_depth=10)
 
-        if not class_infos:
-            logger.warning(f"No classes found in hierarchy for {class_name}")
+        # Step 3: Validate hierarchy
+        if not self._validate_hierarchy(class_infos, class_name):
             return self._generate_not_found_header(class_name)
 
-        # Add packing info and collect typedefs from all classes with timing
-        packing_start = time()
-        all_typedefs: dict[str, str] = {}
-        for _cls_name, class_info in class_infos.items():
-            if class_info.packing_info is None:
-                class_info.packing_info = calculate_packing_info(class_info)
-
-            # Collect typedefs for this class
-            class_typedefs = self.type_resolver.collect_used_typedefs(
-                class_info.members,
-                class_info.methods,
-                class_info.unions,
-                class_info.nested_structs,
-            )
-            all_typedefs.update(class_typedefs)
-
-        packing_elapsed = time() - packing_start
-        logger.debug(f"Packing analysis and typedef collection completed in {packing_elapsed:.3f}s")
+        # Step 4: Add packing info and collect typedefs
+        all_typedefs = self._collect_typedefs_and_packing(class_infos)
 
         logger.info(
             f"Hierarchy complete: {len(class_infos)} classes in order: "
@@ -358,24 +412,14 @@ class DwarfGenerator(BaseGenerator):
         """
         logger.info(f"Generating multi-file hierarchy for: {class_name}")
 
-        # Expand typedef search for full hierarchy mode
-        typedef_expand_start = time()
-        assert self.type_resolver is not None
-        self.type_resolver.expand_primitive_search(full_hierarchy=True)
-        typedef_expand_elapsed = time() - typedef_expand_start
-        logger.debug(f"Typedef search expansion completed in {typedef_expand_elapsed:.3f}s")
+        # Step 1: Expand typedef search
+        self._expand_typedef_search(full_hierarchy=True)
 
-        # Build full hierarchy with dependencies
-        hierarchy_start = time()
-        assert self.hierarchy_builder is not None
-        class_infos, hierarchy_order = self.hierarchy_builder.build_full_hierarchy_with_dependencies(
-            class_name, max_depth=10
-        )
-        hierarchy_elapsed = time() - hierarchy_start
-        logger.debug(f"Hierarchy building completed in {hierarchy_elapsed:.3f}s")
+        # Step 2: Build full hierarchy with dependencies
+        class_infos, hierarchy_order = self._build_hierarchy_with_timing(class_name, max_depth=10)
 
-        if not class_infos:
-            logger.warning(f"No classes found in hierarchy for {class_name}")
+        # Step 3: Validate hierarchy
+        if not self._validate_hierarchy(class_infos, class_name):
             not_found = self._generate_not_found_header(class_name)
             return {"UncategorizedDefinitions.h": not_found}
 
@@ -404,24 +448,8 @@ class DwarfGenerator(BaseGenerator):
         # Initialize header cache
         cache = HeaderCache(str(self.elf_path))
 
-        # Add packing info and collect all typedefs with timing
-        packing_start = time()
-        all_typedefs: dict[str, str] = {}
-        for _cls_name, class_info in class_infos.items():
-            if class_info.packing_info is None:
-                class_info.packing_info = calculate_packing_info(class_info)
-
-            # Collect typedefs for this class
-            class_typedefs = self.type_resolver.collect_used_typedefs(
-                class_info.members,
-                class_info.methods,
-                class_info.unions,
-                class_info.nested_structs,
-            )
-            all_typedefs.update(class_typedefs)
-
-        packing_elapsed = time() - packing_start
-        logger.debug(f"Packing analysis and typedef collection completed in {packing_elapsed:.3f}s")
+        # Step 4: Add packing info and collect typedefs
+        all_typedefs = self._collect_typedefs_and_packing(class_infos)
 
         # Generate headers for each file
         output_headers: dict[str, str] = {}

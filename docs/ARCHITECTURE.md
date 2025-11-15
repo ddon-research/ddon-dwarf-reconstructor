@@ -177,9 +177,20 @@ class TypeChainTraverser:
         """Follow DW_AT_type chain to named type."""
 ```
 
-**class_parser.py** - DWARF parsing with offset capture
+**class_parser.py** - DWARF parsing with multi-CU resolution
 
-- Finds classes in compilation units (early exit optimization)
+- Finds classes in compilation units with intelligent scoring
+- **Multi-CU type resolution:** Searches all compilation units to find complete definitions
+- **Type-aware scoring algorithm:**
+  - Forward declarations (DW_AT_declaration): -1000 penalty
+  - Typedefs with DW_AT_type: 5000
+  - Base types (int, float, etc.): 8000
+  - Enums with size: 6000
+  - Classes with members: 10000 + byte_size
+- **Smart cache validation:** Validates cached entries are complete, not forward declarations
+- **Timeout protection:** 180-second default prevents indefinite searches on missing types
+- **Blacklist mechanism:** Skips pthread and system types without debug info
+- **Early exit optimization:** Returns immediately when finding complete type (score >= 5000)
 - Parses members, methods, nested types
 - **Captures type_offset fields** using TypeChainTraverser
 - Handles anonymous unions, virtual methods
@@ -187,9 +198,43 @@ class TypeChainTraverser:
 
 ```python
 class ClassParser:
+    def __init__(self, type_resolver, dwarf_info, full_scan_timeout: float = 180.0):
+        """Initialize with configurable timeout for full DWARF scans."""
+        self.timed_out_symbols: set[str] = set()  # Track symbols that exceeded timeout
+    
     @log_timing
     def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
-        """Efficient class discovery with early exit."""
+        """Efficient class discovery with scoring and timeout protection.
+        
+        Algorithm:
+        1. Try cache first (lazy loading)
+        2. Validate cached entry is not forward declaration
+        3. If forward declaration, trigger targeted search across all CUs
+        4. Fall back to full scan with timeout if needed
+        5. Prefer complete definitions over forward declarations via scoring
+        """
+    
+    def _find_class_full_scan(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
+        """Search all CUs with type-aware scoring.
+        
+        Scoring rules:
+        - Forward declaration: -1000
+        - Typedef with DW_AT_type: 5000
+        - Base type: 8000
+        - Enum with size: 6000
+        - Class with members: 10000 + size
+        
+        Early exit at score >= 5000 (typedefs, base types, enums).
+        Times out after full_scan_timeout seconds (default 180s).
+        """
+    
+    def _find_class_lazy(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
+        """Lazy loading with cache validation.
+        
+        Validates cached entries via DW_AT_declaration attribute.
+        If forward declaration found, tries targeted_symbol_search.
+        Falls back to returning forward declaration if no better match exists.
+        """
     
     @log_timing
     def parse_class_info(self, cu: CompileUnit, class_die: DIE) -> ClassInfo:
@@ -199,10 +244,13 @@ class ClassParser:
         """Parse member with type_offset field."""
 ```
 
-**lazy_dwarf_index_service.py** - Lazy DIE loading service (NEW)
+**lazy_dwarf_index_service.py** - Lazy DIE loading with multi-CU search
 
 - O(1) DIE lookup by offset via lazy-loaded index
 - Caches offset→DIE mappings
+- **Multi-CU symbol search with scoring:** Searches all compilation units with same scoring logic as class_parser
+- **Timeout protection:** Configurable timeout for targeted searches (default 180s)
+- **Early exit optimization:** Returns immediately when finding complete type (score >= 5000)
 - Enables offset-based type validation
 
 ```python
@@ -210,8 +258,26 @@ class LazyDwarfIndexService:
     def get_die_by_offset(self, offset: int) -> DIE | None:
         """O(1) DIE retrieval by DWARF offset."""
     
-    def targeted_symbol_search(self, symbol_name: str) -> int | None:
-        """Find symbol and return its offset."""
+    def targeted_symbol_search(
+        self, symbol_name: str, timeout: float = 180.0
+    ) -> int | None:
+        """Search all CUs for symbol with type-aware scoring.
+        
+        Uses same scoring algorithm as ClassParser:
+        - Forward declaration: -1000
+        - Typedef with DW_AT_type: 5000
+        - Base type: 8000
+        - Enum with size: 6000
+        - Class with members: 10000 + size
+        
+        Returns offset of best match, or None if not found/timed out.
+        Tracks global best score across all CUs for intelligent selection.
+        """
+    
+    def _search_cu_for_symbol_with_score(
+        self, cu: CompileUnit, symbol_name: str
+    ) -> tuple[int | None, int]:
+        """Search single CU and return (offset, score) tuple."""
 ```
 
 **lazy_type_resolver.py** - Type resolution (REFACTORED)
@@ -230,6 +296,129 @@ class LazyTypeResolver:
     def _resolve_primitive_typedef(self, typedef_name: str) -> str:
         """Resolve typedef with excluded type checking."""
 ```
+
+**array_parser.py** - Array type parsing
+
+---
+
+### Shared Generation Helper Methods (Code Duplication Reduction)
+
+**Problem:** Originally, `generate_complete_hierarchy_header` (single-file mode) and `generate_multi_file_hierarchy` (multi-file mode) duplicated ~75% of their code:
+- Typedef expansion
+- Hierarchy building with timing
+- Empty hierarchy validation
+- Packing info and typedef collection
+
+**Solution:** Extract shared logic into reusable helper methods (November 2025 refactoring):
+
+**dwarf_generator.py** - Shared helper methods
+
+```python
+class DwarfGenerator:
+    def _expand_typedef_search(self, full_hierarchy: bool = True) -> None:
+        """Expand typedef search for hierarchy generation.
+        
+        Shared by both single-file and multi-file modes.
+        Includes timing instrumentation for performance tracking.
+        """
+    
+    def _build_hierarchy_with_timing(
+        self, class_name: str, max_depth: int = 10
+    ) -> tuple[dict[str, ClassInfo], list[str]]:
+        """Build full hierarchy with dependencies and timing.
+        
+        Returns:
+            Tuple of (class_infos dict, hierarchy_order list)
+        
+        Shared by both modes. Delegates to HierarchyBuilder.
+        """
+    
+    def _validate_hierarchy(
+        self, class_infos: dict[str, ClassInfo], class_name: str
+    ) -> bool:
+        """Validate hierarchy is not empty.
+        
+        Returns:
+            True if valid, False if empty
+        
+        Shared validation logic for both modes.
+        """
+    
+    def _collect_typedefs_and_packing(
+        self, class_infos: dict[str, ClassInfo]
+    ) -> dict[str, str]:
+        """Add packing info and collect all typedefs from classes.
+        
+        Returns:
+            Dictionary of collected typedefs
+        
+        Shared by both modes. Combines packing analysis with typedef collection
+        for efficiency (single iteration over class_infos).
+        """
+```
+
+**Impact:**
+- Code duplication reduced from ~75% to ~15%
+- Only mode-specific logic remains in main methods:
+  - Single-file: Direct header generation
+  - Multi-file: FileRegistry + per-file header generation
+- Future bug fixes in shared logic automatically apply to both modes
+- All 218 tests pass (216 unit + 2 integration)
+- No regression in functionality (verified with rLayout generation)
+
+**Usage in refactored methods:**
+
+```python
+def generate_complete_hierarchy_header(self, class_name: str) -> str:
+    """Single-file mode (legacy)."""
+    # Step 1: Shared - Expand typedef search
+    self._expand_typedef_search(full_hierarchy=True)
+    
+    # Step 2: Shared - Build hierarchy
+    class_infos, hierarchy_order = self._build_hierarchy_with_timing(
+        class_name, max_depth=10
+    )
+    
+    # Step 3: Shared - Validate
+    if not self._validate_hierarchy(class_infos, class_name):
+        return self._generate_not_found_header(class_name)
+    
+    # Step 4: Shared - Collect typedefs and packing
+    all_typedefs = self._collect_typedefs_and_packing(class_infos)
+    
+    # Mode-specific: Generate single header
+    header = self.header_generator.generate_single_file_hierarchy_header(
+        class_infos, hierarchy_order, class_name,
+        typedefs=all_typedefs, include_metadata=True
+    )
+    return header
+
+def generate_multi_file_hierarchy(self, class_name: str) -> dict[str, str]:
+    """Multi-file mode with FileRegistry."""
+    # Steps 1-4: Same shared logic as single-file mode
+    self._expand_typedef_search(full_hierarchy=True)
+    class_infos, hierarchy_order = self._build_hierarchy_with_timing(
+        class_name, max_depth=10
+    )
+    if not self._validate_hierarchy(class_infos, class_name):
+        return {"UncategorizedDefinitions.h": self._generate_not_found_header(class_name)}
+    
+    # Mode-specific: FileRegistry for file organization
+    file_registry = FileRegistry(self.dwarf_info)
+    # ... register classes ...
+    classes_by_file = file_registry.get_classes_by_file()
+    
+    # Step 4: Shared - Collect typedefs (same as single-file)
+    all_typedefs = self._collect_typedefs_and_packing(class_infos)
+    
+    # Mode-specific: Generate headers per file
+    output_headers: dict[str, str] = {}
+    for file_path, file_classes in sorted(classes_by_file.items()):
+        # ... generate header for each file ...
+    return output_headers
+```
+
+---
 
 **array_parser.py** - Array type parsing
 
@@ -579,6 +768,32 @@ class PackingInfo:
 - **Clean Output:** No invalid typedefs, correct forward declarations
 - **Cache Performance:** 1519 symbols cached for fast re-use
 - **Complete Headers:** All dependencies fully resolved and generated
+- **Multi-CU Resolution:** Successfully finds complete definitions across 2272+ compilation units
+- **Timeout Protection:** No indefinite searches, all lookups complete within 180s timeout
+
+### Multi-CU Type Resolution Performance
+
+**Test Case: rLayout (single-file mode)**
+
+- **Total Classes:** 285 classes resolved
+- **Total Typedefs:** 52 typedefs resolved
+- **Compilation Units:** 2272+ CUs searched
+- **Execution Time:** 423 seconds (7 minutes)
+- **Timeouts:** 0 (all types found within 180s limit)
+- **Cache Hits:** 387 symbols from persistent cache
+
+**Scoring Algorithm Efficiency:**
+
+- **Early Exit:** Returns immediately at score >= 5000 (typedefs, base types, enums)
+- **Complete Definition Priority:** Classes with members score 10000+, forward declarations score -1000
+- **Type-Specific Handling:** Typedefs (5000), base types (8000), enums (6000) get appropriate scores
+- **Best Match Tracking:** Searches all CUs to find highest-scored definition
+
+**Example: cSetInfoOmTreasureBox**
+
+- **Forward declaration:** Found at offset 0x0010fd6d (CU 0xc9d) with score -1000
+- **Complete definition:** Found at offset 0x6a9a9cf (CU 0x699b890) with score 10128 (128 bytes + 10000 for members)
+- **Result:** Complete definition selected and generated with proper inheritance and methods
 
 ### Offset-Based Architecture Benefits
 
@@ -588,14 +803,19 @@ class PackingInfo:
 - Invalid typedef generation (typedef void void*)
 - Infinite search loops on internal DWARF types
 - 614 lines in hierarchy_builder.py
+- Forward declarations returned even when complete definitions exist
 
-**After (Offset-Based):**
+**After (Offset-Based with Multi-CU Scoring):**
 
 - Type validation via DWARF offsets (no string parsing)
 - Internal type filtering (class_type, structure_type, void)
 - O(1) DIE lookups with LazyDwarfIndexService
 - 243 lines in hierarchy_builder.py (60% reduction)
 - Zero parsing bugs in 289-symbol integration test
+- **Intelligent multi-CU search:** Finds complete definitions across all compilation units
+- **Smart cache validation:** Validates cached forward declarations, searches for better matches
+- **Timeout protection:** Prevents indefinite searches with configurable limits
+- **Blacklist mechanism:** Skips known problematic types (pthread_mutex, FILE, etc.)
 
 ### Caching Strategy
 

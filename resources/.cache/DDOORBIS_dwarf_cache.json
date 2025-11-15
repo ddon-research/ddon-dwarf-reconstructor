@@ -387,7 +387,8 @@
     "JOBHANDLE": 267340,
     "NodeBinaryCommon": 264519,
     "MtGeometry": 200461,
-    "JobParamOfLine": 266819
+    "JobParamOfLine": 266819,
+    "cSetInfoCoord": 111778774
   },
   "offset_to_symbol": {
     "34029": "MtObject",
@@ -776,7 +777,8 @@
     "267340": "JOBHANDLE",
     "264519": "NodeBinaryCommon",
     "200461": "MtGeometry",
-    "266819": "JobParamOfLine"
+    "266819": "JobParamOfLine",
+    "111778774": "cSetInfoCoord"
   },
   "symbol_to_cu_offset": {
     "MtObject": 3229,
@@ -1165,7 +1167,8 @@
     "JOBHANDLE": 3229,
     "NodeBinaryCommon": 3229,
     "MtGeometry": 3229,
-    "JobParamOfLine": 3229
+    "JobParamOfLine": 3229,
+    "cSetInfoCoord": 110737552
   },
   "cu_offset_to_symbols": {
     "3229": [
@@ -1550,7 +1553,8 @@
       "cSetInfoOmWall",
       "cSetInfoOmWarp",
       "cSetInfoOmBadStatus",
-      "cLinkParam"
+      "cLinkParam",
+      "cSetInfoCoord"
     ],
     "157183273": [
       "cSetInfoGeneralPoint"
@@ -1573,5 +1577,5 @@
     ]
   },
   "created": 1763217861.83208,
-  "last_updated": 1763218259.343477
+  "last_updated": 1763221791.8048663
 }
