@@ -60,7 +60,7 @@ class TestHeaderGenerator:
         """Test proper initialization of HeaderGenerator."""
         assert header_generator is not None
         assert hasattr(header_generator, "generate_header")
-        assert hasattr(header_generator, "generate_hierarchy_header")
+        assert hasattr(header_generator, "generate_single_file_hierarchy_header")
 
     @pytest.mark.unit
     def test_generate_header_basic_class(self, header_generator, sample_class):
@@ -109,9 +109,9 @@ class TestHeaderGenerator:
         assert "class DerivedClass : public BaseClass" in header
 
     @pytest.mark.unit
-    def test_generate_hierarchy_header_empty(self, header_generator):
-        """Test hierarchy header generation with empty class list."""
-        header = header_generator.generate_hierarchy_header({}, [], "TestClass")
+    def test_generate_single_file_hierarchy_header_empty(self, header_generator):
+        """Test single-file hierarchy header generation with empty class list."""
+        header = header_generator.generate_single_file_hierarchy_header({}, [], "TestClass")
 
         # Should generate valid header structure
         assert isinstance(header, str)
@@ -120,11 +120,11 @@ class TestHeaderGenerator:
         assert "#endif" in header
 
     @pytest.mark.unit
-    def test_generate_hierarchy_header_single_class(self, header_generator, sample_class):
-        """Test hierarchy header generation with single class."""
+    def test_generate_single_file_hierarchy_header_single_class(self, header_generator, sample_class):
+        """Test single-file hierarchy header generation with single class."""
         classes = {"TestClass": sample_class}
         order = ["TestClass"]
-        header = header_generator.generate_hierarchy_header(classes, order, "TestClass")
+        header = header_generator.generate_single_file_hierarchy_header(classes, order, "TestClass")
 
         # Should include the class
         assert "class TestClass" in header

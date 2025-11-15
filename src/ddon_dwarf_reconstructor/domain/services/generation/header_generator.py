@@ -97,7 +97,7 @@ class HeaderGenerator:
         return "\n".join(lines)
 
     @log_timing
-    def generate_hierarchy_header(
+    def generate_single_file_hierarchy_header(
         self,
         class_infos: dict[str, ClassInfo],
         hierarchy_order: list[str],
@@ -105,7 +105,11 @@ class HeaderGenerator:
         typedefs: dict[str, str] | None = None,
         include_metadata: bool = True,
     ) -> str:
-        """Generate C++ header with complete inheritance hierarchy.
+        """Generate C++ header with complete inheritance hierarchy (single file, legacy mode).
+
+        This method generates all classes in a single file with forward declarations
+        for dependencies. Used for backward compatibility when --full-hierarchy --single-file
+        is specified.
 
         Args:
             class_infos: Dictionary of class name -> ClassInfo
@@ -191,6 +195,107 @@ class HeaderGenerator:
                 lines.extend([""] + class_lines)
 
         lines.extend(["", f"#endif // {sanitized_target}_HIERARCHY_H"])
+
+        return "\n".join(lines)
+
+    @log_timing
+    def generate_single_class_header(
+        self,
+        class_info: ClassInfo,
+        class_dependencies: dict[str, str] | None = None,
+        typedefs: dict[str, str] | None = None,
+        include_metadata: bool = True,
+    ) -> str:
+        """Generate C++ header for single class with include dependencies (multi-file mode).
+
+        This method generates a standalone header for one class with #include statements
+        for dependency headers instead of forward declarations. Each include statement
+        references the header file where the dependency is defined.
+
+        Args:
+            class_info: ClassInfo for the target class
+            class_dependencies: Dict mapping class names to their header filenames
+                                (e.g., {"MtObject": "MtObject.h"})
+            typedefs: Dictionary of typedef name -> underlying type
+            include_metadata: Whether to include DWARF metadata comments
+
+        Returns:
+            Complete C++ header file with includes and class definition
+        """
+        class_name = class_info.name
+        sanitized_class = sanitize_for_filesystem(class_name).upper()
+        lines = [
+            f"#ifndef {sanitized_class}_H",
+            f"#define {sanitized_class}_H",
+            "",
+        ]
+
+        # Add standard includes
+        lines.extend([
+            "#include <cstdint>",
+            "",
+        ])
+
+        # Add includes for dependency classes
+        if class_dependencies:
+            # Extract unique dependency headers, excluding self-references
+            dependency_headers = set()
+            for dep_class, dep_header in class_dependencies.items():
+                if dep_class != class_name and dep_header:
+                    dependency_headers.add(dep_header)
+
+            if dependency_headers:
+                lines.append("// Dependencies")
+                for header in sorted(dependency_headers):
+                    # Use relative includes for headers in same directory
+                    lines.append(f'#include "{header}"')
+                lines.append("")
+
+        # Add base class includes
+        base_class_headers = set()
+        for base_class_name in class_info.base_classes:
+            if class_dependencies and base_class_name in class_dependencies:
+                base_header = class_dependencies[base_class_name]
+                if base_header and base_header not in base_class_headers:
+                    # Only add if not already included
+                    base_class_headers.add(base_header)
+
+        if base_class_headers:
+            lines.append("// Base classes")
+            for header in sorted(base_class_headers):
+                lines.append(f'#include "{header}"')
+            lines.append("")
+
+        # Add typedefs
+        if typedefs:
+            lines.append("// Type definitions")
+            for typedef_name, underlying_type in sorted(typedefs.items()):
+                lines.append(f"typedef {underlying_type} {typedef_name};")
+            lines.append("")
+
+        # Add metadata
+        if include_metadata:
+            lines.extend([
+                f"// Class: {class_name}",
+                f"// Size: {class_info.byte_size} bytes",
+                f"// DIE Offset: 0x{class_info.die_offset:08x}" if class_info.die_offset else "// DIE Offset: unknown",
+            ])
+
+            if class_info.packing_info:
+                packing = class_info.packing_info
+                lines.append(f"// Suggested Packing: {packing.get('suggested_packing', 'unknown')} bytes")
+
+            if class_info.declaration_file:
+                lines.append(f"// Declared in: {class_info.declaration_file}")
+
+            lines.append("")
+
+        # Generate class definition (no forward declarations - all includes above)
+        class_lines = self._generate_single_class(class_info, include_metadata=False)
+        lines.extend(class_lines)
+
+        # Close include guard
+        lines.extend(["", f"#endif // {sanitized_class}_H"])
 
         return "\n".join(lines)
 

@@ -18,7 +18,8 @@ from elftools.dwarf.compileunit import CompileUnit
 from elftools.dwarf.die import DIE
 
 from ...domain.models.dwarf import ClassInfo
-from ...domain.services.generation import HeaderGenerator, HierarchyBuilder
+from ...domain.repositories.cache import HeaderCache
+from ...domain.services.generation import FileRegistry, HeaderGenerator, HierarchyBuilder
 from ...domain.services.parsing import ClassParser
 from ...generators.base_generator import BaseGenerator
 from ...generators.utils.packing_analyzer import calculate_packing_info
@@ -325,7 +326,7 @@ class DwarfGenerator(BaseGenerator):
         # Generate hierarchy header with timing
         header_gen_start = time()
         assert self.header_generator is not None
-        header = self.header_generator.generate_hierarchy_header(
+        header = self.header_generator.generate_single_file_hierarchy_header(
             class_infos,
             hierarchy_order,
             class_name,
@@ -337,6 +338,166 @@ class DwarfGenerator(BaseGenerator):
 
         logger.info(f"Hierarchy header generated successfully for {class_name}")
         return header
+
+    @log_timing
+    def generate_multi_file_hierarchy(
+        self, class_name: str, include_metadata: bool = True
+    ) -> dict[str, str]:
+        """Generate multi-file hierarchy with classes organized by declared file.
+
+        This method generates separate header files for each class based on the
+        source file where it was declared (using DW_AT_decl_file). Enables
+        modular organization of generated headers.
+
+        Args:
+            class_name: Name of the target class
+            include_metadata: Whether to include DWARF metadata comments
+
+        Returns:
+            Dict mapping header filenames to content (e.g., {"MtObject.h": "..."})
+        """
+        logger.info(f"Generating multi-file hierarchy for: {class_name}")
+
+        # Expand typedef search for full hierarchy mode
+        typedef_expand_start = time()
+        assert self.type_resolver is not None
+        self.type_resolver.expand_primitive_search(full_hierarchy=True)
+        typedef_expand_elapsed = time() - typedef_expand_start
+        logger.debug(f"Typedef search expansion completed in {typedef_expand_elapsed:.3f}s")
+
+        # Build full hierarchy with dependencies
+        hierarchy_start = time()
+        assert self.hierarchy_builder is not None
+        class_infos, hierarchy_order = self.hierarchy_builder.build_full_hierarchy_with_dependencies(
+            class_name, max_depth=10
+        )
+        hierarchy_elapsed = time() - hierarchy_start
+        logger.debug(f"Hierarchy building completed in {hierarchy_elapsed:.3f}s")
+
+        if not class_infos:
+            logger.warning(f"No classes found in hierarchy for {class_name}")
+            not_found = self._generate_not_found_header(class_name)
+            return {"UncategorizedDefinitions.h": not_found}
+
+        # Initialize FileRegistry to map classes to their declared files
+        registry_start = time()
+        file_registry = FileRegistry(self.dwarf_info)
+        for _cls_name, class_info in class_infos.items():
+            if class_info.cu_offset is not None:
+                file_registry.register_class(
+                    _cls_name,
+                    class_info.cu_offset,
+                    class_info.declaration_file,
+                )
+        registry_elapsed = time() - registry_start
+        logger.debug(f"FileRegistry built in {registry_elapsed:.3f}s")
+
+        # Organize classes by file
+        classes_by_file = file_registry.get_classes_by_file()
+        uncategorized = file_registry.get_uncategorized_classes()
+
+        logger.info(
+            f"Classes organized by file: {len(classes_by_file)} files, "
+            f"{len(uncategorized)} uncategorized"
+        )
+
+        # Initialize header cache
+        cache = HeaderCache(str(self.elf_path))
+
+        # Add packing info and collect all typedefs with timing
+        packing_start = time()
+        all_typedefs: dict[str, str] = {}
+        for _cls_name, class_info in class_infos.items():
+            if class_info.packing_info is None:
+                class_info.packing_info = calculate_packing_info(class_info)
+
+            # Collect typedefs for this class
+            class_typedefs = self.type_resolver.collect_used_typedefs(
+                class_info.members,
+                class_info.methods,
+                class_info.unions,
+                class_info.nested_structs,
+            )
+            all_typedefs.update(class_typedefs)
+
+        packing_elapsed = time() - packing_start
+        logger.debug(f"Packing analysis and typedef collection completed in {packing_elapsed:.3f}s")
+
+        # Generate headers for each file
+        output_headers: dict[str, str] = {}
+
+        header_gen_start = time()
+        assert self.header_generator is not None
+
+        # Generate headers organized by file
+        for file_path, file_classes in sorted(classes_by_file.items()):
+            if not file_classes:
+                continue
+
+            # Extract filename for output header name
+            import os
+
+            filename = os.path.basename(file_path) if file_path else "Unknown.h"
+            # Change extension to .h if not already
+            if not filename.endswith(".h"):
+                filename = filename.rsplit(".", 1)[0] + ".h"
+
+            logger.debug(f"Generating header for file: {file_path} -> {filename}")
+
+            # Filter class_infos to only those in this file
+            file_class_infos = {
+                cls: info for cls, info in class_infos.items() if cls in file_classes
+            }
+            file_hierarchy_order = [
+                cls for cls in hierarchy_order if cls in file_classes
+            ]
+
+            # Generate header for this file
+            header = self.header_generator.generate_single_file_hierarchy_header(
+                file_class_infos,
+                file_hierarchy_order,
+                file_classes[0],  # Use first class in file as target
+                typedefs=all_typedefs,
+                include_metadata=include_metadata,
+            )
+
+            output_headers[filename] = header
+            cache.set_header(filename, header, file_path=filename)
+
+        # Handle uncategorized classes in separate file
+        if uncategorized:
+            logger.debug(f"Generating UncategorizedDefinitions.h for {len(uncategorized)} classes")
+
+            uncategorized_class_infos = {
+                cls: info for cls, info in class_infos.items() if cls in uncategorized
+            }
+            uncategorized_order = [
+                cls for cls in hierarchy_order if cls in uncategorized
+            ]
+
+            header = self.header_generator.generate_single_file_hierarchy_header(
+                uncategorized_class_infos,
+                uncategorized_order,
+                "UncategorizedDefinitions",
+                typedefs=all_typedefs,
+                include_metadata=include_metadata,
+            )
+
+            output_headers["UncategorizedDefinitions.h"] = header
+            cache.set_header("UncategorizedDefinitions.h", header, file_path="UncategorizedDefinitions.h")
+
+        header_gen_elapsed = time() - header_gen_start
+        logger.debug(f"Multi-file hierarchy generation completed in {header_gen_elapsed:.3f}s")
+
+        # Save cache
+        cache.save()
+
+        logger.info(
+            f"Multi-file hierarchy generated: {len(output_headers)} headers, "
+            f"{sum(len(h) for h in output_headers.values())} total bytes"
+        )
+
+        return output_headers
 
     def build_inheritance_hierarchy(self, class_name: str) -> list[str]:
         """Build inheritance chain for a class.

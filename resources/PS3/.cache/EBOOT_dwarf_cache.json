@@ -12,7 +12,17 @@
     "stLayoutID": 455465,
     "SetInfo": 407943,
     "u8": 475,
-    "unsigned char": 87
+    "unsigned char": 87,
+    "cResource": 10355,
+    "MtPropertyList": 4197,
+    "MtProperty": 2630,
+    "MtString": 2418,
+    "STRING": 2437,
+    "u64": 877,
+    "s32": 460,
+    "size_t": 5787,
+    "MT_MFUNC": 832,
+    "MT_MFUNC32": 847
   },
   "offset_to_symbol": {
     "490": "MtDTI",
@@ -26,7 +36,17 @@
     "455465": "stLayoutID",
     "407943": "SetInfo",
     "475": "u8",
-    "87": "unsigned char"
+    "87": "unsigned char",
+    "10355": "cResource",
+    "4197": "MtPropertyList",
+    "2630": "MtProperty",
+    "2418": "MtString",
+    "2437": "STRING",
+    "877": "u64",
+    "460": "s32",
+    "5787": "size_t",
+    "832": "MT_MFUNC",
+    "847": "MT_MFUNC32"
   },
   "symbol_to_cu_offset": {
     "MtDTI": 0,
@@ -40,7 +60,17 @@
     "stLayoutID": 33019,
     "SetInfo": 33019,
     "u8": 0,
-    "unsigned char": 0
+    "unsigned char": 0,
+    "cResource": 6597,
+    "MtPropertyList": 0,
+    "MtProperty": 0,
+    "MtString": 0,
+    "STRING": 0,
+    "u64": 0,
+    "s32": 0,
+    "size_t": 0,
+    "MT_MFUNC": 0,
+    "MT_MFUNC32": 0
   },
   "cu_offset_to_symbols": {
     "0": [
@@ -51,15 +81,27 @@
       "MtUI",
       "TYPE",
       "u8",
-      "unsigned char"
+      "unsigned char",
+      "MtPropertyList",
+      "MtProperty",
+      "MtString",
+      "STRING",
+      "u64",
+      "s32",
+      "size_t",
+      "MT_MFUNC",
+      "MT_MFUNC32"
     ],
     "33019": [
       "rLayout",
       "stSplitID",
       "stLayoutID",
       "SetInfo"
+    ],
+    "6597": [
+      "cResource"
     ]
   },
   "created": 1760831406.363296,
-  "last_updated": 1760833812.2389252
+  "last_updated": 1760838166.6538281
 }

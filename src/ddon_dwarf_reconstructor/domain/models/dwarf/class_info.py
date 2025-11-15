@@ -33,6 +33,7 @@ class ClassInfo:
     declaration_file: str | None = None
     declaration_line: int | None = None
     die_offset: int | None = None
+    cu_offset: int | None = None  # Compilation unit offset for file mapping
     packing_info: dict[str, int] | None = None  # packing, padding, alignment hints
     template_type_params: list[TemplateTypeParam] = field(default_factory=list)
     """Template type parameters (typename T, class U, etc.)"""

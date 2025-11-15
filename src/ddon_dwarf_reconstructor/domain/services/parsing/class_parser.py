@@ -328,6 +328,7 @@ class ClassParser:
             declaration_file=declaration_file,
             declaration_line=declaration_line,
             die_offset=die_offset,
+            cu_offset=cu.cu_offset,
             packing_info=None,  # Will be calculated later
             template_type_params=template_type_params,
             template_value_params=template_value_params,

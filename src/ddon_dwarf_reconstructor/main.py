@@ -82,6 +82,12 @@ Examples:
         action="store_true",
         help="Generate complete inheritance hierarchy (includes all base classes)",
     )
+    parser.add_argument(
+        "--single-file",
+        action="store_true",
+        help="With --full-hierarchy: generate single file with all classes and forward declarations (legacy mode). "
+        "Without --full-hierarchy: has no effect",
+    )
     return parser.parse_args()
 
 
@@ -149,7 +155,13 @@ def main() -> NoReturn:
         sys.exit(1)
 
     logger.info(f"Generating headers for {len(symbols)} symbol(s)")
-    logger.debug(f"Generation mode: {'full-hierarchy' if args.full_hierarchy else 'single-class'}")
+    generation_mode = "full-hierarchy"
+    if args.full_hierarchy:
+        if args.single_file:
+            generation_mode = "full-hierarchy (single-file, legacy)"
+        else:
+            generation_mode = "full-hierarchy (multi-file)"
+    logger.debug(f"Generation mode: {generation_mode}")
 
     # Track results
     success_count = 0
@@ -162,25 +174,40 @@ def main() -> NoReturn:
                 logger.info(f"[{i}/{len(symbols)}] Processing: {symbol_name}")
 
                 try:
-                    # Generate header
+                    # Generate header(s)
+                    is_multi_file = False
+                    headers_to_write: dict[str, str] = {}
+                    
                     if args.full_hierarchy:
-                        header_content = generator.generate_complete_hierarchy_header(symbol_name)
+                        if args.single_file:
+                            # Legacy single-file mode
+                            header_content = generator.generate_complete_hierarchy_header(symbol_name)
+                            filename = create_header_filename(symbol_name)
+                            headers_to_write[filename] = header_content
+                        else:
+                            # New multi-file mode
+                            is_multi_file = True
+                            headers_to_write = generator.generate_multi_file_hierarchy(symbol_name)
                     else:
                         header_content = generator.generate_header(symbol_name)
+                        filename = create_header_filename(symbol_name)
+                        headers_to_write[filename] = header_content
 
-                    # Determine output path - use platform-specific subdirectory to avoid file collisions
+                    # Determine output path - use platform-specific subdirectory
                     platform_str = generator.platform.value if generator.platform else "unknown"
                     platform_dir = config.output_dir / platform_str
                     platform_dir.mkdir(parents=True, exist_ok=True)
 
-                    filename = create_header_filename(symbol_name)
-                    output_file = platform_dir / filename
+                    # Write header(s)
+                    total_bytes = 0
+                    for header_filename, header_content in headers_to_write.items():
+                        output_file = platform_dir / header_filename
+                        output_file.write_text(header_content, encoding="utf-8")
+                        total_bytes += len(header_content)
 
-                    # Write to output file
-                    output_file.write_text(header_content, encoding="utf-8")
+                        logger.info(f"[SUCCESS] Generated: {output_file}")
+                        logger.info(f"Size: {len(header_content)} bytes")
 
-                    logger.info(f"[SUCCESS] Generated: {output_file}")
-                    logger.info(f"Size: {len(header_content)} bytes")
                     success_count += 1
 
                     # Save cache after each successful generation
@@ -189,18 +216,28 @@ def main() -> NoReturn:
                         logger.debug("Cache saved after successful generation")
 
                     # Calculate lines and provide summary statistics
-                    lines = header_content.split("\n")
-                    logger.debug(f"Generated header contains {len(lines)} lines")
+                    if not is_multi_file:
+                        # Single file mode - show preview
+                        single_filename = list(headers_to_write.keys())[0] if headers_to_write else ""
+                        lines = headers_to_write[single_filename].split("\n") if single_filename in headers_to_write else []
+                        logger.debug(f"Generated header contains {len(lines)} lines")
 
-                    if config.verbose and len(symbols) == 1:
-                        # Only show preview for single symbol in verbose mode
-                        logger.debug("\nPreview (first 30 lines):")
-                        logger.debug("=" * 60)
-                        for line in lines[:30]:
-                            logger.debug(line)
-                        if len(lines) > 30:
-                            logger.debug(f"... and {len(lines) - 30} more lines")
-                        logger.debug("=" * 60)
+                        if config.verbose and len(symbols) == 1:
+                            # Only show preview for single symbol in verbose mode
+                            logger.debug("\nPreview (first 30 lines):")
+                            logger.debug("=" * 60)
+                            for line in lines[:30]:
+                                logger.debug(line)
+                            if len(lines) > 30:
+                                logger.debug(f"... and {len(lines) - 30} more lines")
+                            logger.debug("=" * 60)
+                    else:
+                        # Multi-file mode - show summary
+                        logger.debug(f"Generated {len(headers_to_write)} headers, {total_bytes} total bytes")
+                        if config.verbose:
+                            logger.debug("Generated files:")
+                            for fname in sorted(headers_to_write.keys()):
+                                logger.debug(f"  - {fname}")
 
                 except ValueError as e:
                     logger.error(f"[FAILED] {symbol_name}: {e}")

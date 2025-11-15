@@ -35,6 +35,7 @@ src/ddon_dwarf_reconstructor/
     repositories/cache/
        lru_cache.py            # Fast in-memory cache
        persistent_symbol_cache.py  # Disk-based cache
+       header_cache.py         # SHA256-based header cache with persistence
    
     services/
         parsing/
@@ -339,10 +340,10 @@ class HeaderGenerator:
     def generate_single_class_header(self, class_info: ClassInfo) -> str:
         """Generate header for individual class."""
     
-    def generate_hierarchy_header(
+    def generate_single_file_hierarchy_header(
         self, class_infos: dict, order: list, target_class: str
     ) -> str:
-        """Generate complete inheritance hierarchy header.
+        """Generate complete inheritance hierarchy in single file.
         
         Generates FULL CLASS DEFINITIONS for all classes in class_infos dict:
         - Phase 1: Inheritance chain (base → derived) 
@@ -361,6 +362,84 @@ class HeaderGenerator:
         Returns types that need forward declaration (not in class_infos dict).
         Most types should have full definitions, not forward declarations.
         """
+```
+
+**file_registry.py** - Multi-file class organization (NEW)
+
+- Registers classes with source file mapping
+- Organizes dependencies by declared file (DW_AT_decl_file)
+- Handles both integer file indices and string paths
+- Flexible type handling: `register_class(name, file_index: int | str | None)`
+- Returns classes organized by file for multi-file generation
+
+```python
+class FileRegistry:
+    def register_class(self, name: str, decl_file_index: int | str | None) -> None:
+        """Register class with file mapping.
+        
+        Args:
+            name: Class name
+            decl_file_index: Integer DWARF file index, string path, or None
+        """
+    
+    def get_classes_by_file(self) -> dict[str, list[str]]:
+        """Get classes organized by source file."""
+    
+    def get_uncategorized_classes(self) -> list[str]:
+        """Get classes without file mappings."""
+    
+    def summarize(self) -> dict[str, int]:
+        """Display registry statistics."""
+```
+
+**header_cache.py** - Header persistence and change detection (NEW)
+
+- SHA256-based header fingerprinting
+- Persistent JSON cache: `.cache/{elf_name}_headers.json`
+- Automatic change detection and invalidation
+- Timestamp tracking for debugging
+- Fast cache validation before regeneration
+
+```python
+class HeaderCache:
+    def is_valid(self, filename: str, content: str) -> bool:
+        """Check if cached header matches current content (SHA256)."""
+    
+    def set_header(self, filename: str, content: str) -> None:
+        """Add header to cache."""
+    
+    def save(self) -> None:
+        """Persist cache to disk as JSON."""
+    
+    def _compute_hash(self, content: str) -> str:
+        """Generate SHA256 hash for content."""
+```
+
+**DwarfGenerator** - Multi-file hierarchy orchestration (ENHANCED)
+
+- Added `generate_multi_file_hierarchy()` method
+- Returns `dict[str, str]` mapping filename → content
+- Integrates FileRegistry for class organization
+- Integrates HeaderCache for change detection
+- Supports both PS3 and PS4 platforms
+
+```python
+class DwarfGenerator(BaseGenerator):
+    def generate_multi_file_hierarchy(
+        self, class_name: str
+    ) -> dict[str, str]:
+        """Generate multi-file hierarchy with organization.
+        
+        1. Build complete hierarchy with dependencies
+        2. Register all classes with FileRegistry using source files
+        3. Organize classes by file
+        4. Generate individual headers per file
+        5. Validate against HeaderCache
+        6. Return dict of filename → content
+        
+        Returns: dict[str, str] - mapping of filename to generated content
+        """
+
 ```
 
 **packing_analyzer.py** - Memory layout analysis

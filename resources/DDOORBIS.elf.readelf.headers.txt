@@ -1,0 +1,337 @@
+ELF Header:
+  Magic:   7f 45 4c 46 02 01 01 09 00 00 00 00 00 00 00 00 
+  Class:                             ELF64
+  Data:                              2's complement, little endian
+  Version:                           1 (current)
+  OS/ABI:                            UNIX - FreeBSD
+  ABI Version:                       0
+  Type:                              OS Specific: (fe10)
+  Machine:                           Advanced Micro Devices X86-64
+  Version:                           0x1
+  Entry point address:               0xd5a8d0
+  Start of program headers:          64 (bytes into file)
+  Start of section headers:          800620544 (bytes into file)
+  Flags:                             0x0
+  Size of this header:               64 (bytes)
+  Size of program headers:           56 (bytes)
+  Number of program headers:         11
+  Size of section headers:           64 (bytes)
+  Number of section headers:         36
+  Section header string table index: 33
+
+Section Headers:
+  [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+  [ 0]                   NULL            0000000000000000 000000 000000 00      0   0  0
+  [ 1] .interp           PROGBITS        0000000000000000 004000 000015 00   A  0   0  1
+  [ 2] .init             PROGBITS        0000000000000020 004020 000071 00  AX  0   0 16
+  [ 3] .text             PROGBITS        00000000000000a0 0040a0 1be819b 00  AX  0   0 16
+  [ 4] .fini             PROGBITS        0000000001be8240 1bec240 00004c 00  AX  0   0 16
+  [ 5] .plt              PROGBITS        0000000001be8290 1bec290 0021c0 00  AX  0   0  8
+  [ 6] .rodata           PROGBITS        0000000001bea460 1bee460 39665a 00   A  0   0 32
+  [ 7] .eh_frame         PROGBITS        0000000001f80abc 1f84abc 2f75e4 00   A  0   0  4
+  [ 8] .eh_frame_hdr     PROGBITS        00000000022780a0 227c0a0 0e2044 00   A  0   0  4
+  [ 9] .data.rel.ro      PROGBITS        000000000235c000 2360000 19e5d0 00  WA  0   0 16
+  [10] .got              PROGBITS        00000000024fa5d0 24fe5d0 000368 00  WA  0   0  4
+  [11] .got.plt          PROGBITS        00000000024fa938 24fe938 0010f0 00  WA  0   0  8
+  [12] .sce_process_param PROGBITS        00000000024fc000 2500000 000040 00  WA  0   0  8
+  [13] .data             PROGBITS        00000000024fc040 2500040 021a60 00  WA  0   0 16
+  [14] .ctors            PROGBITS        000000000251daa0 2521aa0 009878 00  WA  0   0  8
+  [15] .dtors            PROGBITS        0000000002527318 252b318 000010 00  WA  0   0  8
+  [16] .preinit_array    NOBITS          0000000002527328 252b328 000000 00      0   0  1
+  [17] .init_array       NOBITS          0000000002527328 252b328 000000 00      0   0  1
+  [18] .fini_array       NOBITS          0000000002527328 252b328 000000 00      0   0  1
+  [19] .bss              NOBITS          0000000002527330 252b330 10c210 00  WA  0   0 16
+  [20] .sce_special      PROGBITS        0000000000000000 252b330 3fd050 00      0   0 16
+  [21] .dynamic          DYNAMIC         0000000000000000 2928380 000ea0 10   W  0   0  8
+  [22] .prodg_meta_data  PROGBITS        0000000000000000 2929220 00004c 00      0   0 16
+  [23] .sceversion       PROGBITS        0000000000000000 292926c 018512 00      0   0  1
+  [24] .debug_info       PROGBITS        0000000000000000 294177e 28081f4b 00      0   0  1
+  [25] .debug_line       PROGBITS        0000000000000000 2a9c36c9 fd2479 00      0   0  1
+  [26] .debug_abbrev     PROGBITS        0000000000000000 2b995b42 459368 00      0   0  1
+  [27] .debug_frame      PROGBITS        0000000000000000 2bdeeeb0 0001b0 00      0   0  8
+  [28] .debug_loc        PROGBITS        0000000000000000 2bdef060 23d55de 00      0   0  1
+  [29] .debug_ranges     PROGBITS        0000000000000000 2e1c463e 9896f0 00      0   0  1
+  [30] .note.GNU-stack   PROGBITS        0000000000000000 2eb4dd2e 000000 00      0   0  1
+  [31] .debug_str        PROGBITS        0000000000000000 2eb4dd2e 391fca 00      0   0  1
+  [32] .sce_stack_sizes  PROGBITS        0000000000000000 2eedfcf8 21569d 00      0   0  1
+  [33] .shstrtab         STRTAB          0000000000000000 2fb87e8b 000173 00      0   0  1
+  [34] .symtab           SYMTAB          0000000000000000 2f0f5398 4b57f0 18     35 65040  4
+  [35] .strtab           STRTAB          0000000000000000 2f5aab88 5dd303 00      0   0  1
+Key to Flags:
+  W (write), A (alloc), X (execute), M (merge), S (strings), l (large)
+  I (info), L (link order), G (group), T (TLS), E (exclude), x (unknown)
+  O (extra OS processing required) o (OS specific), p (processor specific)
+
+There are no section groups in this file.
+
+Program Headers:
+  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+  LOAD           0x004000 0x0000000000000000 0x0000000000000000 0x235a0e4 0x235a0e4 R E 0x4000
+  LOOS+1000010   0x2360000 0x000000000235c000 0x000000000235c000 0x19fa28 0x1a0000 R   0x4000
+  LOAD           0x2500000 0x00000000024fc000 0x00000000024fc000 0x02b328 0x137540 RW  0x4000
+  LOOS+1000001   0x2500000 0x00000000024fc000 0x00000000024fc000 0x000040 0x000040 R   0x8
+  DYNAMIC        0x2928380 0x0000000000000000 0x0000000000000000 0x000ea0 0x000ea0 RW  0x8
+  INTERP         0x004000 0x0000000000000000 0x0000000000000000 0x000015 0x000015 R   0x1
+      [Requesting program interpreter: /libexec/ld-elf.so.1]
+  TLS            0x000000 0x0000000000000000 0x0000000000000000 0x000000 0x000000 R   0x1
+  GNU_EH_FRAME   0x227c0a0 0x00000000022780a0 0x00000000022780a0 0x0e2044 0x0e2044 R   0x4
+  LOOS+1000000   0x252b330 0x0000000000000000 0x0000000000000000 0x3fdef0 0x000000 R   0x10
+  LOOS+fffff00   0x2929220 0x0000000000000000 0x0000000000000000 0x00004c 0x000000     0x10
+  LOOS+fffff01   0x292926c 0x0000000000000000 0x0000000000000000 0x018512 0x000000     0x10
+
+ Section to Segment mapping:
+  Segment Sections...
+   00     .interp .init .text .fini .plt .rodata .eh_frame .eh_frame_hdr .preinit_array .init_array .fini_array 
+   01     .data.rel.ro .got .got.plt .preinit_array .init_array .fini_array 
+   02     .sce_process_param .data .ctors .dtors .preinit_array .init_array .fini_array .bss 
+   03     .sce_process_param .preinit_array .init_array .fini_array 
+   04     .preinit_array .init_array .fini_array .dynamic 
+   05     .interp .preinit_array .init_array .fini_array 
+   06     
+   07     .eh_frame_hdr .preinit_array .init_array .fini_array 
+   08     .preinit_array .init_array .fini_array .sce_special .dynamic 
+   09     .preinit_array .init_array .fini_array .prodg_meta_data 
+   10     .preinit_array .init_array .fini_array .sceversion 
+
+Dynamic section at offset 0x2928380 contains 234 entries:
+  Tag        Type                         Name/Value
+ 0x0000000061000025 (Operating System specific: 61000025)                0x3fc398
+ 0x000000006100003d (Operating System specific: 6100003d)                0xcb8
+ 0x0000000061000035 (Operating System specific: 61000035)                0x18
+ 0x0000000061000037 (Operating System specific: 61000037)                0x3124
+ 0x0000000061000039 (Operating System specific: 61000039)                0x3140
+ 0x000000006100003f (Operating System specific: 6100003f)                0x3cf0
+ 0x000000000000000c (INIT)               0x20
+ 0x000000000000000d (FINI)               0x1be8240
+ 0x0000000061000027 (Operating System specific: 61000027)                0x24fa938
+ 0x0000000061000029 (Operating System specific: 61000029)                0x6e30
+ 0x000000006100002d (Operating System specific: 6100002d)                0x3288
+ 0x000000006100002b (Operating System specific: 6100002b)                0x7
+ 0x000000006100002f (Operating System specific: 6100002f)                0xa0b8
+ 0x0000000061000031 (Operating System specific: 61000031)                0x3f22e0
+ 0x0000000061000033 (Operating System specific: 61000033)                0x18
+ 0x0000000000000019 (INIT_ARRAY)         0x2527328
+ 0x000000000000001b (INIT_ARRAYSZ)       0 (bytes)
+ 0x000000000000001a (FINI_ARRAY)         0x2527328
+ 0x000000000000001c (FINI_ARRAYSZ)       0 (bytes)
+ 0x0000000000000020 (PREINIT_ARRAY)      0x2527328
+ 0x0000000000000021 (PREINIT_ARRAYSZ)    0x0
+ 0x000000006100003b (Operating System specific: 6100003b)                0x18
+ 0x0000000000000015 (DEBUG)              0x0
+ 0x0000000000000016 (TEXTREL)            0x0
+ 0x000000000000001e (FLAGS)              TEXTREL
+ 0x0000000000000001 (NEEDED)             0x1
+ 0x0000000000000001 (NEEDED)             0x14
+ 0x0000000000000001 (NEEDED)             0x2d
+ 0x0000000000000001 (NEEDED)             0x3d
+ 0x0000000000000001 (NEEDED)             0x4e
+ 0x0000000000000001 (NEEDED)             0x61
+ 0x0000000000000001 (NEEDED)             0x70
+ 0x0000000000000001 (NEEDED)             0x83
+ 0x0000000000000001 (NEEDED)             0x97
+ 0x0000000000000001 (NEEDED)             0xad
+ 0x0000000000000001 (NEEDED)             0xbe
+ 0x0000000000000001 (NEEDED)             0xcc
+ 0x0000000000000001 (NEEDED)             0xe7
+ 0x0000000000000001 (NEEDED)             0x103
+ 0x0000000000000001 (NEEDED)             0x116
+ 0x0000000000000001 (NEEDED)             0x124
+ 0x0000000000000001 (NEEDED)             0x138
+ 0x0000000000000001 (NEEDED)             0x14f
+ 0x0000000000000001 (NEEDED)             0x165
+ 0x0000000000000001 (NEEDED)             0x179
+ 0x0000000000000001 (NEEDED)             0x187
+ 0x0000000000000001 (NEEDED)             0x19b
+ 0x0000000000000001 (NEEDED)             0x1ab
+ 0x0000000000000001 (NEEDED)             0x1b9
+ 0x0000000000000001 (NEEDED)             0x1cf
+ 0x0000000000000001 (NEEDED)             0x1df
+ 0x0000000000000001 (NEEDED)             0x1f7
+ 0x0000000000000001 (NEEDED)             0x206
+ 0x0000000000000001 (NEEDED)             0x214
+ 0x0000000000000001 (NEEDED)             0x227
+ 0x0000000000000001 (NEEDED)             0x23a
+ 0x0000000000000001 (NEEDED)             0x253
+ 0x0000000000000001 (NEEDED)             0x266
+ 0x0000000000000001 (NEEDED)             0x27b
+ 0x0000000000000001 (NEEDED)             0x295
+ 0x0000000000000001 (NEEDED)             0x2b0
+ 0x0000000000000001 (NEEDED)             0x2be
+ 0x0000000000000001 (NEEDED)             0x2d0
+ 0x0000000000000001 (NEEDED)             0x2e3
+ 0x0000000000000001 (NEEDED)             0x2ec
+ 0x0000000000000001 (NEEDED)             0x301
+ 0x0000000000000001 (NEEDED)             0x311
+ 0x0000000000000001 (NEEDED)             0x323
+ 0x0000000000000001 (NEEDED)             0x334
+ 0x0000000000000001 (NEEDED)             0x346
+ 0x0000000000000001 (NEEDED)             0x35e
+ 0x0000000000000001 (NEEDED)             0x37a
+ 0x0000000000000001 (NEEDED)             0x38f
+ 0x0000000000000001 (NEEDED)             0x3a4
+ 0x0000000000000001 (NEEDED)             0x3b8
+ 0x000000006100000f (Operating System specific: 6100000f)                0x10101000003d1
+ 0x000000006100000f (Operating System specific: 6100000f)                0x20101000003e0
+ 0x000000006100000f (Operating System specific: 6100000f)                0x30101000003ee
+ 0x000000006100000f (Operating System specific: 6100000f)                0x40101000003fa
+ 0x000000006100000f (Operating System specific: 6100000f)                0x5010100000407
+ 0x000000006100000f (Operating System specific: 6100000f)                0x6010100000416
+ 0x000000006100000f (Operating System specific: 6100000f)                0x7010100000421
+ 0x000000006100000f (Operating System specific: 6100000f)                0x8010100000430
+ 0x000000006100000f (Operating System specific: 6100000f)                0x9000000000440
+ 0x000000006100000f (Operating System specific: 6100000f)                0xa010100000452
+ 0x000000006100000f (Operating System specific: 6100000f)                0xb01010000045f
+ 0x000000006100000f (Operating System specific: 6100000f)                0xc010100000469
+ 0x000000006100000f (Operating System specific: 6100000f)                0xd010100000480
+ 0x000000006100000f (Operating System specific: 6100000f)                0xe000000000490
+ 0x000000006100000f (Operating System specific: 6100000f)                0xf01010000049f
+ 0x000000006100000f (Operating System specific: 6100000f)                0x100101000004a9
+ 0x000000006100000f (Operating System specific: 6100000f)                0x110101000004b9
+ 0x000000006100000f (Operating System specific: 6100000f)                0x120101000004cc
+ 0x000000006100000f (Operating System specific: 6100000f)                0x130101000004de
+ 0x000000006100000f (Operating System specific: 6100000f)                0x140101000004ee
+ 0x000000006100000f (Operating System specific: 6100000f)                0x150101000004f8
+ 0x000000006100000f (Operating System specific: 6100000f)                0x16010100000508
+ 0x000000006100000f (Operating System specific: 6100000f)                0x17010100000514
+ 0x000000006100000f (Operating System specific: 6100000f)                0x1801010000051e
+ 0x000000006100000f (Operating System specific: 6100000f)                0x19010100000530
+ 0x000000006100000f (Operating System specific: 6100000f)                0x1a01010000053c
+ 0x000000006100000f (Operating System specific: 6100000f)                0x1b010100000550
+ 0x000000006100000f (Operating System specific: 6100000f)                0x1c01010000055b
+ 0x000000006100000f (Operating System specific: 6100000f)                0x1d010100000565
+ 0x000000006100000f (Operating System specific: 6100000f)                0x1e010100000574
+ 0x000000006100000f (Operating System specific: 6100000f)                0x1f010100000583
+ 0x000000006100000f (Operating System specific: 6100000f)                0x20010000000598
+ 0x000000006100000f (Operating System specific: 6100000f)                0x210101000005a7
+ 0x000000006100000f (Operating System specific: 6100000f)                0x220101000005b8
+ 0x000000006100000f (Operating System specific: 6100000f)                0x230101000005ce
+ 0x000000006100000f (Operating System specific: 6100000f)                0x240101000005e5
+ 0x000000006100000f (Operating System specific: 6100000f)                0x250101000005ef
+ 0x000000006100000f (Operating System specific: 6100000f)                0x260000000005fd
+ 0x000000006100000f (Operating System specific: 6100000f)                0x2701010000060c
+ 0x000000006100000f (Operating System specific: 6100000f)                0x28010100000611
+ 0x000000006100000f (Operating System specific: 6100000f)                0x29010100000626
+ 0x000000006100000f (Operating System specific: 6100000f)                0x2a010100000631
+ 0x000000006100000f (Operating System specific: 6100000f)                0x2b01010000063f
+ 0x000000006100000f (Operating System specific: 6100000f)                0x2c01010000064c
+ 0x000000006100000f (Operating System specific: 6100000f)                0x2d01010000065a
+ 0x000000006100000f (Operating System specific: 6100000f)                0x2e01010000066e
+ 0x000000006100000f (Operating System specific: 6100000f)                0x2f000000000686
+ 0x000000006100000f (Operating System specific: 6100000f)                0x30000900000697
+ 0x000000006100000f (Operating System specific: 6100000f)                0x310000000006a8
+ 0x000000006100000f (Operating System specific: 6100000f)                0x320101000006b8
+ 0x0000000061000013 (Operating System specific: 61000013)                0x4e0001000006cd
+ 0x0000000061000017 (Operating System specific: 61000017)                0x4e000000000001
+ 0x0000000061000015 (Operating System specific: 61000015)                0xd0e0001000006d6
+ 0x0000000061000019 (Operating System specific: 61000019)                0xd0e000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x42000100000565
+ 0x0000000061000019 (Operating System specific: 61000019)                0x42000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x45000100000598
+ 0x0000000061000019 (Operating System specific: 61000019)                0x45000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x360001000004b9
+ 0x0000000061000019 (Operating System specific: 61000019)                0x36000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0xd1300010000065a
+ 0x0000000061000019 (Operating System specific: 61000019)                0xd13000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x370001000004cc
+ 0x0000000061000019 (Operating System specific: 61000019)                0x37000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x3b000100000508
+ 0x0000000061000019 (Operating System specific: 61000019)                0x3b000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0xd1400010000066e
+ 0x0000000061000019 (Operating System specific: 61000019)                0xd14000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x32000100000480
+ 0x0000000061000019 (Operating System specific: 61000019)                0x32000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x2b000100000416
+ 0x0000000061000019 (Operating System specific: 61000019)                0x2b000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x4b0001000004ee
+ 0x0000000061000019 (Operating System specific: 61000019)                0x4b000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x380001000004de
+ 0x0000000061000019 (Operating System specific: 61000019)                0x38000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x480001000005ce
+ 0x0000000061000019 (Operating System specific: 61000019)                0x48000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0xd10000100000631
+ 0x0000000061000019 (Operating System specific: 61000019)                0xd10000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0xd1200010000064c
+ 0x0000000061000019 (Operating System specific: 61000019)                0xd12000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0xd0f0001000006e7
+ 0x0000000061000019 (Operating System specific: 61000019)                0xd0f000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x3e000100000530
+ 0x0000000061000019 (Operating System specific: 61000019)                0x3e000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x350001000004a9
+ 0x0000000061000019 (Operating System specific: 61000019)                0x35000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x3400010000049f
+ 0x0000000061000019 (Operating System specific: 61000019)                0x34000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x2f000100000452
+ 0x0000000061000019 (Operating System specific: 61000019)                0x2f000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x40000100000550
+ 0x0000000061000019 (Operating System specific: 61000019)                0x40000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x290001000003fa
+ 0x0000000061000019 (Operating System specific: 61000019)                0x29000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x460001000005a7
+ 0x0000000061000019 (Operating System specific: 61000019)                0x46000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x2c000100000421
+ 0x0000000061000019 (Operating System specific: 61000019)                0x2c000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x2d000100000430
+ 0x0000000061000019 (Operating System specific: 61000019)                0x2d000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x2e000100000440
+ 0x0000000061000019 (Operating System specific: 61000019)                0x2e000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x490001000005ef
+ 0x0000000061000019 (Operating System specific: 61000019)                0x49000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x470001000005b8
+ 0x0000000061000019 (Operating System specific: 61000019)                0x47000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x270001000003e0
+ 0x0000000061000019 (Operating System specific: 61000019)                0x27000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x260001000003d1
+ 0x0000000061000019 (Operating System specific: 61000019)                0x26000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x280001000003ee
+ 0x0000000061000019 (Operating System specific: 61000019)                0x28000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x2a000100000407
+ 0x0000000061000019 (Operating System specific: 61000019)                0x2a000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x3c000100000514
+ 0x0000000061000019 (Operating System specific: 61000019)                0x3c000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0xd1100010000063f
+ 0x0000000061000019 (Operating System specific: 61000019)                0xd11000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0xd15000100000686
+ 0x0000000061000019 (Operating System specific: 61000019)                0xd15000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x4100010000055b
+ 0x0000000061000019 (Operating System specific: 61000019)                0x41000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x43000100000574
+ 0x0000000061000019 (Operating System specific: 61000019)                0x43000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x44000100000583
+ 0x0000000061000019 (Operating System specific: 61000019)                0x44000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0xd16000100000697
+ 0x0000000061000019 (Operating System specific: 61000019)                0xd16000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0xd170001000006a8
+ 0x0000000061000019 (Operating System specific: 61000019)                0xd17000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x3000010000045f
+ 0x0000000061000019 (Operating System specific: 61000019)                0x30000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x3a0001000004f8
+ 0x0000000061000019 (Operating System specific: 61000019)                0x3a000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x3f00010000053c
+ 0x0000000061000019 (Operating System specific: 61000019)                0x3f000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x3d00010000051e
+ 0x0000000061000019 (Operating System specific: 61000019)                0x3d000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x33000100000490
+ 0x0000000061000019 (Operating System specific: 61000019)                0x33000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0xd180001000006b8
+ 0x0000000061000019 (Operating System specific: 61000019)                0xd18000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x4a0001000005fd
+ 0x0000000061000019 (Operating System specific: 61000019)                0x4a000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x31000100000469
+ 0x0000000061000019 (Operating System specific: 61000019)                0x31000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x4d00010000060c
+ 0x0000000061000019 (Operating System specific: 61000019)                0x4d000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x230001000006f3
+ 0x0000000061000019 (Operating System specific: 61000019)                0x23000000000009
+ 0x0000000061000015 (Operating System specific: 61000015)                0x4c0001000005e5
+ 0x0000000061000019 (Operating System specific: 61000019)                0x4c000000000009
+ 0x0000000061000007 (Operating System specific: 61000007)                0x0
+ 0x0000000061000009 (Operating System specific: 61000009)                0x702
+ 0x000000006100000d (Operating System specific: 6100000d)                0x101000006cd
+ 0x0000000061000011 (Operating System specific: 61000011)                0x0
+ 0x0000000000000000 (NULL)               0x0
+
+There are no relocations in this file.
+
+There are no unwind sections in this file.
+
+Symbol table '.symtab' contains 205738 entries:

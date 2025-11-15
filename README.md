@@ -39,8 +39,11 @@ uv run python main.py resources/DDOORBIS.elf --generate MtObject
 # Multiple classes (PS4)
 uv run python main.py resources/DDOORBIS.elf --generate MtObject,MtVector4,rTbl2Base
 
-# Full inheritance hierarchy (PS4)
+# Full hierarchy - Multi-file (NEW DEFAULT, PS4)
 uv run python main.py resources/DDOORBIS.elf --generate ClassName --full-hierarchy
+
+# Full hierarchy - Single file (LEGACY, PS4)
+uv run python main.py resources/DDOORBIS.elf --generate ClassName --full-hierarchy --single-file
 
 # PS3 single class
 uv run python main.py resources/PS3/EBOOT.ELF --generate MtDTI
@@ -48,16 +51,45 @@ uv run python main.py resources/PS3/EBOOT.ELF --generate MtDTI
 # PS3 multiple classes
 uv run python main.py resources/PS3/EBOOT.ELF --generate MtUI,rLayout
 
+# PS3 full hierarchy - Multi-file
+uv run python main.py resources/PS3/EBOOT.ELF --generate rLayout --full-hierarchy
+
 # Batch processing from file (PS4, one symbol per line)
 uv run python main.py resources/DDOORBIS.elf --symbols-file resources/season2-resources.txt
 
-# Batch processing with full hierarchy (289 symbols validated, PS4)
-````
+# Batch processing with multi-file hierarchy (289 symbols validated, PS4)
 uv run python main.py resources/DDOORBIS.elf --symbols-file resources/season2-resources.txt --full-hierarchy
 
 # With options
 uv run python main.py resources/DDOORBIS.elf --generate ClassName --output dir/ --verbose
 ```
+
+### Full Hierarchy Modes
+
+**Multi-file (DEFAULT)** - Recommended for large hierarchies
+
+- Organizes classes by source file (DW_AT_decl_file mapping)
+- Generates separate headers per file (more maintainable)
+- Includes #include statements between files
+- Cache system: `.cache/{elf_name}_headers.json`
+- Example output: 22 files for MtObject hierarchy
+
+```bash
+uv run python main.py resources/DDOORBIS.elf --generate MtObject --full-hierarchy
+# Output: output/ps4/MtObject.h, MtProperty.h, MtUI.h, etc.
+```
+
+**Single-file (LEGACY)** - Use `--single-file` flag
+
+- All classes in one file with forward declarations
+- No #include dependencies
+- Original behavior preserved for backward compatibility
+
+```bash
+uv run python main.py resources/DDOORBIS.elf --generate MtObject --full-hierarchy --single-file
+# Output: output/ps4/MtObject.h (all classes in one file)
+````
+
 
 ### Native Executable
 
@@ -81,10 +113,42 @@ VERBOSE=false
 # Options
 --output DIR          # output directory (default: ./output)
 --verbose             # enable debug logging
---full-hierarchy      # include all base classes
+--full-hierarchy      # include all base classes (multi-file mode by default)
+--single-file         # legacy mode: single file with all classes
 --generate SYMBOL     # generate for single or multiple symbols (comma-separated)
 --symbols-file FILE   # read symbols from file (one per line, alternative to --generate)
 ```
+
+### Caching System
+
+Multi-file hierarchy generation uses SHA256-based caching for performance:
+
+**Cache Location:** `.cache/{elf_name}_headers.json`
+
+**How It Works:**
+1. Computes SHA256 hash of each generated header
+2. Persists hashes and timestamps to JSON cache file
+3. On regeneration: checks if content matches (no file written if unchanged)
+4. Automatic invalidation when content changes
+
+**Performance:**
+- First run (cold cache): ~3.2 seconds
+- Second run (warm cache): ~2.65 seconds
+- Cache invalidation: ~2.3 seconds (rebuilds modified headers only)
+
+**Example Cache File:**
+```json
+{
+  "MtObject.h": {
+    "hash": "21259870eb19ea1cf...",
+    "file": "MtObject.h",
+    "generated_at": 1760837315
+  }
+}
+```
+
+To clear cache: `rm .cache/*.json`
+
 
 ## Architecture
 
@@ -257,11 +321,34 @@ Follow conventions in .github/copilot-instructions.md:
 | Metric | Value | Notes |
 |--------|-------|-------|
 | **Single class** | ~0.5-1s | With cache: <0.01s |
-| **Full hierarchy** | ~1-3s | Resolves 74-133 classes recursively |
+| **Full hierarchy (multi-file)** | ~1-3s | Resolves 74-133 classes, generates multiple files |
+| **Multi-file with cache** | ~2.6s (warm) | File-based change detection, SHA256 validation |
+| **Single-file mode** | ~0.9s | Legacy mode with all classes in one file |
 | **Batch processing** | 4-5 symbols/min | 289 symbols in ~60 minutes |
 | **Cache hit rate** | 85%+ | Typedef resolution |
 | **Output size** | 130-170 KB | Complete headers with all dependencies |
-| **Test suite** | 0.24s | 120 unit tests |
+| **Test suite** | 0.24s | 196 unit tests |
+
+### Multi-File Generation Performance (MtObject Hierarchy - PS4)
+
+```
+Total classes resolved:  74 (1 main + 73 dependencies)
+Generated headers:       22 files
+Total output size:       144 KB
+Generation time:         ~1.06 seconds
+Cache file size:         3.9 KB (.cache/DDOORBIS_headers.json)
+Second run (cached):     ~2.65 seconds
+```
+
+### Multi-File Generation Performance (rLayout Hierarchy - PS3)
+
+```
+Total classes resolved:  8 (1 main + 7 dependencies)
+Generated headers:       8 files
+Total output size:       11.9 KB
+Generation time:         ~0.92 seconds
+Cache file size:         1.4 KB (.cache/EBOOT_headers.json)
+```
 
 ### Batch Test Results (Season 2 - 289 Symbols)
 
@@ -276,12 +363,19 @@ Forward declarations:    0 (all fully resolved)
 
 ### Example Output
 
-**MtObject with --full-hierarchy:**
+**MtObject with --full-hierarchy (multi-file):**
 - Input: 1 class name
 - Resolved: 74 classes recursively
-- Generated: 3,605 lines, 126 KB
-- Forward declarations: 0
-- Time: ~2 seconds
+- Generated: 22 files, 144 KB total
+- Time: ~1 second
+- Cache: Automatic SHA256-based change detection
+
+**MtObject with --full-hierarchy --single-file (legacy):**
+- Input: 1 class name
+- Resolved: 74 classes recursively
+- Generated: 1 file, 126 KB
+- Time: ~0.9 seconds
+
 
 ## Limitations
 
