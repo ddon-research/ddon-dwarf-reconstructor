@@ -8,12 +8,16 @@ correct array declaration handling.
 """
 
 import re
+from typing import TYPE_CHECKING
 
 from ....infrastructure.logging import get_logger, log_timing
 from ....utils.path_utils import sanitize_for_filesystem
 from ...models.dwarf import ClassInfo, EnumInfo, MemberInfo, MethodInfo, StructInfo, UnionInfo
 from ..lazy_dwarf_index_service import LazyDwarfIndexService
 from ..parsing.die_type_classifier import DIETypeClassifier
+
+if TYPE_CHECKING:
+    from ..parsing.class_parser import ClassParser
 
 logger = get_logger(__name__)
 
@@ -30,13 +34,17 @@ class HeaderGenerator:
     - Metadata comments
     """
 
-    def __init__(self, dwarf_index: LazyDwarfIndexService) -> None:
+    def __init__(
+        self, dwarf_index: LazyDwarfIndexService, class_parser: "ClassParser | None" = None
+    ) -> None:
         """Initialize header generator with DWARF index.
 
         Args:
             dwarf_index: DWARF index for offset-based type validation
+            class_parser: Optional class parser for tracking timed-out symbols
         """
         self.dwarf_index = dwarf_index
+        self.class_parser = class_parser
 
     @log_timing
     def generate_header(
@@ -515,6 +523,12 @@ class HeaderGenerator:
                     f"// - DIE Offset: 0x{class_info.die_offset:08x}",
                 ]
             )
+            
+            # Check if this class lookup timed out
+            if self.class_parser and class_name in self.class_parser.timed_out_symbols:
+                lines.append(
+                    f"// - WARNING: Type lookup timed out. Definition may be incomplete or missing."
+                )
 
             if class_info.packing_info:
                 packing = class_info.packing_info

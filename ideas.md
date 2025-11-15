@@ -7,6 +7,63 @@
 # Feature
 - Add namespace information to types, enums, classes etc.
 
+# Enhancement: Cache Metadata for Complete Definition Detection
+
+## Problem
+Currently, the persistent symbol cache stores only symbol name → DIE offset mappings. When the cache is loaded, validation must occur at retrieval time to check if the cached offset points to a complete class definition or just a forward declaration. This validation requires loading the DIE and checking the `DW_AT_declaration` attribute, which adds overhead.
+
+## Proposed Solution
+Enhance cache entries to store completeness metadata alongside offsets:
+
+```python
+{
+    "symbol_name": {
+        "offset": 0x12345,
+        "cu_offset": 0x100,
+        "is_complete": true,          # New: not a forward declaration
+        "has_children": true,          # New: has members/methods
+        "byte_size": 128,              # New: size in bytes
+        "completeness_score": 10128    # New: pre-calculated score
+    }
+}
+```
+
+## Benefits
+1. **Skip validation overhead**: Cache hit can immediately determine if entry is usable
+2. **Faster filtering**: Can reject incomplete definitions without loading DIE
+3. **Better cache utilization**: Know quality of cached entries
+4. **Pre-computed scoring**: No need to recalculate completeness score
+
+## Trade-offs
+1. **Larger cache files**: More metadata per entry (~16-24 extra bytes)
+2. **Cache invalidation complexity**: Need to update cache when parsing logic changes
+3. **Migration overhead**: Existing caches need conversion or rebuild
+
+## Current Implementation (Validation-on-Retrieval)
+The current approach keeps cache entries simple and performs validation when retrieving:
+- **Pros**: Simple cache format, no migration needed, always uses latest validation logic
+- **Cons**: Validation overhead on every cache hit, potential wasted lookups
+
+## Recommendation
+Keep validation-on-retrieval approach for now due to:
+1. Cache rebuild is already expensive (full ELF scan), validation overhead is marginal
+2. Simpler cache format reduces bugs and maintenance
+3. Validation logic may evolve as DWARF edge cases are discovered
+4. Current performance is acceptable for MTFramework use case
+
+Consider metadata enhancement if:
+- Cache validation becomes a measurable bottleneck (profile first)
+- Multiple cache hits per symbol lookup become common
+- Cache format stabilizes (no breaking changes for 6+ months)
+
+## Implementation Notes
+If implementing metadata enhancement:
+1. Add versioning to cache format for migration detection
+2. Include timestamp or ELF hash for cache invalidation
+3. Store DWARF version used during cache build
+4. Provide tool to inspect and validate cache contents
+5. Document cache format in ARCHITECTURE.md
+
 # Bug
 - rAbilityAddData is not found/understood, it is part of a namespace and generates an empty file
 

@@ -6,6 +6,7 @@ This module handles parsing of DWARF class/struct types into ClassInfo objects,
 including members, methods, enums, and nested types.
 """
 
+import time
 from typing import TYPE_CHECKING
 
 from elftools.dwarf.compileunit import CompileUnit
@@ -34,6 +35,24 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
+# Blacklist of known external/system types that typically lack debug info
+# These types will skip expensive full DWARF scans to prevent long search times
+TYPE_BLACKLIST = {
+    # POSIX/pthread types
+    "pthread_mutex",
+    "pthread_mutex_t",
+    "pthread_cond",
+    "pthread_cond_t",
+    "pthread_rwlock_t",
+    "pthread_attr_t",
+    # Standard C library types
+    "FILE",
+    "_IO_FILE",
+    # Compiler builtins
+    "__va_list_tag",
+    "__builtin_va_list",
+}
+
 
 class ClassParser:
     """Parses DWARF class information into structured ClassInfo objects.
@@ -51,6 +70,7 @@ class ClassParser:
         type_resolver: "LazyTypeResolver",
         dwarf_info: "DWARFInfo",
         lazy_index: "LazyDwarfIndexService | None" = None,
+        full_scan_timeout: float = 180.0,
     ):
         """Initialize class parser with lazy type resolver and lazy index.
 
@@ -58,10 +78,13 @@ class ClassParser:
             type_resolver: LazyTypeResolver instance for memory-efficient type name resolution
             dwarf_info: DWARF information structure
             lazy_index: Optional LazyDwarfIndex for memory-efficient lookups
+            full_scan_timeout: Maximum seconds for full DWARF scan (default: 180s)
         """
         self.type_resolver = type_resolver
         self.dwarf_info = dwarf_info
         self.lazy_index = lazy_index
+        self.full_scan_timeout = full_scan_timeout
+        self.timed_out_symbols: set[str] = set()  # Track symbols that timed out
 
     @log_timing
     def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
@@ -80,6 +103,14 @@ class ClassParser:
         Returns:
             Tuple of (CompileUnit, DIE) if found, None otherwise
         """
+        # Check blacklist first to avoid expensive scans for known unresolvable types
+        if class_name in TYPE_BLACKLIST:
+            logger.warning(
+                f"Type '{class_name}' is blacklisted (known external/system type). "
+                f"Skipping search to avoid performance issues."
+            )
+            return None
+        
         # Try lazy loading first (memory efficient)
         if self.lazy_index:
             result = self._find_class_lazy(class_name)
@@ -90,13 +121,43 @@ class ClassParser:
         return self._find_class_full_scan(class_name)
 
     def _find_class_full_scan(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
-        """Find class using full DWARF iteration (memory intensive fallback)."""
+        """Find class using full DWARF iteration (memory intensive fallback).
+        
+        Searches all compilation units for the best match, preferring complete definitions
+        over forward declarations. Uses scoring algorithm based on DWARF4 spec:
+        - Forward declarations (DW_AT_declaration): heavily penalized
+        - Has members (has_children): strongly preferred
+        - Has byte_size: preferred, scaled by size
+        - Early exit optimization: returns immediately if perfect match found
+          (has_children + size>0 + no declaration)
+        - Timeout protection: aborts after full_scan_timeout seconds
+        """
         target_name = class_name.encode("utf-8")
         fallback_candidate = None
+        best_candidate = None
+        best_score = -1
+        best_cu = None
+        
+        # Track time to prevent indefinite searches
+        start_time = time.time()
+        timed_out = False
+        candidates_found = 0
 
-        # Look for complete definition first (early exit on match)
+        # Look for best definition across all CUs
         cu: CompileUnit
         for cu in self.dwarf_info.iter_CUs():  # type: ignore
+            # Check timeout
+            elapsed = time.time() - start_time
+            if elapsed > self.full_scan_timeout:
+                timed_out = True
+                logger.error(
+                    f"Full DWARF scan for '{class_name}' timed out after {elapsed:.1f}s. "
+                    f"Searched {candidates_found} candidates. This type may lack debug information. "
+                    f"Consider adding to blacklist if issue persists."
+                )
+                self.timed_out_symbols.add(class_name)
+                break
+            
             die: DIE
             for die in cu.iter_DIEs():  # type: ignore
                 if die.is_null():  # type: ignore
@@ -112,29 +173,125 @@ class ClassParser:
                 ):
                     name_attr = die.attributes.get("DW_AT_name")
                     if name_attr and name_attr.value == target_name:
-                        # Check if this is a complete definition
+                        candidates_found += 1
+                        
+                        # Check for forward declaration (DWARF4 spec: incomplete types
+                        # have DW_AT_declaration attribute and no byte_size)
+                        decl_attr = die.attributes.get("DW_AT_declaration")
+                        is_declaration = decl_attr is not None
+                        
+                        # Evaluate completeness
                         size_attr = die.attributes.get("DW_AT_byte_size")
-                        if size_attr and size_attr.value > 0:
-                            logger.info(
-                                f"Found {class_name} in CU at offset 0x{cu.cu_offset:x} "
-                                f"(size: {size_attr.value} bytes)",
-                            )
-                            return cu, die
-                        if die.has_children:
-                            logger.info(
-                                f"Found {class_name} in CU at offset 0x{cu.cu_offset:x} "
-                                f"(has members)",
-                            )
-                            return cu, die
-                        # Keep first forward declaration as fallback
+                        has_size = size_attr and size_attr.value > 0
+                        has_members = die.has_children
+                        
+                        # Calculate completeness score with type-specific handling:
+                        # - Typedefs, base types, enums: complete if not declarations
+                        # - Classes/structs: prefer those with members and size
+                        score = 0
+                        
+                        if is_declaration:
+                            score = -1000  # Forward declaration
+                        elif die.tag == "DW_TAG_typedef":
+                            # Typedefs are complete if they have a DW_AT_type attribute
+                            type_attr = die.attributes.get("DW_AT_type")
+                            if type_attr:
+                                score = 5000  # Complete typedef
+                            else:
+                                score = -500  # Incomplete typedef
+                        elif die.tag == "DW_TAG_base_type":
+                            # Base types are always complete
+                            score = 8000  # High priority
+                        elif die.tag == "DW_TAG_enumeration_type":
+                            # Enums are complete if they have size
+                            if has_size:
+                                score = 6000  # Complete enum
+                            else:
+                                score = -500  # Incomplete enum
+                        else:
+                            # Classes/structs/unions: use member-based scoring
+                            if has_size:
+                                score += size_attr.value if size_attr else 0
+                            if has_members:
+                                score += 10000
+                        
+                        logger.debug(
+                            f"Found candidate {class_name} at DIE 0x{die.offset:x} "
+                            f"(CU 0x{cu.cu_offset:x}): score={score}, "
+                            f"size={size_attr.value if size_attr else 0}, "
+                            f"has_children={has_members}, is_declaration={is_declaration}, "
+                            f"tag={die.tag}"
+                        )
+                        
+                        if score > best_score:
+                            best_score = score
+                            best_candidate = die
+                            best_cu = cu
+                        
+                        # Keep first match as ultimate fallback
                         if fallback_candidate is None:
                             fallback_candidate = (cu, die)
+                        
+                        # Early exit optimization: if we found a perfect match
+                        # (classes with members, typedefs, base types, or enums)
+                        if (has_members and has_size and not is_declaration) or score >= 5000:
+                            logger.info(
+                                f"Found {class_name} in CU at offset 0x{cu.cu_offset:x} "
+                                f"(perfect match: size={size_attr.value} bytes, has_children=True, "
+                                f"score={score})"
+                            )
+                            return cu, die
 
-        # Return fallback if found
+        # Return best candidate if found
+        if best_candidate and best_score > 0:
+            size_attr = best_candidate.attributes.get("DW_AT_byte_size")
+            size_value = size_attr.value if size_attr else 0
+            has_members = best_candidate.has_children
+            
+            # MTFramework heuristic: warn if class has no members
+            # Most MT classes have at least a vtable pointer
+            if not has_members and size_value > 0:
+                logger.warning(
+                    f"Found {class_name} with size={size_value} bytes but no members. "
+                    f"This is unusual for MTFramework classes. Possible edge case of "
+                    f"parent->child inheritance with no new members added."
+                )
+            
+            logger.info(
+                f"Found {class_name} in CU at offset 0x{best_cu.cu_offset:x} "
+                f"(best match: size={size_value} bytes, has_children={has_members}, "
+                f"score={best_score})"
+            )
+            return best_cu, best_candidate
+        
+        # If timed out, return best candidate found so far (even if incomplete)
+        if timed_out and fallback_candidate:
+            cu, die = fallback_candidate
+            logger.warning(
+                f"Returning partial result for {class_name} after timeout. "
+                f"Best candidate at CU 0x{cu.cu_offset:x} with score={best_score}. "
+                f"Result may be incomplete."
+            )
+            return cu, die
+        
+        # Warn if only forward declaration found
         if fallback_candidate:
             cu, die = fallback_candidate
-            logger.info(
-                f"Found {class_name} in CU at offset 0x{cu.cu_offset:x} (forward declaration)",
+            logger.warning(
+                f"Found {class_name} in CU at offset 0x{cu.cu_offset:x} "
+                f"but only as forward declaration (score={best_score}). "
+                f"This may indicate missing debug information."
+            )
+            return cu, die
+
+        logger.warning(f"Class {class_name} not found in DWARF info")
+        return None
+        if fallback_candidate:
+            cu, die = fallback_candidate
+            logger.warning(
+                f"Found {class_name} in CU at offset 0x{cu.cu_offset:x} "
+                f"but only as forward declaration (score={best_score}). "
+                f"This may indicate missing debug information."
             )
             return cu, die
 
@@ -142,7 +299,12 @@ class ClassParser:
         return None
 
     def _find_class_lazy(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
-        """Find class using lazy loading for memory efficiency with CU optimization."""
+        """Find class using lazy loading for memory efficiency with CU optimization.
+        
+        Validates cached results to ensure they point to complete definitions,
+        not forward declarations. Falls back to targeted search, then full scan
+        if cached entry is invalid.
+        """
         if not self.lazy_index:
             return None
 
@@ -154,16 +316,51 @@ class ClassParser:
                 die_cu_result = self._find_die_and_cu_by_offset(offset)
                 if die_cu_result:
                     cu, die = die_cu_result
-                    logger.info(f"Found {class_name} via cache at offset 0x{offset:x}")
-                    return cu, die
+                    
+                    # Validate that cached entry is not a forward declaration
+                    # (DWARF4 spec: incomplete types have DW_AT_declaration attribute)
+                    decl_attr = die.attributes.get("DW_AT_declaration")
+                    is_declaration = decl_attr is not None
+                    
+                    if is_declaration:
+                        logger.warning(
+                            f"Cached entry for {class_name} at offset 0x{offset:x} "
+                            f"is a forward declaration. Trying targeted search for complete definition."
+                        )
+                        # Don't fall back to full scan yet - try targeted search first
+                        # (targeted search will check all CUs with timeout protection)
+                    else:
+                        # Log cache hit with completeness info
+                        size_attr = die.attributes.get("DW_AT_byte_size")
+                        has_members = die.has_children
+                        logger.info(
+                            f"Found {class_name} via cache at offset 0x{offset:x} "
+                            f"(size={size_attr.value if size_attr else 0}, "
+                            f"has_children={has_members})"
+                        )
+                        return cu, die
 
-            # Not in cache - do targeted search looking for ANY matching type
-            # This searches once through CUs checking all tags simultaneously
+            # Not in cache or cache had forward declaration - do targeted search
+            # This searches through CUs with scoring and timeout protection
             offset = self.lazy_index.targeted_symbol_search(class_name)
             if offset:
                 die_cu_result = self._find_die_and_cu_by_offset(offset)
                 if die_cu_result:
                     cu, die = die_cu_result
+                    
+                    # Validate targeted search result
+                    decl_attr = die.attributes.get("DW_AT_declaration")
+                    is_declaration = decl_attr is not None
+                    
+                    if is_declaration:
+                        logger.warning(
+                            f"Targeted search found forward declaration for {class_name} "
+                            f"at offset 0x{offset:x}. This likely means no complete definition exists."
+                        )
+                        # Return the forward declaration - it's better than nothing
+                        # The full scan would also time out finding the same thing
+                        return cu, die
+                    
                     # Determine what type we actually found
                     tag = str(die.tag) if die.tag else "unknown"
                     if tag == "DW_TAG_namespace":
@@ -175,9 +372,10 @@ class ClassParser:
                     else:
                         symbol_type = "type"
 
+                    size_attr = die.attributes.get("DW_AT_byte_size")
                     logger.info(
                         f"Found {class_name} via lazy loading at offset 0x{offset:x} "
-                        f"(type: {symbol_type})"
+                        f"(type: {symbol_type}, size={size_attr.value if size_attr else 0})"
                     )
                     return cu, die
 

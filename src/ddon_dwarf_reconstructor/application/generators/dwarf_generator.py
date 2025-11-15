@@ -116,7 +116,7 @@ class DwarfGenerator(BaseGenerator):
 
         # Initialize header generator with DWARF index
         header_start = time()
-        self.header_generator = HeaderGenerator(self.lazy_index)
+        self.header_generator = HeaderGenerator(self.lazy_index, self.class_parser)
         header_elapsed = time() - header_start
         logger.debug(f"HeaderGenerator initialization: {header_elapsed:.3f}s")
 
