@@ -51,6 +51,25 @@ make build
 build/main.exe --generate MtObject resources/DDOORBIS.elf
 ``````
 
+### Searching Full DWARF Dump
+
+Full DWARF dump (30GB+ uncompressed, zstd-compressed): `D:\research\DDON-binaries\IDA9.2\PS4_DDON_02020005_2016_12_21\DDOORBIS.elf.llvmdwarfdump.zst`
+
+**Search via Git Bash + ripgrep (rg available in Git Bash PATH):**
+
+```bash
+# Basic search with context
+&"C:\Program Files\Git\bin\bash.exe" -c 'rg -z "PATTERN" "/d/research/DDON-binaries/IDA9.2/PS4_DDON_02020005_2016_12_21/DDOORBIS.elf.llvmdwarfdump.zst" -C 5 | head -100'
+```
+
+**Key patterns:**
+- `-z` flag: decompress zstd on-the-fly
+- `-C N`: context lines before/after match
+- `-A N` / `-B N`: lines after/before match
+- Use `/d/...` Unix paths in Git Bash
+- `* (0xOFFSET)`: parent DIE marker in llvm-dwarfdump output
+- Pipe to `head`/`tail` to limit output
+
 ### Testing (CRITICAL)
 
 **ALWAYS use `uv run pytest` - never bare `pytest`**
@@ -253,16 +272,23 @@ def test_mtpropertylist_full_hierarchy():
 11. Comparison (table with alternatives)
 12. License
 
+**ARCHITECTURE.md style:**
+- **Present-tense capabilities only** - describe what the system DOES, not how it evolved
+- **Include rationales** - explain WHY each design choice solves project-specific problems
+- **No historical/delta perspective** - avoid "previously", "now", "changed from", "improved"
+- **Problem-solution pairs** - for each component, state the problem it addresses
+
 **ARCHITECTURE.md sections:**
-1. System overview (diagram)
-2. Directory structure (tree)
-3. Core components (with code signatures)
-4. Data flow (step-by-step)
-5. Performance optimizations (table)
-6. Design principles
-7. Extension points
-8. Limitations
-9. References
+1. Purpose and scope (what problems it solves)
+2. System overview (diagram with rationales)
+3. Directory structure (tree)
+4. Core components (with code signatures + WHY needed)
+5. Data flow (step-by-step with problem statements)
+6. Performance optimizations (table + what problem each solves)
+7. Design principles (with concrete examples of problems they prevent)
+8. Extension points
+9. Limitations
+10. References
 
 **TESTING.md sections:**
 1. Quick start (commands first)
@@ -314,9 +340,19 @@ tests/
  infrastructure/config/
 
 docs/
+ README.md                  # Documentation index
  ARCHITECTURE.md
+ COMPONENT_DIAGRAM.md
+ GENERATION_FLOWS.md
  TESTING.md
- knowledge-base/            # Research notes
+ DWARF_TAG_ANALYSIS.md
+ PS3_DWARF2_LOCATION_EXPRESSIONS.md
+ knowledge-base/
+   dwarf-specification/     # DWARF 2/4 specifications
+   dwarf/                   # DWARF parsing patterns
+   pyelftools/              # pyelftools usage
+   ps4-elf/                 # PS4 ELF format
+   tools/                   # Other tool approaches
 
 Root files:
  main.py                    # Entry point
@@ -336,6 +372,14 @@ Root files:
 - **Tests:** Mirror the src/ structure in tests/
 
 ## Common Workflows
+
+### Task Tracking
+
+For complex multi-step tasks (3+ steps):
+- Use manage_todo_list tool to track progress during active work
+- Mark tasks in-progress/completed as work proceeds
+- Provides visibility into planning and progress
+- Consider creating persistent planning files (ideas.md, task lists) for work spanning multiple sessions
 
 ### Adding a New Feature
 
@@ -387,12 +431,14 @@ python -m pytest  # Wrong - use uv run
 - Use technical, concise style
 - Include code examples with type hints
 - Add performance metrics when relevant
+- **For ARCHITECTURE.md:** Use present-tense capabilities, include WHY/rationale for each design choice, explain what problems each component solves
 
 **Not this:**
 - Create new ad-hoc documentation files
 - Use emojis, sales language, or casual tone
 - Generate verbose explanations without examples
 - Skip code examples or use pseudocode
+- **For ARCHITECTURE.md:** Use historical perspective ("previously", "now improved", "changed from")
 
 ### When Writing Summaries
 

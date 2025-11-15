@@ -1,22 +1,26 @@
-# DWARF Reconstructor Class Diagram
+# Component Diagram
 
-This diagram shows the architecture of the DWARF-to-C++ header reconstructor using domain-driven design.
+Complete class structure diagram showing all components in the DWARF-to-C++ header reconstructor.
 
 ```mermaid
 classDiagram
     %% Application Layer
     class DwarfGenerator {
         -Path elf_path
-        -LazyDwarfIndexService dwarf_index
+        -LazyDwarfIndexService lazy_index
         -LazyTypeResolver type_resolver
         -ClassParser class_parser
         -HeaderGenerator header_generator
         -HierarchyBuilder hierarchy_builder
         +__init__(elf_path: Path)
-        +generate_header(class_name: str) str
-        +generate_hierarchy_header(class_name: str) str
-        +generate_complete_hierarchy_header(class_name: str) str
+        +generate_header(class_name: str, include_metadata: bool) str
+        +generate_complete_hierarchy_header(class_name: str, include_metadata: bool) str
+        +generate_multi_file_hierarchy(class_name: str, output_dir: Path) dict~str,str~
         +find_class(name: str) tuple~CompileUnit, DIE~
+        -_expand_typedef_search(full_hierarchy: bool)
+        -_build_hierarchy_with_timing(class_name: str, max_depth: int) tuple
+        -_validate_hierarchy(class_infos: dict, class_name: str) bool
+        -_collect_typedefs_and_packing(class_infos: dict) dict~str,str~
         +close()
     }
 
@@ -105,7 +109,8 @@ classDiagram
         -LazyDwarfIndexService dwarf_index
         +__init__(dwarf_index)
         +generate_header(class_info, typedefs, cu_offset) str
-        +generate_hierarchy_header(class_infos, hierarchy_order) str
+        +generate_single_file_hierarchy_header(class_infos, hierarchy_order, target_class, typedefs) str
+        +generate_multi_file_hierarchy(classes_by_file, all_typedefs, class_infos) dict~str,str~
         -_generate_forward_declarations(class_infos, hierarchy_order) str
         -_generate_class_definition(class_info) str
         -_generate_members(members) str
@@ -138,6 +143,15 @@ classDiagram
         -_extract_union_dependencies(union, deps)
     }
 
+    class FileRegistry {
+        -DWARFInfo dwarf_info
+        -dict~str,list~ _file_to_classes
+        +__init__(dwarf_info)
+        +register_class(class_name, cu_offset, decl_file)
+        +get_classes_by_file() dict~str,list~
+        -_normalize_path(path) str
+    }
+
     %% Core Layer
     class LazyTypeResolver {
         -DWARFInfo dwarf_info
@@ -148,6 +162,7 @@ classDiagram
         +resolve_type(die: DIE) str|None
         +resolve_type_from_offset(offset: int) str|None
         +discover_typedefs() dict~str,str~
+        +collect_used_typedefs(members, methods, base_classes, enums, structs, unions) dict~str,str~
         -_resolve_type_chain(die, visited) str|None
         -_format_pointer_type(base_type, qualifiers) str
         -_format_array_type(die, base_type) str
@@ -157,9 +172,12 @@ classDiagram
         -DWARFInfo dwarf_info
         -dict~int,DIE~ _offset_index
         -bool _index_built
-        +__init__(dwarf_info)
+        +__init__(dwarf_info, cache_file, die_cache_size)
         +get_die_by_offset(offset: int) DIE|None
         +extract_die_by_offset(offset: int) DIE|None
+        +targeted_symbol_search(symbol_name, timeout) int|None
+        +save_cache()
+        +load_cache()
         -_build_offset_index()
         -_index_dies_in_cu(cu)
     }
@@ -179,6 +197,15 @@ classDiagram
         -_deserialize(data) ClassInfo
     }
 
+    class HeaderCache {
+        -Path cache_dir
+        -dict~str,str~ _hash_cache
+        +__init__(cache_dir)
+        +should_regenerate(filename, new_content) bool
+        +update(filename, content)
+        -_compute_hash(content) str
+    }
+
     class PackingAnalyzer {
         <<static>>
         +calculate_packing_info(class_info: ClassInfo) dict~str,int~
@@ -193,6 +220,7 @@ classDiagram
         +bool enable_caching
         +bool verbose_logging
         +str cache_dir
+        +int die_cache_size
     }
 
     %% Relationships - Application Layer
@@ -220,6 +248,7 @@ classDiagram
     HeaderGenerator --> LazyDwarfIndexService : validates offsets
     HeaderGenerator --> DIETypeClassifier : filters types
     HeaderGenerator --> ClassInfo : reads
+    HeaderGenerator --> HeaderCache : checks changes
 
     HierarchyBuilder --> ClassParser : parses classes
     HierarchyBuilder --> DependencyExtractor : extracts dependencies
@@ -229,6 +258,9 @@ classDiagram
     DependencyExtractor --> LazyDwarfIndexService : resolves offsets
     DependencyExtractor --> DIETypeClassifier : classifies types
     DependencyExtractor --> ClassInfo : reads
+
+    FileRegistry --> LazyDwarfIndexService : extracts file paths
+    FileRegistry --> ClassInfo : organizes
 
     %% Relationships - Core Services
     LazyTypeResolver --> LazyDwarfIndexService : finds DIEs
@@ -242,81 +274,45 @@ classDiagram
     %% Notes
     note for DwarfGenerator "Application Layer\nOrchestrates parsing and generation"
     note for ClassParser "Domain Layer\nParses DWARF DIEs into ClassInfo"
-    note for HeaderGenerator "Domain Layer\nGenerates C++ headers with two-phase algorithm"
+    note for HeaderGenerator "Domain Layer\nGenerates C++ headers for single and multi-file modes"
     note for HierarchyBuilder "Domain Layer\nBuilds inheritance chains and resolves dependencies recursively"
     note for LazyTypeResolver "Core Layer\nOn-demand type resolution with caching"
     note for LazyDwarfIndexService "Core Layer\nEfficient DIE offset lookup (O(1) after index)"
 ```
 
-## Architecture Overview
-
-The system follows **domain-driven design** with clear separation of concerns:
+## Component Responsibilities
 
 ### Application Layer
-- **DwarfGenerator**: Main orchestrator that coordinates all components
-- Entry point for header generation operations
-- Manages lifecycle (file opening/closing)
+- **DwarfGenerator**: Main orchestrator coordinating all components, manages lifecycle, provides public API
 
-### Domain Layer
-
-#### Models (`domain/models/dwarf/`)
+### Domain Layer - Models
 - **ClassInfo**: Complete class representation with members, methods, inheritance
-- **MemberInfo**: Field data (type, offset, bit fields)
-- **MethodInfo**: Method signatures with parameters and virtual table info
+- **MemberInfo**: Member variable with type, offset, bitfield information
+- **MethodInfo**: Method signature with parameters, virtual table info
 - **EnumInfo**, **StructInfo**, **UnionInfo**: Nested type definitions
 
-#### Services - Parsing (`domain/services/parsing/`)
-- **ClassParser**: DWARF DIE → ClassInfo conversion
-- **DIETypeClassifier**: Type validation and classification (static utilities)
+### Domain Layer - Parsing Services
+- **ClassParser**: DWARF DIE → ClassInfo conversion with multi-CU resolution
+- **DIETypeClassifier**: Static utilities for type validation and classification
 
-#### Services - Generation (`domain/services/generation/`)
-- **HeaderGenerator**: ClassInfo → C++ header with two-phase generation
-  - Phase 1: Inheritance hierarchy (base → derived)
-  - Phase 2: All dependency classes (alphabetically)
-- **HierarchyBuilder**: Builds complete inheritance chains with recursive dependency resolution
-- **DependencyExtractor**: Offset-based dependency extraction (no string parsing)
+### Domain Layer - Generation Services
+- **HeaderGenerator**: ClassInfo → C++ header generation (single-file and multi-file modes)
+- **HierarchyBuilder**: Builds complete inheritance chains with dependency resolution
+- **DependencyExtractor**: Offset-based dependency extraction without string parsing
+- **FileRegistry**: Organizes classes by original source files using DW_AT_decl_file
 
 ### Core Layer
-- **LazyTypeResolver**: On-demand type resolution with LRU caching
-- **LazyDwarfIndexService**: O(1) DIE offset lookup after initial index build
+- **LazyTypeResolver**: On-demand type resolution with LRU caching, typedef collection
+- **LazyDwarfIndexService**: O(1) DIE offset lookup with lazy index building, persistent caching
 
 ### Infrastructure Layer
-- **PersistentSymbolCache**: Disk-based caching with LRU memory cache
+- **PersistentSymbolCache**: Disk-based symbol caching with LRU memory cache
+- **HeaderCache**: SHA256-based header change detection for selective file writing
 - **PackingAnalyzer**: Struct packing and alignment analysis
-- **DwarfConfig**: Configuration management
-
-## Key Design Patterns
-
-1. **Lazy Loading**: Type resolution and DWARF index building on-demand
-2. **Offset-Based Resolution**: All type lookups use DIE offsets (no string parsing)
-3. **Two-Phase Generation**: Separate inheritance hierarchy from dependency classes
-4. **Recursive Dependency Tracing**: Full transitive closure of all type dependencies
-5. **Persistent Caching**: 85%+ cache hit rate for repeated symbol lookups
-
-## Data Flow
-
-1. **DwarfGenerator** receives class name
-2. **ClassParser** finds and parses DIE → **ClassInfo**
-3. **HierarchyBuilder** builds inheritance chain and extracts dependencies
-4. **DependencyExtractor** collects all type offsets recursively
-5. **HeaderGenerator** outputs C++ header in two phases:
-   - Inheritance hierarchy (base → derived)
-   - All dependency classes (alphabetically)
-6. **LazyTypeResolver** resolves types on-demand with caching
-7. **PersistentSymbolCache** stores parsed ClassInfo for future runs
-
-## Performance Characteristics
-
-| Component | Time Complexity | Space Complexity | Notes |
-|-----------|----------------|------------------|-------|
-| LazyDwarfIndexService | O(1) lookup after O(n) build | O(n) for index | Built lazily on first use |
-| LazyTypeResolver | O(1) with cache, O(log n) miss | O(k) for cache | LRU cache with 10K entries |
-| DependencyExtractor | O(m) per class | O(d) for deps | m=members+methods, d=unique deps |
-| HierarchyBuilder | O(h + d*m) | O(c) for classes | h=hierarchy depth, d=dependencies, m=avg members |
-| HeaderGenerator | O(c*m) | O(c) | c=classes, m=avg members |
+- **DwarfConfig**: Configuration management for all components
 
 ## References
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) - Detailed architecture documentation
-- [TESTING.md](TESTING.md) - Testing strategy and guidelines
+- [GENERATION_FLOWS.md](GENERATION_FLOWS.md) - Generation workflow diagrams
 - [README.md](../README.md) - Project overview and usage

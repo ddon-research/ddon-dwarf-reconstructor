@@ -1,3 +1,14 @@
+const MtDTI *__fastcall cSetInfoOmBreakTarget::getDTI(const cSetInfoOmBreakTarget *this);
+cSetInfoOmBreakTarget::MyDTI stru_255E760; // idb
+MtObject *__fastcall cSetInfoOmBreakTarget::MyDTI::newInstance(const cSetInfoOmBreakTarget::MyDTI *this);
+void __fastcall cSetInfoOmBreakTarget::_cSetInfoOmBreakTarget(cSetInfoOmBreakTarget *this);
+void __fastcall cSetInfoOmBreakTarget::createProperty(cSetInfoOmBreakTarget *this, MtPropertyList *s);
+bool __fastcall cSetInfoOmBreakTarget::load(cSetInfoOmBreakTarget *this, MtDataReader *r);
+bool __fastcall cSetInfoOmBreakTarget::save(cSetInfoOmBreakTarget *this, MtDataWriter *w);
+bool __fastcall cSetInfoOmBreakTarget::applyInfo(const cSetInfoOmBreakTarget *this, cUnit *pu);
+bool __fastcall cSetInfoOmBreakTarget::applyParam(const cSetInfoOmBreakTarget *this, cOmControl::InputLot *param);
+void __fastcall cSetInfoOmBreakTarget::copy(cSetInfoOmBreakTarget *this, cSetInfo *p);
+
 struct __cppobj MtObject
 {
   int (**_vptr$MtObject)(void);

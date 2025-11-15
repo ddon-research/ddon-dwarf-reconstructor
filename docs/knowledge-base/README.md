@@ -8,17 +8,23 @@ This knowledge base documents our approach to DWARF-to-C++ header reconstruction
 
 ```
 knowledge-base/
-├── ps4-elf/           # PS4-specific ELF format information
+├── dwarf-specification/  # Official DWARF format specifications
+│   ├── DWARF2.pdf       # DWARF 2.0.0 specification (PS3)
+│   ├── DWARF2.mm.txt    # DWARF2 text extraction
+│   ├── DWARF4.pdf       # DWARF 4 specification (PS4)
+│   ├── DWARF4.txt       # DWARF4 text extraction
+│   └── README.md
+├── ps4-elf/             # PS4-specific ELF format information
 │   ├── ps4-constants.md
 │   └── ida-loader-insights.md
-├── dwarf/             # DWARF parsing techniques
+├── dwarf/               # DWARF parsing techniques
 │   ├── ghidra-dwarf-parsing.md
 │   └── llvm-dwarf-parsing.md
-├── pyelftools/        # Current implementation approach
+├── pyelftools/          # Current implementation approach
 │   └── pyelftools-approach.md
-├── tools/             # Related tools and their approaches
+├── tools/               # Related tools and their approaches
 │   └── dwarf2cpp-approach.md
-└── optimization/      # Performance optimization strategies
+└── optimization/        # Performance optimization strategies
     └── indexing-strategy.md
 ```
 
