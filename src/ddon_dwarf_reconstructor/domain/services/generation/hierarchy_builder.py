@@ -247,6 +247,19 @@ class HierarchyBuilder:
                 if dep_offset not in processed_offsets:
                     to_process_offsets.add(dep_offset)
                     depth_map[dep_offset] = current_depth + 1
+            
+            # NEW: Also include base classes of this dependency
+            # This ensures intermediate base classes are not lost
+            base_classes = self._get_base_class_chain(type_name)
+            for base_name in base_classes:
+                if base_name not in all_classes:
+                    logger.debug(f"Adding base class of {type_name}: {base_name}")
+                    base_result = self.class_parser.find_class(base_name)
+                    if base_result:
+                        base_cu, base_die = base_result
+                        base_info = self.class_parser.parse_class_info(base_cu, base_die)
+                        all_classes[base_name] = base_info
+                        resolved_count += 1
         
         elapsed = time.perf_counter() - start_time
         logger.info(
@@ -350,3 +363,41 @@ class HierarchyBuilder:
                 if base_type != "unknown_type":
                     return base_type
         return None
+
+    def _get_base_class_chain(self, class_name: str) -> list[str]:
+        """Get complete base class chain for a class.
+
+        This method walks the inheritance hierarchy from the given class
+        to its root base class, collecting all intermediate base classes.
+        Used to ensure complete inheritance chains are included when
+        resolving dependencies.
+
+        Args:
+            class_name: Name of the class to get base classes for
+
+        Returns:
+            List of base class names from immediate parent to root (MtObject, etc.)
+            Empty list if class has no base classes or couldn't be found
+        """
+        base_classes: list[str] = []
+        current_class = class_name
+        visited = set()
+
+        while current_class and current_class not in visited:
+            visited.add(current_class)
+
+            result = self.class_parser.find_class(current_class)
+            if not result:
+                break
+
+            _cu, class_die = result
+
+            # Find base class
+            base_name = self._find_base_class(class_die)
+            if base_name and base_name != "unknown_type":
+                base_classes.append(base_name)
+                current_class = base_name
+            else:
+                break
+
+        return base_classes

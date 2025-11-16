@@ -387,7 +387,108 @@
     "JOBHANDLE": 267340,
     "MtGeometry": 200461,
     "JobParamOfLine": 266819,
-    "cSetInfoGeneralPoint": 248989287
+    "cSetInfoGeneralPoint": 248989287,
+    "cSetInfoCoord": 248989840,
+    "cSetInfoCharacter": 248010069,
+    "Resource": 635067383,
+    "Buffer": 634679965,
+    "ShaderObject": 665835991,
+    "BufferObject": 665836011,
+    "KEY": 643498871,
+    "cResPathBase": 298702565,
+    "uDDOModel": 218744627,
+    "CPacketDataBase": 70081962,
+    "uSoundZoneBase": 596650960,
+    "cResPtrBase": 290458225,
+    "uCoord": 611968780,
+    "cZoneListener": 627231297,
+    "uModel": 647509963,
+    "USAGE_TYPE": 634681137,
+    "cpTalk": 130588986,
+    "cpRotateCtrl": 233191797,
+    "cpPartsCtrl": 229520744,
+    "cpActionRequest": 183417353,
+    "cpEquip": 289709168,
+    "cpDDMrlMgr": 97036468,
+    "uControl": 115543040,
+    "cpMotionHistory": 218415743,
+    "cpSoftBody": 289934979,
+    "cpShlShotCtrl": 87944942,
+    "cArray<uDDOModel::stTouchReleaseInfo, 8>": 218784935,
+    "cDelegate_6<void, u32, u32, f32, f32, f32, u32>": 218751090,
+    "cpSequenceCtrl": 96860594,
+    "cpEffectProvider": 194248923,
+    "cpOcdCtrl": 69856627,
+    "cpStateManager": 183124490,
+    "cHitGeom": 51000521,
+    "cpWallExitCtrl": 100861569,
+    "cpCheckWallCliff": 218784145,
+    "GuardComponent": 218745596,
+    "uCharacter": 12872516,
+    "cDelegate_0<void>": 233172581,
+    "cAttackParam": 297289485,
+    "cpRegionStatusCtrl": 231989401,
+    "cpPivotCtrl": 231745382,
+    "cpActionSelect": 183198811,
+    "uShlBase": 251634423,
+    "uHuman": 86407848,
+    "cHitInfoAfter": 178385849,
+    "cUnitDieInfo": 261053147,
+    "uPlayer": 65771228,
+    "cpActionManager": 183118655,
+    "cpEffectStatusManager": 194802875,
+    "rShlParamList": 304512009,
+    "cpObjCollisionBase": 87468132,
+    "cpInput": 240754105,
+    "cpComponent": 233119831,
+    "cContextInstance": 115528174,
+    "cpKeepAtkAdjust": 213495171,
+    "cpScrCollision": 235715419,
+    "cHitInfo": 87550431,
+    "MtTypedArray<cAsyncArc>": 218852675,
+    "uHumanEnemy": 99510676,
+    "cpPathFinding": 92096268,
+    "uEnemy": 71244954,
+    "cpModelConst": 96702680,
+    "cpPawnThink": 183419768,
+    "cpLayout": 380443438,
+    "cpInvincibleCtrl": 180907295,
+    "cComponentManager": 22762975,
+    "MOT_TYPE": 647523980,
+    "cShlNotifyInfo": 251378814,
+    "cpSlave": 183418800,
+    "cContextCharacter": 87819844,
+    "cpWorkRate": 242404963,
+    "cpChargeCtrl": 203527328,
+    "cpLockOnTargetManager": 217251837,
+    "cpCatchCtrl": 182773187,
+    "cOutLineController": 218746195,
+    "cpAISensor": 183445010,
+    "MtTypedArray<cDamageMsg>": 218777403,
+    "uNpc": 362312219,
+    "MtTypedStorageArray<uDDOModel, 8>": 218852479,
+    "cCollNode": 297287429,
+    "uAimCheck": 365685387,
+    "cpLockOn": 216999388,
+    "TOUCH_RELEASE_TYPE": 218852432,
+    "TOUCH_TYPE": 218852326,
+    "cpHpDamageCtrl": 138334755,
+    "HP_DATATYPE": 304380242,
+    "cDamageSeInfo": 138339935,
+    "cContextInterface": 218751802,
+    "cpNpc": 219689198,
+    "cOcdInfo": 180690191,
+    "Motion": 647511713,
+    "InterpolationJoint": 647513934,
+    "MPARAM_WORK": 634485120,
+    "rMotionList": 642919168,
+    "Joint": 286878832,
+    "cZoneLayout": 626989975,
+    "cLayoutElement": 627031768,
+    "cGroupManager": 626991973,
+    "cSoundLayoutInfo": 280648819,
+    "rZone": 626991634,
+    "cInGameGroupManager": 626990268
   },
   "offset_to_symbol": {
     "293520466": "rLayout",
@@ -776,7 +877,108 @@
     "267340": "JOBHANDLE",
     "200461": "MtGeometry",
     "266819": "JobParamOfLine",
-    "248989287": "cSetInfoGeneralPoint"
+    "248989287": "cSetInfoGeneralPoint",
+    "248989840": "cSetInfoCoord",
+    "248010069": "cSetInfoCharacter",
+    "635067383": "Resource",
+    "634679965": "Buffer",
+    "665835991": "ShaderObject",
+    "665836011": "BufferObject",
+    "643498871": "KEY",
+    "298702565": "cResPathBase",
+    "218744627": "uDDOModel",
+    "70081962": "CPacketDataBase",
+    "596650960": "uSoundZoneBase",
+    "290458225": "cResPtrBase",
+    "611968780": "uCoord",
+    "627231297": "cZoneListener",
+    "647509963": "uModel",
+    "634681137": "USAGE_TYPE",
+    "130588986": "cpTalk",
+    "233191797": "cpRotateCtrl",
+    "229520744": "cpPartsCtrl",
+    "183417353": "cpActionRequest",
+    "289709168": "cpEquip",
+    "97036468": "cpDDMrlMgr",
+    "115543040": "uControl",
+    "218415743": "cpMotionHistory",
+    "289934979": "cpSoftBody",
+    "87944942": "cpShlShotCtrl",
+    "218784935": "cArray<uDDOModel::stTouchReleaseInfo, 8>",
+    "218751090": "cDelegate_6<void, u32, u32, f32, f32, f32, u32>",
+    "96860594": "cpSequenceCtrl",
+    "194248923": "cpEffectProvider",
+    "69856627": "cpOcdCtrl",
+    "183124490": "cpStateManager",
+    "51000521": "cHitGeom",
+    "100861569": "cpWallExitCtrl",
+    "218784145": "cpCheckWallCliff",
+    "218745596": "GuardComponent",
+    "12872516": "uCharacter",
+    "233172581": "cDelegate_0<void>",
+    "297289485": "cAttackParam",
+    "231989401": "cpRegionStatusCtrl",
+    "231745382": "cpPivotCtrl",
+    "183198811": "cpActionSelect",
+    "251634423": "uShlBase",
+    "86407848": "uHuman",
+    "178385849": "cHitInfoAfter",
+    "261053147": "cUnitDieInfo",
+    "65771228": "uPlayer",
+    "183118655": "cpActionManager",
+    "194802875": "cpEffectStatusManager",
+    "304512009": "rShlParamList",
+    "87468132": "cpObjCollisionBase",
+    "240754105": "cpInput",
+    "233119831": "cpComponent",
+    "115528174": "cContextInstance",
+    "213495171": "cpKeepAtkAdjust",
+    "235715419": "cpScrCollision",
+    "87550431": "cHitInfo",
+    "218852675": "MtTypedArray<cAsyncArc>",
+    "99510676": "uHumanEnemy",
+    "92096268": "cpPathFinding",
+    "71244954": "uEnemy",
+    "96702680": "cpModelConst",
+    "183419768": "cpPawnThink",
+    "380443438": "cpLayout",
+    "180907295": "cpInvincibleCtrl",
+    "22762975": "cComponentManager",
+    "647523980": "MOT_TYPE",
+    "251378814": "cShlNotifyInfo",
+    "183418800": "cpSlave",
+    "87819844": "cContextCharacter",
+    "242404963": "cpWorkRate",
+    "203527328": "cpChargeCtrl",
+    "217251837": "cpLockOnTargetManager",
+    "182773187": "cpCatchCtrl",
+    "218746195": "cOutLineController",
+    "183445010": "cpAISensor",
+    "218777403": "MtTypedArray<cDamageMsg>",
+    "362312219": "uNpc",
+    "218852479": "MtTypedStorageArray<uDDOModel, 8>",
+    "297287429": "cCollNode",
+    "365685387": "uAimCheck",
+    "216999388": "cpLockOn",
+    "218852432": "TOUCH_RELEASE_TYPE",
+    "218852326": "TOUCH_TYPE",
+    "138334755": "cpHpDamageCtrl",
+    "304380242": "HP_DATATYPE",
+    "138339935": "cDamageSeInfo",
+    "218751802": "cContextInterface",
+    "219689198": "cpNpc",
+    "180690191": "cOcdInfo",
+    "647511713": "Motion",
+    "647513934": "InterpolationJoint",
+    "634485120": "MPARAM_WORK",
+    "642919168": "rMotionList",
+    "286878832": "Joint",
+    "626989975": "cZoneLayout",
+    "627031768": "cLayoutElement",
+    "626991973": "cGroupManager",
+    "280648819": "cSoundLayoutInfo",
+    "626991634": "rZone",
+    "626990268": "cInGameGroupManager"
   },
   "symbol_to_cu_offset": {
     "rLayout": 293519243,
@@ -1165,7 +1367,108 @@
     "JOBHANDLE": 3229,
     "MtGeometry": 3229,
     "JobParamOfLine": 3229,
-    "cSetInfoGeneralPoint": 248989178
+    "cSetInfoGeneralPoint": 248989178,
+    "cSetInfoCoord": 248989178,
+    "cSetInfoCharacter": 247996981,
+    "Resource": 635066766,
+    "Buffer": 634679916,
+    "ShaderObject": 665763114,
+    "BufferObject": 665763114,
+    "KEY": 643498199,
+    "cResPathBase": 298650033,
+    "uDDOModel": 218641216,
+    "CPacketDataBase": 70017833,
+    "uSoundZoneBase": 596574570,
+    "cResPtrBase": 290401882,
+    "uCoord": 611968738,
+    "cZoneListener": 627231255,
+    "uModel": 647422192,
+    "USAGE_TYPE": 634679916,
+    "cpTalk": 130425184,
+    "cpRotateCtrl": 233178426,
+    "cpPartsCtrl": 229520458,
+    "cpActionRequest": 183198525,
+    "cpEquip": 289651422,
+    "cpDDMrlMgr": 96881084,
+    "uControl": 115230445,
+    "cpMotionHistory": 218415457,
+    "cpSoftBody": 289651422,
+    "cpShlShotCtrl": 87673805,
+    "cArray<uDDOModel::stTouchReleaseInfo, 8>": 218641216,
+    "cDelegate_6<void, u32, u32, f32, f32, f32, u32>": 218641216,
+    "cpSequenceCtrl": 96648008,
+    "cpEffectProvider": 194248637,
+    "cpOcdCtrl": 69642870,
+    "cpStateManager": 182863830,
+    "cHitGeom": 50785382,
+    "cpWallExitCtrl": 100846543,
+    "cpCheckWallCliff": 218641216,
+    "GuardComponent": 218641216,
+    "uCharacter": 12620150,
+    "cDelegate_0<void>": 233119205,
+    "cAttackParam": 297229973,
+    "cpRegionStatusCtrl": 231974332,
+    "cpPivotCtrl": 231745096,
+    "cpActionSelect": 183198525,
+    "uShlBase": 251365087,
+    "uHuman": 86080331,
+    "cHitInfoAfter": 178130408,
+    "cUnitDieInfo": 261053038,
+    "uPlayer": 65346644,
+    "cpActionManager": 182863830,
+    "cpEffectStatusManager": 194494413,
+    "rShlParamList": 304454815,
+    "cpObjCollisionBase": 87412309,
+    "cpInput": 240542607,
+    "cpComponent": 233119205,
+    "cContextInstance": 115230445,
+    "cpKeepAtkAdjust": 213494885,
+    "cpScrCollision": 235715133,
+    "cHitInfo": 87412309,
+    "MtTypedArray<cAsyncArc>": 218641216,
+    "uHumanEnemy": 99131605,
+    "cpPathFinding": 91880398,
+    "uEnemy": 70941961,
+    "cpModelConst": 96648008,
+    "cpPawnThink": 183198525,
+    "cpLayout": 380344988,
+    "cpInvincibleCtrl": 180689905,
+    "cComponentManager": 22762866,
+    "MOT_TYPE": 647422192,
+    "cShlNotifyInfo": 251365087,
+    "cpSlave": 183198525,
+    "cContextCharacter": 87673805,
+    "cpWorkRate": 242404677,
+    "cpChargeCtrl": 203511372,
+    "cpLockOnTargetManager": 217238100,
+    "cpCatchCtrl": 182501144,
+    "cOutLineController": 218641216,
+    "cpAISensor": 183198525,
+    "MtTypedArray<cDamageMsg>": 218641216,
+    "uNpc": 361986961,
+    "MtTypedStorageArray<uDDOModel, 8>": 218641216,
+    "cCollNode": 297229973,
+    "uAimCheck": 365668729,
+    "cpLockOn": 216999102,
+    "TOUCH_RELEASE_TYPE": 218641216,
+    "TOUCH_TYPE": 218641216,
+    "cpHpDamageCtrl": 138029966,
+    "HP_DATATYPE": 304326803,
+    "cDamageSeInfo": 138029966,
+    "cContextInterface": 218641216,
+    "cpNpc": 219673245,
+    "cOcdInfo": 180689905,
+    "Motion": 647422192,
+    "InterpolationJoint": 647422192,
+    "MPARAM_WORK": 634483919,
+    "rMotionList": 642919126,
+    "Joint": 286878123,
+    "cZoneLayout": 626932757,
+    "cLayoutElement": 627031016,
+    "cGroupManager": 626932757,
+    "cSoundLayoutInfo": 280577336,
+    "rZone": 626932757,
+    "cInGameGroupManager": 626932757
   },
   "symbol_definitions": {
     "rLayout": [
@@ -4263,6 +4566,814 @@
         "score": 0,
         "complete": true
       }
+    ],
+    "cSetInfoCoord": [
+      {
+        "cu_offset": 248989178,
+        "die_offset": 248989840,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cSetInfoCharacter": [
+      {
+        "cu_offset": 247996981,
+        "die_offset": 248010069,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "Resource": [
+      {
+        "cu_offset": 635066766,
+        "die_offset": 635067383,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "Buffer": [
+      {
+        "cu_offset": 634679916,
+        "die_offset": 634679965,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "ShaderObject": [
+      {
+        "cu_offset": 665763114,
+        "die_offset": 665835991,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "BufferObject": [
+      {
+        "cu_offset": 665763114,
+        "die_offset": 665836011,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "KEY": [
+      {
+        "cu_offset": 643498199,
+        "die_offset": 643498871,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cResPathBase": [
+      {
+        "cu_offset": 298650033,
+        "die_offset": 298702565,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "uDDOModel": [
+      {
+        "cu_offset": 218641216,
+        "die_offset": 218744627,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "CPacketDataBase": [
+      {
+        "cu_offset": 70017833,
+        "die_offset": 70081962,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "uSoundZoneBase": [
+      {
+        "cu_offset": 596574570,
+        "die_offset": 596650960,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cResPtrBase": [
+      {
+        "cu_offset": 290401882,
+        "die_offset": 290458225,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "uCoord": [
+      {
+        "cu_offset": 611968738,
+        "die_offset": 611968780,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cZoneListener": [
+      {
+        "cu_offset": 627231255,
+        "die_offset": 627231297,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "uModel": [
+      {
+        "cu_offset": 647422192,
+        "die_offset": 647509963,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "USAGE_TYPE": [
+      {
+        "cu_offset": 634679916,
+        "die_offset": 634681137,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpTalk": [
+      {
+        "cu_offset": 130425184,
+        "die_offset": 130588986,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpRotateCtrl": [
+      {
+        "cu_offset": 233178426,
+        "die_offset": 233191797,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpPartsCtrl": [
+      {
+        "cu_offset": 229520458,
+        "die_offset": 229520744,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpActionRequest": [
+      {
+        "cu_offset": 183198525,
+        "die_offset": 183417353,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpEquip": [
+      {
+        "cu_offset": 289651422,
+        "die_offset": 289709168,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpDDMrlMgr": [
+      {
+        "cu_offset": 96881084,
+        "die_offset": 97036468,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "uControl": [
+      {
+        "cu_offset": 115230445,
+        "die_offset": 115543040,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpMotionHistory": [
+      {
+        "cu_offset": 218415457,
+        "die_offset": 218415743,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpSoftBody": [
+      {
+        "cu_offset": 289651422,
+        "die_offset": 289934979,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpShlShotCtrl": [
+      {
+        "cu_offset": 87673805,
+        "die_offset": 87944942,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cArray<uDDOModel::stTouchReleaseInfo, 8>": [
+      {
+        "cu_offset": 218641216,
+        "die_offset": 218784935,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cDelegate_6<void, u32, u32, f32, f32, f32, u32>": [
+      {
+        "cu_offset": 218641216,
+        "die_offset": 218751090,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpSequenceCtrl": [
+      {
+        "cu_offset": 96648008,
+        "die_offset": 96860594,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpEffectProvider": [
+      {
+        "cu_offset": 194248637,
+        "die_offset": 194248923,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpOcdCtrl": [
+      {
+        "cu_offset": 69642870,
+        "die_offset": 69856627,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpStateManager": [
+      {
+        "cu_offset": 182863830,
+        "die_offset": 183124490,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cHitGeom": [
+      {
+        "cu_offset": 50785382,
+        "die_offset": 51000521,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpWallExitCtrl": [
+      {
+        "cu_offset": 100846543,
+        "die_offset": 100861569,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpCheckWallCliff": [
+      {
+        "cu_offset": 218641216,
+        "die_offset": 218784145,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "GuardComponent": [
+      {
+        "cu_offset": 218641216,
+        "die_offset": 218745596,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "uCharacter": [
+      {
+        "cu_offset": 12620150,
+        "die_offset": 12872516,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cDelegate_0<void>": [
+      {
+        "cu_offset": 233119205,
+        "die_offset": 233172581,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cAttackParam": [
+      {
+        "cu_offset": 297229973,
+        "die_offset": 297289485,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpRegionStatusCtrl": [
+      {
+        "cu_offset": 231974332,
+        "die_offset": 231989401,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpPivotCtrl": [
+      {
+        "cu_offset": 231745096,
+        "die_offset": 231745382,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpActionSelect": [
+      {
+        "cu_offset": 183198525,
+        "die_offset": 183198811,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "uShlBase": [
+      {
+        "cu_offset": 251365087,
+        "die_offset": 251634423,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "uHuman": [
+      {
+        "cu_offset": 86080331,
+        "die_offset": 86407848,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cHitInfoAfter": [
+      {
+        "cu_offset": 178130408,
+        "die_offset": 178385849,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cUnitDieInfo": [
+      {
+        "cu_offset": 261053038,
+        "die_offset": 261053147,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "uPlayer": [
+      {
+        "cu_offset": 65346644,
+        "die_offset": 65771228,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpActionManager": [
+      {
+        "cu_offset": 182863830,
+        "die_offset": 183118655,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpEffectStatusManager": [
+      {
+        "cu_offset": 194494413,
+        "die_offset": 194802875,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "rShlParamList": [
+      {
+        "cu_offset": 304454815,
+        "die_offset": 304512009,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpObjCollisionBase": [
+      {
+        "cu_offset": 87412309,
+        "die_offset": 87468132,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpInput": [
+      {
+        "cu_offset": 240542607,
+        "die_offset": 240754105,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpComponent": [
+      {
+        "cu_offset": 233119205,
+        "die_offset": 233119831,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cContextInstance": [
+      {
+        "cu_offset": 115230445,
+        "die_offset": 115528174,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpKeepAtkAdjust": [
+      {
+        "cu_offset": 213494885,
+        "die_offset": 213495171,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpScrCollision": [
+      {
+        "cu_offset": 235715133,
+        "die_offset": 235715419,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cHitInfo": [
+      {
+        "cu_offset": 87412309,
+        "die_offset": 87550431,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtTypedArray<cAsyncArc>": [
+      {
+        "cu_offset": 218641216,
+        "die_offset": 218852675,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "uHumanEnemy": [
+      {
+        "cu_offset": 99131605,
+        "die_offset": 99510676,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpPathFinding": [
+      {
+        "cu_offset": 91880398,
+        "die_offset": 92096268,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "uEnemy": [
+      {
+        "cu_offset": 70941961,
+        "die_offset": 71244954,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpModelConst": [
+      {
+        "cu_offset": 96648008,
+        "die_offset": 96702680,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpPawnThink": [
+      {
+        "cu_offset": 183198525,
+        "die_offset": 183419768,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpLayout": [
+      {
+        "cu_offset": 380344988,
+        "die_offset": 380443438,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpInvincibleCtrl": [
+      {
+        "cu_offset": 180689905,
+        "die_offset": 180907295,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cComponentManager": [
+      {
+        "cu_offset": 22762866,
+        "die_offset": 22762975,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MOT_TYPE": [
+      {
+        "cu_offset": 647422192,
+        "die_offset": 647523980,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cShlNotifyInfo": [
+      {
+        "cu_offset": 251365087,
+        "die_offset": 251378814,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpSlave": [
+      {
+        "cu_offset": 183198525,
+        "die_offset": 183418800,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cContextCharacter": [
+      {
+        "cu_offset": 87673805,
+        "die_offset": 87819844,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpWorkRate": [
+      {
+        "cu_offset": 242404677,
+        "die_offset": 242404963,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpChargeCtrl": [
+      {
+        "cu_offset": 203511372,
+        "die_offset": 203527328,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpLockOnTargetManager": [
+      {
+        "cu_offset": 217238100,
+        "die_offset": 217251837,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpCatchCtrl": [
+      {
+        "cu_offset": 182501144,
+        "die_offset": 182773187,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cOutLineController": [
+      {
+        "cu_offset": 218641216,
+        "die_offset": 218746195,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpAISensor": [
+      {
+        "cu_offset": 183198525,
+        "die_offset": 183445010,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtTypedArray<cDamageMsg>": [
+      {
+        "cu_offset": 218641216,
+        "die_offset": 218777403,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "uNpc": [
+      {
+        "cu_offset": 361986961,
+        "die_offset": 362312219,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtTypedStorageArray<uDDOModel, 8>": [
+      {
+        "cu_offset": 218641216,
+        "die_offset": 218852479,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cCollNode": [
+      {
+        "cu_offset": 297229973,
+        "die_offset": 297287429,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "uAimCheck": [
+      {
+        "cu_offset": 365668729,
+        "die_offset": 365685387,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpLockOn": [
+      {
+        "cu_offset": 216999102,
+        "die_offset": 216999388,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "TOUCH_RELEASE_TYPE": [
+      {
+        "cu_offset": 218641216,
+        "die_offset": 218852432,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "TOUCH_TYPE": [
+      {
+        "cu_offset": 218641216,
+        "die_offset": 218852326,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpHpDamageCtrl": [
+      {
+        "cu_offset": 138029966,
+        "die_offset": 138334755,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "HP_DATATYPE": [
+      {
+        "cu_offset": 304326803,
+        "die_offset": 304380242,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cDamageSeInfo": [
+      {
+        "cu_offset": 138029966,
+        "die_offset": 138339935,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cContextInterface": [
+      {
+        "cu_offset": 218641216,
+        "die_offset": 218751802,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cpNpc": [
+      {
+        "cu_offset": 219673245,
+        "die_offset": 219689198,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cOcdInfo": [
+      {
+        "cu_offset": 180689905,
+        "die_offset": 180690191,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "Motion": [
+      {
+        "cu_offset": 647422192,
+        "die_offset": 647511713,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "InterpolationJoint": [
+      {
+        "cu_offset": 647422192,
+        "die_offset": 647513934,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MPARAM_WORK": [
+      {
+        "cu_offset": 634483919,
+        "die_offset": 634485120,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "rMotionList": [
+      {
+        "cu_offset": 642919126,
+        "die_offset": 642919168,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "Joint": [
+      {
+        "cu_offset": 286878123,
+        "die_offset": 286878832,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cZoneLayout": [
+      {
+        "cu_offset": 626932757,
+        "die_offset": 626989975,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cLayoutElement": [
+      {
+        "cu_offset": 627031016,
+        "die_offset": 627031768,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cGroupManager": [
+      {
+        "cu_offset": 626932757,
+        "die_offset": 626991973,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cSoundLayoutInfo": [
+      {
+        "cu_offset": 280577336,
+        "die_offset": 280648819,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "rZone": [
+      {
+        "cu_offset": 626932757,
+        "die_offset": 626991634,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cInGameGroupManager": [
+      {
+        "cu_offset": 626932757,
+        "die_offset": 626990268,
+        "score": 0,
+        "complete": true
+      }
     ]
   },
   "cu_offset_to_symbols": {
@@ -4669,9 +5780,242 @@
       "MATERIAL_INFO"
     ],
     "248989178": [
-      "cSetInfoGeneralPoint"
+      "cSetInfoGeneralPoint",
+      "cSetInfoCoord"
+    ],
+    "247996981": [
+      "cSetInfoCharacter"
+    ],
+    "635066766": [
+      "Resource"
+    ],
+    "634679916": [
+      "Buffer",
+      "USAGE_TYPE"
+    ],
+    "665763114": [
+      "ShaderObject",
+      "BufferObject"
+    ],
+    "643498199": [
+      "KEY"
+    ],
+    "298650033": [
+      "cResPathBase"
+    ],
+    "218641216": [
+      "uDDOModel",
+      "cArray<uDDOModel::stTouchReleaseInfo, 8>",
+      "cDelegate_6<void, u32, u32, f32, f32, f32, u32>",
+      "cpCheckWallCliff",
+      "GuardComponent",
+      "MtTypedArray<cAsyncArc>",
+      "cOutLineController",
+      "MtTypedArray<cDamageMsg>",
+      "MtTypedStorageArray<uDDOModel, 8>",
+      "TOUCH_RELEASE_TYPE",
+      "TOUCH_TYPE",
+      "cContextInterface"
+    ],
+    "70017833": [
+      "CPacketDataBase"
+    ],
+    "596574570": [
+      "uSoundZoneBase"
+    ],
+    "290401882": [
+      "cResPtrBase"
+    ],
+    "611968738": [
+      "uCoord"
+    ],
+    "627231255": [
+      "cZoneListener"
+    ],
+    "647422192": [
+      "uModel",
+      "MOT_TYPE",
+      "Motion",
+      "InterpolationJoint"
+    ],
+    "130425184": [
+      "cpTalk"
+    ],
+    "233178426": [
+      "cpRotateCtrl"
+    ],
+    "229520458": [
+      "cpPartsCtrl"
+    ],
+    "183198525": [
+      "cpActionRequest",
+      "cpActionSelect",
+      "cpPawnThink",
+      "cpSlave",
+      "cpAISensor"
+    ],
+    "289651422": [
+      "cpEquip",
+      "cpSoftBody"
+    ],
+    "96881084": [
+      "cpDDMrlMgr"
+    ],
+    "115230445": [
+      "uControl",
+      "cContextInstance"
+    ],
+    "218415457": [
+      "cpMotionHistory"
+    ],
+    "87673805": [
+      "cpShlShotCtrl",
+      "cContextCharacter"
+    ],
+    "96648008": [
+      "cpSequenceCtrl",
+      "cpModelConst"
+    ],
+    "194248637": [
+      "cpEffectProvider"
+    ],
+    "69642870": [
+      "cpOcdCtrl"
+    ],
+    "182863830": [
+      "cpStateManager",
+      "cpActionManager"
+    ],
+    "50785382": [
+      "cHitGeom"
+    ],
+    "100846543": [
+      "cpWallExitCtrl"
+    ],
+    "12620150": [
+      "uCharacter"
+    ],
+    "233119205": [
+      "cDelegate_0<void>",
+      "cpComponent"
+    ],
+    "297229973": [
+      "cAttackParam",
+      "cCollNode"
+    ],
+    "231974332": [
+      "cpRegionStatusCtrl"
+    ],
+    "231745096": [
+      "cpPivotCtrl"
+    ],
+    "251365087": [
+      "uShlBase",
+      "cShlNotifyInfo"
+    ],
+    "86080331": [
+      "uHuman"
+    ],
+    "178130408": [
+      "cHitInfoAfter"
+    ],
+    "261053038": [
+      "cUnitDieInfo"
+    ],
+    "65346644": [
+      "uPlayer"
+    ],
+    "194494413": [
+      "cpEffectStatusManager"
+    ],
+    "304454815": [
+      "rShlParamList"
+    ],
+    "87412309": [
+      "cpObjCollisionBase",
+      "cHitInfo"
+    ],
+    "240542607": [
+      "cpInput"
+    ],
+    "213494885": [
+      "cpKeepAtkAdjust"
+    ],
+    "235715133": [
+      "cpScrCollision"
+    ],
+    "99131605": [
+      "uHumanEnemy"
+    ],
+    "91880398": [
+      "cpPathFinding"
+    ],
+    "70941961": [
+      "uEnemy"
+    ],
+    "380344988": [
+      "cpLayout"
+    ],
+    "180689905": [
+      "cpInvincibleCtrl",
+      "cOcdInfo"
+    ],
+    "22762866": [
+      "cComponentManager"
+    ],
+    "242404677": [
+      "cpWorkRate"
+    ],
+    "203511372": [
+      "cpChargeCtrl"
+    ],
+    "217238100": [
+      "cpLockOnTargetManager"
+    ],
+    "182501144": [
+      "cpCatchCtrl"
+    ],
+    "361986961": [
+      "uNpc"
+    ],
+    "365668729": [
+      "uAimCheck"
+    ],
+    "216999102": [
+      "cpLockOn"
+    ],
+    "138029966": [
+      "cpHpDamageCtrl",
+      "cDamageSeInfo"
+    ],
+    "304326803": [
+      "HP_DATATYPE"
+    ],
+    "219673245": [
+      "cpNpc"
+    ],
+    "634483919": [
+      "MPARAM_WORK"
+    ],
+    "642919126": [
+      "rMotionList"
+    ],
+    "286878123": [
+      "Joint"
+    ],
+    "626932757": [
+      "cZoneLayout",
+      "cGroupManager",
+      "rZone",
+      "cInGameGroupManager"
+    ],
+    "627031016": [
+      "cLayoutElement"
+    ],
+    "280577336": [
+      "cSoundLayoutInfo"
     ]
   },
   "created": 1763245346.611231,
-  "last_updated": 1763290602.9907727
+  "last_updated": 1763300183.222193
 }
