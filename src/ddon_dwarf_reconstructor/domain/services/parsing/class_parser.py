@@ -7,6 +7,7 @@ including members, methods, enums, and nested types.
 """
 
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from elftools.dwarf.compileunit import CompileUnit
@@ -71,6 +72,8 @@ class ClassParser:
         dwarf_info: "DWARFInfo",
         lazy_index: "LazyDwarfIndexService | None" = None,
         full_scan_timeout: float = 180.0,
+        exhaustive_search: bool = False,
+        dwarf_dump_path: "Path | None" = None,
     ):
         """Initialize class parser with lazy type resolver and lazy index.
 
@@ -79,11 +82,15 @@ class ClassParser:
             dwarf_info: DWARF information structure
             lazy_index: Optional LazyDwarfIndex for memory-efficient lookups
             full_scan_timeout: Maximum seconds for full DWARF scan (default: 180s)
+            exhaustive_search: Enable exhaustive search mode (scan all CUs for best definition)
+            dwarf_dump_path: Optional path to compressed llvm-dwarfdump .zst file for fast lookups
         """
         self.type_resolver = type_resolver
         self.dwarf_info = dwarf_info
         self.lazy_index = lazy_index
         self.full_scan_timeout = full_scan_timeout
+        self.exhaustive_search = exhaustive_search
+        self.dwarf_dump_path = dwarf_dump_path
         self.timed_out_symbols: set[str] = set()  # Track symbols that timed out
 
     @log_timing
@@ -92,6 +99,8 @@ class ClassParser:
 
         When lazy_index is available, uses memory-efficient offset-based lookups.
         Falls back to full DWARF iteration if lazy loading is unavailable.
+
+        In exhaustive_search mode, bypasses cache to find most complete definition.
 
         Supports classes, structs, unions, enums, typedefs, and arrays.
         Returns the first complete definition (with size > 0) found.
@@ -111,6 +120,19 @@ class ClassParser:
             )
             return None
         
+        # In exhaustive mode, skip cache and do full scan
+        if self.exhaustive_search:
+            logger.debug(f"Exhaustive search enabled for '{class_name}', bypassing cache")
+            
+            # If dwarf_dump is available, use fast zstd lookup
+            if self.dwarf_dump_path:
+                result = self._find_class_with_dump(class_name)
+                if result:
+                    return result
+                # Fall through to full scan if dump lookup failed
+            
+            return self._find_class_full_scan(class_name)
+        
         # Try lazy loading first (memory efficient)
         if self.lazy_index:
             result = self._find_class_lazy(class_name)
@@ -122,26 +144,34 @@ class ClassParser:
 
     def _find_class_full_scan(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
         """Find class using full DWARF iteration (memory intensive fallback).
-        
+
         Searches all compilation units for the best match, preferring complete definitions
         over forward declarations. Uses scoring algorithm based on DWARF4 spec:
         - Forward declarations (DW_AT_declaration): heavily penalized
         - Has members (has_children): strongly preferred
         - Has byte_size: preferred, scaled by size
-        - Early exit optimization: returns immediately if perfect match found
+        - Nested types: enums (+1000 each), structs (+500), unions (+300)
+        - Early exit optimization (default mode): returns immediately if perfect match found
           (has_children + size>0 + no declaration)
+        - Exhaustive mode (self.exhaustive_search=True): scans all CUs to find most complete
         - Timeout protection: aborts after full_scan_timeout seconds
+
+        Returns:
+            Tuple of (CompileUnit, DIE) for best match, or None if not found
         """
         target_name = class_name.encode("utf-8")
         fallback_candidate = None
         best_candidate = None
         best_score = -1
         best_cu = None
-        
+
         # Track time to prevent indefinite searches
         start_time = time.time()
         timed_out = False
         candidates_found = 0
+
+        mode_str = "exhaustive" if self.exhaustive_search else "fast (early-exit)"
+        logger.debug(f"Starting {mode_str} search for '{class_name}'")
 
         # Look for best definition across all CUs
         cu: CompileUnit
@@ -157,7 +187,7 @@ class ClassParser:
                 )
                 self.timed_out_symbols.add(class_name)
                 break
-            
+
             die: DIE
             for die in cu.iter_DIEs():  # type: ignore
                 if die.is_null():  # type: ignore
@@ -174,22 +204,22 @@ class ClassParser:
                     name_attr = die.attributes.get("DW_AT_name")
                     if name_attr and name_attr.value == target_name:
                         candidates_found += 1
-                        
+
                         # Check for forward declaration (DWARF4 spec: incomplete types
                         # have DW_AT_declaration attribute and no byte_size)
                         decl_attr = die.attributes.get("DW_AT_declaration")
                         is_declaration = decl_attr is not None
-                        
+
                         # Evaluate completeness
                         size_attr = die.attributes.get("DW_AT_byte_size")
                         has_size = size_attr and size_attr.value > 0
                         has_members = die.has_children
-                        
+
                         # Calculate completeness score with type-specific handling:
                         # - Typedefs, base types, enums: complete if not declarations
                         # - Classes/structs: prefer those with members and size
                         score = 0
-                        
+
                         if is_declaration:
                             score = -1000  # Forward declaration
                         elif die.tag == "DW_TAG_typedef":
@@ -214,7 +244,31 @@ class ClassParser:
                                 score += size_attr.value if size_attr else 0
                             if has_members:
                                 score += 10000
-                        
+
+                            # In exhaustive mode, count nested types for better scoring
+                            if self.exhaustive_search:
+                                nested_enums = sum(
+                                    1 for c in die.iter_children()
+                                    if c.tag == "DW_TAG_enumeration_type"
+                                )
+                                nested_structs = sum(
+                                    1 for c in die.iter_children()
+                                    if c.tag == "DW_TAG_structure_type"
+                                )
+                                nested_unions = sum(
+                                    1 for c in die.iter_children()
+                                    if c.tag == "DW_TAG_union_type"
+                                )
+                                score += nested_enums * 1000
+                                score += nested_structs * 500
+                                score += nested_unions * 300
+
+                                logger.debug(
+                                    f"Candidate {class_name} at 0x{die.offset:x}: "
+                                    f"enums={nested_enums}, structs={nested_structs}, "
+                                    f"unions={nested_unions}"
+                                )
+
                         logger.debug(
                             f"Found candidate {class_name} at DIE 0x{die.offset:x} "
                             f"(CU 0x{cu.cu_offset:x}): score={score}, "
@@ -222,26 +276,27 @@ class ClassParser:
                             f"has_children={has_members}, is_declaration={is_declaration}, "
                             f"tag={die.tag}"
                         )
-                        
+
                         if score > best_score:
                             best_score = score
                             best_candidate = die
                             best_cu = cu
-                        
+
                         # Keep first match as ultimate fallback
                         if fallback_candidate is None:
                             fallback_candidate = (cu, die)
-                        
-                        # Early exit optimization: if we found a perfect match
+
+                        # Early exit optimization: if we found a perfect match AND not in exhaustive mode
                         # (classes with members, typedefs, base types, or enums)
-                        if (has_members and has_size and not is_declaration) or score >= 5000:
-                            size_str = f"{size_attr.value} bytes" if size_attr else "no size"
-                            logger.info(
-                                f"Found {class_name} in CU at offset 0x{cu.cu_offset:x} "
-                                f"(perfect match: size={size_str}, has_children={has_members}, "
-                                f"score={score})"
-                            )
-                            return cu, die
+                        if not self.exhaustive_search:
+                            if (has_members and has_size and not is_declaration) or score >= 5000:
+                                size_str = f"{size_attr.value} bytes" if size_attr else "no size"
+                                logger.info(
+                                    f"Found {class_name} in CU at offset 0x{cu.cu_offset:x} "
+                                    f"(perfect match: size={size_str}, has_children={has_members}, "
+                                    f"score={score})"
+                                )
+                                return cu, die
 
         # Return best candidate if found
         if best_candidate and best_score > 0:
@@ -263,6 +318,17 @@ class ClassParser:
                 f"(best match: size={size_value} bytes, has_children={has_members}, "
                 f"score={best_score})"
             )
+            
+            # Update cache with best definition found
+            if self.lazy_index:
+                logger.debug(
+                    f"Updating cache with {class_name} -> CU 0x{best_cu.cu_offset:x}, "
+                    f"DIE 0x{best_candidate.offset:x}, score={best_score}"
+                )
+                self.lazy_index.persistent_cache.add_symbol_cu_mapping(
+                    class_name, best_cu.cu_offset, best_candidate.offset, score=best_score, complete=True
+                )
+            
             return best_cu, best_candidate
         
         # If timed out, return best candidate found so far (even if incomplete)
@@ -273,6 +339,17 @@ class ClassParser:
                 f"Best candidate at CU 0x{cu.cu_offset:x} with score={best_score}. "
                 f"Result may be incomplete."
             )
+            
+            # Update cache even with incomplete result (better than nothing)
+            if self.lazy_index:
+                logger.debug(
+                    f"Caching partial result: {class_name} -> CU 0x{cu.cu_offset:x}, "
+                    f"DIE 0x{die.offset:x}, score={best_score}"
+                )
+                self.lazy_index.persistent_cache.add_symbol_cu_mapping(
+                    class_name, cu.cu_offset, die.offset, score=best_score, complete=False
+                )
+            
             return cu, die
         
         # Warn if only forward declaration found
@@ -283,21 +360,101 @@ class ClassParser:
                 f"but only as forward declaration (score={best_score}). "
                 f"This may indicate missing debug information."
             )
+            
+            # Cache forward declaration (better than nothing for next lookup)
+            if self.lazy_index:
+                logger.debug(
+                    f"Caching forward declaration: {class_name} -> CU 0x{cu.cu_offset:x}, "
+                    f"DIE 0x{die.offset:x}, score={best_score}"
+                )
+                self.lazy_index.persistent_cache.add_symbol_cu_mapping(
+                    class_name, cu.cu_offset, die.offset, score=best_score, complete=False
+                )
+            
             return cu, die
 
         logger.warning(f"Class {class_name} not found in DWARF info")
         return None
-        if fallback_candidate:
-            cu, die = fallback_candidate
-            logger.warning(
-                f"Found {class_name} in CU at offset 0x{cu.cu_offset:x} "
-                f"but only as forward declaration (score={best_score}). "
-                f"This may indicate missing debug information."
+
+    def _find_class_with_dump(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
+        """Find class using compressed DWARF dump for fast multi-definition lookup.
+        
+        Uses ZstdDumpParser to quickly find all definition locations, then loads
+        only those specific CUs to compare completeness. Much faster than full scan.
+        
+        Args:
+            class_name: Name of the class to find
+            
+        Returns:
+            Tuple of (CompileUnit, DIE) for best match, or None if not found
+        """
+        from ....infrastructure.zstd_dump_parser import ZstdDumpParser
+        
+        logger.info(f"Using DWARF dump for fast lookup: {self.dwarf_dump_path}")
+        
+        try:
+            parser = ZstdDumpParser(Path(self.dwarf_dump_path))
+            locations = parser.find_class_definitions(class_name)
+            
+            if not locations:
+                logger.warning(f"No definitions found for '{class_name}' in DWARF dump")
+                return None
+            
+            logger.info(
+                f"Found {len(locations)} definition(s) for '{class_name}' in dump "
+                f"(best has {locations[0].nested_enum_count} enums, "
+                f"{locations[0].nested_struct_count} structs, "
+                f"score={locations[0].completeness_score})"
             )
-            return cu, die
-
-        logger.warning(f"Class {class_name} not found in DWARF info")
-        return None
+            
+            # Load the best definition's CU and find the DIE
+            best_location = locations[0]
+            cu_offset = int(best_location.cu_offset, 16)
+            die_offset = int(best_location.die_offset, 16)
+            
+            logger.debug(
+                f"Loading best definition from CU 0x{cu_offset:x}, DIE 0x{die_offset:x}"
+            )
+            
+            # Find the CU with this offset
+            target_cu = None
+            for cu in self.dwarf_info.iter_CUs():
+                if cu.cu_offset == cu_offset:
+                    target_cu = cu
+                    break
+            
+            if not target_cu:
+                logger.error(f"Could not find CU at offset 0x{cu_offset:x}")
+                return None
+            
+            # Find the DIE at the specific offset within this CU
+            for die in target_cu.iter_DIEs():
+                if die.offset == die_offset:
+                    logger.info(
+                        f"Found {class_name} at DIE 0x{die_offset:x} "
+                        f"(CU 0x{cu_offset:x}) via DWARF dump"
+                    )
+                    
+                    # Update cache with this complete definition (use best location's score)
+                    if self.lazy_index:
+                        logger.debug(
+                            f"Updating cache with {class_name} -> CU 0x{cu_offset:x}, "
+                            f"DIE 0x{die_offset:x}, score={best_location.completeness_score}"
+                        )
+                        self.lazy_index.persistent_cache.add_symbol_cu_mapping(
+                            class_name, cu_offset, die_offset, 
+                            score=best_location.completeness_score, complete=True
+                        )
+                    
+                    return target_cu, die
+            
+            logger.error(f"Could not find DIE at offset 0x{die_offset:x} in CU 0x{cu_offset:x}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error using DWARF dump: {e}")
+            logger.debug("Falling back to full scan")
+            return None
 
     def _find_class_lazy(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
         """Find class using lazy loading for memory efficiency with CU optimization.

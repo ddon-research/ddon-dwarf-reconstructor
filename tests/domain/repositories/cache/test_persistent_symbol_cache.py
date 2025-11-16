@@ -182,7 +182,7 @@ def test_corrupted_cache_raises_error(tmp_path: Path):
     with open(cache_file, "w", encoding="utf-8") as f:
         json.dump(corrupted_data, f, indent=2)
 
-    # Load cache - should raise ValueError
-    with pytest.raises(ValueError, match="Cache file is corrupted"):
+    # Load cache - should raise ValueError with helpful recovery message
+    with pytest.raises(ValueError, match="Cache file has inconsistent mappings"):
         PersistentSymbolCache(cache_file)
 

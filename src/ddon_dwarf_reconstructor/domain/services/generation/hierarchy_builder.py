@@ -151,20 +151,31 @@ class HierarchyBuilder:
         if not self.dependency_extractor or not self.dwarf_index:
             return
 
+        import time
+        start_time = time.perf_counter()
+
         # Track processing
         to_process_offsets: set[int] = set()
         processed_offsets: set[int] = set()
         depth_map: dict[int, int] = {}
 
         # Extract dependencies from hierarchy classes
+        logger.debug(f"Extracting dependencies from {len(hierarchy_classes)} hierarchy classes")
         for class_info in hierarchy_classes.values():
             offsets = self.dependency_extractor.extract_dependencies(class_info)
             for offset in offsets:
                 if offset not in processed_offsets:
                     to_process_offsets.add(offset)
                     depth_map[offset] = 0
+        
+        logger.info(f"Found {len(to_process_offsets)} initial dependencies to resolve")
 
         # Recursively process dependencies
+        resolved_count = 0
+        cache_hit_count = 0
+        cache_miss_count = 0
+        skipped_count = 0
+        
         while to_process_offsets:
             current_offset = to_process_offsets.pop()
             if current_offset in processed_offsets:
@@ -175,16 +186,19 @@ class HierarchyBuilder:
 
             if current_depth >= max_depth:
                 logger.debug(f"Reached max depth for offset 0x{current_offset:x}")
+                skipped_count += 1
                 continue
 
             # Filter to only resolvable types
             if not self.dependency_extractor.filter_resolvable_types({current_offset}):
+                skipped_count += 1
                 continue
 
             # Get type name and resolve
             type_name = self.dependency_extractor.get_type_name(current_offset)
             if not type_name:
                 logger.debug(f"No name for offset 0x{current_offset:x}")
+                skipped_count += 1
                 continue
 
             # Filter out internal DWARF type names
@@ -197,19 +211,33 @@ class HierarchyBuilder:
             }
             if type_name in internal_types:
                 logger.debug(f"Skipping internal type: {type_name}")
+                skipped_count += 1
                 continue
 
             if type_name in all_classes:
                 # Already resolved
+                cache_hit_count += 1
                 class_info = all_classes[type_name]
             else:
                 # Try to resolve
+                resolve_start = time.perf_counter()
                 class_info = self._try_resolve_type_by_offset(current_offset, type_name)
+                resolve_time = time.perf_counter() - resolve_start
+                
                 if not class_info:
+                    skipped_count += 1
                     continue
 
                 all_classes[type_name] = class_info
-                logger.debug(f"Resolved dependency: {type_name} (depth {current_depth})")
+                resolved_count += 1
+                
+                if resolve_time > 0.1:  # Log slow resolutions
+                    logger.warning(f"Slow resolution: {type_name} took {resolve_time:.2f}s (depth {current_depth})")
+                else:
+                    logger.debug(f"Resolved dependency: {type_name} in {resolve_time:.3f}s (depth {current_depth})")
+                
+                # Check if this was a cache hit or miss inside find_class
+                cache_miss_count += 1
 
             # Extract and queue new dependencies
             new_offsets = self.dependency_extractor.extract_dependencies(class_info)
@@ -219,6 +247,13 @@ class HierarchyBuilder:
                 if dep_offset not in processed_offsets:
                     to_process_offsets.add(dep_offset)
                     depth_map[dep_offset] = current_depth + 1
+        
+        elapsed = time.perf_counter() - start_time
+        logger.info(
+            f"Dependency resolution complete in {elapsed:.2f}s: "
+            f"{resolved_count} newly resolved, {cache_hit_count} already in memory, "
+            f"{skipped_count} skipped, {cache_miss_count} required find_class lookup"
+        )
 
     def _try_resolve_type_by_offset(
         self, offset: int, type_name: str
@@ -232,12 +267,21 @@ class HierarchyBuilder:
         Returns:
             ClassInfo if successfully parsed, None otherwise
         """
+        import time
+        
         # Use find_class which returns (CU, DIE) tuple
         try:
+            find_start = time.perf_counter()
             result = self.class_parser.find_class(type_name)
+            find_time = time.perf_counter() - find_start
+            
             if not result:
                 logger.debug(f"Could not find class: {type_name}")
                 return None
+            
+            # Log if find_class took significant time (cache miss indicator)
+            if find_time > 0.5:
+                logger.warning(f"find_class({type_name}) took {find_time:.2f}s - likely cache miss")
 
             cu, die = result
 

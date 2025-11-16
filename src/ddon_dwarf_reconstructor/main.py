@@ -39,6 +39,12 @@ Examples:
   # Generate from file with full hierarchy
   python main.py resources/DDOORBIS.elf --symbols-file my-symbols.txt --full-hierarchy
 
+  # Exhaustive search for most complete definition (slower first run)
+  python main.py resources/DDOORBIS.elf --generate rLayout --exhaustive
+
+  # Exhaustive search with compressed DWARF dump (requires Python 3.14)
+  python main.py resources/DDOORBIS.elf --generate rLayout --exhaustive --dwarf-dump dump.zst
+
   # Using .env file for configuration
   echo 'ELF_FILE_PATH=resources/DDOORBIS.elf' > .env
   python main.py --generate MtObject
@@ -87,6 +93,20 @@ Examples:
         action="store_true",
         help="With --full-hierarchy: generate single file with all classes and forward declarations (legacy mode). "
         "Without --full-hierarchy: has no effect",
+    )
+    parser.add_argument(
+        "--exhaustive",
+        action="store_true",
+        help="Enable exhaustive search mode: scan all CUs to find most complete definition "
+        "(default: fast mode with early-exit on first complete definition). "
+        "Useful when classes have multiple definitions with varying nested types.",
+    )
+    parser.add_argument(
+        "--dwarf-dump",
+        type=Path,
+        metavar="PATH",
+        help="Path to compressed llvm-dwarfdump .zst file for fast lookups. "
+        "Requires Python 3.14+. Used with --exhaustive for targeted CU loading.",
     )
     return parser.parse_args()
 
@@ -161,7 +181,16 @@ def main() -> NoReturn:
             generation_mode = "full-hierarchy (single-file, legacy)"
         else:
             generation_mode = "full-hierarchy (multi-file)"
+    
+    search_mode = "exhaustive" if args.exhaustive else "fast (early-exit)"
     logger.debug(f"Generation mode: {generation_mode}")
+    logger.debug(f"Search mode: {search_mode}")
+    
+    if args.dwarf_dump:
+        if not args.exhaustive:
+            logger.warning("--dwarf-dump specified without --exhaustive, will be ignored")
+        else:
+            logger.debug(f"DWARF dump: {args.dwarf_dump}")
 
     # Track results
     success_count = 0
@@ -169,7 +198,11 @@ def main() -> NoReturn:
 
     # Process each symbol
     try:
-        with DwarfGenerator(config.elf_file_path) as generator:
+        with DwarfGenerator(
+            config.elf_file_path,
+            exhaustive_search=args.exhaustive,
+            dwarf_dump_path=args.dwarf_dump if args.exhaustive else None,
+        ) as generator:
             for i, symbol_name in enumerate(symbols, 1):
                 logger.info(f"[{i}/{len(symbols)}] Processing: {symbol_name}")
 

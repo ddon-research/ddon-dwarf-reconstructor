@@ -220,17 +220,22 @@ class LazyDwarfIndexService:
         return discovered
 
     @log_timing
-    def targeted_symbol_search(self, symbol_name: str, timeout: float = 180.0) -> int | None:
+    def targeted_symbol_search(self, symbol_name: str, timeout: float = 600.0) -> int | None:
         """Search for symbol using targeted CU scanning with scoring.
 
         This is used as fallback when symbol is not in persistent cache.
         Searches across compilation units and prefers complete definitions
         over forward declarations. Includes timeout protection to prevent
         indefinite searches for types lacking debug information.
+        
+        Search strategy:
+        1. Check hinted CU first (if provided from cache)
+        2. Sort remaining CUs by size (smallest first) for faster discovery
+        3. Scan until timeout or perfect match found
 
         Args:
             symbol_name: Name of symbol to find
-            timeout: Maximum search time in seconds (default: 180s)
+            timeout: Maximum search time in seconds (default: 600s = 10 minutes)
 
         Returns:
             DWARF offset of best match or None if not found/timed out
@@ -290,8 +295,24 @@ class LazyDwarfIndexService:
                     )
 
             # Search remaining CUs for better matches
-            logger.debug("Performing full CU scan to find best definition")
+            # Sort CUs by size (smallest first) for faster discovery of complete definitions
+            logger.debug("Sorting CUs by size for optimized search order")
+            
+            # Build list of (cu, size) tuples
+            cu_list = []
             for cu in self.dwarf_info.iter_CUs():
+                # Skip CU we already checked
+                if cu_offset_hint is not None and cu.cu_offset == cu_offset_hint:
+                    continue
+                cu_size = cu.header.unit_length
+                cu_list.append((cu, cu_size))
+            
+            # Sort by size (ascending) - smaller CUs scan faster
+            cu_list.sort(key=lambda x: x[1])
+            
+            logger.debug(f"Scanning {len(cu_list)} CUs (sorted by size: smallest first)")
+            
+            for cu, cu_size in cu_list:
                 # Check timeout at start of each CU
                 elapsed = time.time() - start_time
                 if elapsed > timeout:
@@ -302,10 +323,6 @@ class LazyDwarfIndexService:
                         f"Type may lack debug information or be located very late in ELF."
                     )
                     break
-                
-                # Skip CU we already checked
-                if cu_offset_hint is not None and cu.cu_offset == cu_offset_hint:
-                    continue
 
                 cus_searched += 1
                 
@@ -371,15 +388,27 @@ class LazyDwarfIndexService:
                 )
                 return fallback_offset
             
-            # Warn if only forward declaration found
+            # Warn if only forward declaration found after exhaustive scan
             if fallback_offset:
                 logger.warning(
                     f"Found {symbol_name} at 0x{fallback_offset:x} "
                     f"but only as forward declaration (score={global_best_score}). "
-                    f"Complete definition not found after searching {cus_searched} CUs."
+                    f"Complete definition not found after exhaustive scan of {cus_searched} CUs."
                 )
-                # Don't cache forward declarations - let full scan handle it
-                return None
+                # Cache the forward declaration with low score to avoid re-scanning
+                # This prevents expensive re-scans for symbols that truly only exist as forward declarations
+                self.persistent_cache.add_symbol_cu_mapping(
+                    symbol_name, 
+                    global_best_cu, 
+                    fallback_offset,
+                    score=global_best_score,
+                    complete=False  # Mark as incomplete (forward declaration only)
+                )
+                logger.info(
+                    f"Cached forward-declaration-only result for {symbol_name} "
+                    f"to prevent future exhaustive scans"
+                )
+                return fallback_offset
 
         except Exception as e:
             logger.error(f"Error in targeted search for {symbol_name}: {e}")
@@ -444,12 +473,16 @@ class LazyDwarfIndexService:
         best_offset = None
         best_score = -1
         fallback_offset = None
+        dies_scanned = 0
+        matches_found = 0
 
         try:
             for die in cu.iter_DIEs():
+                dies_scanned += 1
                 if die.tag in target_tags:
                     name_attr = die.attributes.get("DW_AT_name")
                     if name_attr and name_attr.value == target_name:
+                        matches_found += 1
                         # Found a match - evaluate completeness
                         decl_attr = die.attributes.get("DW_AT_declaration")
                         is_declaration = decl_attr is not None
@@ -533,12 +566,23 @@ class LazyDwarfIndexService:
             if fallback_offset:
                 logger.debug(
                     f"Found {symbol_name} at 0x{fallback_offset:x} in CU 0x{cu.cu_offset:x} "
-                    f"but only as forward declaration (score={best_score})"
+                    f"but only as forward declaration (score={best_score}). "
+                    f"Scanned {dies_scanned} DIEs, found {matches_found} matches"
                 )
                 return fallback_offset, best_score
+            
+            # Log that no matches were found in this CU
+            if dies_scanned > 1000:  # Only log for large CUs to reduce noise
+                logger.debug(
+                    f"No matches for {symbol_name} in CU 0x{cu.cu_offset:x} "
+                    f"after scanning {dies_scanned} DIEs"
+                )
 
         except Exception as e:
-            logger.error(f"Error searching CU 0x{cu.cu_offset:x} for {symbol_name}: {e}")
+            logger.error(
+                f"Error searching CU 0x{cu.cu_offset:x} for {symbol_name} "
+                f"(scanned {dies_scanned} DIEs, found {matches_found} matches): {e}"
+            )
 
         return None, -1
 

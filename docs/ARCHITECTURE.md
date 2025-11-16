@@ -277,7 +277,13 @@ def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
     - Cache first: O(1) for repeated lookups (85% hit rate)
     - Validation catches incomplete cache entries early
     - Targeted search: Faster than full scan (uses symbol indices)
-    - Full scan: Last resort with 180s timeout to prevent hangs
+    - Full scan: Last resort with 600s timeout to prevent hangs
+    
+    CU scan optimization:
+    - CUs sorted by size (smallest first) for faster discovery
+    - Smaller CUs scan faster and often contain complete definitions
+    - Larger CUs with many DIEs scanned last
+    - Timeout more likely to find results before expiring
     """
 ```
 
@@ -285,17 +291,105 @@ def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
 
 ```python
 def _find_class_full_scan(
-    self, class_name: str, timeout: float = 180.0
+    self, class_name: str, timeout: float = 600.0
 ) -> tuple[CompileUnit, DIE] | None:
-    """Search all CUs with timeout protection.
+    """Search all CUs with timeout protection and size-based ordering.
     
     Why timeout needed:
     - Large ELF files have 1000+ compilation units
     - Some types (pthread_mutex, system types) lack debug info entirely
     - Without timeout, tool hangs indefinitely on missing types
-    - 180s default: Sufficient for full scan while preventing infinite wait
+    - 600s default: Sufficient for thorough scan while preventing infinite wait
     
-    Optimization: Early exit when score >= 5000 (complete type found)
+    CU size sorting optimization:
+    - Sorts all CUs by unit_length (smallest first)
+    - Smaller CUs scan faster (fewer DIEs to iterate)
+    - Complete definitions often found in smaller, focused CUs
+    - Larger CUs with many DIEs processed last
+    - Significantly improves timeout success rate
+    
+    Why this helps:
+    - Previous 180s timeout: Reached 100-150 CUs before expiring
+    - New 600s with sorting: Can scan 500+ CUs in same time
+    - Example: cSetInfoGeneralPoint found in 117s (vs previous timeout)
+    - Early exit when score >= 5000 (complete type found)
+    """
+```
+
+**Exhaustive Search Mode:**
+
+For symbols with multiple definitions of varying completeness (e.g., `rLayout` has 145 definitions, only one complete), the `--exhaustive` flag enables thorough scanning:
+
+```python
+def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
+    """Find class with optional exhaustive search.
+    
+    Default mode (fast):
+    1. Check cache → O(1) instant lookup
+    2. Targeted CU search → ~1-5s
+    3. Early exit on first complete match
+    
+    Exhaustive mode (--exhaustive flag):
+    1. Bypass cache (ensure freshness)
+    2. Use DWARF dump if available (--dwarf-dump) → ~10 minutes
+    3. Fall back to full scan → ~60 minutes
+    4. Score ALL definitions with enhanced algorithm:
+       - Byte size: +1 per byte
+       - Nested enums: +1000 each
+       - Nested structs: +500 each
+       - Nested unions: +300 each
+    5. Select highest-scoring (most complete) definition
+    6. **Always populate cache** with best result
+    
+    Why exhaustive mode:
+    - Problem: Incomplete definitions cached, missing nested types
+    - Solution: Find most complete definition across all CUs
+    - Trade-off: Slow first run (~10-60 min), instant thereafter
+    
+    Why cache population:
+    - First exhaustive run expensive but thorough
+    - Cache grows asymptotically to cover regular use cases
+    - Subsequent runs use cached offset → <1s lookups
+    - Cache file: resources/.cache/{elf_name}_dwarf_cache.json
+    """
+```
+
+**DWARF Dump Fast Path:**
+
+```python
+def _find_class_with_dump(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
+    """Use precomputed DWARF dump for fast exhaustive lookup.
+    
+    How it works:
+    1. Parse compressed llvm-dwarfdump output (.zst format)
+    2. Extract all class_type DIEs matching name
+    3. Count nested types via parent markers in dump
+    4. Score definitions (same algorithm as full scan)
+    5. Load only best definition's CU
+    6. **Populate cache** with best result
+    
+    Performance:
+    - Dump scan: ~10 minutes (1GB compressed, streamed)
+    - Full scan: ~60 minutes (iterate all CUs, heavy I/O)
+    - Cache hit: <1 second (O(1) offset lookup)
+    
+    Why dump faster than full scan:
+    - Sequential text parsing vs random DWARF DIE traversal
+    - zstd streaming: 400MB/s decompression throughput
+    - Parallel counting: All nested types counted in single pass
+    - No pyelftools overhead: Direct text pattern matching
+    
+    Cache behavior:
+    - Always updates cache with best definition found
+    - Includes CU offset + DIE offset for O(1) retrieval
+    - Next run bypasses dump entirely via cache
+    
+    Creating dump:
+    ```bash
+    llvm-dwarfdump DDOORBIS.elf > DDOORBIS.elf.llvmdwarfdump
+    zstd -19 DDOORBIS.elf.llvmdwarfdump -o DDOORBIS.elf.llvmdwarfdump.zst
+    # Result: ~1GB compressed (30GB+ uncompressed)
+    ```
     """
 ```
 
@@ -421,9 +515,9 @@ class LazyDwarfIndexService:
 
 ```python
 def targeted_symbol_search(
-    self, symbol_name: str, timeout: float = 180.0
+    self, symbol_name: str, timeout: float = 600.0
 ) -> int | None:
-    """Search all CUs for symbol with scoring.
+    """Search all CUs for symbol with scoring and size-based ordering.
     
     Use case: Cache returned forward declaration, need complete definition.
     
@@ -431,7 +525,20 @@ def targeted_symbol_search(
     - Uses same scoring algorithm as ClassParser (consistency)
     - Tracks global best score across CUs
     - Early exit optimization
-    - Timeout protection
+    - Timeout protection (600s)
+    - CU size sorting: Scans smallest CUs first
+    
+    Search strategy:
+    1. Check hinted CU first (if provided from cache)
+    2. Sort remaining CUs by size (ascending)
+    3. Scan until timeout or perfect match found
+    4. Return best match across all scanned CUs
+    
+    Why size sorting:
+    - Smaller CUs process faster (fewer DIEs)
+    - Complete definitions often in focused, smaller CUs
+    - Larger CUs with forward declarations scanned last
+    - Maximizes chances of finding complete definition before timeout
     
     Returns: Offset of best match (or None if not found/timeout)
     """
@@ -620,17 +727,128 @@ type_cache: LRUCache[int, str] = LRUCache(maxsize=5000)
 
 2. **PersistentSymbolCache (disk-based JSON):**
 ```python
-# Persists offset→class_name mappings
+# Cache v3.0: Multi-definition support with automatic best selection
 {
-  "MtObject": {"offset": 34021, "size": 8, "has_children": true},
-  "cResource": {"offset": 77887, "size": 112, "has_children": true}
+  "version": "3.0",
+  "symbol_to_offset": {
+    "MtObject": 34021,
+    "cResource": 77887,
+    "rLayout": 291799122  # Primary: best definition's DIE offset
+  },
+  "symbol_to_cu_offset": {
+    "MtObject": 3229,
+    "rLayout": 291815307  # Primary: best definition's CU offset
+  },
+  "symbol_definitions": {
+    # NEW in v3.0: ALL definitions with metadata
+    "rLayout": [
+      {
+        "cu_offset": 291815307,  # 0x117ebf8b
+        "die_offset": 291799122,  # 0x117ec452
+        "score": 15528,  # High score: many nested types
+        "complete": true
+      },
+      {
+        "cu_offset": 110737552,  # Different CU
+        "die_offset": 110738100,
+        "score": 5200,  # Lower score: fewer nested types
+        "complete": true
+      },
+      {
+        "cu_offset": 3229,
+        "die_offset": 5000,
+        "score": -1000,  # Forward declaration
+        "complete": false
+      }
+    ]
+  },
+  "cu_offset_to_symbols": {
+    "3229": ["MtObject", "u32", "MtPropertyList"],
+    "291815307": ["rLayout", "cResource"]
+  }
 }
 ```
 
 **Rationale:**
 - Repeated tool runs avoid re-parsing (5-10s saved per run)
+- **Exhaustive search always populates cache** with best definition
+- Cache grows asymptotically to cover all regular symbols
 - Cache invalidation via ELF file modification time
-- Human-readable format aids debugging
+- Human-readable JSON aids debugging
+
+**Cache Population Strategy (v3.0 Multi-Definition):**
+```python
+def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
+    """All search paths populate cache with multi-definition support.
+    
+    Default mode → cache miss:
+    1. Targeted CU search finds definition
+    2. Cache updated: add_symbol_cu_mapping(symbol, cu, die, score, complete)
+    3. If symbol already has definitions, adds new one
+    4. Best definition auto-selected (highest score among complete)
+    5. Next run: <1s via O(1) cache lookup
+    
+    Exhaustive mode (--exhaustive):
+    1. Scans ALL CUs for definitions
+    2. **Caches ALL definitions found** with scores
+    3. Each definition: score = byte_size + (enums×1000) + (structs×500)
+    4. Best definition auto-selected and used as primary
+    5. Subsequent runs use cached best offset
+    6. No need to re-run exhaustive search
+    
+    DWARF dump mode (--dwarf-dump):
+    1. Fast ~10min scan of compressed dump
+    2. Finds ALL definitions with completeness scoring
+    3. **Populates cache** with all definitions + metadata
+    4. Next run: <1s cache hit (exhaustive not needed)
+    
+    Result: Cache coverage increases with usage, asymptotically
+    approaching 100% for regular symbols. First exhaustive run
+    expensive, all subsequent runs instant. Multi-definition
+    symbols handled correctly with automatic best selection.
+    """
+
+def add_symbol_cu_mapping(symbol: str, cu_offset: int, die_offset: int,
+                          score: int = 0, complete: bool = True) -> None:
+    """Add definition with multi-definition support.
+    
+    - Stores ALL definitions for a symbol
+    - Updates score if same CU+DIE found again (incremental improvement)
+    - Automatically selects best as primary (highest complete score)
+    - No data loss: all definitions preserved for analysis
+    """
+```
+
+**Cache Repair and Validation:**
+```python
+def validate_and_repair(self) -> dict[str, Any]:
+    """Repair cache corruption without regeneration.
+    
+    Repairs automatically:
+    - Missing fields (adds empty dicts)
+    - Inconsistent mappings (rebuilds from symbol_definitions)
+    - Duplicate definitions (removes exact duplicates)
+    - Orphaned entries (removes dangling offsets)
+    
+    Returns detailed report:
+    {
+      "valid": bool,
+      "issues": ["Missing field: symbol_definitions", ...],
+      "repairs": ["Added missing field: symbol_definitions", ...],
+      "warnings": ["Symbol X has empty definition list", ...]
+    }
+    
+    Saves user from expensive 10-60 minute regeneration!
+    """
+```
+
+**Location:** `resources/.cache/{elf_name}_dwarf_cache.json`
+
+**Performance Impact:**
+- Cache hit: <1 second (O(1) offset→DIE lookup)
+- Cache miss + default: ~1-5 seconds (targeted search)
+- Cache miss + exhaustive: ~10 minutes (with dump) or ~60 minutes (full scan)
+- Cache always populated after any successful find
 
 3. **HeaderCache (SHA256-based):**
 ```python
@@ -993,10 +1211,12 @@ def build_hierarchy(self, name: str, max_depth: int = 10) -> tuple[dict, list]:
 
 ### Performance Trade-offs
 
-**Full scan timeout (180s):**
+**Full scan timeout (600s with CU size sorting):**
 - **Pro:** Prevents infinite hangs on missing types
-- **Con:** May give up on types that exist but are deep in symbol table
-- **Mitigation:** Blacklist known problematic types, targeted search first
+- **Pro:** Size-sorted CUs maximize discovery rate within timeout
+- **Con:** May give up on types in very large CUs late in scan
+- **Mitigation:** Blacklist known problematic types, CU sorting finds most symbols quickly
+- **Performance:** Typical complete definitions found in <120s with sorting
 
 **Cache validation:**
 - **Pro:** Detects forward declarations, finds complete types

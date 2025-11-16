@@ -14,7 +14,7 @@ Reconstructs C++ class definitions from DWARF debug information in ELF files. De
 - **Platform support:** PS4 (x86-64, DWARF3/4) and PS3 (PowerPC64, DWARF2) with automatic detection
 - **Output organization:** Platform-specific output folders (output/ps4/, output/ps3/)
 - **PS4 ELF support:** Automatic section patching for PS4 binaries
-- **High performance:** Persistent caching, offset-based resolution, timeout protection (180s default)
+- **High performance:** Persistent caching, offset-based resolution, CU size-sorted scanning, timeout protection (600s default)
 - **Robust architecture:** Domain-driven design, 216 unit tests, type-safe
 
 ## Requirements
@@ -62,8 +62,54 @@ uv run python main.py resources/DDOORBIS.elf --symbols-file resources/season2-re
 # Batch processing with multi-file hierarchy (289 symbols validated, PS4)
 uv run python main.py resources/DDOORBIS.elf --symbols-file resources/season2-resources.txt --full-hierarchy
 
+# Exhaustive search for multi-definition symbols (PS4)
+uv run python main.py resources/DDOORBIS.elf --generate rLayout --exhaustive
+
+# Fast exhaustive search with precomputed DWARF dump (PS4)
+uv run python main.py resources/DDOORBIS.elf --generate rLayout --exhaustive \
+  --dwarf-dump path/to/DDOORBIS.elf.llvmdwarfdump.zst
+
 # With options
 uv run python main.py resources/DDOORBIS.elf --generate ClassName --output dir/ --verbose
+```
+
+### Exhaustive Search Mode
+
+**Problem:** Some symbols (like `rLayout`) have multiple definitions across compilation units with varying completeness (some missing nested enums/structs).
+
+**Solution:** `--exhaustive` mode scans all definitions and selects the most complete one based on scoring:
+- **Byte size:** +1 per byte
+- **Nested enums:** +1000 each
+- **Nested structs:** +500 each
+- **Nested unions:** +300 each
+
+**Performance:**
+- Default mode (cache hit): <1 second
+- Exhaustive mode (full scan): ~60 minutes (all CUs)
+- **Exhaustive with dump:** ~10 minutes (precomputed index)
+
+**Usage:**
+```bash
+# Standard exhaustive (slow but thorough)
+uv run python main.py resources/DDOORBIS.elf --generate rLayout --exhaustive
+
+# Fast exhaustive with compressed dump file
+uv run python main.py resources/DDOORBIS.elf --generate rLayout --exhaustive \
+  --dwarf-dump /path/to/llvm-dwarfdump-output.zst
+```
+
+**Cache Behavior:**
+- Exhaustive search **populates the cache** with the best definition found
+- Subsequent runs use cached offset for instant lookups (<1s)
+- Cache asymptotically covers all regular use cases
+- Cache file: `resources/.cache/{elf_name}_dwarf_cache.json`
+
+**DWARF Dump Creation:**
+```bash
+# Create compressed dump for fast exhaustive searches
+llvm-dwarfdump DDOORBIS.elf > DDOORBIS.elf.llvmdwarfdump
+zstd -19 DDOORBIS.elf.llvmdwarfdump -o DDOORBIS.elf.llvmdwarfdump.zst
+# Size: ~1GB compressed (30GB+ uncompressed)
 ```
 
 ### Full Hierarchy Modes
@@ -119,13 +165,68 @@ VERBOSE=false
 --single-file         # legacy mode: single file with all classes
 --generate SYMBOL     # generate for single or multiple symbols (comma-separated)
 --symbols-file FILE   # read symbols from file (one per line, alternative to --generate)
+--exhaustive          # scan all CUs for most complete definition (slow but thorough)
+--dwarf-dump PATH     # path to compressed llvm-dwarfdump output (.zst) for fast exhaustive search
 ```
 
 ### Caching System
 
+The project uses two caching mechanisms for optimal performance:
+
+#### 1. Symbol Cache (DWARF Offset Cache)
+
+**Location:** `resources/.cache/{elf_name}_dwarf_cache.json`
+
+**Purpose:** Caches symbol→CU/DIE offset mappings with multi-definition support
+
+**Cache Format:** v3.0 (auto-migrates from v1.0/v2.0)
+
+**How It Works:**
+1. First search (any mode) stores symbol location (CU offset + DIE offset + score + completeness)
+2. **Multi-definition support**: Stores ALL definitions of a symbol across different CUs
+3. Automatically selects best definition (highest score among complete definitions)
+4. Subsequent lookups use cached best offset for O(1) retrieval
+5. Exhaustive search **always populates cache** with all definitions found
+6. Cache grows asymptotically to cover all regular use cases
+
+**Multi-Definition Handling:**
+- Symbols like `rLayout` may appear in multiple CUs with varying completeness
+- Cache stores metadata for each definition: `cu_offset`, `die_offset`, `score`, `complete`
+- Best definition automatically selected based on:
+  1. Completeness (prefer complete over forward declarations)
+  2. Score (nested types: enums×1000 + structs×500 + unions×300 + byte_size)
+
+**Performance:**
+- Cache hit: <1 second (instant DIE retrieval)
+- Cache miss + exhaustive: ~10 minutes (with dump), then cached
+- Cache miss + default: ~1-5 seconds (targeted search), then cached
+
+**Cache Repair (No Need to Regenerate!):**
+```bash
+# If cache corruption detected, automatic repair attempts:
+# 1. Fix missing fields (migrates v1.0/v2.0 → v3.0)
+# 2. Remove duplicate definitions
+# 3. Fix inconsistent mappings
+# 4. Remove orphaned entries
+
+# Manual validation/repair (coming soon):
+# uv run python main.py --validate-cache resources/DDOORBIS.elf
+```
+
+**Example:**
+```bash
+# First run (exhaustive): ~10 minutes, populates cache with ALL definitions
+uv run python main.py --generate rLayout --exhaustive --dwarf-dump dump.zst resources/DDOORBIS.elf
+
+# Second run (any mode): <1 second via cache (uses best definition)
+uv run python main.py --generate rLayout resources/DDOORBIS.elf
+```
+
+#### 2. Header Cache (SHA256 Cache)
+
 Multi-file hierarchy generation uses SHA256-based caching for performance:
 
-**Cache Location:** `.cache/{elf_name}_headers.json`
+**Location:** `.cache/{elf_name}_headers.json`
 
 **How It Works:**
 1. Computes SHA256 hash of each generated header

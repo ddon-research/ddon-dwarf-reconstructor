@@ -42,13 +42,17 @@ class DwarfGenerator(BaseGenerator):
     - Hierarchy management by HierarchyBuilder
     """
 
-    def __init__(self, elf_path: Path):
+    def __init__(self, elf_path: Path, exhaustive_search: bool = False, dwarf_dump_path: Path | None = None):
         """Initialize generator with ELF file path using lazy loading.
 
         Args:
             elf_path: Path to ELF file containing DWARF information
+            exhaustive_search: Enable exhaustive search mode (scan all CUs for best definition)
+            dwarf_dump_path: Optional path to compressed llvm-dwarfdump .zst file for fast lookups
         """
         super().__init__(elf_path)
+        self.exhaustive_search = exhaustive_search
+        self.dwarf_dump_path = dwarf_dump_path
         self.type_resolver: LazyTypeResolver | None = None
         self.class_parser: ClassParser | None = None
         self.header_generator: HeaderGenerator | None = None
@@ -110,7 +114,13 @@ class DwarfGenerator(BaseGenerator):
 
         # Initialize class parser with lazy index
         parser_start = time()
-        self.class_parser = ClassParser(self.type_resolver, self.dwarf_info, self.lazy_index)
+        self.class_parser = ClassParser(
+            self.type_resolver,
+            self.dwarf_info,
+            self.lazy_index,
+            exhaustive_search=self.exhaustive_search,
+            dwarf_dump_path=self.dwarf_dump_path,
+        )
         parser_elapsed = time() - parser_start
         logger.debug(f"ClassParser with lazy loading initialization: {parser_elapsed:.3f}s")
 
