@@ -846,11 +846,20 @@ class ClassParser:
 
         # Parse parameters
         parameters = []
+        param_index = 0  # Track non-artificial parameter position for auto-incrementing names
         for child in method_die.iter_children():
             if child.tag == "DW_TAG_formal_parameter":
-                param = self.parse_parameter(child)
+                # Check if this is an artificial parameter (like 'this' pointer)
+                is_artificial = child.attributes.get("DW_AT_artificial") is not None
+                
+                # Only increment index for non-artificial parameters
+                current_index = param_index if not is_artificial else 0
+                param = self.parse_parameter(child, current_index)
                 if param:
                     parameters.append(param)
+                    # Only increment counter for non-artificial parameters
+                    if not is_artificial:
+                        param_index += 1
 
         return MethodInfo(
             name=method_name,
@@ -863,11 +872,12 @@ class ClassParser:
             is_destructor=is_destructor,
         )
 
-    def parse_parameter(self, param_die: DIE) -> ParameterInfo | None:
+    def parse_parameter(self, param_die: DIE, param_index: int = 0) -> ParameterInfo | None:
         """Parse a function parameter using pyelftools.
 
         Args:
             param_die: DIE representing the parameter
+            param_index: Zero-based parameter position for auto-incrementing unnamed params
 
         Returns:
             ParameterInfo object
@@ -875,9 +885,14 @@ class ClassParser:
         # Check if artificial (like 'this' pointer)
         is_artificial = param_die.attributes.get("DW_AT_artificial") is not None
 
-        # Get parameter name
+        # Get parameter name with auto-incrementing fallback
         name_attr = param_die.attributes.get("DW_AT_name")
-        param_name = name_attr.value.decode("utf-8") if name_attr else "param"
+        if name_attr:
+            param_name = name_attr.value.decode("utf-8")
+        else:
+            # Auto-increment unnamed parameters to avoid C++ syntax errors
+            # (param1, param2, param3, ...) instead of all being "param"
+            param_name = f"param{param_index + 1}"
 
         # Get parameter type (for display)
         param_type = self.type_resolver.resolve_type_name(param_die)
