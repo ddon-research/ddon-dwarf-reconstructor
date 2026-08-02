@@ -17,12 +17,13 @@ from pathlib import Path
 from time import time
 from typing import TYPE_CHECKING, cast
 
-from elftools.dwarf.compileunit import CompileUnit
-from elftools.dwarf.die import DIE
-
+from ...core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ...core.observability import get_logger
+from ...core.path_policy import create_header_filename
 from ...domain.ports.class_parser import ClassParserPort
 from ...domain.ports.disassembly import DisassemblyProducerFactory
 from ...domain.ports.dump_lookup import DumpLookupFactory
+from ...domain.ports.source_identity import SourceHashPort
 from ...domain.ports.type_resolution import TypeResolverPort
 from ...domain.services.generation import (
     HeaderGenerator,
@@ -30,8 +31,6 @@ from ...domain.services.generation import (
     SpecialHeaderRenderer,
 )
 from ...generators.base_generator import BaseGenerator
-from ...infrastructure.logging import get_logger
-from ...utils.path_utils import create_header_filename
 from .dwarf_generator_context import DwarfGeneratorContext
 from .dwarf_header_generation import HeaderGenerationMixin
 from .dwarf_knowledge import KnowledgeExportMixin
@@ -71,6 +70,10 @@ class DwarfGenerator(
         resolve_param_names: bool = False,
         dump_lookup_factory: DumpLookupFactory | None = None,
         disassembly_factory: DisassemblyProducerFactory | None = None,
+        cache_file: Path | None = None,
+        die_cache_size: int = 10000,
+        type_cache_size: int = 5000,
+        source_hash: SourceHashPort | None = None,
     ):
         """Initialize generator with ELF file path using lazy loading.
 
@@ -89,6 +92,10 @@ class DwarfGenerator(
         self.resolve_param_names = resolve_param_names
         self.dump_lookup_factory = dump_lookup_factory
         self.disassembly_factory = disassembly_factory
+        self.cache_file = cache_file
+        self.die_cache_size = die_cache_size
+        self.type_cache_size = type_cache_size
+        self.source_hash = source_hash
         self.type_resolver: TypeResolverPort | None = None
         self.class_parser: ClassParserPort | None = None
         self.header_generator: HeaderGenerator | None = None
@@ -161,18 +168,17 @@ class DwarfGenerator(
         from ...domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
         from ...domain.services.parsing import ClassParser
         from ...domain.services.parsing.type_resolver import LazyTypeResolver
-        from ...infrastructure.config import get_cache_file_path, get_config
 
         assert self.dwarf_info is not None, "dwarf_info must be initialized"
-        config = get_config()
-        cache_file = get_cache_file_path(str(self.elf_path))
+        cache_file = self.cache_file or Path(".dwarf_cache.json")
 
         # Initialize lazy index
         lazy_start = time()
         self.lazy_index = LazyDwarfIndexService(
             self.dwarf_info,
             str(cache_file),
-            die_cache_size=config["DIE_CACHE_SIZE"],
+            die_cache_size=self.die_cache_size,
+            type_cache_size=self.type_cache_size,
             source_file_path=self.elf_path,
         )
         lazy_elapsed = time() - lazy_start
@@ -259,7 +265,7 @@ class DwarfGenerator(
         return SpecialHeaderRenderer.render_not_found(class_name)
 
     def _generate_namespace_header(
-        self, namespace_name: str, cu: CompileUnit, namespace_die: DIE
+        self, namespace_name: str, cu: DwarfCompilationUnit, namespace_die: DwarfEntry
     ) -> str:
         """Generate a namespace header through the shared renderer."""
         return SpecialHeaderRenderer.render_namespace(namespace_name, cu, namespace_die)

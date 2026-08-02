@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from elftools.dwarf.compileunit import CompileUnit
-from elftools.dwarf.die import DIE
-
+from ...core.dwarf import DwarfCompilationUnit, DwarfEntry
 from ..models.dwarf import ClassInfo
 from .type_resolution import TypeNameResolver
 
@@ -19,8 +17,10 @@ class ClassParserPort(Protocol):
 
     def find_class(
         self, class_name: str, exhaustive_override: bool | None = None
-    ) -> tuple[CompileUnit, DIE] | None: ...
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...
 
-    def parse_class_info(self, cu: CompileUnit, class_die: DIE) -> ClassInfo: ...
+    def parse_class_info(self, cu: DwarfCompilationUnit, class_die: DwarfEntry) -> ClassInfo: ...
 
-    def _find_die_and_cu_by_offset(self, offset: int) -> tuple[CompileUnit, DIE] | None: ...
+    def _find_die_and_cu_by_offset(
+        self, offset: int
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...

@@ -4,15 +4,14 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from elftools.dwarf.die import DIE
-
+from ...core.dwarf import DwarfEntry
 from ..models.dwarf import MemberInfo, MethodInfo, StructInfo, UnionInfo
 
 
 class TypeNameResolver(Protocol):
     """Minimum resolver surface required to render an array element type."""
 
-    def resolve_type_name(self, die: DIE, type_attr_name: str = "DW_AT_type") -> str: ...
+    def resolve_type_name(self, die: DwarfEntry, type_attr_name: str = "DW_AT_type") -> str: ...
 
 
 class TypeResolverPort(TypeNameResolver, Protocol):

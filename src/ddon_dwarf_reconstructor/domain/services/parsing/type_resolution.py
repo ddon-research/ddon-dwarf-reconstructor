@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from elftools.dwarf.die import DIE
-
-from ....infrastructure.logging import get_logger
+from ....core.dwarf import DwarfEntry
+from ....core.observability import get_logger
 from .array_parser import parse_array_type
 from .type_resolver_context import TypeResolverContext
 
@@ -36,7 +35,7 @@ class TypeResolutionMixin:
             self._primitive_typedefs.update(additional_types)
 
     def resolve_type_name(
-        self: TypeResolverContext, die: DIE, type_attr_name: str = "DW_AT_type"
+        self: TypeResolverContext, die: DwarfEntry, type_attr_name: str = "DW_AT_type"
     ) -> str:
         """Resolve type name using offset-based caching.
 
@@ -75,7 +74,7 @@ class TypeResolutionMixin:
             logger.warning(f"Failed to resolve type reference for {die.tag}: {e}")
             return "unknown_type"
 
-    def _resolve_die_type_name(self: TypeResolverContext, type_die: DIE) -> str:
+    def _resolve_die_type_name(self: TypeResolverContext, type_die: DwarfEntry) -> str:
         named_type = self._named_type_name(type_die)
         if named_type is not None:
             return named_type
@@ -94,14 +93,14 @@ class TypeResolutionMixin:
         return str(type_die.tag).replace("DW_TAG_", "")
 
     @staticmethod
-    def _named_type_name(type_die: DIE) -> str | None:
+    def _named_type_name(type_die: DwarfEntry) -> str | None:
         name_attr = type_die.attributes.get("DW_AT_name")
         if name_attr is None:
             return None
         value = name_attr.value
         return value.decode("utf-8") if isinstance(value, bytes) else str(value)
 
-    def _resolve_qualified_type(self: TypeResolverContext, type_die: DIE) -> str:
+    def _resolve_qualified_type(self: TypeResolverContext, type_die: DwarfEntry) -> str:
         base_type = self.resolve_type_name(type_die)
         if type_die.tag == "DW_TAG_pointer_type" and base_type == "unknown_type":
             return "void*"
@@ -116,7 +115,7 @@ class TypeResolutionMixin:
         suffix = suffixes.get(str(type_die.tag))
         return f"{base_type}{suffix or ''}"
 
-    def _resolve_array_type(self: TypeResolverContext, type_die: DIE) -> str:
+    def _resolve_array_type(self: TypeResolverContext, type_die: DwarfEntry) -> str:
         try:
             array_info = parse_array_type(type_die, self)
         except (AttributeError, KeyError, TypeError, ValueError) as error:
@@ -209,7 +208,7 @@ class TypeResolutionMixin:
         finally:
             self._types_in_progress.discard(typedef_name)
 
-    def collect_typedefs_from_die(self: TypeResolverContext, class_die: DIE) -> set[str]:
+    def collect_typedefs_from_die(self: TypeResolverContext, class_die: DwarfEntry) -> set[str]:
         """Collect typedefs used by a class DIE, resolving them lazily.
 
         Args:

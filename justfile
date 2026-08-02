@@ -52,13 +52,13 @@ deps:
 structure:
     uv run python -m tests.support.quality.check_structure src tests tools/sonar
 
-boundaries:
-    uv run python -m tests.support.quality.check_boundaries
+architecture:
+    uv run pytest tests/quality/test_architecture.py -q
 
 audit:
     uv run prospector --profile .prospector.yml --tool pylint --tool pyflakes --tool mccabe src
 
-check: lint format-check type-check deps structure boundaries
+check: lint format-check type-check deps structure architecture
 
 ci: check test-unit package-smoke
 

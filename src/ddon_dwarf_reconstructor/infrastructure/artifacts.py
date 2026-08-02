@@ -120,6 +120,10 @@ class SourceIdentityCatalog:
             self._save(catalog)
             return identity
 
+    def sha256(self, source_path: Path) -> str:
+        """Implement the application source-hash port with durable warm reuse."""
+        return self.identify(source_path).sha256
+
     def inspect(self, *, include_sources: bool = False) -> dict[str, Any]:
         """Return catalog metadata without hashing or changing sources."""
         catalog = self._load()

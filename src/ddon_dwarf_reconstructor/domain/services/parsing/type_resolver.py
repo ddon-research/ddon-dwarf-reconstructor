@@ -4,9 +4,8 @@
 
 from __future__ import annotations
 
-from elftools.dwarf.dwarfinfo import DWARFInfo
-
-from ....infrastructure.logging import get_logger
+from ....core.dwarf import DwarfInfo
+from ....core.observability import get_logger
 from ..lazy_dwarf_index_service import LazyDwarfIndexService
 from .primitive_lookup import PrimitiveLookupMixin
 from .primitive_type_names import PrimitiveTypeNamesMixin
@@ -70,7 +69,7 @@ class LazyTypeResolver(
         }
     )
 
-    def __init__(self, dwarf_info: DWARFInfo, lazy_index: LazyDwarfIndexService):
+    def __init__(self, dwarf_info: DwarfInfo, lazy_index: LazyDwarfIndexService):
         """Initialize lazy type resolver.
 
         Args:

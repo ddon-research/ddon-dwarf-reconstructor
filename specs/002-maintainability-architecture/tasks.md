@@ -4,7 +4,8 @@
 
 - [x] T001 Capture fixture and real-artifact output manifests outside source control.
 - [x] T002 Add typed generation/evidence contracts and compatibility tests.
-- [x] T003 Add structure, complexity, and import-boundary checkers with unit tests.
+- [x] T003 Add structure and complexity checks plus the pinned ArchUnitPython architecture suite
+  with positive, negative-control, and empty-selector tests.
 - [x] T004 Add Hypothesis, pytest-regressions, and pinned Prospector dev tooling.
 
 ## Domain and application
@@ -19,7 +20,8 @@
 ## Infrastructure and tests
 
 - [x] T011 Split cache/index/dump/exporter/CLI responsibilities behind ports.
-- [x] T012 Remove legacy-layer imports and add boundary tests.
+- [x] T012 Remove forbidden legacy-layer imports, move concrete wiring to the composition root,
+  and add the executable architecture policy.
 - [x] T013 Reorganize oversized tests and extract typed DIE factories.
 - [x] T014 Add missing parser, renderer, cache, CLI, exporter, and failure-path tests.
 - [x] T015 Raise coverage to the feature thresholds.

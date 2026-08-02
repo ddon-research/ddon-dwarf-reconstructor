@@ -10,9 +10,8 @@ checking their tags first. Critical for preventing bugs like treating
 namespaces as classes or enums as forward-declarable types.
 """
 
-from elftools.dwarf.die import DIE
-
-from ....infrastructure.logging import get_logger
+from ....core.dwarf import DwarfEntry
+from ....core.observability import get_logger
 from ...models.dwarf.tag_constants import (
     FORWARD_DECLARABLE_TYPES,
     NAMED_TERMINAL_TYPES,
@@ -32,8 +31,8 @@ class DIETypeClassifier:
     """
 
     @staticmethod
-    def is_named_type(die: DIE) -> bool:
-        """Check if DIE represents a named type.
+    def is_named_type(die: DwarfEntry) -> bool:
+        """Check if a DIE represents a named type.
 
         A named type has both:
         1. A tag that represents a terminal type definition
@@ -43,7 +42,7 @@ class DIETypeClassifier:
             die: DIE to check
 
         Returns:
-            True if DIE has a name and is a terminal type
+            True if a DIE has a name and is a terminal type
 
         Examples:
             - DW_TAG_class_type with name "MyClass": True
@@ -53,8 +52,8 @@ class DIETypeClassifier:
         return die.tag in NAMED_TERMINAL_TYPES and "DW_AT_name" in die.attributes
 
     @staticmethod
-    def is_forward_declarable(die: DIE) -> bool:
-        """Check if DIE can be forward declared in C++.
+    def is_forward_declarable(die: DwarfEntry) -> bool:
+        """Check if a DIE can be forward declared in C++.
 
         Only classes, structs, and unions can be forward declared.
         Enums, typedefs, namespaces, and base types cannot.
@@ -63,7 +62,7 @@ class DIETypeClassifier:
             die: DIE to check
 
         Returns:
-            True if DIE is a class/struct/union with a name
+            True if a DIE is a class/struct/union with a name
 
         Examples:
             - DW_TAG_class_type with name: True
@@ -73,8 +72,8 @@ class DIETypeClassifier:
         return die.tag in FORWARD_DECLARABLE_TYPES and "DW_AT_name" in die.attributes
 
     @staticmethod
-    def is_type_qualifier(die: DIE) -> bool:
-        """Check if DIE is a type qualifier (pointer, const, etc.).
+    def is_type_qualifier(die: DwarfEntry) -> bool:
+        """Check if a DIE is a type qualifier (pointer, const, etc.).
 
         Type qualifiers wrap other types and must be traversed to find
         the actual terminal type. They typically don't have DW_AT_name
@@ -84,7 +83,7 @@ class DIETypeClassifier:
             die: DIE to check
 
         Returns:
-            True if DIE is a qualifier tag
+            True if a DIE is a qualifier tag
 
         Examples:
             - DW_TAG_pointer_type: True
@@ -94,8 +93,8 @@ class DIETypeClassifier:
         return die.tag in TYPE_QUALIFIER_TAGS
 
     @staticmethod
-    def is_primitive_type(die: DIE) -> bool:
-        """Check if DIE represents a primitive base type.
+    def is_primitive_type(die: DwarfEntry) -> bool:
+        """Check if a DIE represents a primitive base type.
 
         Primitive types are built-in types (int, char, float, etc.) that
         don't need forward declarations or dependency resolution.
@@ -104,7 +103,7 @@ class DIETypeClassifier:
             die: DIE to check
 
         Returns:
-            True if DIE is a base_type with primitive name
+            True if a DIE is a base_type with primitive name
 
         Examples:
             - DW_TAG_base_type with name "int": True
@@ -127,10 +126,10 @@ class DIETypeClassifier:
         return name in PRIMITIVE_TYPE_NAMES
 
     @staticmethod
-    def get_type_name(die: DIE) -> str | None:
-        """Safely get type name from DIE.
+    def get_type_name(die: DwarfEntry) -> str | None:
+        """Safely get type name from a DIE.
 
-        Only returns name if DIE is a named terminal type.
+        Only returns a name if the DIE is a named terminal type.
         Returns None for qualifiers, anonymous types, etc.
 
         This method ensures we only extract names from appropriate DIEs.
@@ -159,8 +158,8 @@ class DIETypeClassifier:
         return str(name_attr.value)
 
     @staticmethod
-    def requires_resolution(die: DIE) -> bool:
-        """Check if DIE represents a type that needs dependency resolution.
+    def requires_resolution(die: DwarfEntry) -> bool:
+        """Check if a DIE represents a type that needs dependency resolution.
 
         Types that need resolution are:
         - Classes, structs, unions (forward declarable)

@@ -129,16 +129,17 @@ def test_export_hashes_large_elf_once(tmp_path: Path, monkeypatch: pytest.Monkey
 
     original_hash = artifacts.sha256_file
     hashed_paths: list[Path] = []
+    source_hash = artifacts.SourceIdentityCatalog().sha256
 
     def counting_hash(path: Path) -> str:
         hashed_paths.append(path)
         return original_hash(path)
 
     monkeypatch.setattr(artifacts, "sha256_file", counting_hash)
-    KnowledgeExporter(elf_path, "ps4-02020005").export(
+    KnowledgeExporter(elf_path, "ps4-02020005", source_hash=source_hash).export(
         "rLayout", {"rLayout": layout}, ["rLayout"], tmp_path / "first"
     )
-    KnowledgeExporter(elf_path, "ps4-02020005").export(
+    KnowledgeExporter(elf_path, "ps4-02020005", source_hash=source_hash).export(
         "rLayout", {"rLayout": layout}, ["rLayout"], tmp_path / "second"
     )
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from ....infrastructure.logging import get_logger
+from ....core.observability import get_logger
 from ...models.dwarf import ClassInfo
 
 logger = get_logger(__name__)

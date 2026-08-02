@@ -1,14 +1,13 @@
 """Method-implementation evidence scoring and parameter-name merging."""
 
-from elftools.dwarf.die import DIE
-
-from ....infrastructure.logging import get_logger
+from ....core.dwarf import DwarfEntry
+from ....core.observability import get_logger
 from ...models.dwarf import ParameterInfo
 
 logger = get_logger(__name__)
 
 
-def score_implementation(implementation: DIE) -> int:
+def score_implementation(implementation: DwarfEntry) -> int:
     """Score implementation evidence while traversing children once."""
     named_parameters = 0
     lexical_blocks = 0
@@ -27,7 +26,7 @@ def score_implementation(implementation: DIE) -> int:
 
 
 def merge_parameter_names(
-    implementation: DIE,
+    implementation: DwarfEntry,
     declaration_parameters: list[ParameterInfo],
     method_name: str,
 ) -> int:
@@ -42,7 +41,7 @@ def merge_parameter_names(
     return merge_count
 
 
-def _implementation_parameter_names(implementation: DIE) -> list[str]:
+def _implementation_parameter_names(implementation: DwarfEntry) -> list[str]:
     names: list[str] = []
     for child in implementation.iter_children():
         if child.tag != "DW_TAG_formal_parameter":

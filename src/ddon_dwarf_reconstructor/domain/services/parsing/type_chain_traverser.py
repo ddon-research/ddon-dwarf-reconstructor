@@ -14,9 +14,8 @@ This traverser follows that chain and returns the Class DIE offset.
 
 from typing import TYPE_CHECKING
 
-from elftools.dwarf.die import DIE
-
-from ....infrastructure.logging import get_logger
+from ....core.dwarf import DwarfEntry
+from ....core.observability import get_logger
 from .die_type_classifier import DIETypeClassifier
 
 if TYPE_CHECKING:
@@ -37,7 +36,7 @@ class TypeChainTraverser:
     MAX_CHAIN_DEPTH = 20
 
     @staticmethod
-    def follow_to_terminal_type(start_die: DIE) -> DIE | None:
+    def follow_to_terminal_type(start_die: DwarfEntry) -> DwarfEntry | None:
         """Follow qualifiers, typedefs, and declarators to a terminal DIE."""
         current = start_die
         visited: set[int] = set()
@@ -60,7 +59,7 @@ class TypeChainTraverser:
         return None
 
     @staticmethod
-    def _next_type_die(current: DIE) -> DIE | None:
+    def _next_type_die(current: DwarfEntry) -> DwarfEntry | None:
         if DIETypeClassifier.is_type_qualifier(current):
             return TypeChainTraverser._follow_attribute(current, "type qualifier")
         if current.tag == "DW_TAG_typedef":
@@ -78,7 +77,7 @@ class TypeChainTraverser:
         return None
 
     @staticmethod
-    def _follow_attribute(current: DIE, kind: str) -> DIE | None:
+    def _follow_attribute(current: DwarfEntry, kind: str) -> DwarfEntry | None:
         if "DW_AT_type" not in current.attributes:
             logger.debug("%s at 0x%x has no DW_AT_type", kind, current.offset)
             return None
@@ -88,7 +87,7 @@ class TypeChainTraverser:
         return next_die
 
     @staticmethod
-    def _anonymous_aggregate(current: DIE) -> DIE | None:
+    def _anonymous_aggregate(current: DwarfEntry) -> DwarfEntry | None:
         if "DW_AT_name" not in current.attributes:
             logger.debug("Anonymous %s at 0x%x is terminal", current.tag, current.offset)
             return current
@@ -96,13 +95,13 @@ class TypeChainTraverser:
         return current
 
     @staticmethod
-    def get_terminal_type_offset(member_die: DIE) -> int | None:
+    def get_terminal_type_offset(member_die: DwarfEntry) -> int | None:
         """Convenience method to get terminal type offset from a member/parameter DIE.
 
         Combines attribute lookup and chain following in one call.
 
         Args:
-            member_die: DIE representing a member, parameter, or variable
+            member_die: DwarfEntry representing a member, parameter, or variable
 
         Returns:
             Offset of terminal type DIE, or None if no type or traversal fails

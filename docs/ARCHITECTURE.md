@@ -45,48 +45,126 @@ canonical full-build boundary so Windows and Ubuntu use the same LibreOffice
 and Groff converters. The main runtime package consumes neither generated
 Rust constants nor presentation files.
 
+## Hexagonal architecture policy
+
+The primary runtime is a ports-and-adapters hexagon. The source tree and the
+pytest architecture suite are the policy's source of truth; this section is a
+human-readable rendering of that policy. Dependency arrows point toward the
+inside: core contracts and deterministic domain decisions do not know which
+ELF parser, cache, process, or filesystem adapter supplies their inputs.
+
+```text
+                         inbound adapters
+              cli.py / artifact_cli.py / main.py
+                               │
+                               ▼
+       application use cases and compatibility façades
+                               │
+                 domain ports and domain policies
+                               │
+                 core contracts and pure values
+                               ▲
+        infrastructure outbound adapters and composition
+     ELF/DWARF, zstd/SQLite, Orbis, artifacts, config, logging
+```
+
+### Source-derived responsibility matrix
+
+| Source boundary | Current implementation | Allowed dependency direction | Enforced policy |
+| --- | --- | --- | --- |
+| Core | `src/ddon_dwarf_reconstructor/core/` | Standard library only; no outer package | Core has no runtime dependencies on application, domain, generators, or infrastructure. |
+| Domain policies and ports | `domain/models/`, `domain/services/`, `domain/ports/` | Core, domain models/ports, and standard library | Domain has no infrastructure imports and no `elftools.*` dependency. `DwarfInfo`, `DwarfEntry`, and cache/source-hash protocols keep external types out of signatures. |
+| Application use cases | `application/generators/`, `application/exporters/` | Core, domain, and intentional compatibility seams | Application does not construct infrastructure adapters or import infrastructure. Cache sizing, source identity, dump lookup, and disassembly arrive through constructor ports from the composition root. |
+| Inbound adapters | `cli.py`, `artifact_cli.py`, `main.py` | Application plus concrete infrastructure wiring | `main.py` is the composition root: it supplies factories, cache paths/sizes, and `SourceIdentityCatalog().sha256`. |
+| Outbound adapters | `infrastructure/`, plus the legacy `generators/base_generator.py` ELF façade | Core/domain ports and external libraries | Adapters own `pyelftools`, zstd, SQLite, Orbis processes, durable artifacts, configuration, and logging setup. |
+| Separate tool boundary | `tools/dwarf_spec_pipeline/` | Its own package, lockfile, and checks | Specification acquisition/conversion is not imported by the runtime package. |
+
+### Port and adapter rules
+
+1. A port describes a purposeful use-case conversation, not a convenience
+   import bucket. Current examples are `ClassParserPort`, `DwarfIndexPort`,
+   `DumpLookupPort`, `DisassemblyProducerPort`, `SymbolCachePort`, and
+   `SourceHashPort`.
+2. Core and domain signatures use project-owned models or structural contracts.
+   Concrete `pyelftools`, zstd, SQLite, subprocess, and artifact-catalog types
+   stay in adapters and composition. The legacy ELF façade exposes the
+   pyelftools object through `core.dwarf` contracts while its concrete ELF
+   lifecycle remains in the compatibility adapter.
+3. Infrastructure may depend inward on ports and models. Application code may
+   request a port but may not import or instantiate an infrastructure adapter.
+   `main.py` and `infrastructure/composition.py` are the only normal wiring
+   locations for concrete adapters.
+4. Mocks and fixture doubles implement the same ports as production adapters.
+   The architecture suite checks the source package, so test-only imports and
+   generated outputs do not become production dependencies.
+
+### Import policy and explicit exceptions
+
+- New imports are package-relative. Imports through `src.` are forbidden.
+- `TYPE_CHECKING` imports count as dependencies for layer rules and must obey
+  the same direction. Runtime-cycle checking ignores type-only edges so
+  annotation-only compatibility cycles do not masquerade as runtime cycles.
+- Thin re-exports are allowed only for compatibility: the logging/path-policy
+  and platform façades delegate to core implementations and do not reimplement
+  policy.
+- Dynamic imports must obey the same direction as static imports. They are
+  retained only for lazy domain/application loading and optional compatibility
+  paths; infrastructure construction belongs in the composition root.
+- The public `application/generators/dwarf_generator.py` still inherits the
+  legacy `generators/base_generator.py` façade because callers patch and import
+  that compatibility surface. This is one named migration seam, not a general
+  application-to-adapter allowlist; new application code must use ports.
+- `tests/quality/test_architecture.py` scans only `src/` and has an explicit
+  non-empty source-root guard. ArchUnitPython's negated rule accepts an empty
+  selector, so the suite also keeps a positive empty-selector control to make
+  selector regressions visible.
+
+### Architecture-tool decision
+
+ArchUnitPython `1.5.0` is pinned in the test dependency group. It provides a
+pytest-native fluent API, understands the repository's source-root layout,
+absolute and relative imports, external modules, `TYPE_CHECKING` options,
+runtime cycles, and failure diagnostics without adding a runtime dependency to
+the package. The suite uses compiled path-separator patterns so the same rules
+run on Windows and Linux.
+
+The real-layout spike evaluated the alternatives before selection:
+
+| Tool | Result in this repository |
+| --- | --- |
+| PyTestArch `4.0.1` (Apache-2.0) | Expressive pytest rules, but scanning the actual `src/` tree raised a `UnicodeDecodeError` from a non-source artifact even with explicit exclusions. Rejected for source-tree reliability. |
+| Import Linter `2.13` (BSD-2-Clause) | Mature contracts and useful CLI, but the normal workflow is configuration-driven `lint-imports`; it did not provide the low-boilerplate pytest API required here. Rejected for integration cost. |
+| Tach `0.35.0` (MIT) | Strong module/interface configuration and CI CLI, but Rust/configuration-heavy and not a normal pytest assertion library. Rejected for maintenance and workflow fit. |
+| ArchUnitPython `1.5.0` (MIT) | Passed the real source-root spike, gave useful violation diagnostics, and supported the required negative controls and cycle options. Selected. |
+
+The suite is invoked directly by `uv run just architecture`, included in
+`uv run just check`, selected by the unit marker, and therefore runs in both
+the normal pytest and CI paths. There is no surviving bespoke AST import
+checker.
+
 ## System Architecture
 
-The architecture follows domain-driven design with clear separation between orchestration, business logic, and infrastructure:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Application Layer: Orchestration & Public API              │
-│  - DwarfGenerator (main entry point)                        │
-│  - Coordinates domain services                              │
-│  - Manages lifecycle and caching                            │
-└─────────────────────────────────────────────────────────────┘
-                              │
-┌─────────────────────────────────────────────────────────────┐
-│  Domain Layer: Core Business Logic                          │
-├─────────────────────────────────────────────────────────────┤
-│  Models: ClassInfo, MemberInfo, MethodInfo                  │
-│  Services:                                                   │
-│    - ClassParser: DWARF parsing with multi-CU resolution    │
-│    - TypeResolver: Typedef and type chain resolution        │
-│    - HierarchyBuilder: Dependency graph construction        │
-│    - HeaderGenerator: C++ code generation                   │
-│  Repositories: Symbol cache, Header cache                   │
-└─────────────────────────────────────────────────────────────┘
-                              │
-┌─────────────────────────────────────────────────────────────┐
-│  Infrastructure Layer: Configuration & External Interfaces   │
-│  - ELF file handling (PS3/PS4 compatibility)                │
-│  - Pinned Orbis objdump adapter and durable report cache    │
-│  - Logging and performance tracking                         │
-│  - Configuration management                                 │
-└─────────────────────────────────────────────────────────────┘
-```
+The application, domain, and infrastructure responsibilities below are read
+through the hexagonal policy above. The application coordinates use cases;
+domain services make reconstruction decisions; infrastructure translates
+external resources into the ports those decisions consume.
 
 ## Directory Structure
 
 ```
 src/ddon_dwarf_reconstructor/
+├── core/                              # Technology-neutral contracts and policies
+│   ├── dwarf.py                       # Structural DWARF contracts
+│   ├── observability.py               # Standard-library logging façade
+│   ├── path_policy.py                 # Canonical output naming policy
+│   └── platform.py                    # Platform value used across ports
+│
 ├── application/
-│   └── generators/
-│       └── dwarf_generator.py          # Main orchestrator and public API
+│   ├── exporters/                     # Deterministic graph/export use cases
+│   └── generators/                    # Public generation façade and workflows
 │
 ├── domain/
+│   ├── ports/                         # Purposeful inbound/outbound conversations
 │   ├── models/dwarf/                   # Data structures
 │   │   ├── class_info.py              # Complete class representation
 │   │   ├── member_info.py             # Member variables with DWARF offsets
@@ -96,11 +174,10 @@ src/ddon_dwarf_reconstructor/
 │   │   ├── struct_info.py             # Nested structures
 │   │   └── tag_constants.py           # DWARF tag classification constants
 │   │
-│   ├── repositories/cache/             # Caching layer
+│   ├── repositories/cache/             # Cache policies and compatibility façade
 │   │   ├── lru_cache.py               # In-memory LRU cache
-│   │   ├── persistent_symbol_cache.py # Disk-persisted symbol cache
+│   │   ├── persistent_symbol_cache.py # Source-bound durable cache
 │   │   └── header_cache.py            # SHA256-based header deduplication
-│   │
 │   └── services/
 │       ├── parsing/                    # DWARF parsing services
 │       │   ├── class_parser.py        # Multi-CU class discovery & parsing
@@ -119,6 +196,8 @@ src/ddon_dwarf_reconstructor/
 │       └── lazy_dwarf_index_service.py # Lazy DIE loading with offset index
 │
 └── infrastructure/
+    ├── artifacts.py                    # Source identity and durable artifacts
+    ├── composition.py                  # Concrete adapter factories
     ├── config/                         # Configuration
     │   ├── application_config.py      # Application settings
     │   └── dwarf_config.py            # DWARF-specific constants
@@ -127,7 +206,9 @@ src/ddon_dwarf_reconstructor/
     │   ├── logger_setup.py            # Structured logging
     │   └── progress_tracker.py        # Performance tracking
     │
-    └── elf_platform.py                 # Platform detection (PS3/PS4)
+    ├── elf_platform.py                 # Platform detection (PS3/PS4)
+    ├── orbis_objdump.py                # Orbis disassembly adapter
+    └── zstd_dump_parser.py             # Compressed-DWARF lookup adapter
 ```
 
 ### Knowledge Export and Instruction Evidence
@@ -1452,8 +1533,8 @@ and single-file dependency closure is structural: method signatures render on
 declarations but method-only types do not trigger unbounded transitive scans.
 
 The structure checker enforces the 400/250/75/10 module/class/function/
-complexity limits with no baseline exemption. Boundary checks and the output
-manifest checker are invoked by the root `justfile`, CI, and the documented
-local acceptance sequence. See
+complexity limits with no baseline exemption. The ArchUnitPython architecture
+suite and output manifest checker are invoked by the root `justfile`, CI, and
+the documented local acceptance sequence. See
 [`specs/002-maintainability-architecture/`](../specs/002-maintainability-architecture/)
 for the contracts and evidence record.

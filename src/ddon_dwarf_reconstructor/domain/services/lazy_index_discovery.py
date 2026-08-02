@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from elftools.dwarf.compileunit import CompileUnit
-from elftools.dwarf.die import DIE
-
-from ...infrastructure.logging import get_logger
+from ...core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ...core.observability import get_logger
 from ..models.dwarf.tag_registry import DwarfTagRegistry
 from .lazy_index_context import LazyIndexContext
 
@@ -26,7 +24,9 @@ class LazyIndexDiscoveryMixin:
         value = name_attr.value
         return value.decode("utf-8") if isinstance(value, bytes) else str(value)
 
-    def _process_die_symbol(self: LazyIndexContext, die: DIE, cu_offset: int | None = None) -> bool:
+    def _process_die_symbol(
+        self: LazyIndexContext, die: DwarfEntry, cu_offset: int | None = None
+    ) -> bool:
         name_attr = die.attributes.get("DW_AT_name")
         if name_attr is None:
             return False
@@ -40,7 +40,7 @@ class LazyIndexDiscoveryMixin:
         return True
 
     def discover_symbols_in_cu(
-        self: LazyIndexContext, cu: CompileUnit, target_types: set[str] | None = None
+        self: LazyIndexContext, cu: DwarfCompilationUnit, target_types: set[str] | None = None
     ) -> int:
         """Discover searchable symbols in one CU without retaining its DIEs."""
         target_types = target_types or self._get_default_target_types()

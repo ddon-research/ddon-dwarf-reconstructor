@@ -13,8 +13,8 @@ from contextlib import closing, contextmanager, suppress
 from pathlib import Path
 from time import monotonic, sleep, time
 
+from ..core.observability import get_logger
 from ..infrastructure.artifacts import SourceIdentityCatalog
-from ..infrastructure.logging import get_logger
 from .zstd_dump_query import DefinitionLocation as DefinitionLocation
 from .zstd_dump_query import ZstdDumpQueryMixin
 from .zstd_dump_scan import ZstdDumpScanMixin

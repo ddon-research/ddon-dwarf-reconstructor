@@ -8,9 +8,11 @@ from logging import Logger
 from pathlib import Path
 
 from .application.generators import DwarfGenerator, GenerationRequest
+from .core.observability import get_logger, log_timing
+from .infrastructure.artifacts import SourceIdentityCatalog
 from .infrastructure.composition import create_disassembly_producer, create_dump_lookup
-from .infrastructure.config import Config
-from .infrastructure.logging import LoggerSetup, get_logger, log_timing
+from .infrastructure.config import Config, get_cache_file_path, get_config
+from .infrastructure.logging import LoggerSetup
 
 
 @dataclass(frozen=True, slots=True)
@@ -111,6 +113,7 @@ def _run_generation(
     success_count = 0
     failed_symbols: list[tuple[str, str]] = []
     try:
+        dwarf_config = get_config()
         with DwarfGenerator(
             config.elf_file_path,
             exhaustive_search=options.exhaustive,
@@ -119,6 +122,10 @@ def _run_generation(
             resolve_param_names=options.resolve_param_names,
             dump_lookup_factory=create_dump_lookup,
             disassembly_factory=create_disassembly_producer,
+            cache_file=get_cache_file_path(str(config.elf_file_path)),
+            die_cache_size=int(dwarf_config["DIE_CACHE_SIZE"]),
+            type_cache_size=int(dwarf_config["TYPE_CACHE_SIZE"]),
+            source_hash=SourceIdentityCatalog().sha256,
         ) as generator:
             for index, symbol_name in enumerate(symbols, 1):
                 logger.info("[%s/%s] Processing: %s", index, len(symbols), symbol_name)

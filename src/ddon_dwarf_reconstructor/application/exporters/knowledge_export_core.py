@@ -8,7 +8,6 @@ from typing import Any
 
 from ...domain.models.disassembly import OrbisDisassemblyReport
 from ...domain.models.dwarf import ClassInfo
-from ...infrastructure.artifacts import SourceIdentityCatalog
 from .knowledge_export_context import KnowledgeExportContext
 
 
@@ -78,7 +77,7 @@ class KnowledgeExportCoreMixin:
         dict[str, str],
         dict[int, str],
     ]:
-        elf_sha256 = SourceIdentityCatalog().identify(self.elf_path).sha256
+        elf_sha256 = self.source_hash(self.elf_path)
         build_id = f"build:{self.build_id}"
         source_id = f"source:{self.build_id}:elf"
         nodes = [

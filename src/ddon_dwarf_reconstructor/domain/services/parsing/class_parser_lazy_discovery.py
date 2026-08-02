@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from elftools.dwarf.compileunit import CompileUnit
-from elftools.dwarf.die import DIE
-
-from ....infrastructure.logging import get_logger
+from ....core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ....core.observability import get_logger
 from .class_parser_context import ClassParserContext
 
 logger = get_logger(__name__)
@@ -14,7 +12,7 @@ logger = get_logger(__name__)
 class ClassParserLazyDiscoveryMixin:
     def _find_class_lazy(
         self: ClassParserContext, class_name: str
-    ) -> tuple[CompileUnit, DIE] | None:
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         """Use cache, authoritative dump lookup, and targeted DWARF search in order."""
         if self.lazy_index is None:
             return None
@@ -32,7 +30,7 @@ class ClassParserLazyDiscoveryMixin:
 
     def _cached_definition(
         self: ClassParserContext, class_name: str
-    ) -> tuple[CompileUnit, DIE] | None:
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         assert self.lazy_index is not None
         offset = self.lazy_index.find_symbol_offset(class_name)
         if offset is None:
@@ -60,7 +58,7 @@ class ClassParserLazyDiscoveryMixin:
 
     def _dump_definition(
         self: ClassParserContext, class_name: str
-    ) -> tuple[CompileUnit, DIE] | None:
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         if not self.dwarf_dump_path:
             return None
         dump_available, dump_result = self._find_class_with_dump_status(class_name)
@@ -71,7 +69,7 @@ class ClassParserLazyDiscoveryMixin:
 
     def _targeted_definition(
         self: ClassParserContext, class_name: str
-    ) -> tuple[CompileUnit, DIE] | None:
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         assert self.lazy_index is not None
         offset = self.lazy_index.targeted_symbol_search(class_name)
         if offset is None:
@@ -108,7 +106,7 @@ class ClassParserLazyDiscoveryMixin:
 
     def _find_die_and_cu_by_offset(
         self: ClassParserContext, offset: int
-    ) -> tuple[CompileUnit, DIE] | None:
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         """Find both the DIE and its containing CU without a full DIE materialization."""
         try:
             direct_die = self._direct_die(offset)
@@ -125,7 +123,7 @@ class ClassParserLazyDiscoveryMixin:
         logger.warning("DIE not found at offset 0x%x", offset)
         return None
 
-    def _direct_die(self: ClassParserContext, offset: int) -> DIE | None:
+    def _direct_die(self: ClassParserContext, offset: int) -> DwarfEntry | None:
         direct_lookup = getattr(self.dwarf_info, "get_DIE_from_refaddr", None)
         if direct_lookup is None:
             return None
@@ -133,14 +131,14 @@ class ClassParserLazyDiscoveryMixin:
         return direct_die if getattr(direct_die, "offset", None) == offset else None
 
     @staticmethod
-    def _offset_in_cu(cu: CompileUnit, offset: int) -> bool:
+    def _offset_in_cu(cu: DwarfCompilationUnit, offset: int) -> bool:
         unit_length = cu["unit_length"]
         return (
             isinstance(unit_length, int) and cu.cu_offset <= offset < cu.cu_offset + unit_length + 4
         )
 
     @staticmethod
-    def _find_die_in_cu(cu: CompileUnit, offset: int) -> DIE | None:
+    def _find_die_in_cu(cu: DwarfCompilationUnit, offset: int) -> DwarfEntry | None:
         for die in cu.iter_DIEs():
             if die.offset == offset:
                 return die

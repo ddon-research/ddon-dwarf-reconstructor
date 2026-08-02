@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from elftools.dwarf.compileunit import CompileUnit
-from elftools.dwarf.die import DIE
-
-from ....infrastructure.logging import get_logger, log_timing
+from ....core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ....core.observability import get_logger, log_timing
 from .class_parser_context import ClassParserContext
 from .class_parser_dump_discovery import ClassParserDumpDiscoveryMixin
 from .class_parser_lazy_discovery import ClassParserLazyDiscoveryMixin
@@ -22,7 +20,7 @@ class ClassParserDiscoveryMixin(ClassParserDumpDiscoveryMixin, ClassParserLazyDi
         self: ClassParserContext,
         class_name: str,
         exhaustive_override: bool | None = None,
-    ) -> tuple[CompileUnit, DIE] | None:
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         """Find a class, struct, union, enum, typedef, or array by name."""
         exhaustive = self.exhaustive_search if exhaustive_override is None else exhaustive_override
         if class_name in TYPE_BLACKLIST:

@@ -9,7 +9,7 @@ correct array declaration handling.
 
 from typing import TYPE_CHECKING
 
-from ....infrastructure.logging import get_logger
+from ....core.observability import get_logger
 from ...ports.class_parser import ClassParserPort
 from ...ports.dwarf_index import DwarfIndexPort
 from .header_aggregate_rendering import HeaderAggregateRenderingMixin

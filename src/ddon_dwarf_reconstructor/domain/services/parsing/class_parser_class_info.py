@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from elftools.dwarf.compileunit import CompileUnit
-from elftools.dwarf.die import DIE
-
-from ....infrastructure.logging import get_logger, log_timing
+from ....core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ....core.observability import get_logger, log_timing
 from ...models.dwarf import (
     ClassInfo,
     MemberInfo,
@@ -27,7 +25,9 @@ logger = get_logger(__name__)
 
 class ClassParserClassInfoMixin(ClassParserChildrenMixin):
     @log_timing
-    def parse_class_info(self: ClassParserContext, cu: CompileUnit, class_die: DIE) -> ClassInfo:
+    def parse_class_info(
+        self: ClassParserContext, cu: DwarfCompilationUnit, class_die: DwarfEntry
+    ) -> ClassInfo:
         """Parse a class DIE into a stable domain model."""
         header = self._class_header(cu, class_die)
         children = self._parse_class_children(cu, class_die, header[0])
@@ -56,7 +56,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
         )
 
     def _class_header(
-        self: ClassParserContext, cu: CompileUnit, class_die: DIE
+        self: ClassParserContext, cu: DwarfCompilationUnit, class_die: DwarfEntry
     ) -> tuple[str, int, int | None, str | None, int | None, int, str, str, bool, str | None]:
         name_attr = class_die.attributes.get("DW_AT_name")
         class_name = name_attr.value.decode("utf-8") if name_attr else "unknown_class"
@@ -83,7 +83,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
             self._get_containing_type(class_die),
         )
 
-    def _get_qualified_name(self: ClassParserContext, die: DIE, name: str) -> str:
+    def _get_qualified_name(self: ClassParserContext, die: DwarfEntry, name: str) -> str:
         """Build a qualified name from namespace and containing-type parents."""
         components = [name]
         current_die = die
@@ -111,7 +111,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
             current_die = parent_die
         return "::".join(reversed(components))
 
-    def _get_containing_type(self: ClassParserContext, die: DIE) -> str | None:
+    def _get_containing_type(self: ClassParserContext, die: DwarfEntry) -> str | None:
         """Return the qualified aggregate containing ``die``, when present."""
         try:
             parent_die = die.get_parent()
@@ -136,7 +136,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
         return self._get_qualified_name(parent_die, parent_name)
 
     @staticmethod
-    def _get_accessibility(die: DIE) -> str:
+    def _get_accessibility(die: DwarfEntry) -> str:
         """Return the C++ access level represented by a DWARF attribute."""
         attribute = die.attributes.get("DW_AT_accessibility")
         if attribute is None:
@@ -146,14 +146,14 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
 
     def _parse_member_or_anonymous(
         self: ClassParserContext,
-        member_die: DIE,
+        member_die: DwarfEntry,
         class_name: str,
         processed_offsets: set[int],
     ) -> MemberInfo | UnionInfo | None:
         """Parse member, detecting and handling anonymous unions.
 
         Args:
-            member_die: DIE representing the member
+            member_die: DwarfEntry representing the member
             class_name: Name of containing class (for logging)
             processed_offsets: Set of already-processed union offsets
 
@@ -183,11 +183,11 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
         # Regular member
         return self.parse_member(member_die)
 
-    def parse_member(self: ClassParserContext, member_die: DIE) -> MemberInfo | None:
+    def parse_member(self: ClassParserContext, member_die: DwarfEntry) -> MemberInfo | None:
         """Parse a class member using pyelftools.
 
         Args:
-            member_die: DIE representing the member
+            member_die: DwarfEntry representing the member
 
         Returns:
             MemberInfo object if valid, None otherwise
@@ -221,7 +221,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
         )
 
     @staticmethod
-    def _member_name(member_die: DIE, type_name: str) -> str | None:
+    def _member_name(member_die: DwarfEntry, type_name: str) -> str | None:
         name_attr = member_die.attributes.get("DW_AT_name")
         if name_attr is not None:
             value = name_attr.value
@@ -235,7 +235,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
 
     @staticmethod
     def _member_layout(
-        member_die: DIE,
+        member_die: DwarfEntry,
     ) -> tuple[int | None, bool, int | None, int | None, int | None]:
         is_static = (
             member_die.attributes.get("DW_AT_external") is not None

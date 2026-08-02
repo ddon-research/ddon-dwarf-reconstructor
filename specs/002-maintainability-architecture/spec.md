@@ -30,8 +30,8 @@ warm-cache performance.
   and 70% branch coverage for parsing, generation, orchestration, and artifact
   modules.
 - **MA-008**: Unit, full non-performance, Ruff, format, Pyrefly, deptry,
-  structure, boundary, output-regression, and explicit real-artifact checks
-  MUST be documented and runnable.
+  structure, source-derived architecture, output-regression, and explicit
+  real-artifact checks MUST be documented and runnable.
 
 ## Non-goals
 
@@ -53,8 +53,8 @@ regression.
 - `394` unit tests pass; `408` non-performance tests pass with one opt-out.
 - Total coverage is `88.5%` lines and `74.8%` branches. Parsing, generation,
   orchestration, and artifact groups all exceed their enforced thresholds.
-- Ruff, formatting, Pyrefly, deptry, structure, boundary, compile, and focused Prospector
-  checks pass.
+- Ruff, formatting, Pyrefly, deptry, structure, ArchUnitPython architecture, compile, and
+  focused Prospector checks pass.
 - The five retained fixture headers match the pre-refactor manifest exactly
   through both `ddon-dwarf-reconstructor` and `python main.py`.
 - The explicit real PS4 `rLayout` warm run produced a 20,039-byte header, and a

@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from elftools.dwarf.die import DIE
-
-from ....infrastructure.logging import get_logger, log_timing
+from ....core.dwarf import DwarfEntry
+from ....core.observability import get_logger, log_timing
 
 logger = get_logger(__name__)
 
@@ -51,8 +50,8 @@ class HierarchyChainMixin:
 
         return list(reversed(hierarchy))  # Base to derived order
 
-    def _find_base_class(self: HierarchyBuilderContext, class_die: DIE) -> str | None:
-        """Find direct base class from a class DIE.
+    def _find_base_class(self: HierarchyBuilderContext, class_die: DwarfEntry) -> str | None:
+        """Find the direct base class from a class DIE.
 
         Args:
             class_die: DIE representing a class

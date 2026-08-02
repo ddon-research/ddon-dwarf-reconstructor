@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from elftools.dwarf.compileunit import CompileUnit
-
-from ...infrastructure.logging import get_logger
+from ...core.dwarf import DwarfCompilationUnit
+from ...core.observability import get_logger
 from .definition_selection import DefinitionCandidate
 from .lazy_index_context import LazyIndexContext
 
@@ -15,7 +14,7 @@ class LazyIndexSearchReportingMixin:
     def _finish_cu_search(
         self: LazyIndexContext,
         symbol_name: str,
-        cu: CompileUnit,
+        cu: DwarfCompilationUnit,
         best: DefinitionCandidate | None,
         fallback: DefinitionCandidate | None,
         dies_scanned: int,

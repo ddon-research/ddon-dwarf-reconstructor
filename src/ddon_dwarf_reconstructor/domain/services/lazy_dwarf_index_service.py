@@ -8,9 +8,9 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
 
-from elftools.dwarf.dwarfinfo import DWARFInfo
-
-from ...infrastructure.logging import get_logger
+from ...core.dwarf import DwarfInfo
+from ...core.observability import get_logger
+from ..ports.cache import SymbolCachePort
 from ..repositories.cache import LRUCache, PersistentSymbolCache
 from .lazy_index_context import LazyIndexContext
 from .lazy_index_discovery import LazyIndexDiscoveryMixin
@@ -29,9 +29,11 @@ class LazyDwarfIndexService(
 ):
     """Preserve the public index API while delegating focused responsibilities."""
 
+    persistent_cache: SymbolCachePort
+
     def __init__(
         self,
-        dwarf_info: DWARFInfo,
+        dwarf_info: DwarfInfo,
         cache_file: str = ".dwarf_cache.json",
         die_cache_size: int = 10000,
         type_cache_size: int = 5000,

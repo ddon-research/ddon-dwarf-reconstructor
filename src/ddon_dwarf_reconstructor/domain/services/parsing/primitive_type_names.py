@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-from elftools.dwarf.die import DIE
-
-from ....infrastructure.logging import get_logger
+from ....core.dwarf import DwarfEntry
+from ....core.observability import get_logger
 from .type_resolver_context import TypeResolverContext
 
 logger = get_logger(__name__)
 
 
 class PrimitiveTypeNamesMixin:
-    def _get_primitive_base_type_name(self: TypeResolverContext, type_die: DIE) -> str:
+    def _get_primitive_base_type_name(self: TypeResolverContext, type_die: DwarfEntry) -> str:
         """Return a display name while preserving pointer and qualifier syntax."""
         tag = type_die.tag
         if tag in {"DW_TAG_base_type", "DW_TAG_typedef"}:
@@ -34,12 +33,12 @@ class PrimitiveTypeNamesMixin:
         logger.debug("Unhandled type DIE tag: %s", tag)
         return "unknown_type"
 
-    def _named_or_typedef_name(self: TypeResolverContext, type_die: DIE) -> str:
+    def _named_or_typedef_name(self: TypeResolverContext, type_die: DwarfEntry) -> str:
         if type_die.tag == "DW_TAG_base_type":
             return self._die_name(type_die) or "unknown_type"
         return self._resolve_referenced_name(type_die, "unknown_type")
 
-    def _qualified_primitive_name(self: TypeResolverContext, type_die: DIE) -> str:
+    def _qualified_primitive_name(self: TypeResolverContext, type_die: DwarfEntry) -> str:
         if type_die.tag == "DW_TAG_pointer_type":
             return self._resolve_referenced_name(type_die, "void", "*")
         if type_die.tag == "DW_TAG_reference_type":
@@ -48,7 +47,7 @@ class PrimitiveTypeNamesMixin:
         referenced_name = self._resolve_referenced_name(type_die, "unknown_type")
         return f"{qualifier} {referenced_name}"
 
-    def _special_primitive_name(self: TypeResolverContext, type_die: DIE) -> str:
+    def _special_primitive_name(self: TypeResolverContext, type_die: DwarfEntry) -> str:
         if type_die.tag == "DW_TAG_ptr_to_member_type":
             return self._resolve_member_pointer_name(type_die)
         if type_die.tag == "DW_TAG_subroutine_type":
@@ -57,7 +56,7 @@ class PrimitiveTypeNamesMixin:
 
     def _resolve_referenced_name(
         self: TypeResolverContext,
-        type_die: DIE,
+        type_die: DwarfEntry,
         missing_name: str,
         suffix: str = "",
     ) -> str:
@@ -68,7 +67,7 @@ class PrimitiveTypeNamesMixin:
             return missing_name
         return f"{self._get_primitive_base_type_name(target_die)}{suffix}"
 
-    def _resolve_member_pointer_name(self: TypeResolverContext, type_die: DIE) -> str:
+    def _resolve_member_pointer_name(self: TypeResolverContext, type_die: DwarfEntry) -> str:
         for attribute_name in ("DW_AT_containing_type", "DW_AT_type"):
             if attribute_name not in type_die.attributes:
                 continue
@@ -78,14 +77,14 @@ class PrimitiveTypeNamesMixin:
         logger.debug("Incomplete pointer-to-member type at offset 0x%x", type_die.offset)
         return "unknown_type"
 
-    def _resolve_subroutine_name(self: TypeResolverContext, type_die: DIE) -> str:
+    def _resolve_subroutine_name(self: TypeResolverContext, type_die: DwarfEntry) -> str:
         if "DW_AT_type" not in type_die.attributes:
             return "void"
         target_die = type_die.get_DIE_from_attribute("DW_AT_type")
         return self._get_primitive_base_type_name(target_die) if target_die else "void"
 
     @staticmethod
-    def _die_name(type_die: DIE) -> str | None:
+    def _die_name(type_die: DwarfEntry) -> str | None:
         name_attr = type_die.attributes.get("DW_AT_name")
         if name_attr is None:
             return None

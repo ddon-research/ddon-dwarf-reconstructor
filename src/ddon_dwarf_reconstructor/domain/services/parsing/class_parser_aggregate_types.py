@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from elftools.dwarf.compileunit import CompileUnit
-from elftools.dwarf.die import DIE
-
-from ....infrastructure.logging import get_logger
+from ....core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ....core.observability import get_logger
 from ...models.dwarf import (
     EnumeratorInfo,
     EnumInfo,
@@ -18,11 +16,11 @@ logger = get_logger(__name__)
 
 
 class ClassParserAggregateTypesMixin:
-    def parse_enum(self: ClassParserContext, enum_die: DIE) -> EnumInfo | None:
+    def parse_enum(self: ClassParserContext, enum_die: DwarfEntry) -> EnumInfo | None:
         """Parse an enumeration using pyelftools.
 
         Args:
-            enum_die: DIE representing the enum
+            enum_die: DwarfEntry representing the enum
 
         Returns:
             EnumInfo object if valid, None otherwise
@@ -49,7 +47,9 @@ class ClassParserAggregateTypesMixin:
             enumerators=enumerators,
         )
 
-    def _parse_enumerator(self: ClassParserContext, enumerator_die: DIE) -> EnumeratorInfo | None:
+    def _parse_enumerator(
+        self: ClassParserContext, enumerator_die: DwarfEntry
+    ) -> EnumeratorInfo | None:
         """Parse an enumerator value."""
         name_attr = enumerator_die.attributes.get("DW_AT_name")
         if not name_attr:
@@ -71,11 +71,13 @@ class ClassParserAggregateTypesMixin:
 
         return EnumeratorInfo(name=enumerator_name, value=value)
 
-    def parse_nested_structure(self: ClassParserContext, struct_die: DIE) -> StructInfo | None:
+    def parse_nested_structure(
+        self: ClassParserContext, struct_die: DwarfEntry
+    ) -> StructInfo | None:
         """Parse a nested structure definition.
 
         Args:
-            struct_die: DIE representing the struct
+            struct_die: DwarfEntry representing the struct
 
         Returns:
             StructInfo object if valid, None otherwise
@@ -109,11 +111,11 @@ class ClassParserAggregateTypesMixin:
             die_offset=struct_die.offset,
         )
 
-    def parse_union(self: ClassParserContext, union_die: DIE) -> UnionInfo | None:
+    def parse_union(self: ClassParserContext, union_die: DwarfEntry) -> UnionInfo | None:
         """Parse a union definition.
 
         Args:
-            union_die: DIE representing the union
+            union_die: DwarfEntry representing the union
 
         Returns:
             UnionInfo object if valid, None otherwise
@@ -150,7 +152,9 @@ class ClassParserAggregateTypesMixin:
             die_offset=union_die.offset,
         )
 
-    def _get_declaration_file(self: ClassParserContext, cu: CompileUnit, die: DIE) -> str | None:
+    def _get_declaration_file(
+        self: ClassParserContext, cu: DwarfCompilationUnit, die: DwarfEntry
+    ) -> str | None:
         """Get declaration file name from line program."""
         decl_file_attr = die.attributes.get("DW_AT_decl_file")
         if not decl_file_attr:

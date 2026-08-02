@@ -9,25 +9,12 @@ Detects the target platform of an ELF file (PS3, PS4, PC, etc.) based on:
 - OS/ABI field
 """
 
-from enum import Enum
-
 from elftools.elf.elffile import ELFFile
 
-from .logging import get_logger
+from ..core.observability import get_logger
+from ..core.platform import ELFPlatform
 
 logger = get_logger(__name__)
-
-
-class ELFPlatform(Enum):
-    """Supported ELF target platforms."""
-
-    PS3 = "ps3"  # PowerPC64 big-endian, DWARF2
-    PS4 = "ps4"  # x86-64 little-endian, DWARF3/4
-    UNKNOWN = "unknown"  # Unrecognized platform
-
-    def __str__(self) -> str:
-        """Return uppercase string representation."""
-        return self.value.upper()
 
 
 class PlatformDetector:

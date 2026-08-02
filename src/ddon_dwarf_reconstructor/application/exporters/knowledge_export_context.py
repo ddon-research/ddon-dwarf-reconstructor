@@ -11,6 +11,7 @@ from ...domain.models.disassembly import (
     OrbisFunctionDisassembly,
 )
 from ...domain.models.dwarf import ClassInfo, MethodInfo
+from ...domain.ports.source_identity import SourceHashPort
 
 if TYPE_CHECKING:
     from .knowledge_export_core import _OptionalRecords
@@ -24,6 +25,7 @@ class KnowledgeExportContext(Protocol):
     requires_resolution: Callable[[int], bool] | None
     SCHEMA_VERSION: str
     PRODUCER: str
+    source_hash: SourceHashPort
 
     def _ordered_names(
         self, class_infos: dict[str, ClassInfo], hierarchy_order: list[str]

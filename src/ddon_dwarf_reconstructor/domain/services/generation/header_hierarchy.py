@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ....infrastructure.logging import get_logger, log_timing
-from ....utils.path_utils import sanitize_for_filesystem
+from ....core.observability import get_logger, log_timing
+from ....core.path_policy import sanitize_for_filesystem
 from ...models.dwarf import ClassInfo
 
 if TYPE_CHECKING:

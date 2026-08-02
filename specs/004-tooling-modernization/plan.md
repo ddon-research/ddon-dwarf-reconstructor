@@ -14,7 +14,7 @@
 ## Validation tiers
 
 - Tier 1: focused Typer/CliRunner and existing unit tests, Ruff, Pyrefly warning checks, deptry,
-  structure, and boundary checks.
+  structure, and the ArchUnitPython architecture suite.
 - Tier 2: full non-performance tests, coverage group thresholds, package builds, and nested tool
   tests.
 - Tier 3: explicit real-ELF, compiler, cold-index, and warm-cache determinism validation using

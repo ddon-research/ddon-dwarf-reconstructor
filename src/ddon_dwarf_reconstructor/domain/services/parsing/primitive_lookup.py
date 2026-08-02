@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from elftools.dwarf.die import DIE
-
-from ....infrastructure.logging import get_logger
+from ....core.dwarf import DwarfEntry
+from ....core.observability import get_logger
 from .type_resolver_context import TypeResolverContext
 
 logger = get_logger(__name__)
@@ -55,7 +54,9 @@ class PrimitiveLookupMixin:
         result = self.index.targeted_symbol_search(type_name)
         return result if isinstance(result, int) else None
 
-    def _resolve_primitive_die(self: TypeResolverContext, type_name: str, die: DIE) -> str | None:
+    def _resolve_primitive_die(
+        self: TypeResolverContext, type_name: str, die: DwarfEntry
+    ) -> str | None:
         if die.tag == "DW_TAG_base_type":
             return type_name
         if die.tag != "DW_TAG_typedef":

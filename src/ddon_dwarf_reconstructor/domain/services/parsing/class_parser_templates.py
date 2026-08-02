@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from elftools.dwarf.die import DIE
-
-from ....infrastructure.logging import get_logger
+from ....core.dwarf import DwarfEntry
+from ....core.observability import get_logger
 from ...models.dwarf import (
     TemplateTypeParam,
     TemplateValueParam,
@@ -50,12 +49,12 @@ class ClassParserTemplatesMixin:
         return list(reversed(hierarchy))  # Return from base to derived
 
     def parse_template_type_param(
-        self: ClassParserContext, param_die: DIE
+        self: ClassParserContext, param_die: DwarfEntry
     ) -> TemplateTypeParam | None:
         """Parse template type parameter (typename T or class T).
 
         Args:
-            param_die: DIE representing the template type parameter
+            param_die: DwarfEntry representing the template type parameter
 
         Returns:
             TemplateTypeParam object if valid, None otherwise
@@ -86,12 +85,12 @@ class ClassParserTemplatesMixin:
         return TemplateTypeParam(name=param_name, default_type=default_type)
 
     def parse_template_value_param(
-        self: ClassParserContext, param_die: DIE
+        self: ClassParserContext, param_die: DwarfEntry
     ) -> TemplateValueParam | None:
         """Parse template value parameter (non-type template parameter).
 
         Args:
-            param_die: DIE representing the template value parameter
+            param_die: DwarfEntry representing the template value parameter
 
         Returns:
             TemplateValueParam object if valid, None otherwise

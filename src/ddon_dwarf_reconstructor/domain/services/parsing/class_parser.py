@@ -7,11 +7,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from elftools.dwarf.compileunit import CompileUnit
-from elftools.dwarf.die import DIE
-from elftools.dwarf.dwarfinfo import DWARFInfo
-
-from ....infrastructure.logging import get_logger
+from ....core.dwarf import DwarfCompilationUnit, DwarfEntry, DwarfInfo
+from ....core.observability import get_logger
 from ...ports.dump_lookup import DumpLookupPort
 from .class_parser_aggregate_types import ClassParserAggregateTypesMixin
 from .class_parser_class_info import ClassParserClassInfoMixin
@@ -46,7 +43,7 @@ class ClassParser(
     def __init__(
         self,
         type_resolver: LazyTypeResolver,
-        dwarf_info: DWARFInfo,
+        dwarf_info: DwarfInfo,
         lazy_index: LazyDwarfIndexService | None = None,
         full_scan_timeout: float = 180.0,
         exhaustive_search: bool = False,
@@ -78,7 +75,7 @@ class ClassParser(
         self.dump_parser = dump_parser
         self.timed_out_symbols: set[str] = set()  # Track symbols that timed out
         self._implementation_cache: dict[
-            int, tuple[CompileUnit, DIE] | None
+            int, tuple[DwarfCompilationUnit, DwarfEntry] | None
         ] = {}  # Cache for method implementations
         self._dump_lookup_authoritative_miss = False
         self._dump_lookup_unavailable = False

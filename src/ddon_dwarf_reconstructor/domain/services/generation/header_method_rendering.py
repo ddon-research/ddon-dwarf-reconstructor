@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from ....infrastructure.logging import get_logger
+from ....core.observability import get_logger
 from ...models.dwarf import MethodInfo
 
 if TYPE_CHECKING:

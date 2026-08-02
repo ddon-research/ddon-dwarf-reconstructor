@@ -4,10 +4,8 @@ from __future__ import annotations
 
 import time
 
-from elftools.dwarf.compileunit import CompileUnit
-from elftools.dwarf.die import DIE
-
-from ....infrastructure.logging import get_logger
+from ....core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ....core.observability import get_logger
 from .class_parser_context import ClassParserContext
 from .class_parser_scan_state import ScanState
 from .parser_policy import MAX_NON_IMPROVING_COMPLETE_CANDIDATES
@@ -18,7 +16,7 @@ logger = get_logger(__name__)
 class ClassParserScanMixin:
     def _find_class_full_scan(
         self: ClassParserContext, class_name: str, exhaustive_override: bool | None = None
-    ) -> tuple[CompileUnit, DIE] | None:
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         """Find the best matching definition by scanning compilation units."""
         use_exhaustive = (
             self.exhaustive_search if exhaustive_override is None else exhaustive_override
@@ -72,7 +70,7 @@ class ClassParserScanMixin:
 
     def _scan_compilation_unit(
         self: ClassParserContext,
-        cu: CompileUnit,
+        cu: DwarfCompilationUnit,
         target_name: bytes,
         class_name: str,
         exhaustive: bool,
@@ -86,7 +84,7 @@ class ClassParserScanMixin:
                 break
 
     @staticmethod
-    def _is_candidate_die(die: DIE, target_name: bytes) -> bool:
+    def _is_candidate_die(die: DwarfEntry, target_name: bytes) -> bool:
         if die.is_null():
             return False
         if die.tag not in {
@@ -103,8 +101,8 @@ class ClassParserScanMixin:
 
     def _consider_candidate(
         self: ClassParserContext,
-        cu: CompileUnit,
-        die: DIE,
+        cu: DwarfCompilationUnit,
+        die: DwarfEntry,
         class_name: str,
         exhaustive: bool,
         state: ScanState,
@@ -147,7 +145,7 @@ class ClassParserScanMixin:
 
     def _candidate_score(
         self: ClassParserContext,
-        die: DIE,
+        die: DwarfEntry,
         declaration: bool,
         has_size: bool,
         has_members: bool,
@@ -170,7 +168,7 @@ class ClassParserScanMixin:
         return score
 
     @staticmethod
-    def _special_candidate_score(die: DIE, has_size: bool) -> int | None:
+    def _special_candidate_score(die: DwarfEntry, has_size: bool) -> int | None:
         if die.tag == "DW_TAG_typedef":
             return 5000 if die.attributes.get("DW_AT_type") else -500
         if die.tag == "DW_TAG_base_type":
@@ -180,7 +178,7 @@ class ClassParserScanMixin:
         return None
 
     @staticmethod
-    def _nested_type_counts(die: DIE) -> tuple[int, int, int]:
+    def _nested_type_counts(die: DwarfEntry) -> tuple[int, int, int]:
         counts = {"DW_TAG_enumeration_type": 0, "DW_TAG_structure_type": 0, "DW_TAG_union_type": 0}
         for child in die.iter_children():
             if child.tag in counts:
@@ -199,7 +197,7 @@ class ClassParserScanMixin:
 
     def _select_scan_result(
         self: ClassParserContext, class_name: str, state: ScanState
-    ) -> tuple[CompileUnit, DIE] | None:
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         if state.best_candidate is not None and state.best_cu is not None and state.best_score > 0:
             return self._complete_scan_result(class_name, state)
         if state.timed_out and state.fallback_candidate:
@@ -211,7 +209,7 @@ class ClassParserScanMixin:
 
     def _complete_scan_result(
         self: ClassParserContext, class_name: str, state: ScanState
-    ) -> tuple[CompileUnit, DIE]:
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry]:
         assert state.best_candidate is not None and state.best_cu is not None
         size_attr = state.best_candidate.attributes.get("DW_AT_byte_size")
         size_value = size_attr.value if size_attr else 0
@@ -224,7 +222,7 @@ class ClassParserScanMixin:
 
     def _partial_scan_result(
         self: ClassParserContext, class_name: str, state: ScanState
-    ) -> tuple[CompileUnit, DIE]:
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry]:
         assert state.fallback_candidate is not None
         cu, die = state.fallback_candidate
         logger.warning("Returning partial result for %s after timeout", class_name)
@@ -233,7 +231,7 @@ class ClassParserScanMixin:
 
     def _forward_scan_result(
         self: ClassParserContext, class_name: str, state: ScanState
-    ) -> tuple[CompileUnit, DIE]:
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry]:
         assert state.fallback_candidate is not None
         cu, die = state.fallback_candidate
         logger.warning("Found %s only as a forward declaration", class_name)
@@ -242,8 +240,8 @@ class ClassParserScanMixin:
 
     def _cache_scan_result(
         self: ClassParserContext,
-        cu: CompileUnit,
-        die: DIE,
+        cu: DwarfCompilationUnit,
+        die: DwarfEntry,
         class_name: str,
         score: int,
         complete: bool,

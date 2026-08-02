@@ -6,7 +6,7 @@ This module handles building complete inheritance chains and collecting
 all classes in an inheritance hierarchy for full hierarchy header generation.
 """
 
-from ....infrastructure.logging import get_logger, log_timing
+from ....core.observability import get_logger, log_timing
 from ...models.dwarf import ClassInfo
 from ...ports.class_parser import ClassParserPort
 from ...ports.dwarf_index import DwarfIndexPort

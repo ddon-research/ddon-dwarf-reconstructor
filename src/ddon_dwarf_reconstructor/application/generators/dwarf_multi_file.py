@@ -5,10 +5,10 @@ from __future__ import annotations
 import os
 from time import time
 
+from ...core.observability import get_logger, log_timing
 from ...domain.models.dwarf import ClassInfo
 from ...domain.repositories.cache import HeaderCache
 from ...domain.services.generation import FileRegistry
-from ...infrastructure.logging import get_logger, log_timing
 from .dwarf_generator_context import DwarfGeneratorContext
 
 logger = get_logger(__name__)

@@ -8,7 +8,8 @@
 
 ## Phase 1: Quality gates
 
-- [x] Add structure and import-boundary checkers under `tests/support/quality/`.
+- [x] Add the source-derived ArchUnitPython architecture suite under `tests/quality/`,
+  including cross-platform source selectors, negative controls, and empty-match guards.
 - [x] Enable Ruff McCabe checks and add focused Prospector configuration.
 - [x] Add Hypothesis and regression testing support.
 - [x] Add tests for the quality and manifest utilities.
@@ -30,7 +31,7 @@
 ## Phase 4: Convergence
 
 - [x] Add missing negative, ambiguity, corruption, timeout, and determinism tests.
-- [x] Raise coverage and enforce size/complexity/boundary gates.
+- [x] Raise coverage and enforce size/complexity/architecture gates.
 - [x] Run fixture, fresh-process, warm-cache, compiler, real-artifact, and performance
   acceptance checks.
 - [x] Update architecture, testing, README, workflow, and Spec Kit documentation.

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from ....infrastructure.logging import get_logger
+from ....core.observability import get_logger
 from .type_resolver_context import TypeResolverContext
 
 logger = get_logger(__name__)

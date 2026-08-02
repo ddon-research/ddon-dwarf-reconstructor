@@ -119,7 +119,7 @@ uv run just sync
 uv lock --check
 uv run just test-unit       # fast tests
 uv run just test            # non-performance suite
-uv run just check           # Ruff, Pyrefly, deptry, structure, boundaries
+uv run just check           # Ruff, Pyrefly, deptry, structure, architecture
 uv run just coverage        # coverage thresholds and reports
 uv run just package         # wheel and sdist
 uv run just package-smoke   # isolated uv tool install and CLI smoke test
@@ -152,6 +152,10 @@ validates dependency declarations, and focused Prospector diagnostics remain a n
 - [Testing and acceptance tiers](docs/TESTING.md)
 - [DWARF tag analysis](docs/DWARF_TAG_ANALYSIS.md)
 - [DWARF specification pipeline](tools/dwarf_spec_pipeline/README.md)
+
+The architecture policy is executable: `uv run just architecture` runs the pinned
+ArchUnitPython rules for the `src/` hexagon and is included in both `just check` and the unit
+pytest tier.
 
 Generated headers and evidence bundles are wire-format contracts. Validate them with exact
 byte-level output manifests across fresh and warm processes. Real ELF, compressed dumps, compiler

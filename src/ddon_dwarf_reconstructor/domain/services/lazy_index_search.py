@@ -5,10 +5,8 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 
-from elftools.dwarf.compileunit import CompileUnit
-from elftools.dwarf.die import DIE
-
-from ...infrastructure.logging import get_logger
+from ...core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ...core.observability import get_logger
 from ..models.dwarf.tag_registry import DwarfTagRegistry
 from .definition_selection import (
     DefinitionCandidate,
@@ -93,7 +91,7 @@ class LazyIndexSearchMixin(LazyIndexSearchReportingMixin):
             logger.debug("Found candidate in hinted CU with score=%s", candidate.score)
         return candidate
 
-    def _ordered_cus(self: LazyIndexContext, hint: int | None) -> list[CompileUnit]:
+    def _ordered_cus(self: LazyIndexContext, hint: int | None) -> list[DwarfCompilationUnit]:
         logger.debug("Sorting CUs by size for optimized search order")
         candidates = [
             cu for cu in self.dwarf_info.iter_CUs() if hint is None or cu.cu_offset != hint
@@ -173,7 +171,7 @@ class LazyIndexSearchMixin(LazyIndexSearchReportingMixin):
 
     def _search_cu_candidate(
         self: LazyIndexContext,
-        cu: CompileUnit,
+        cu: DwarfCompilationUnit,
         symbol_name: str,
         target_tags: set[str],
         target_name: bytes,
@@ -187,7 +185,7 @@ class LazyIndexSearchMixin(LazyIndexSearchReportingMixin):
 
     def _search_cu_for_symbol(
         self: LazyIndexContext,
-        cu: CompileUnit,
+        cu: DwarfCompilationUnit,
         symbol_name: str,
         target_tags: set[str],
         target_name: bytes,
@@ -198,7 +196,7 @@ class LazyIndexSearchMixin(LazyIndexSearchReportingMixin):
 
     def _search_cu_for_symbol_with_score(
         self: LazyIndexContext,
-        cu: CompileUnit,
+        cu: DwarfCompilationUnit,
         symbol_name: str,
         target_tags: set[str],
         target_name: bytes,
@@ -235,8 +233,8 @@ class LazyIndexSearchMixin(LazyIndexSearchReportingMixin):
 
     def _candidate_for_die(
         self: LazyIndexContext,
-        die: DIE,
-        cu: CompileUnit,
+        die: DwarfEntry,
+        cu: DwarfCompilationUnit,
         symbol_name: str,
         target_tags: set[str],
         target_name: bytes,
@@ -274,7 +272,7 @@ class LazyIndexSearchMixin(LazyIndexSearchReportingMixin):
         )
 
     @staticmethod
-    def _accept_cu_candidate(die: DIE, candidate: DefinitionCandidate) -> bool:
+    def _accept_cu_candidate(die: DwarfEntry, candidate: DefinitionCandidate) -> bool:
         signals = DefinitionSignals(
             tag=str(die.tag),
             byte_size=candidate.byte_size,

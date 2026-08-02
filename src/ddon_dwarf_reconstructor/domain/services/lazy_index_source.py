@@ -6,7 +6,7 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
-from ...infrastructure.logging import get_logger
+from ...core.observability import get_logger
 from .lazy_index_context import LazyIndexContext
 
 logger = get_logger(__name__)
@@ -42,6 +42,8 @@ class LazyIndexSourceMixin:
         try:
             for symbol, offset in mappings:
                 die = self.dwarf_info.get_DIE_from_refaddr(int(offset))
+                if die is None:
+                    return False
                 name_attribute = die.attributes.get("DW_AT_name")
                 if name_attribute is None:
                     return False

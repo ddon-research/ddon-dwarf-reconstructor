@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
 
-from ...utils.path_utils import create_header_filename
+from ...core.path_policy import create_header_filename
 
 
 @dataclass(frozen=True, slots=True)

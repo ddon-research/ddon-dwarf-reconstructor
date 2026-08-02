@@ -1,10 +1,8 @@
 """Render deterministic headers for namespaces and unresolved symbols."""
 
-from elftools.dwarf.compileunit import CompileUnit
-from elftools.dwarf.die import DIE
-
-from ....infrastructure.logging import get_logger
-from ....utils.path_utils import sanitize_for_filesystem
+from ....core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ....core.observability import get_logger
+from ....core.path_policy import sanitize_for_filesystem
 
 logger = get_logger(__name__)
 
@@ -26,7 +24,9 @@ class SpecialHeaderRenderer:
 """
 
     @staticmethod
-    def render_namespace(namespace_name: str, cu: CompileUnit, namespace_die: DIE) -> str:
+    def render_namespace(
+        namespace_name: str, cu: DwarfCompilationUnit, namespace_die: DwarfEntry
+    ) -> str:
         """Render a namespace header with sorted forward declarations."""
         child_items = SpecialHeaderRenderer._namespace_children(namespace_die)
         sanitized_name = sanitize_for_filesystem(namespace_name).upper()
@@ -46,7 +46,7 @@ class SpecialHeaderRenderer:
         return "\n".join(lines)
 
     @staticmethod
-    def _namespace_children(namespace_die: DIE) -> list[tuple[str, str]]:
+    def _namespace_children(namespace_die: DwarfEntry) -> list[tuple[str, str]]:
         child_items: list[tuple[str, str]] = []
         try:
             for child in namespace_die.iter_children():
@@ -70,8 +70,8 @@ class SpecialHeaderRenderer:
     def _namespace_prefix(
         namespace_name: str,
         sanitized_name: str,
-        cu: CompileUnit,
-        namespace_die: DIE,
+        cu: DwarfCompilationUnit,
+        namespace_die: DwarfEntry,
         child_items: list[tuple[str, str]],
     ) -> list[str]:
         lines = [

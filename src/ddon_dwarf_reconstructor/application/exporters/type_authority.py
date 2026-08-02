@@ -5,8 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from elftools.dwarf.die import DIE
-
+from ...core.dwarf import DwarfEntry
 from ...domain.models.dwarf import ClassInfo
 
 
@@ -38,7 +37,7 @@ class TypeAuthority:
     selection_basis: tuple[str, ...]
     rejected_candidates: tuple[tuple[int, str], ...]
 
-    def validate_die(self, die: DIE) -> None:
+    def validate_die(self, die: DwarfEntry) -> None:
         """Fail when direct offset resolution does not produce the approved DIE."""
         name_attribute = die.attributes.get("DW_AT_name")
         raw_name = name_attribute.value if name_attribute is not None else None

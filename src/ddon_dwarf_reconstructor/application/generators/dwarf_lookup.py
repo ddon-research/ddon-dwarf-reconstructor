@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from elftools.dwarf.compileunit import CompileUnit
-from elftools.dwarf.die import DIE
-
+from ...core.dwarf import DwarfCompilationUnit, DwarfEntry
 from ...domain.models.dwarf import ClassInfo
 from ...domain.services.generation import calculate_packing_info
 from .dwarf_generator_context import DwarfGeneratorContext
 
 
 class GeneratorLookupMixin:
-    def find_class(self: DwarfGeneratorContext, class_name: str) -> tuple[CompileUnit, DIE] | None:
+    def find_class(
+        self: DwarfGeneratorContext, class_name: str
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         """Find a class/type DIE by name.
 
         Delegates to ClassParser for the search.
@@ -20,13 +20,13 @@ class GeneratorLookupMixin:
             class_name: Name of the class to find
 
         Returns:
-            Tuple of (CompileUnit, DIE) if found, None otherwise
+            Tuple of (compilation unit, DIE) if found, None otherwise
         """
         parser = self.class_parser
         assert parser is not None
         return parser.find_class(class_name)
 
-    def is_namespace(self: DwarfGeneratorContext, die: DIE) -> bool:
+    def is_namespace(self: DwarfGeneratorContext, die: DwarfEntry) -> bool:
         """Check if a DIE represents a namespace.
 
         Args:
@@ -37,8 +37,10 @@ class GeneratorLookupMixin:
         """
         return die.tag == "DW_TAG_namespace"
 
-    def parse_class_info(self: DwarfGeneratorContext, cu: CompileUnit, class_die: DIE) -> ClassInfo:
-        """Parse class information from DIE.
+    def parse_class_info(
+        self: DwarfGeneratorContext, cu: DwarfCompilationUnit, class_die: DwarfEntry
+    ) -> ClassInfo:
+        """Parse class information from a DIE.
 
         Delegates to ClassParser and adds packing analysis.
 

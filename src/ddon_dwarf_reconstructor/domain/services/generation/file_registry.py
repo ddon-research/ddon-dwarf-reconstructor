@@ -8,10 +8,10 @@ attributes. Handles compilation unit file lists and normalizes paths.
 
 from typing import TYPE_CHECKING
 
-from ....infrastructure.logging import get_logger
+from ....core.observability import get_logger
 
 if TYPE_CHECKING:
-    from elftools.dwarf.dwarfinfo import DWARFInfo
+    from ....core.dwarf import DwarfInfo
 
 logger = get_logger(__name__)
 
@@ -30,7 +30,7 @@ class FileRegistry:
         _uncategorized: Set of classes with no file info
     """
 
-    def __init__(self, dwarf_info: DWARFInfo):
+    def __init__(self, dwarf_info: DwarfInfo):
         """Initialize file registry with DWARF information.
 
         Args:

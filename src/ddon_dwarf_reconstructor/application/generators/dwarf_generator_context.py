@@ -5,19 +5,17 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol
 
-from elftools.dwarf.compileunit import CompileUnit
-from elftools.dwarf.die import DIE
-from elftools.dwarf.dwarfinfo import DWARFInfo
-
+from ...core.dwarf import DwarfCompilationUnit, DwarfEntry, DwarfInfo
+from ...core.platform import ELFPlatform
 from ...domain.models.dwarf import ClassInfo
 from ...domain.ports.class_parser import ClassParserPort
 from ...domain.ports.disassembly import DisassemblyProducerFactory
 from ...domain.ports.dump_lookup import DumpLookupFactory
+from ...domain.ports.source_identity import SourceHashPort
 from ...domain.ports.type_resolution import TypeResolverPort
 from ...domain.repositories.cache import HeaderCache
 from ...domain.services.generation import FileRegistry, HeaderGenerator, HierarchyBuilder
 from ...domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
-from ...infrastructure.elf_platform import ELFPlatform
 from .generation_contracts import GenerationRequest, HeaderBundle
 
 
@@ -26,7 +24,7 @@ class DwarfGeneratorContext(Protocol):
 
     elf_path: Path
     platform: ELFPlatform
-    dwarf_info: DWARFInfo | None
+    dwarf_info: DwarfInfo | None
     class_parser: ClassParserPort | None
     type_resolver: TypeResolverPort | None
     header_generator: HeaderGenerator | None
@@ -34,12 +32,13 @@ class DwarfGeneratorContext(Protocol):
     hierarchy_builder: HierarchyBuilder | None
     dump_lookup_factory: DumpLookupFactory | None
     disassembly_factory: DisassemblyProducerFactory | None
+    source_hash: SourceHashPort | None
 
-    def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None: ...
+    def find_class(self, class_name: str) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...
 
-    def is_namespace(self, die: DIE) -> bool: ...
+    def is_namespace(self, die: DwarfEntry) -> bool: ...
 
-    def parse_class_info(self, cu: CompileUnit, class_die: DIE) -> ClassInfo: ...
+    def parse_class_info(self, cu: DwarfCompilationUnit, class_die: DwarfEntry) -> ClassInfo: ...
 
     def build_inheritance_hierarchy(self, class_name: str) -> list[str]: ...
 
@@ -67,7 +66,7 @@ class DwarfGeneratorContext(Protocol):
     def _generate_not_found_header(self, class_name: str) -> str: ...
 
     def _generate_namespace_header(
-        self, namespace_name: str, cu: CompileUnit, namespace_die: DIE
+        self, namespace_name: str, cu: DwarfCompilationUnit, namespace_die: DwarfEntry
     ) -> str: ...
 
     def _expand_typedef_search(self, full_hierarchy: bool = True) -> None: ...

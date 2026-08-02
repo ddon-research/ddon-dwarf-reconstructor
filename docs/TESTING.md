@@ -38,11 +38,28 @@ uv run just ci
 
 # Distribution acceptance
 uv run just package-smoke
+
+# Architecture policy (also part of `just check` and `test-unit`)
+uv run just architecture
 ```
 
 The `packaging` marker installs the project into temporary uv tool directories and verifies the
 standalone console entry point from outside the checkout. It is excluded from the normal test and
 coverage recipes and is run explicitly by `just package-smoke` and CI.
+
+## Architecture enforcement
+
+`tests/quality/test_architecture.py` is the executable hexagonal-architecture policy for the
+primary `src/` tree. It uses pinned ArchUnitPython rules for domain/application dependency
+direction, external `elftools` isolation, core isolation, runtime-cycle detection, and a
+deliberate negative control. Selectors are guarded against an empty source tree and use
+cross-platform path-separator patterns. The selected tool's negated rules do not fail when a
+selector matches nothing, so the suite keeps a positive empty-selector diagnostic as a regression
+control.
+
+Run it directly with `uv run just architecture`. The recipe is included in `uv run just check`,
+and every architecture test is marked `unit`, so normal pytest, unit tests, coverage, and CI all
+execute the policy. The former bespoke AST checker under `tests/support/quality/` has been removed.
 
 ## Test Categories
 
@@ -287,7 +304,7 @@ Steps:
 ```yaml
 Trigger: Push to main, Pull Requests
 Steps:
-    1. `uv run just check` (Ruff, Pyrefly, deptry, structure, boundaries)
+    1. `uv run just check` (Ruff, Pyrefly, deptry, structure, architecture)
     2. Focused Prospector audit (non-blocking)
 ```
 

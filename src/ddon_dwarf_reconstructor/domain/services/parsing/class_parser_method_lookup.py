@@ -4,10 +4,8 @@ from __future__ import annotations
 
 import time
 
-from elftools.dwarf.compileunit import CompileUnit
-from elftools.dwarf.die import DIE
-
-from ....infrastructure.logging import get_logger
+from ....core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ....core.observability import get_logger
 from .class_parser_context import ClassParserContext
 from .method_evidence import score_implementation
 
@@ -17,7 +15,7 @@ logger = get_logger(__name__)
 class ClassParserMethodLookupMixin:
     def _find_method_implementation(
         self: ClassParserContext, declaration_offset: int, method_name: str
-    ) -> tuple[CompileUnit, DIE] | None:
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         """Find an implementation using the dump index, then bounded CU lookup."""
         if self.dwarf_dump_path:
             result = self._find_implementation_in_dump(declaration_offset, method_name)
@@ -27,9 +25,9 @@ class ClassParserMethodLookupMixin:
 
     def _scan_method_implementations(
         self: ClassParserContext, declaration_offset: int, method_name: str
-    ) -> tuple[CompileUnit, DIE] | None:
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         started_at = time.time()
-        best_impl: tuple[CompileUnit, DIE] | None = None
+        best_impl: tuple[DwarfCompilationUnit, DwarfEntry] | None = None
         best_score = -1
         for cu in self.dwarf_info.iter_CUs():
             if time.time() - started_at > 5.0:
@@ -43,12 +41,12 @@ class ClassParserMethodLookupMixin:
 
     def _scan_method_cu(
         self: ClassParserContext,
-        cu: CompileUnit,
+        cu: DwarfCompilationUnit,
         declaration_offset: int,
         method_name: str,
-        best_impl: tuple[CompileUnit, DIE] | None,
+        best_impl: tuple[DwarfCompilationUnit, DwarfEntry] | None,
         best_score: int,
-    ) -> tuple[tuple[CompileUnit, DIE] | None, int, bool]:
+    ) -> tuple[tuple[DwarfCompilationUnit, DwarfEntry] | None, int, bool]:
         for die in cu.iter_DIEs():
             if die.tag != "DW_TAG_subprogram":
                 continue
@@ -67,7 +65,7 @@ class ClassParserMethodLookupMixin:
 
     def _find_implementation_in_dump(
         self: ClassParserContext, declaration_offset: int, method_name: str
-    ) -> tuple[CompileUnit, DIE] | None:
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         """Search DWARF dump for implementation with DW_AT_specification.
 
         Uses regex to find DW_TAG_subprogram with DW_AT_specification

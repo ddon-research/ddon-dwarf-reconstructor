@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from time import time
 
+from ...core.observability import get_logger, log_timing
 from ...domain.models.dwarf import ClassInfo
 from ...domain.services.generation import calculate_packing_info
-from ...infrastructure.logging import get_logger, log_timing
 from .dwarf_generator_context import DwarfGeneratorContext
 
 logger = get_logger(__name__)

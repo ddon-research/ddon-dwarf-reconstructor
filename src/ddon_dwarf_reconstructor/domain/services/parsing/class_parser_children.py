@@ -5,10 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TypeVar
 
-from elftools.dwarf.compileunit import CompileUnit
-from elftools.dwarf.die import DIE
-
-from ....infrastructure.logging import get_logger
+from ....core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ....core.observability import get_logger
 from ...models.dwarf import (
     ClassInfo,
     EnumInfo,
@@ -42,7 +40,7 @@ class ParsedClassChildren:
 
 class ClassParserChildrenMixin:
     def _parse_class_children(
-        self: ClassParserContext, cu: CompileUnit, class_die: DIE, class_name: str
+        self: ClassParserContext, cu: DwarfCompilationUnit, class_die: DwarfEntry, class_name: str
     ) -> ParsedClassChildren:
         children = ParsedClassChildren()
         processed_union_offsets: set[int] = set()
@@ -52,8 +50,8 @@ class ClassParserChildrenMixin:
 
     def _parse_class_child(
         self: ClassParserContext,
-        cu: CompileUnit,
-        child: DIE,
+        cu: DwarfCompilationUnit,
+        child: DwarfEntry,
         class_name: str,
         processed_union_offsets: set[int],
         result: ParsedClassChildren,
@@ -70,7 +68,7 @@ class ClassParserChildrenMixin:
             self._log_unhandled_child(class_name, child)
 
     def _parse_primary_child(
-        self: ClassParserContext, child: DIE, class_name: str, result: ParsedClassChildren
+        self: ClassParserContext, child: DwarfEntry, class_name: str, result: ParsedClassChildren
     ) -> None:
         if child.tag == "DW_TAG_subprogram":
             self._append_if_present(result.methods, self.parse_method(child))
@@ -81,8 +79,8 @@ class ClassParserChildrenMixin:
 
     def _parse_nested_child(
         self: ClassParserContext,
-        cu: CompileUnit,
-        child: DIE,
+        cu: DwarfCompilationUnit,
+        child: DwarfEntry,
         processed_union_offsets: set[int],
         result: ParsedClassChildren,
     ) -> None:
@@ -94,7 +92,7 @@ class ClassParserChildrenMixin:
             self._append_union_child(child, processed_union_offsets, result)
 
     def _parse_template_child(
-        self: ClassParserContext, child: DIE, result: ParsedClassChildren
+        self: ClassParserContext, child: DwarfEntry, result: ParsedClassChildren
     ) -> None:
         if child.tag == "DW_TAG_template_type_param":
             self._append_if_present(
@@ -107,7 +105,7 @@ class ClassParserChildrenMixin:
 
     def _append_member_child(
         self: ClassParserContext,
-        child: DIE,
+        child: DwarfEntry,
         class_name: str,
         processed_union_offsets: set[int],
         result: ParsedClassChildren,
@@ -120,7 +118,7 @@ class ClassParserChildrenMixin:
 
     def _append_union_child(
         self: ClassParserContext,
-        child: DIE,
+        child: DwarfEntry,
         processed_union_offsets: set[int],
         result: ParsedClassChildren,
     ) -> None:
@@ -129,7 +127,7 @@ class ClassParserChildrenMixin:
         self._append_if_present(result.unions, self.parse_union(child))
 
     def _append_base_class(
-        self: ClassParserContext, child: DIE, result: ParsedClassChildren
+        self: ClassParserContext, child: DwarfEntry, result: ParsedClassChildren
     ) -> None:
         base_type = self.type_resolver.resolve_type_name(child)
         if base_type != "unknown_type":
@@ -141,7 +139,7 @@ class ClassParserChildrenMixin:
             items.append(item)
 
     @staticmethod
-    def _log_unhandled_child(class_name: str, child: DIE) -> None:
+    def _log_unhandled_child(class_name: str, child: DwarfEntry) -> None:
         child_name = child.attributes.get("DW_AT_name")
         child_name_str = child_name.value.decode("utf-8") if child_name else "unnamed"
         logger.warning(

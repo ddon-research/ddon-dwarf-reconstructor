@@ -44,7 +44,7 @@ provenance manifest are linked from the
 
 **Contents:**
 - Purpose and scope (Dragon's Dogma Online reverse engineering)
-- System architecture (domain-driven design layers)
+- Source-derived hexagonal architecture, ports, adapters, and composition rules
 - Directory structure with component explanations
 - Core components detailed documentation
 - Design principles and rationale (offset-based resolution, lazy loading, etc.)

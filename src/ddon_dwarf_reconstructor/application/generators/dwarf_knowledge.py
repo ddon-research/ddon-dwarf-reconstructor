@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ...infrastructure.logging import get_logger
+from ...core.observability import get_logger
 from .dwarf_generator_context import DwarfGeneratorContext
 
 logger = get_logger(__name__)
@@ -59,7 +59,11 @@ class KnowledgeExportMixin:
                 self.elf_path, root_symbol
             )
 
-        exporter = KnowledgeExporter(self.elf_path, build_id)
+        exporter_options = {}
+        source_hash = getattr(self, "source_hash", None)
+        if source_hash is not None:
+            exporter_options["source_hash"] = source_hash
+        exporter = KnowledgeExporter(self.elf_path, build_id, **exporter_options)
         return exporter.export(
             root_symbol,
             class_infos,

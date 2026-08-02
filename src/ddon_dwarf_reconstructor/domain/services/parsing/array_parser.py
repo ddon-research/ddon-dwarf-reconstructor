@@ -6,8 +6,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
-from elftools.dwarf.die import DIE
-
+from ....core.dwarf import DwarfEntry
 from ...models.dwarf import TypeDeclarator
 from ...ports.type_resolution import TypeNameResolver
 
@@ -55,7 +54,7 @@ class ArrayInfo:
         )
 
 
-def parse_array_type(array_die: DIE, type_resolver: TypeNameResolver) -> ArrayInfo | None:
+def parse_array_type(array_die: DwarfEntry, type_resolver: TypeNameResolver) -> ArrayInfo | None:
     """Resolve an array DIE without materializing unrelated DIEs."""
     type_attribute = array_die.attributes.get("DW_AT_type")
     if type_attribute is None:
@@ -63,6 +62,8 @@ def parse_array_type(array_die: DIE, type_resolver: TypeNameResolver) -> ArrayIn
 
     try:
         element_die = array_die.get_DIE_from_attribute("DW_AT_type")
+        if element_die is None:
+            return None
         element_type = type_resolver.resolve_type_name(element_die)
     except (AttributeError, KeyError, TypeError, ValueError) as error:
         logger.debug("Failed to resolve array element type: %s", error)
@@ -74,7 +75,7 @@ def parse_array_type(array_die: DIE, type_resolver: TypeNameResolver) -> ArrayIn
     return ArrayInfo(name, element_type, tuple(dimensions), total_elements, array_die.offset)
 
 
-def _collect_dimensions(array_die: DIE) -> list[int]:
+def _collect_dimensions(array_die: DwarfEntry) -> list[int]:
     dimensions: list[int] = []
     for child in array_die.iter_children():
         if child.tag == "DW_TAG_subrange_type":
@@ -82,7 +83,7 @@ def _collect_dimensions(array_die: DIE) -> list[int]:
     return dimensions
 
 
-def _subrange_size(subrange_die: DIE) -> int:
+def _subrange_size(subrange_die: DwarfEntry) -> int:
     count_attribute = subrange_die.attributes.get("DW_AT_count")
     upper_attribute = subrange_die.attributes.get("DW_AT_upper_bound")
     lower_attribute = subrange_die.attributes.get("DW_AT_lower_bound")

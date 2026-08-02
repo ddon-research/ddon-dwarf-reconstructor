@@ -7,7 +7,7 @@ DIE offsets rather than string parsing. This eliminates bugs caused
 by parsing type strings with qualifiers (const, *, &, etc.).
 """
 
-from ....infrastructure.logging import get_logger
+from ....core.observability import get_logger
 from ...models.dwarf import ClassInfo, MemberInfo, MethodInfo, StructInfo, UnionInfo
 from ...ports.dwarf_index import DwarfIndexPort
 from ..parsing.die_type_classifier import DIETypeClassifier

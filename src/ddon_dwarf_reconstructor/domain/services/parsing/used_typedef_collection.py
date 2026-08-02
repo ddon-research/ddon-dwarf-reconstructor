@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
-from ....infrastructure.logging import get_logger
+from ....core.observability import get_logger
 from ...models.dwarf import MemberInfo, MethodInfo, StructInfo, UnionInfo
 from .type_resolver_context import TypeResolverContext
 

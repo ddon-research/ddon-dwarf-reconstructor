@@ -11,6 +11,21 @@ from ddon_dwarf_reconstructor.main import GenerationOptions
 cli_main = importlib.import_module("ddon_dwarf_reconstructor.main")
 
 
+def _patch_runtime_wiring(mocker) -> tuple[Path, Mock]:
+    cache_file = Path("cache/dwarf.json")
+    source_hash = Mock(name="source_hash")
+    mocker.patch(
+        "ddon_dwarf_reconstructor.main.get_config",
+        return_value={"DIE_CACHE_SIZE": 10000, "TYPE_CACHE_SIZE": 5000},
+    )
+    mocker.patch("ddon_dwarf_reconstructor.main.get_cache_file_path", return_value=cache_file)
+    mocker.patch(
+        "ddon_dwarf_reconstructor.main.SourceIdentityCatalog",
+        return_value=Mock(sha256=source_hash),
+    )
+    return cache_file, source_hash
+
+
 @pytest.mark.unit
 def test_run_generation_uses_export_knowledge_path(mocker) -> None:
     options = GenerationOptions(
@@ -31,6 +46,7 @@ def test_run_generation_uses_export_knowledge_path(mocker) -> None:
 
     mocker.patch("ddon_dwarf_reconstructor.main.Config.from_args", return_value=mock_config)
     mocker.patch("ddon_dwarf_reconstructor.main.LoggerSetup.initialize")
+    cache_file, source_hash = _patch_runtime_wiring(mocker)
     mock_generator = mocker.MagicMock()
     mock_generator.__enter__.return_value = mock_generator
     mock_generator.platform.value = "ps4"
@@ -49,6 +65,10 @@ def test_run_generation_uses_export_knowledge_path(mocker) -> None:
         resolve_param_names=False,
         dump_lookup_factory=cli_main.create_dump_lookup,
         disassembly_factory=cli_main.create_disassembly_producer,
+        cache_file=cache_file,
+        die_cache_size=10000,
+        type_cache_size=5000,
+        source_hash=source_hash,
     )
     mock_generator.export_knowledge_graph.assert_called_once_with(
         "rLayout",
@@ -75,6 +95,7 @@ def test_run_generation_uses_dump_index_as_fast_lookup_without_exhaustive_mode(m
     )
     mocker.patch("ddon_dwarf_reconstructor.main.Config.from_args", return_value=mock_config)
     mocker.patch("ddon_dwarf_reconstructor.main.LoggerSetup.initialize")
+    cache_file, source_hash = _patch_runtime_wiring(mocker)
     mock_generator = mocker.MagicMock()
     mock_generator.__enter__.return_value = mock_generator
     mock_generator.platform.value = "ps4"
@@ -91,4 +112,8 @@ def test_run_generation_uses_dump_index_as_fast_lookup_without_exhaustive_mode(m
         resolve_param_names=False,
         dump_lookup_factory=cli_main.create_dump_lookup,
         disassembly_factory=cli_main.create_disassembly_producer,
+        cache_file=cache_file,
+        die_cache_size=10000,
+        type_cache_size=5000,
+        source_hash=source_hash,
     )

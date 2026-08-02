@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from elftools.dwarf.compileunit import CompileUnit
-from elftools.dwarf.die import DIE
-
-from ....infrastructure.logging import get_logger
+from ....core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ....core.observability import get_logger
 from ...ports.dump_lookup import DumpDefinitionLocation, DumpLookupPort
 from .class_parser_context import ClassParserContext
 
@@ -23,7 +21,7 @@ class ClassParserDumpDiscoveryMixin:
 
     def _find_class_with_dump(
         self: ClassParserContext, class_name: str
-    ) -> tuple[CompileUnit, DIE] | None:
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         """Resolve the highest-ranked dump location and load its DIE."""
         logger.info("Using DWARF dump for fast lookup: %s", self.dwarf_dump_path)
         self._dump_lookup_unavailable = False
@@ -48,7 +46,10 @@ class ClassParserDumpDiscoveryMixin:
                 return None
             self._cache_dump_location(class_name, location, cu_offset, die_offset)
             logger.info(
-                "Found %s at DIE 0x%x (CU 0x%x) via DWARF dump", class_name, die_offset, cu_offset
+                "Found %s at DIE 0x%x (CU 0x%x) via DWARF dump",
+                class_name,
+                die_offset,
+                cu_offset,
             )
             return target_cu, die
         except (
@@ -67,7 +68,7 @@ class ClassParserDumpDiscoveryMixin:
 
     def _find_class_with_dump_status(
         self: ClassParserContext, class_name: str
-    ) -> tuple[bool, tuple[CompileUnit, DIE] | None]:
+    ) -> tuple[bool, tuple[DwarfCompilationUnit, DwarfEntry] | None]:
         """Distinguish an authoritative indexed miss from an unavailable dump."""
         if not self.dwarf_dump_path:
             return False, None
@@ -80,14 +81,14 @@ class ClassParserDumpDiscoveryMixin:
             logger.warning("DWARF dump lookup unavailable for %s: %s", class_name, error)
             return False, None
 
-    def _find_cu(self: ClassParserContext, cu_offset: int) -> CompileUnit | None:
+    def _find_cu(self: ClassParserContext, cu_offset: int) -> DwarfCompilationUnit | None:
         for cu in self.dwarf_info.iter_CUs():
             if cu.cu_offset == cu_offset:
                 return cu
         return None
 
     @staticmethod
-    def _find_die(cu: CompileUnit, die_offset: int) -> DIE | None:
+    def _find_die(cu: DwarfCompilationUnit, die_offset: int) -> DwarfEntry | None:
         for die in cu.iter_DIEs():
             if die.offset == die_offset:
                 return die

@@ -1,3 +1,5 @@
-"""Core module initialization."""
+"""Technology-neutral runtime contracts and policies."""
 
-__all__: list[str] = []
+from .platform import ELFPlatform
+
+__all__ = ["ELFPlatform"]

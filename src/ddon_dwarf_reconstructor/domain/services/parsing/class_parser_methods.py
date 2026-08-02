@@ -5,9 +5,8 @@ from __future__ import annotations
 import re
 import time
 
-from elftools.dwarf.die import DIE
-
-from ....infrastructure.logging import get_logger
+from ....core.dwarf import DwarfEntry
+from ....core.observability import get_logger
 from ...models.dwarf import (
     MethodInfo,
     ParameterInfo,
@@ -20,7 +19,7 @@ logger = get_logger(__name__)
 
 
 class ClassParserMethodsMixin:
-    def parse_method(self: ClassParserContext, method_die: DIE) -> MethodInfo | None:
+    def parse_method(self: ClassParserContext, method_die: DwarfEntry) -> MethodInfo | None:
         """Parse a class method using pyelftools."""
         name_attr = method_die.attributes.get("DW_AT_name")
         if not name_attr:
@@ -61,7 +60,9 @@ class ClassParserMethodsMixin:
             is_declaration=is_declaration,
         )
 
-    def _virtual_method_info(self: ClassParserContext, method_die: DIE) -> tuple[bool, int | None]:
+    def _virtual_method_info(
+        self: ClassParserContext, method_die: DwarfEntry
+    ) -> tuple[bool, int | None]:
         virtuality_attr = method_die.attributes.get("DW_AT_virtuality")
         is_virtual = virtuality_attr is not None and bool(getattr(virtuality_attr, "value", True))
         if not is_virtual:
@@ -70,14 +71,16 @@ class ClassParserMethodsMixin:
         return True, self._parse_vtable_index(vtable_attr) if vtable_attr else None
 
     @staticmethod
-    def _parent_name(method_die: DIE) -> str:
+    def _parent_name(method_die: DwarfEntry) -> str:
         parent_die = method_die.get_parent()
         if not parent_die or "DW_AT_name" not in parent_die.attributes:
             return ""
         value = parent_die.attributes["DW_AT_name"].value
         return value.decode("utf-8", errors="ignore") if isinstance(value, bytes) else str(value)
 
-    def _parse_method_parameters(self: ClassParserContext, method_die: DIE) -> list[ParameterInfo]:
+    def _parse_method_parameters(
+        self: ClassParserContext, method_die: DwarfEntry
+    ) -> list[ParameterInfo]:
         parameters: list[ParameterInfo] = []
         param_index = 0
         for child in method_die.iter_children():
@@ -125,12 +128,12 @@ class ClassParserMethodsMixin:
         return None
 
     def parse_parameter(
-        self: ClassParserContext, param_die: DIE, param_index: int = 0
+        self: ClassParserContext, param_die: DwarfEntry, param_index: int = 0
     ) -> ParameterInfo | None:
         """Parse a function parameter using pyelftools.
 
         Args:
-            param_die: DIE representing the parameter
+            param_die: DwarfEntry representing the parameter
             param_index: Zero-based parameter position for auto-incrementing unnamed params
 
         Returns:
@@ -175,7 +178,7 @@ class ClassParserMethodsMixin:
 
     def _resolve_parameter_names_from_implementation(
         self: ClassParserContext,
-        method_die: DIE,
+        method_die: DwarfEntry,
         method_name: str,
         parameters: list[ParameterInfo],
     ) -> None:

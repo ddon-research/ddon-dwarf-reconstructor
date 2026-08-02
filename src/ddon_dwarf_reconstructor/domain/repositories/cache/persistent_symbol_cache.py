@@ -8,7 +8,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from ....infrastructure.logging import get_logger
+from ....core.observability import get_logger
 from .cache_context import CacheContext
 from .cache_definitions import CacheDefinitionsMixin
 from .cache_persistence import CachePersistenceMixin

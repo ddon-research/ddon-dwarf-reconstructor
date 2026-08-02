@@ -266,8 +266,9 @@ modules remain only as compatibility coverage while behavior moves to the
 owning package.
 
 Every test change must preserve the structure limits (400-line modules,
-250-line classes, 75-line functions, McCabe 10) and the architecture boundary
-checker. The non-performance coverage command and
+250-line classes, 75-line functions, McCabe 10) and the executable hexagonal
+architecture policy in `tests/quality/test_architecture.py`. The
+non-performance coverage command and
 `tests.support.quality.check_coverage` enforce
 80% total lines plus 80% line/70% branch coverage in the high-risk groups.
 Generated headers use exact external manifest comparisons rather than snapshot

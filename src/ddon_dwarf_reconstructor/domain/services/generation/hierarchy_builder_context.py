@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from elftools.dwarf.die import DIE
-
+from ....core.dwarf import DwarfEntry
 from ...models.dwarf import ClassInfo
 from ...ports.class_parser import ClassParserPort
 from ...ports.dwarf_index import DwarfIndexPort
@@ -20,7 +19,7 @@ class HierarchyBuilderContext(Protocol):
     dwarf_index: DwarfIndexPort
     dependency_extractor: DependencyExtractor
 
-    def _find_base_class(self, class_die: DIE) -> str | None: ...
+    def _find_base_class(self, class_die: DwarfEntry) -> str | None: ...
 
     def _get_base_class_chain(self, class_name: str) -> list[str]: ...
 

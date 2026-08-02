@@ -5,7 +5,7 @@ from __future__ import annotations
 from time import time
 from typing import Any
 
-from ....infrastructure.logging import get_logger
+from ....core.observability import get_logger
 from .cache_context import CacheContext
 
 logger = get_logger(__name__)
