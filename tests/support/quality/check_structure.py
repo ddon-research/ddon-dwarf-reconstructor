@@ -1,9 +1,4 @@
-"""Enforce the repository's Python size and complexity budgets.
-
-The checker intentionally uses the standard library so it can run before the
-full development environment is installed.  It measures physical source lines
-and AST spans, which keeps the rule deterministic and easy to review.
-"""
+"""Enforce the repository's Python size and complexity budgets."""
 
 from __future__ import annotations
 
@@ -103,7 +98,6 @@ class _ComplexityVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-        # Nested functions have their own complexity budget.
         return
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:

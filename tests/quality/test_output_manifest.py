@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scripts.regression.output_manifest import (
+from tests.support.regression.output_manifest import (
     build_manifest,
     compare_manifests,
     main,

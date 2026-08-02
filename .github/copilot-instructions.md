@@ -50,8 +50,8 @@ uv run ddon-dwarf-reconstructor artifacts inspect --dwarf-dump <path>
 ```
 
 Before handoff, run `uv run just test`, `uv run just coverage-ci`, and `uv run just audit`.
-`scripts/check.ps1`, `just check`, and the CI workflows are the authoritative aggregations of
-these gates. Coverage targets are at least 80% total lines, with at
+`just check` and the CI workflows are the authoritative aggregations of these gates. Coverage
+targets are at least 80% total lines, with at
 least 80% lines and 70% branches in parsing, generation, orchestration, and artifact modules. Ruff,
 Pyrefly, and deptry remain authoritative; Prospector is only for focused duplicate, dead-code,
 import, complexity, and maintainability diagnostics.
@@ -59,7 +59,8 @@ import, complexity, and maintainability diagnostics.
 ## Regression and performance rules
 
 - Compare generated `.h` and `.hpp` files byte-for-byte using
-  `scripts/regression/output_manifest.py`; do not replace header regression tests with snapshots.
+  `uv run python -m tests.support.regression.output_manifest`; do not replace header regression
+  tests with snapshots.
 - Compare canonical and compatibility entrypoints when both exist. Validate fresh-process and
   warm-cache runs, and record input identity, producer/configuration identity, and cache state.
 - Keep real-artifact baselines outside source control; commit only small deterministic manifests or

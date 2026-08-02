@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from scripts.quality.check_boundaries import check
+from tests.support.quality.check_boundaries import check
 
 
 def test_domain_infrastructure_import_is_reported(tmp_path: Path) -> None:

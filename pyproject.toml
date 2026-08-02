@@ -92,13 +92,14 @@ markers = [
     "integration: marks tests as integration tests", 
     "unit: marks tests as unit tests",
     "performance: marks tests as performance benchmarks",
+    "packaging: validates the installed distribution and uv tool entry point",
 ]
 log_cli = true
 log_cli_level = "INFO"
 log_cli_format = "%(levelname)s: %(message)s"
 
 [tool.pyrefly]
-project-includes = ["src/**/*.py", "scripts/**/*.py"]
+project-includes = ["src/**/*.py", "tests/support/**/*.py", "tools/sonar/**/*.py"]
 search-path = ["src"]
 python-version = "3.14"
 preset = "default"

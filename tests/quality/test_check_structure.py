@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from scripts.quality.check_structure import check, inspect_file
+from tests.support.quality.check_structure import check, inspect_file
 
 
 def test_structure_checker_accepts_small_module(tmp_path: Path) -> None:

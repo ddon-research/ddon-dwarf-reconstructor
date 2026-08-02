@@ -1,4 +1,4 @@
-"""Check the most important DDD/hexagonal import boundaries."""
+"""Check the dependency direction between the application layers."""
 
 from __future__ import annotations
 
@@ -46,27 +46,46 @@ def _is_allowed_application_import(module: str) -> bool:
     )
 
 
+def _domain_violation(path: Path, module: str) -> str | None:
+    normalized = _normalized_import(module)
+    forbidden_infrastructure = _is_infrastructure(module) and normalized != "infrastructure.logging"
+    if (
+        forbidden_infrastructure
+        or normalized.startswith("application")
+        or normalized.startswith("generators")
+    ):
+        return f"{path}: domain imports {module}"
+    return None
+
+
+def _application_violation(path: Path, module: str) -> str | None:
+    if _is_infrastructure(module) and not _is_allowed_application_import(module):
+        return f"{path}: application imports {module}"
+    return None
+
+
+def _import_violations(path: Path, layer: str, module: str) -> list[str]:
+    violations: list[str] = []
+    if layer == "domain":
+        violation = _domain_violation(path, module)
+        if violation is not None:
+            violations.append(violation)
+    if layer == "application":
+        violation = _application_violation(path, module)
+        if violation is not None:
+            violations.append(violation)
+    if module.startswith("src.ddon_dwarf_reconstructor"):
+        violations.append(f"{path}: repository-relative import {module}")
+    return violations
+
+
 def check(root: Path = ROOT) -> list[str]:
     violations: list[str] = []
     for path in sorted(root.rglob("*.py")):
         relative = path.relative_to(root).as_posix()
         layer = relative.split("/", 1)[0]
         for module in imported_modules(path):
-            normalized = _normalized_import(module)
-            if layer == "domain" and (
-                (_is_infrastructure(module) and normalized != "infrastructure.logging")
-                or normalized.startswith("application")
-                or normalized.startswith("generators")
-            ):
-                violations.append(f"{path}: domain imports {module}")
-            if (
-                layer == "application"
-                and _is_infrastructure(module)
-                and not _is_allowed_application_import(module)
-            ):
-                violations.append(f"{path}: application imports {module}")
-            if module.startswith("src.ddon_dwarf_reconstructor"):
-                violations.append(f"{path}: repository-relative import {module}")
+            violations.extend(_import_violations(path, layer, module))
     return violations
 
 

@@ -90,7 +90,8 @@ uv run just check
 ```
 
 Before handoff, also run `uv run just test`, `uv run just coverage-ci`, and `uv run just audit`.
-Use `scripts/check.ps1` or the matching just recipes so structure, boundary, typing, lint,
+For distribution changes, also run `uv run just package` and `uv run just package-smoke`.
+Use the matching just recipes so structure, boundary, typing, lint,
 dependency, and duplicate/dead-code diagnostics remain part of routine development.
 Ruff, Pyrefly, and deptry are authoritative for linting, formatting, production typing, and
 dependency hygiene; keep Prospector focused on duplicate, dead-code, import, complexity, and

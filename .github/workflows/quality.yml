@@ -31,6 +31,9 @@ jobs:
     - name: Run locked quality checks
       run: uv run just check
 
+    - name: Verify uv tool installation
+      run: uv run just package-smoke
+
     - name: Run Prospector diagnostics
       continue-on-error: true
       run: uv run just audit

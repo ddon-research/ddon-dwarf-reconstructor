@@ -19,29 +19,29 @@ test-performance:
     uv run pytest -m performance
 
 test:
-    uv run pytest -m "not performance"
+    uv run pytest -m "not performance and not packaging"
 
 coverage:
-    uv run pytest -m "not performance" --cov=src/ddon_dwarf_reconstructor --cov-branch --cov-fail-under=80 --cov-report=json --cov-report=term-missing --cov-report=html
-    uv run python scripts/quality/check_coverage.py coverage.json
+    uv run pytest -m "not performance and not packaging" --cov=src/ddon_dwarf_reconstructor --cov-branch --cov-fail-under=80 --cov-report=json --cov-report=term-missing --cov-report=html
+    uv run python -m tests.support.quality.check_coverage coverage.json
 
 coverage-open:
-    uv run pytest -m "not performance" --cov=src/ddon_dwarf_reconstructor --cov-branch --cov-fail-under=80 --cov-report=json --cov-report=html
-    uv run python scripts/quality/check_coverage.py coverage.json
+    uv run pytest -m "not performance and not packaging" --cov=src/ddon_dwarf_reconstructor --cov-branch --cov-fail-under=80 --cov-report=json --cov-report=html
+    uv run python -m tests.support.quality.check_coverage coverage.json
     powershell -NoProfile -Command "Start-Process htmlcov/index.html"
 
 coverage-ci:
-    uv run pytest -m "not performance" --cov=src/ddon_dwarf_reconstructor --cov-branch --cov-fail-under=80 --cov-report=json --cov-report=xml --cov-report=html --junit-xml=test-results.xml
-    uv run python scripts/quality/check_coverage.py coverage.json
+    uv run pytest -m "not performance and not packaging" --cov=src/ddon_dwarf_reconstructor --cov-branch --cov-fail-under=80 --cov-report=json --cov-report=xml --cov-report=html --junit-xml=test-results.xml
+    uv run python -m tests.support.quality.check_coverage coverage.json
 
 lint:
-    uv run ruff check --no-fix src tests scripts
+    uv run ruff check --no-fix src tests tools/sonar
 
 format:
-    uv run ruff format src tests scripts
+    uv run ruff format src tests tools/sonar
 
 format-check:
-    uv run ruff format --check src tests scripts
+    uv run ruff format --check src tests tools/sonar
 
 type-check:
     uv run pyrefly check --min-severity warn
@@ -50,20 +50,29 @@ deps:
     uv run deptry .
 
 structure:
-    uv run python scripts/quality/check_structure.py
+    uv run python -m tests.support.quality.check_structure src tests tools/sonar
 
 boundaries:
-    uv run python scripts/quality/check_boundaries.py
+    uv run python -m tests.support.quality.check_boundaries
 
 audit:
     uv run prospector --profile .prospector.yml --tool pylint --tool pyflakes --tool mccabe src
 
 check: lint format-check type-check deps structure boundaries
 
-ci: check test-unit
+ci: check test-unit package-smoke
 
 package:
     uv build
+
+package-smoke:
+    uv run pytest tests/packaging/test_uv_tool_install.py -m packaging
+
+sonar-validate:
+    uv run python -m tools.sonar.prepare_msvc_analysis --validate-only
+
+sonar-capture:
+    uv run python -m tools.sonar.prepare_msvc_analysis
 
 native-build:
     uv run python -m nuitka --clang --onefile --jobs=16 --lto=yes --static-libpython=auto --remove-output --deployment --output-dir=build main.py

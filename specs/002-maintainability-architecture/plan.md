@@ -8,7 +8,7 @@
 
 ## Phase 1: Quality gates
 
-- [x] Add structure and import-boundary checkers under `scripts/quality/`.
+- [x] Add structure and import-boundary checkers under `tests/support/quality/`.
 - [x] Enable Ruff McCabe checks and add focused Prospector configuration.
 - [x] Add Hypothesis and regression testing support.
 - [x] Add tests for the quality and manifest utilities.

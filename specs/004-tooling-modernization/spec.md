@@ -15,7 +15,8 @@ DWARF specification pipeline without changing generated evidence or durable-arti
   mutually exclusive.
 - **TM-002**: The specification pipeline MUST expose its `build`, `validate`, and `sources`
   commands through Typer.
-- **TM-003**: Pyrefly MUST be the authoritative type checker for `src` and operational scripts;
+- **TM-003**: Pyrefly MUST be the authoritative type checker for `src`, typed test support, and
+  checkout-local operational Python modules;
   both projects MUST pass at warning severity without a legacy-mode fallback.
 - **TM-004**: deptry MUST pass for both project boundaries with explicit first-party and
   package-to-module mappings.

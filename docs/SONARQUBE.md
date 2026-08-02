@@ -10,7 +10,7 @@ Visual Studio x64 validation command.
 - SonarQube for VS Code is installed and enabled in VS Code.
 - Visual Studio Community 2026 is installed with the MSVC x64 build tools.
 - `vswhere.exe` is available at the standard Visual Studio installer location.
-- PowerShell can run local scripts.
+- The root uv environment is installed with `uv sync --python 3.14.6`.
 - Sonar's Windows Build Wrapper is downloaded outside the repository.
 
 Sonar documents the supported C/C++ environments and compilation-database setup in [Analyze C
@@ -32,7 +32,7 @@ Invoke-WebRequest `
 Expand-Archive -LiteralPath $archivePath -DestinationPath $installRoot -Force
 ```
 
-The repository script also searches this default path:
+The repository Python adapter also searches this default path:
 
 ```text
 %LOCALAPPDATA%\SonarSource\build-wrapper-win-x86\build-wrapper-win-x86\build-wrapper-win-x86-64.exe
@@ -42,14 +42,14 @@ The repository script also searches this default path:
 
 Run the prerequisite check first:
 
-```powershell
-& .\scripts\sonar\prepare-msvc-analysis.ps1 -ValidateOnly
+```text
+uv run just sonar-validate
 ```
 
 Then capture the existing MSVC validation command:
 
-```powershell
-& .\scripts\sonar\prepare-msvc-analysis.ps1
+```text
+uv run just sonar-capture
 ```
 
 The database is written to:
@@ -58,7 +58,7 @@ The database is written to:
 output/msvc-header-validation-20260801/sonar-build-wrapper/compile_commands.json
 ```
 
-The script resolves the installed Visual Studio instance with `vswhere.exe`, loads the x64
+The Python adapter resolves the installed Visual Studio instance with `vswhere.exe`, loads the x64
 developer environment, and preserves the validation flags used by the repository:
 
 ```text
@@ -69,8 +69,8 @@ The default command is strict and returns the MSVC build exit code. If generated
 known compile failures but a compilation database is still needed for diagnostic analysis, use
 the explicit analysis-only mode:
 
-```powershell
-& .\scripts\sonar\prepare-msvc-analysis.ps1 -AllowValidationFailure
+```text
+uv run python -m tools.sonar.prepare_msvc_analysis --allow-validation-failure
 ```
 
 This mode succeeds only after the Build Wrapper has produced a valid JSON database containing at
@@ -99,13 +99,14 @@ ignored by the repository's existing `output/` rule.
 
 ## Troubleshooting
 
-- **Build Wrapper not found:** pass `-BuildWrapperPath` with the full path to
-  `build-wrapper-win-x86-64.exe`.
+- **Build Wrapper not found:** pass `--build-wrapper-path` with the full path to
+  `build-wrapper-win-x86-64.exe`, for example:
+  `uv run python -m tools.sonar.prepare_msvc_analysis --build-wrapper-path D:/tools/build-wrapper-win-x86-64.exe`.
 - **MSVC not found:** install the Visual Studio C++ x64 workload and rerun `-ValidateOnly`.
 - **No C/C++ entries:** confirm that the validation command compiled at least one `.cpp` file and
   rerun the capture.
 - **Generated-header errors:** use strict mode to treat them as build failures. Use
-  `-AllowValidationFailure` only to inspect the captured commands in SonarQube; resolve the
+  `--allow-validation-failure` only to inspect the captured commands in SonarQube; resolve the
   generated-header closure issues separately.
 - **Stale analysis:** regenerate the database after changing compiler flags, include paths, or
   generated headers, then refresh the active database in the SonarQube panel.

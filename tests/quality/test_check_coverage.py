@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.quality.check_coverage import read_report, violations
+from tests.support.quality.check_coverage import read_report, violations
 
 
 def _summary(statements: int, missing: int, branches: int, missing_branches: int) -> dict[str, int]:

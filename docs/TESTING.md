@@ -35,7 +35,14 @@ uv run just test-performance
 uv run just test-unit
 uv run just coverage
 uv run just ci
+
+# Distribution acceptance
+uv run just package-smoke
 ```
+
+The `packaging` marker installs the project into temporary uv tool directories and verifies the
+standalone console entry point from outside the checkout. It is excluded from the normal test and
+coverage recipes and is run explicitly by `just package-smoke` and CI.
 
 ## Test Categories
 
@@ -461,7 +468,7 @@ pure declarator/array/type properties; `pytest-regressions` is reserved for
 small deterministic metadata and ordering records, never generated headers.
 
 Output acceptance is separate from coverage. Run
-`scripts/regression/output_manifest.py` against the external fixture and real
+`uv run python -m tests.support.regression.output_manifest` against the external fixture and real
 baselines. It compares sorted relative paths, byte counts, and SHA-256 values;
 manifest metadata records source identity, producer, configuration, and cache
 state but is not substituted for byte comparison. Use a fresh output directory

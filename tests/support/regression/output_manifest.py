@@ -1,6 +1,6 @@
 """Create and compare deterministic output manifests.
 
-Header bytes are compared exactly.  Other files are included only when their
+Header bytes are compared exactly. Other files are included only when their
 extensions are explicitly requested, allowing callers to exclude volatile
 runtime metadata while keeping the comparison policy visible.
 """

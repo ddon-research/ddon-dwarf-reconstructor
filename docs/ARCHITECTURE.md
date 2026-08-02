@@ -1453,7 +1453,7 @@ declarations but method-only types do not trigger unbounded transitive scans.
 
 The structure checker enforces the 400/250/75/10 module/class/function/
 complexity limits with no baseline exemption. Boundary checks and the output
-manifest checker are part of `scripts/check.ps1`, CI, and the documented local
-acceptance sequence. See
+manifest checker are invoked by the root `justfile`, CI, and the documented
+local acceptance sequence. See
 [`specs/002-maintainability-architecture/`](../specs/002-maintainability-architecture/)
 for the contracts and evidence record.

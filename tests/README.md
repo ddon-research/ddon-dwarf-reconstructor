@@ -16,7 +16,11 @@ uv run just coverage
 uv run just test-unit
 uv run just test-integration
 uv run just test-performance
+uv run just package-smoke
 ```
+
+`just test` and the coverage recipes exclude the `packaging` marker; run `just package-smoke`
+explicitly when validating the standalone uv tool installation.
 
 ## Test Structure
 
@@ -263,7 +267,8 @@ owning package.
 
 Every test change must preserve the structure limits (400-line modules,
 250-line classes, 75-line functions, McCabe 10) and the architecture boundary
-checker. The non-performance coverage command and `check_coverage.py` enforce
+checker. The non-performance coverage command and
+`tests.support.quality.check_coverage` enforce
 80% total lines plus 80% line/70% branch coverage in the high-risk groups.
 Generated headers use exact external manifest comparisons rather than snapshot
 normalization. Deterministic JSONL and diagnostic metadata may use

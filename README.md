@@ -23,6 +23,17 @@ uv sync --python 3.14.6
 uv run just test-unit
 ```
 
+To install the reconstructor as a standalone uv tool from a checkout:
+
+```text
+uv tool install . --python 3.14.6
+ddon-dwarf-reconstructor --version
+ddon-dwarf-reconstructor --help
+```
+
+The installed tool contains the runtime package and dependencies only; repository quality and
+SonarQube maintenance commands remain checkout-local `just` or Python-module workflows.
+
 The committed `[tool.pyrefly]` sections are the curated result of the Pyrefly migration. If a
 fresh checkout reports a legacy editor mode, run `uv run pyrefly init` once against its
 `pyproject.toml`, then retain the explicit project configuration and use the recommended Pyrefly
@@ -111,7 +122,10 @@ uv run just test            # non-performance suite
 uv run just check           # Ruff, Pyrefly, deptry, structure, boundaries
 uv run just coverage        # coverage thresholds and reports
 uv run just package         # wheel and sdist
+uv run just package-smoke   # isolated uv tool install and CLI smoke test
 uv run just native-build    # optional Nuitka executable
+uv run just sonar-validate  # validate local Sonar/MSVC prerequisites
+uv run just sonar-capture   # capture the MSVC compilation database
 uv run just spec-check      # nested project checks
 ```
 
@@ -123,9 +137,12 @@ uv run just check
 uv run just test
 ```
 
-The root Pyrefly configuration checks `src` and operational `scripts`; the nested project checks
-its own `src`. Pyrefly is authoritative for typing, deptry validates dependency declarations, and
-focused Prospector diagnostics remain a non-blocking audit.
+The packaging smoke test is intentionally separate from the non-packaging test and coverage
+recipes because it creates a temporary uv tool environment.
+
+The root Pyrefly configuration checks `src`, typed test support, and the checkout-local SonarQube
+adapter; the nested project checks its own `src`. Pyrefly is authoritative for typing, deptry
+validates dependency declarations, and focused Prospector diagnostics remain a non-blocking audit.
 
 ## Architecture and testing
 
