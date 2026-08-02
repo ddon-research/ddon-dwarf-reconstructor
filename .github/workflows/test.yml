@@ -1,4 +1,4 @@
-name: Unit Tests and Coverage
+name: Required Correctness Tests and Coverage
 
 on:
   push:
@@ -28,7 +28,12 @@ jobs:
     - name: Install dependencies
       run: uv sync --python 3.14.6 --frozen
         
-    - name: Run non-performance tests with coverage
+    - name: Verify test taxonomy and required integration collection
+      run: |
+        uv run pytest --collect-only -q
+        uv run pytest --collect-only -q -m "integration and not performance and not real_asset"
+
+    - name: Run required correctness tests with coverage
       run: uv run just coverage-ci
         
     - name: Generate coverage report
@@ -38,7 +43,7 @@ jobs:
       uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
       with:
         files: ./coverage.xml
-        flags: unittests
+        flags: correctness
         name: codecov-umbrella
         fail_ci_if_error: false
         
@@ -59,4 +64,4 @@ jobs:
       continue-on-error: true
       with:
         files: test-results.xml
-        check_name: "Unit Test Results"
+        check_name: "Correctness Test Results"

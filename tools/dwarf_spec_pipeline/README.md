@@ -8,7 +8,10 @@ repository artifacts.
 
 ```text
 uv sync --python 3.14.6
+uv run just test-unit
+uv run just test-integration
 uv run just test
+uv run just test-official
 uv run just check
 uv run dwarf-spec-pipeline --help
 ```
@@ -38,4 +41,7 @@ docker compose -f compose.yaml run --rm dwarf-spec-pipeline
 
 The project uses Ruff, Pyrefly, deptry, and just through its frozen uv environment. Tests and
 quality checks do not download sources unless an explicit build requests it; `--offline` requires
-an already verified local cache.
+an already verified local cache. The test suite uses the shared project vocabulary: `unit`,
+`integration`, and `acceptance` scopes plus `functional`, `regression`, and `non_functional`
+purposes. `just test` includes deterministic local integration tests; `just test-official` is an
+explicit check for generated official artifacts.

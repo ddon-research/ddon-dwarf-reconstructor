@@ -171,7 +171,7 @@ Derive a plan first and refactor the code aggressively.
 DONE:
 We went through large refactoring. Clean all artifact caches and temporary and intermediate files. Also clean dot (".") folders, if any, unless it would break our setup/IDE. Then regenerate them all to ensure we have not introduced any regressions by accident. It might make sense to compare the previous results and fil.es and keep them in an archive before deleting them and until we are sure nothing is broken.
 --
-TODO:
+WIP:
 Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
 Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
 
@@ -192,7 +192,7 @@ https://realpython.com/ref/software-engineering-glossary/test-pyramid/
 Afterwards, review the current copilot, codex, python instructions and revalidate the tooling loop for changes. Update documentation, specs and the knowledge base.
 Derive a plan first and refactor the code aggressively.
 --
-TODO:
+DONE:
 Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
 Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
 

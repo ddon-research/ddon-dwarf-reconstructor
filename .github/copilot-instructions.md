@@ -63,6 +63,8 @@ Always use `uv run` for project Python commands and the packaged entry point for
 ```text
 uv run ddon-dwarf-reconstructor ...
 uv run just test-unit
+uv run just test-integration
+uv run just test
 uv run just check
 uv run ddon-dwarf-reconstructor generate <elf> --symbol <name>
 uv run ddon-dwarf-reconstructor artifacts inspect --dwarf-dump <path>
@@ -80,6 +82,14 @@ import, complexity, and maintainability diagnostics.
 - Compare generated `.h` and `.hpp` files byte-for-byte using
   `uv run python -m tests.support.regression.output_manifest`; do not replace header regression
   tests with snapshots.
+- Every root test has exactly one scope marker (`unit`, `integration`, or `acceptance`) and at
+  least one purpose marker (`functional`, `regression`, or `non_functional`). The collection hook
+  rejects missing/ambiguous classifications. Mark `performance`, `slow`, `real_asset`,
+  `packaging`, and `quality` qualifiers explicitly and satisfy their compatibility rules.
+- Required deterministic integration tests are included in `uv run just test` and coverage. Use
+  `uv run just test-without-integration` only as an exceptional fast iteration shortcut; it is not
+  the handoff gate. Use `test-regression`, `test-non-functional`, `test-acceptance`,
+  `test-real-assets`, and `test-performance` for explicit evidence slices.
 - Validate the packaged entry point and each intentional output mode in fresh-process and warm-cache
   runs, and record input identity, producer/configuration identity, and cache state.
 - Keep real-artifact baselines outside source control; commit only small deterministic manifests or

@@ -16,25 +16,40 @@ test-observability:
     uv run pytest tests/infrastructure/test_logging.py -m unit -q
 
 test-integration:
-    uv run pytest -m integration
+    uv run pytest -m "integration and not performance and not real_asset"
+
+test-without-integration:
+    uv run pytest -m "not integration and not acceptance and not performance and not packaging and not real_asset"
+
+test-regression:
+    uv run pytest -m regression
+
+test-non-functional:
+    uv run pytest -m "non_functional and not performance and not packaging and not real_asset"
+
+test-acceptance:
+    uv run pytest -m acceptance
+
+test-real-assets:
+    uv run pytest -m real_asset
 
 test-performance:
     uv run pytest -m performance
 
 test:
-    uv run pytest -m "not performance and not packaging"
+    uv run pytest -m "not performance and not packaging and not real_asset"
 
 coverage:
-    uv run pytest -m "not performance and not packaging" --cov=src/ddon_dwarf_reconstructor --cov-branch --cov-fail-under=80 --cov-report=json --cov-report=term-missing --cov-report=html
+    uv run pytest -m "not performance and not packaging and not real_asset" --cov=src/ddon_dwarf_reconstructor --cov-branch --cov-fail-under=80 --cov-report=json --cov-report=term-missing --cov-report=html
     uv run python -m tests.support.quality.check_coverage coverage.json
 
 coverage-open:
-    uv run pytest -m "not performance and not packaging" --cov=src/ddon_dwarf_reconstructor --cov-branch --cov-fail-under=80 --cov-report=json --cov-report=html
+    uv run pytest -m "not performance and not packaging and not real_asset" --cov=src/ddon_dwarf_reconstructor --cov-branch --cov-fail-under=80 --cov-report=json --cov-report=html
     uv run python -m tests.support.quality.check_coverage coverage.json
     powershell -NoProfile -Command "Start-Process htmlcov/index.html"
 
 coverage-ci:
-    uv run pytest -m "not performance and not packaging" --cov=src/ddon_dwarf_reconstructor --cov-branch --cov-fail-under=80 --cov-report=json --cov-report=xml --cov-report=html --junit-xml=test-results.xml
+    uv run pytest -m "not performance and not packaging and not real_asset" --cov=src/ddon_dwarf_reconstructor --cov-branch --cov-fail-under=80 --cov-report=json --cov-report=xml --cov-report=html --junit-xml=test-results.xml
     uv run python -m tests.support.quality.check_coverage coverage.json
 
 lint:

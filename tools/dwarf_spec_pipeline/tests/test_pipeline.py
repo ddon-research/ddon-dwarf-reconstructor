@@ -14,6 +14,8 @@ from dwarf_spec_pipeline.validation import load_and_validate_document
 
 
 @pytest.mark.integration
+@pytest.mark.functional
+@pytest.mark.regression
 def test_build_is_byte_deterministic_for_locked_intermediates(
     tmp_path: Path, source, schema_path, monkeypatch
 ) -> None:  # type: ignore[no-untyped-def]

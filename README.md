@@ -155,11 +155,18 @@ uv run just                 # list recipes
 uv run just sync
 uv lock --check
 uv run just test-unit       # fast tests
+uv run just test-integration # required deterministic integrations
+uv run just test-without-integration # exceptional fast opt-out
+uv run just test-regression  # output and authority contracts
+uv run just test-non-functional # quality/operational checks
 uv run just test-observability # focused JSONL/chained traceback tests
-uv run just test            # non-performance suite
+uv run just test            # required correctness loop, including integrations
 uv run just check           # Ruff, Pyrefly, deptry, structure, architecture
 uv run just coverage-ci     # coverage thresholds and CI reports
 uv run just audit            # Prospector duplicate/dead-code audit
+uv run just test-acceptance  # CLI, real-asset, and distribution acceptance
+uv run just test-real-assets # explicit local external inputs
+uv run just test-performance # explicit performance budgets
 uv run just package         # wheel and sdist
 uv run just package-smoke   # isolated uv tool install and CLI smoke test
 uv run just native-build    # optional Nuitka executable
@@ -178,8 +185,10 @@ uv run just coverage-ci
 uv run just audit
 ```
 
-The packaging smoke test is intentionally separate from the non-packaging test and coverage
-recipes because it creates a temporary uv tool environment.
+The default `test` and coverage recipes include deterministic integration tests and exclude only
+`performance`, `packaging`, and `real_asset` qualifiers. `test-without-integration` is an explicit
+iteration shortcut. Packaging, real-asset, and performance checks remain separate because they
+mutate temporary environments or require local external inputs.
 
 The root Pyrefly configuration checks `src`, typed test support, and the checkout-local SonarQube
 adapter; the nested project checks its own `src`. Pyrefly is authoritative for typing, deptry
@@ -200,9 +209,10 @@ ArchUnitPython rules for the `src/` hexagon and is included in both `just check`
 pytest tier.
 
 Generated headers and evidence bundles are wire-format contracts. Validate them with exact
-byte-level output manifests across fresh and warm processes. Real ELF, compressed dumps, compiler
-validation, and performance tests require explicit local paths and never commit proprietary inputs
-or generated runtime artifacts.
+byte-level output manifests across fresh and warm processes. The test taxonomy and rationale are
+documented in [Testing](docs/TESTING.md) and the [testing knowledge base](docs/knowledge-base/testing/).
+Real ELF, compressed dumps, compiler validation, and performance tests require explicit local paths
+and never commit proprietary inputs or generated runtime artifacts.
 
 ## License
 

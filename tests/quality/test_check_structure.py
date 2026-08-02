@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from tests.support.quality.check_structure import MAX_CLASS_LINES, check, inspect_file
+
+pytestmark = [pytest.mark.unit, pytest.mark.non_functional, pytest.mark.quality]
 
 
 def test_structure_checker_accepts_small_module(tmp_path: Path) -> None:

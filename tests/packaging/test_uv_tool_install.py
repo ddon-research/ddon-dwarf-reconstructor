@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = [pytest.mark.acceptance, pytest.mark.functional, pytest.mark.packaging]
+
 
 def _uv_executable() -> str:
     executable = shutil.which("uv") or shutil.which("uv.exe")
@@ -20,7 +22,6 @@ def _tool_executable(bin_directory: Path) -> Path:
     return bin_directory / name
 
 
-@pytest.mark.packaging
 def test_uv_tool_install_exposes_standalone_cli(tmp_path: Path) -> None:
     repository_root = Path(__file__).resolve().parents[2]
     tool_directory = tmp_path / "uv-tools"

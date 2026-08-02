@@ -11,13 +11,20 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.non_functional,
+    pytest.mark.performance,
+    pytest.mark.real_asset,
+    pytest.mark.slow,
+]
+
 
 def _optional_argument(option: str, environment_name: str) -> list[str]:
     value = os.environ.get(environment_name)
     return [option, value] if value else []
 
 
-@pytest.mark.performance
 def test_real_rlayout_export_completes_within_warm_budget(tmp_path: Path) -> None:
     """The warm indexed rLayout export should finish within its regression budget."""
     if os.environ.get("DDON_REAL_PERFORMANCE") != "1":

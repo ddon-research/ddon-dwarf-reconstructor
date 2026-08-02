@@ -8,6 +8,8 @@ import pytest
 
 from tools.sonar import prepare_msvc_analysis as sonar
 
+pytestmark = [pytest.mark.unit, pytest.mark.non_functional, pytest.mark.quality]
+
 
 def _paths(tmp_path: Path) -> sonar.SonarPaths:
     validation = tmp_path / "validation"

@@ -107,6 +107,23 @@ ordering.
 - Keep real-asset manifests and generated headers outside source control. Commit only deterministic
   manifests or small structured expectations that describe those external baselines.
 
+### Test taxonomy and pyramid
+
+- Every collected root test has exactly one scope marker: `unit`, `integration`, or `acceptance`;
+  and at least one purpose marker: `functional`, `regression`, or `non_functional`. The collection
+  hook in `tests/conftest.py` rejects missing or ambiguous classifications under strict markers.
+- `performance`, `slow`, `real_asset`, `packaging`, and `quality` are explicit qualifiers. A
+  performance or quality test must also be `non_functional`; a real-asset test must be integration
+  or acceptance; a packaging test must be acceptance.
+- Required deterministic integration tests are part of `uv run just test`, `coverage`, and
+  `coverage-ci`. `uv run just test-without-integration` is an exceptional iteration shortcut, not
+  a handoff or merge gate. Use `test-regression`, `test-non-functional`, `test-acceptance`,
+  `test-real-assets`, and `test-performance` for explicit evidence slices.
+- The knowledge exporter integration path must continue to run without proprietary ELF inputs;
+  real PS4/PS3 inputs remain explicitly qualified environmental acceptance evidence.
+- Update `docs/TESTING.md`, `docs/knowledge-base/testing/`, and the active Spec Kit feature when
+  the taxonomy, test loop, test evidence, or external prerequisites change.
+
 ## Required validation
 
 After each refactoring slice, run the smallest relevant tests plus the complete fast gate:
@@ -114,6 +131,7 @@ After each refactoring slice, run the smallest relevant tests plus the complete 
 ```text
 uv run just test-unit
 uv run just check
+uv run just test
 ```
 
 Before handoff, also run `uv run just test`, `uv run just coverage-ci`, and `uv run just audit`.
@@ -122,9 +140,10 @@ Use the matching just recipes so structure, architecture, typing, lint,
 dependency, and duplicate/dead-code diagnostics remain part of routine development.
 Ruff, Pyrefly, and deptry are authoritative for linting, formatting, production typing, and
 dependency hygiene; keep Prospector focused on duplicate, dead-code, import, complexity, and
-maintainability diagnostics. Run real PS4 and
-performance checks only with explicit local paths and record cold/warm state, timing, and manifest
-identity in the relevant Spec Kit artifact.
+maintainability diagnostics. Run real PS4 and performance checks only with explicit local paths and
+record cold/warm state, timing, and manifest identity in the relevant Spec Kit artifact. The nested
+`tools/dwarf_spec_pipeline` project has its own uv lockfile and mirrors the marker vocabulary; run
+its `just test`, `just test-official`, and `just check` from that project boundary as applicable.
 
 ## Spec-driven workflow
 

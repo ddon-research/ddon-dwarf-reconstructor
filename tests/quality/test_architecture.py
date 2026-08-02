@@ -9,6 +9,8 @@ from re import Pattern
 import pytest
 from archunitpython import CheckOptions, assert_passes, project_files
 
+pytestmark = [pytest.mark.unit, pytest.mark.non_functional, pytest.mark.quality]
+
 SRC_ROOT = Path(__file__).parents[2] / "src"
 _FOLDER_PATTERNS = {
     name: re.compile(rf".*[\\/]{name}(?:[\\/].*)?")

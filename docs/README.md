@@ -29,6 +29,7 @@ Complete documentation for the DWARF-to-C++ header reconstructor.
   - [ps4-elf/](knowledge-base/ps4-elf/) - PS4 ELF format specifics
   - [tools/](knowledge-base/tools/) - Analysis of similar tools
   - [observability/](knowledge-base/observability/) - Structured logs and exception tracing
+  - [testing/](knowledge-base/testing/) - Testing pyramid, marker taxonomy, and validation loop
 
 ### DWARF specification pipeline
 
@@ -93,7 +94,8 @@ critical-path event without creating log spam.
 
 **Contents:**
 - Quick start commands
-- Test categories (unit vs integration)
+- Test pyramid scopes, purposes, and qualifiers
+- Required integration and explicit opt-out commands
 - Test structure and organization
 - Writing new tests with examples
 - Coverage requirements and CI/CD integration

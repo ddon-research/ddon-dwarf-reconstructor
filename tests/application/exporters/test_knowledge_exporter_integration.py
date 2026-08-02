@@ -20,6 +20,8 @@ from ddon_dwarf_reconstructor.infrastructure.orbis_objdump import (
     OrbisToolIdentity,
 )
 
+pytestmark = [pytest.mark.integration, pytest.mark.functional, pytest.mark.regression]
+
 
 def _exporter(elf_path: Path) -> KnowledgeExporter:
     return KnowledgeExporter(
@@ -33,7 +35,6 @@ def _read_jsonl(path: Path) -> list[dict[str, object]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
 
 
-@pytest.mark.unit
 def test_dwarf_method_ids_are_scoped_to_the_selected_owner_die(tmp_path: Path) -> None:
     """Duplicate class definitions must remain distinct source observations."""
     elf_path = tmp_path / "DDOORBIS.elf"
@@ -52,7 +53,6 @@ def test_dwarf_method_ids_are_scoped_to_the_selected_owner_die(tmp_path: Path) -
     assert ":dwarf:117ec452:" in second_identity[2]
 
 
-@pytest.mark.unit
 def test_export_projects_reconstructed_cpp_and_orbis_instructions(tmp_path: Path) -> None:
     elf_path = tmp_path / "DDOORBIS.elf"
     elf_path.write_bytes(b"deterministic dwarf fixture")

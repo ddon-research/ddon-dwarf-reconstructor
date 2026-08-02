@@ -30,7 +30,7 @@ jobs:
       - name: Install tool dependencies
         run: uv sync --python 3.14.6 --frozen
 
-      - name: Run locked tool checks
+      - name: Run locked tool checks and required integration tests
         run: uv run just ci
 
       - name: Validate Docker Compose configuration

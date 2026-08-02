@@ -83,8 +83,16 @@ Do not suppress the checker or add a baseline exemption.
 
 - Mirror the production package layout in `tests/`; place shared typed DIE builders and fixtures in
   `tests/support/`.
-- Mark fast isolated tests `unit`; reserve `integration`, `slow`, and `performance` for tests
-  that need the corresponding resources.
+- Give every root test exactly one scope marker (`unit`, `integration`, or `acceptance`) and at
+  least one purpose marker (`functional`, `regression`, or `non_functional`). The collection hook
+  in `tests/conftest.py` rejects missing or ambiguous classifications.
+- Mark `performance`, `slow`, `real_asset`, `packaging`, and `quality` qualifiers explicitly. A
+  performance or quality test must be `non_functional`; a real-asset test must be integration or
+  acceptance; a packaging test must be acceptance.
+- Required deterministic integration tests are included in `just test` and coverage. Use
+  `just test-without-integration` only for exceptional fast iteration; use `test-regression`,
+  `test-non-functional`, `test-acceptance`, `test-real-assets`, and `test-performance` for
+  explicit evidence slices.
 - Use Hypothesis for pure type-reference, declarator, array, qualifier, pointer, and parser
   invariants. Use `pytest-regressions` only for small deterministic diagnostics and metadata.
 - Exercise missing, incomplete, conflicting, duplicate, unavailable, cyclic, malformed, and

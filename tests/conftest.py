@@ -12,11 +12,32 @@ from tests.support.dwarf_builders import (
     build_mock_die,
     build_mock_elf_file,
 )
+from tests.support.quality.taxonomy import (
+    apply_default_functional_purpose,
+    taxonomy_errors,
+)
 
 # Add src directory to path for imports
 src_path = Path(__file__).parent.parent / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Enforce the repository-wide scope/purpose taxonomy at collection time."""
+    del config
+    for item in items:
+        apply_default_functional_purpose(item)
+
+    violations = [
+        f"{item.nodeid}: {', '.join(taxonomy_errors(item))}"
+        for item in items
+        if taxonomy_errors(item)
+    ]
+    if violations:
+        preview = "\n".join(violations[:20])
+        suffix = "" if len(violations) <= 20 else f"\n... and {len(violations) - 20} more"
+        raise pytest.UsageError(f"Test taxonomy violations:\n{preview}{suffix}")
 
 
 @pytest.fixture(scope="session")

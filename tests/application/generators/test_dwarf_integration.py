@@ -1,7 +1,7 @@
 """Integration tests for DwarfGenerator with real ELF files.
 
 These tests run only if the test ELF file is available and are marked as integration tests.
-They verify end-to-end functionality but don't write files to disk.
+They verify end-to-end functionality without writing repository files.
 """
 
 from pathlib import Path
@@ -10,6 +10,14 @@ import pytest
 
 from ddon_dwarf_reconstructor.application.generators import DwarfGenerator
 from ddon_dwarf_reconstructor.infrastructure.elf_session import ElfDwarfSession
+
+pytestmark = [
+    pytest.mark.acceptance,
+    pytest.mark.functional,
+    pytest.mark.regression,
+    pytest.mark.real_asset,
+    pytest.mark.slow,
+]
 
 
 class TestDwarfGeneratorIntegration:
@@ -20,13 +28,16 @@ class TestDwarfGeneratorIntegration:
         """Get path to test ELF file if it exists."""
         return Path("resources/DDOORBIS.elf")
 
-    @pytest.mark.integration
     @pytest.mark.skipif(
         not Path("resources/DDOORBIS.elf").exists(), reason="Test ELF file not available"
     )
-    def test_real_elf_processing(self, test_elf_path: Path):
+    def test_real_elf_processing(self, test_elf_path: Path, tmp_path: Path):
         """Test processing real ELF file without writing output."""
-        with DwarfGenerator(test_elf_path, session_factory=ElfDwarfSession) as generator:
+        with DwarfGenerator(
+            test_elf_path,
+            session_factory=ElfDwarfSession,
+            cache_file=tmp_path / "dwarf-cache.json",
+        ) as generator:
             # Test that we can find a known class
             result = generator.find_class("MtObject")
             assert result is not None, "Should find MtObject class in test data"
@@ -52,13 +63,16 @@ class TestDwarfGeneratorIntegration:
     # because they would require scanning through 2000+ compilation units
     # with millions of DIEs, making the test extremely slow.
 
-    @pytest.mark.integration
     @pytest.mark.skipif(
         not Path("resources/DDOORBIS.elf").exists(), reason="Test ELF file not available"
     )
-    def test_dwarf_info_access(self, test_elf_path: Path):
+    def test_dwarf_info_access(self, test_elf_path: Path, tmp_path: Path):
         """Test that DWARF information is properly accessible."""
-        with DwarfGenerator(test_elf_path, session_factory=ElfDwarfSession) as generator:
+        with DwarfGenerator(
+            test_elf_path,
+            session_factory=ElfDwarfSession,
+            cache_file=tmp_path / "dwarf-cache.json",
+        ) as generator:
             # Verify we have DWARF info
             assert generator.dwarf_info is not None
 

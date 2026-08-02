@@ -28,7 +28,13 @@ testpaths = ["tests"]
 addopts = ["-q", "--strict-markers", "--tb=short"]
 markers = [
     "unit: fast isolated tests",
-    "integration: tests that exercise source conversion or official artifacts",
+    "integration: tests that exercise deterministic source conversion components",
+    "acceptance: user-visible or externally validated artifact workflows",
+    "functional: verifies behavior or published output",
+    "regression: pins a stable output or previously observed failure",
+    "non_functional: verifies performance, quality, or operational behavior",
+    "real_artifact: requires generated official artifacts or external source state",
+    "official: validates the checked-in official-source knowledge artifacts",
 ]
 
 [tool.ruff]

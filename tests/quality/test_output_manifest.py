@@ -3,12 +3,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from tests.support.regression.output_manifest import (
     build_manifest,
     compare_manifests,
     main,
     write_manifest,
 )
+
+pytestmark = [pytest.mark.unit, pytest.mark.functional, pytest.mark.regression]
 
 
 def test_manifest_hashes_selected_files_deterministically(tmp_path: Path) -> None:

@@ -274,8 +274,8 @@ flowchart TD
     Publish --> Manifest["sorted SHA-256 manifest"]
 ```
 
-After source changes, run the unit/static tier, then the non-performance
-coverage tier and `uv run python -m tests.support.quality.check_coverage`. The fixture acceptance run compares the
+After source changes, run the unit/static tier, then the required correctness tier (including
+deterministic integration tests) and `uv run python -m tests.support.quality.check_coverage`. The fixture acceptance run compares the
 five retained single-file headers byte-for-byte. The packaged console entrypoint
 is compared across the intentional output modes with the same manifest. The
 explicit real PS4 run uses the external ELF, compressed dump, and

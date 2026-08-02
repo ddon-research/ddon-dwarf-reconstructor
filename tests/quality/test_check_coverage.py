@@ -7,6 +7,8 @@ import pytest
 
 from tests.support.quality.check_coverage import read_report, violations
 
+pytestmark = [pytest.mark.unit, pytest.mark.non_functional, pytest.mark.quality]
+
 
 def _summary(statements: int, missing: int, branches: int, missing_branches: int) -> dict[str, int]:
     return {

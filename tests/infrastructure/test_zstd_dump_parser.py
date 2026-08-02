@@ -16,6 +16,8 @@ from ddon_dwarf_reconstructor.infrastructure.zstd_dump_parser import (
     ZstdDumpParser,
 )
 
+pytestmark = pytest.mark.unit
+
 
 @pytest.fixture(autouse=True)
 def isolated_artifact_cache(tmp_path, monkeypatch):

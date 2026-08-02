@@ -1314,7 +1314,7 @@ def build_hierarchy(self, name: str, max_depth: int = 10) -> tuple[dict, list]:
 | Compressed dump index build | 295.6s | One-time streaming build from the real `.zst` |
 | Indexed class + method lookup | 1.52ms | Fresh process, published SQLite sidecar |
 | Warm `rLayout` knowledge export | ~2.4s | Real ELF and retained source-bound caches |
-| Unit/non-performance suite | <1s typical | 276 passed, 1 deselected at the 2026-07-26 checkpoint |
+| Required correctness suite | ~3s local | 429 collected tests after excluding performance, packaging, and real assets on 2026-08-03 |
 
 ## Limitations and Trade-offs
 
@@ -1393,27 +1393,38 @@ def build_hierarchy(self, name: str, max_depth: int = 10) -> tuple[dict, list]:
 
 ## Testing Strategy
 
-**Test categories:**
+The test suite follows a practical pyramid: many `unit` tests, fewer deterministic `integration`
+tests, and a small `acceptance` tier. Scope and purpose markers are enforced at pytest collection
+time; see [TESTING.md](TESTING.md) and the [testing knowledge base](knowledge-base/testing/).
 
-1. **Fast tests:** Use focused fixtures and mocks at external boundaries
-   - ClassParser with mocked DWARF structures
-   - TypeResolver with mocked offset lookups
-   - HeaderGenerator with mocked ClassInfo
-   
-2. **Integration/performance tests:** Opt in to local real ELF/dump files
-   - PS4: `resources/DDOORBIS.elf`
-   - PS3: `resources/PS3/EBOOT.ELF`
-   
-**Why this split:**
-- Fast tests validate logic in isolation
-- Real tests validate cold/warm behavior and deterministic output end to end
+The required correctness loop is:
+
+```text
+uv run just test-unit
+uv run just check
+uv run just test
+uv run just coverage-ci
+uv run just audit
+```
+
+`just test` includes local integration tests and excludes only `performance`, `packaging`, and
+`real_asset` qualifiers. The deterministic exporter integration test crosses source identity,
+typed models, evidence serialization, manifest publication, and the filesystem using temporary
+fixtures. This preserves a meaningful higher-level signal without making proprietary ELF or
+compressed-DWARF inputs a CI dependency.
+
+Real PS4/PS3 generator checks are `acceptance` tests qualified with `real_asset` and `slow`; the
+warm `rLayout` budget is also `performance` and `non_functional`. They require explicit local
+paths and are run with `just test-real-assets` or `just test-performance`.
 
 **Critical test cases:**
-- Multi-CU resolution: Verify complete definitions chosen over forward declarations
-- Timeout handling: Ensure search terminates within configured limit
-- Type blacklist: Verify known problematic types rejected immediately
-- Scoring algorithm: Validate correct type selection across CUs
-- Cache validation: Ensure forward declarations detected and re-searched
+
+- Multi-CU resolution: complete definitions chosen over forward declarations
+- Timeout handling: search terminates within the configured limit
+- Type blacklist: known problematic types are rejected immediately
+- Scoring algorithm: correct type selection across CUs
+- Cache validation: forward declarations are detected and re-searched
+- Evidence publication: deterministic manifests and JSONL retain source/DIE provenance
 
 ## Platform-Specific Validation
 

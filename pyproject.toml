@@ -90,11 +90,17 @@ addopts = [
     "--color=yes",
 ]
 markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests as integration tests", 
-    "unit: marks tests as unit tests",
-    "performance: marks tests as performance benchmarks",
+    "unit: isolated fast tests with controlled boundaries",
+    "integration: multiple real project components using deterministic local fixtures",
+    "acceptance: user-visible CLI, distribution, or external-artifact workflows",
+    "functional: verifies product behavior or output correctness",
+    "regression: pins a previously observed defect or stable output contract",
+    "non_functional: verifies performance, quality, maintainability, resource, or operational behavior",
+    "slow: marks tests outside the normal fast feedback budget",
+    "performance: marks non-functional time, throughput, or resource benchmarks",
+    "real_asset: requires an explicit local ELF, dump, compiler, or generated artifact",
     "packaging: validates the installed distribution and uv tool entry point",
+    "quality: validates architecture, structure, coverage, or repository tooling policy",
 ]
 log_cli = true
 log_cli_level = "INFO"

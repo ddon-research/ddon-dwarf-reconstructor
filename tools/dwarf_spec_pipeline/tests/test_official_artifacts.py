@@ -6,8 +6,15 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = [
+    pytest.mark.acceptance,
+    pytest.mark.functional,
+    pytest.mark.regression,
+    pytest.mark.real_artifact,
+    pytest.mark.official,
+]
 
-@pytest.mark.integration
+
 def test_official_artifacts_have_expected_coverage() -> None:
     if os.environ.get("DWARF_SPEC_OFFICIAL") != "1":
         pytest.skip("set DWARF_SPEC_OFFICIAL=1 after the Docker Compose build")

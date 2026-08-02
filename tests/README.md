@@ -1,271 +1,35 @@
-# Running Tests
+# Test suite guide
 
-## Quick Start
+The root test suite is pytest-only. Use the repository's locked environment and `just` recipes:
 
-```bash
-# Install the locked development environment
-uv sync --python 3.14.6
-
-# Run the canonical test tiers
-uv run just test
-
-# Run tests with coverage thresholds
-uv run just coverage
-
-# Run specific test categories
+```text
 uv run just test-unit
 uv run just test-integration
-uv run just test-performance
-uv run just package-smoke
-```
-
-`just test` and the coverage recipes exclude the `packaging` marker; run `just package-smoke`
-explicitly when validating the standalone uv tool installation.
-
-## Test Structure
-
-```
-tests/
-├── conftest.py                 # Pytest configuration and shared fixtures
-├── application/                # Use-case and exporter tests
-│   ├── exporters/
-│   └── generators/
-├── domain/                     # Model, parser, cache, and rendering tests
-│   ├── models/
-│   ├── repositories/
-│   └── services/
-├── infrastructure/             # Filesystem, ELF, config, and dump adapters
-├── performance/                # Explicitly opt-in benchmark tests
-├── quality/                    # Structure, architecture, coverage, and output gates
-├── support/                    # Typed DIE builders and shared test helpers
-└── utils/                      # Small platform and patching tests
-```
-
-## Test Categories
-
-Tests are marked using pytest markers for selective execution:
-
-### Unit Tests (`-m unit`)
-- Fast, isolated tests
-- No external dependencies
-- Test individual functions/methods
-- Example: Configuration validation, error handling
-
-### Integration Tests (`-m integration`)
-- Test component interactions
-- Require ELF file
-- Test full workflows (parsing, extracting, generating)
-- Slower than unit tests
-
-### Performance Tests (`-m performance`)
-- Benchmark performance metrics
-- Test caching, indexing, optimization features
-- May be very slow (marked with `@pytest.mark.slow`)
-- Should validate performance constraints
-
-### Slow Tests (`-m slow`)
-- Tests that take significant time (>10s)
-- Often overlap with performance tests
-- Skip in fast CI runs with `-m "not slow"`
-
-## Fixtures
-
-Shared fixtures are defined in [conftest.py](conftest.py):
-
-### Configuration Fixtures
-- `config`: Loaded Config object from environment
-- `elf_file_path`: Path to ELF file (skips if not available)
-- `project_root`: Project root directory
-
-### Parser Fixtures
-- `elf_parser`: Fresh DWARFParser instance (function scope)
-
-### Sample Symbol Fixtures
-- `sample_symbols`: Dict of known symbols from [resources/sample-symbols.csv](../resources/sample-symbols.csv)
-- `fast_symbol`: Returns "MtObject" (found in first CU, fast for testing)
-- `known_symbol`: Parametrized fixture for testing multiple symbols
-
-## Environment Setup
-
-Tests require an ELF file to be configured:
-
-```bash
-# Create .env file
-echo "ELF_FILE_PATH=resources/DDOORBIS.elf" > .env
-```
-
-Or set environment variable:
-```bash
-export ELF_FILE_PATH=resources/DDOORBIS.elf
-```
-
-## Common Test Commands
-
-```bash
-# Run all non-performance tests
 uv run just test
-
-# Run tests and stop on first failure
-uv run pytest -x
-
-# Run tests matching a pattern
-uv run pytest -k "cache"
-
-# Run a specific test file
-uv run pytest tests/performance/test_cu_caching.py
-
-# Run a specific test function
-uv run pytest tests/performance/test_cu_caching.py::test_cu_cache_speedup
-
-# Show print statements
-uv run pytest -s
-
-# Generate HTML coverage report
-uv run just coverage
-# Open htmlcov/index.html in browser
-
-# Run integration tests only
-uv run just test-integration
-
-# Very verbose output with local variables on failure
-uv run pytest -vv -l
+uv run just test-without-integration  # exceptional iteration shortcut
+uv run just coverage-ci
+uv run just audit
 ```
 
-## Using Sample Symbols
+See [docs/TESTING.md](../docs/TESTING.md) for the full marker contract, pyramid rationale, real
+asset policy, and nested specification-project loop.
 
-Tests should use known symbols from [resources/sample-symbols.csv](../resources/sample-symbols.csv):
+## Ownership
 
-**MtObject**: Base class, in first CU (fast to find, <10s)
-**rLandInfo, cSetInfoOm, etc.**: May be in later CUs (much slower, potentially minutes)
+- `tests/application/`, `tests/config/`, `tests/domain/`, and `tests/infrastructure/` mirror the
+  production boundaries.
+- `tests/performance/` contains explicit non-functional budgets.
+- `tests/packaging/` contains isolated distribution acceptance.
+- `tests/quality/` contains architecture, maintainability, manifest, coverage, and taxonomy gates.
+- `tests/support/` contains typed DIE builders, regression manifest helpers, and test-policy code.
 
-### Example: Using the fast_symbol fixture
-```python
-@pytest.mark.integration
-def test_header_generation(elf_parser: DWARFParser, fast_symbol: str) -> None:
-    """Test with MtObject (fast symbol)."""
-    header = generate_header(elf_parser, fast_symbol)
-    assert len(header) > 0
-```
+## Marker rule
 
-### Example: Testing with multiple symbols
-```python
-@pytest.mark.slow
-@pytest.mark.parametrize("symbol", ["MtObject", "rLandInfo"])
-def test_multiple_symbols(elf_parser: DWARFParser, symbol: str, sample_symbols: dict) -> None:
-    """Test with various symbols (may be slow)."""
-    if symbol not in sample_symbols:
-        pytest.skip(f"{symbol} not in CSV")
+Every collected root test has exactly one scope: `unit`, `integration`, or `acceptance`. Every test
+has a purpose: `functional`, `regression`, or `non_functional`. Performance, quality, packaging,
+slow, and real-asset qualifiers are explicit and validated during collection by
+`tests/conftest.py`.
 
-    header = generate_header(elf_parser, symbol)
-    assert len(header) > 0
-```
-
-## Writing New Tests
-
-### Test File Naming
-- File: `test_<feature>.py`
-- Function: `test_<what_it_tests>()`
-- Class: `Test<Feature>` (optional)
-
-### Using Markers
-```python
-import pytest
-
-
-@pytest.mark.unit
-def test_something_fast():
-    """Fast unit test."""
-    assert True
-
-
-@pytest.mark.integration
-def test_with_elf(elf_parser):
-    """Integration test requiring ELF file."""
-    pass
-
-
-@pytest.mark.slow
-@pytest.mark.performance
-def test_performance_benchmark(elf_parser):
-    """Long-running performance test."""
-    pass
-```
-
-### Using Fixtures
-```python
-import pytest
-from pathlib import Path
-from ddon_dwarf_reconstructor.core import DWARFParser
-
-
-@pytest.mark.integration
-def test_with_fixtures(
-    elf_parser: DWARFParser, fast_symbol: str, sample_symbols: dict[str, str | None]
-) -> None:
-    """Test using shared fixtures from conftest.py."""
-    # elf_parser is ready to use
-    # fast_symbol is "MtObject"
-    # sample_symbols contains all known symbols
-
-    if fast_symbol not in sample_symbols:
-        pytest.skip(f"{fast_symbol} not in sample CSV")
-
-    # Your test code here
-    pass
-```
-
-## Debugging Tests
-
-```bash
-# Run with pdb on failure
-uv run pytest --pdb
-
-# Run with pdb at test start
-uv run pytest --trace
-
-# Show local variables on failure
-uv run pytest -l
-
-# Very verbose output
-uv run pytest -vv
-
-# Run with full stdout/stderr
-uv run pytest -s --tb=long
-```
-
-## Continuous Integration
-
-The test suite is designed for CI/CD pipelines:
-
-```yaml
-# Example GitHub Actions
-- name: Run tests
-  run: |
-    uv sync --python 3.14.6 --frozen
-    uv run just coverage-ci
-```
-
-## Test runner
-
-Pytest is the only supported test runner. Use fixtures and markers directly:
-
-- `runner.run_test(test_func)` becomes a marked `def test_func()`.
-- Conditional test availability uses `pytest.skip(reason)`.
-- Test modules are collected by pytest; they do not need `__main__` blocks.
-
-## Ownership and quality gates
-
-New tests live beside the owning package under `tests/application`,
-`tests/domain`, `tests/infrastructure`, or `tests/quality`; `tests/support`
-contains shared typed DIE builders and fixtures. Keep parser, rendering, and
-adapter tests in the package-shaped directory that owns the behavior.
-
-Every test change must preserve the structure limits (600-line modules,
-500-line classes including documentation, 75-line functions, McCabe 10) and
-the executable hexagonal architecture policy in `tests/quality/test_architecture.py`. The
-non-performance coverage command and
-`tests.support.quality.check_coverage` enforce
-80% total lines plus 80% line/70% branch coverage in the high-risk groups.
-Generated headers use exact external manifest comparisons rather than snapshot
-normalization. Deterministic JSONL and diagnostic metadata may use
-`pytest-regressions`.
+The normal `test` and coverage recipes include deterministic integration tests. Use
+`test-without-integration` only to shorten an iteration while diagnosing a local change; run the
+required loop before handoff.

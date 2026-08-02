@@ -16,6 +16,7 @@ Use regular CPython 3.14.6 and the locked uv environment:
 ```text
 uv sync --python 3.14.6
 uv run just test-unit
+uv run just test-integration
 uv run just check
 uv run just test
 uv run just coverage-ci
@@ -50,6 +51,12 @@ uv run --directory tools/dwarf_spec_pipeline dwarf-spec-pipeline validate
   the manifest identity.
 - Update the README, architecture/testing docs, active contracts, and Spec Kit artifacts whenever
   public commands, configuration, or validation behavior changes.
+- Root tests use one scope (`unit`, `integration`, or `acceptance`) plus a purpose
+  (`functional`, `regression`, or `non_functional`). Collection enforces the taxonomy; qualify
+  performance, slow, real-asset, packaging, and quality work explicitly.
+- The default `just test` and coverage loop includes deterministic integration tests. Use
+  `just test-without-integration` only for exceptional iteration, and run the required loop before
+  handoff. Real-asset and performance checks remain explicit local evidence.
 
 ## Observability loop
 

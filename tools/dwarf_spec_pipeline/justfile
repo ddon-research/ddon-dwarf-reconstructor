@@ -10,7 +10,16 @@ sync:
     uv sync --python 3.14.6
 
 test:
-    uv run pytest
+    uv run pytest -m "not official and not real_artifact"
+
+test-unit:
+    uv run pytest -m unit
+
+test-integration:
+    uv run pytest -m integration
+
+test-official:
+    uv run pytest -m official
 
 lint:
     uv run ruff check --no-fix src tests
