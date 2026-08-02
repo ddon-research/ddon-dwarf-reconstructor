@@ -1,4 +1,4 @@
-"""Focused knowledge-export operations for the compatibility façade."""
+"""Method records for knowledge export."""
 
 from __future__ import annotations
 
@@ -34,6 +34,8 @@ class KnowledgeExportMethodsMixin:
                         "parameters": parameters,
                         "is_virtual": method.is_virtual,
                         "vtable_index": method.vtable_index,
+                        "is_noreturn": method.is_noreturn,
+                        "is_noexcept": method.is_noexcept,
                         "source_revision": self.build_id,
                         "deterministic": True,
                     },

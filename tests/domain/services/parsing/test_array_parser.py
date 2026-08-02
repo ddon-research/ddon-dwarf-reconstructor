@@ -7,7 +7,6 @@ from unittest.mock import Mock
 import pytest
 
 from ddon_dwarf_reconstructor.domain.services.parsing.array_parser import (
-    ArrayInfo,
     parse_array_type,
 )
 
@@ -80,20 +79,7 @@ def test_array_invalid_and_missing_bounds_become_unspecified_dimensions() -> Non
     result = parse_array_type(_array_die(element, children), resolver)
 
     assert result is not None
-    assert result.dimensions == (0, 0, 0)
+    assert result.dimensions == (None, None, None)
     assert result.name == "Value[][][]"
-    assert result.total_elements == 1
-
-
-@pytest.mark.unit
-def test_array_info_legacy_mapping_access_remains_supported() -> None:
-    info = ArrayInfo("Value[2]", "Value", (2,), 2, 0x1234)
-
-    assert info["name"] == info.name
-    assert info["element_type"] == "Value"
-    assert info["dimensions"] == (2,)
-    assert info["total_elements"] == 2
-    assert info["die_offset"] == 0x1234
-    assert info.as_dict()["dimensions"] == [2]
-    with pytest.raises(KeyError):
-        info["unknown"]
+    assert result.total_elements is None
+    assert result.declarator.render() == "Value[][][]"

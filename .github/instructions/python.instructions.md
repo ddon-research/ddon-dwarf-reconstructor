@@ -20,8 +20,19 @@ through the repository's `src` directory.
 - Use small immutable or deliberately-owned typed models for cross-layer data. Prefer existing
   `GenerationRequest`, `HeaderBundle`, `DefinitionCandidate`, type-reference, and declarator
   contracts over untyped dictionaries or repeated parameter lists.
+- Breaking changes are allowed when they remove unnecessary indirection. Update in-repository
+  callers, tests, and contracts atomically; do not add a wrapper just to avoid changing a caller.
 - Keep one policy implementation for definition selection, source identity, primitive/excluded-type
   classification, method evidence, special-header rendering, and array/declarator parsing.
+- `DwarfRuntimeConfig.from_environment()` is the only source for runtime cache sizes and search
+  bounds. Invalid `DWARF_DIE_CACHE_SIZE`, `DWARF_TYPE_CACHE_SIZE`, or
+  `DWARF_MAX_SEARCH_TIME_MS` values are configuration errors, not reasons to silently use defaults.
+- `ElfDwarfSession` owns ELF/DWARF handles and PS4 pyelftools normalization. Do not open ELF files
+  or invoke the patch installer from domain services or individual generators.
+- `SearchResult` carries status, candidate score, CU/DIE provenance, elapsed time, and diagnostics.
+  Callers must make an explicit decision about partial or unavailable evidence.
+- `AtomicHeaderPublisher` is the sole generated-header writer. Stage a complete bundle, publish its
+  manifest, and preserve rollback behavior; do not add a second content cache or direct writes.
 - Use explicit `is not None` checks for optional numeric evidence. Offset `0` is valid.
 - Catch specific expected exceptions, preserve useful context, and emit structured diagnostics.
   Do not use bare `except`, unexplained `Any`, or silent fallbacks.
@@ -36,9 +47,9 @@ through the repository's `src` directory.
 - Declare runtime dependencies in `[project.dependencies]` and development tools in PEP 735
   `[dependency-groups]`. Run tools through `uv run`; use `deptry` to detect missing or misplaced
   dependencies and keep module-name mappings explicit for packages such as `pyelftools`.
-- The committed Pyrefly configuration is curated from the migration initializer. If a new
-  checkout has no `[tool.pyrefly]` section, run `uv run pyrefly init pyproject.toml` once, then
-  review and commit the explicit configuration; do not retain a legacy mypy fallback or broad
+- The committed Pyrefly configuration is explicit and authoritative. If a new checkout has no
+  `[tool.pyrefly]` section, run `uv run pyrefly init pyproject.toml` once, then review and commit
+  the explicit configuration; do not add a second type-checker configuration or broad
   missing-import suppression.
 
 ## Size and complexity gates

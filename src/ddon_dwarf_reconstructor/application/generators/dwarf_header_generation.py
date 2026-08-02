@@ -1,4 +1,4 @@
-"""Focused operations extracted from the public compatibility façade."""
+"""Header generation operations for the application generator."""
 
 from __future__ import annotations
 
@@ -6,13 +6,13 @@ from time import time
 
 from ...core.observability import get_logger, log_timing
 from ...domain.models.dwarf import ClassInfo
-from ...domain.services.generation import calculate_packing_info
+from ...domain.services.generation import SpecialHeaderRenderer, calculate_packing_info
 from .dwarf_generator_context import DwarfGeneratorContext
 
 logger = get_logger(__name__)
 
 
-class HeaderGenerationMixin:
+class HeaderGenerationService:
     @log_timing
     def generate_header(
         self: DwarfGeneratorContext, class_name: str, include_metadata: bool = True
@@ -30,32 +30,32 @@ class HeaderGenerationMixin:
 
         # Find class with timing
         find_start = time()
-        result = self.find_class(class_name)
+        result = self.workflow.find_class(class_name)
         find_elapsed = time() - find_start
         logger.debug(f"Class search completed in {find_elapsed:.3f}s")
 
         if not result:
             logger.warning(f"Class {class_name} not found")
-            return self._generate_not_found_header(class_name)
+            return SpecialHeaderRenderer.render_not_found(class_name)
 
         cu, class_die = result
 
         # Check if this is a namespace
-        if self.is_namespace(class_die):
+        if self.workflow.is_namespace(class_die):
             logger.info(f"{class_name} is a namespace, generating namespace header")
-            return self._generate_namespace_header(class_name, cu, class_die)
+            return SpecialHeaderRenderer.render_namespace(class_name, cu, class_die)
 
         # Build a complete closure so standalone output defines bases and by-value types.
-        self._expand_typedef_search(full_hierarchy=True)
-        class_infos, hierarchy_order = self._build_hierarchy_with_timing(
+        self.workflow.expand_typedef_search(full_hierarchy=True)
+        class_infos, hierarchy_order = self.workflow.build_hierarchy_with_timing(
             class_name,
             max_depth=10,
             include_method_signatures=False,
         )
-        if not self._validate_hierarchy(class_infos, class_name):
-            return self._generate_not_found_header(class_name)
+        if not self.workflow.validate_hierarchy(class_infos, class_name):
+            return SpecialHeaderRenderer.render_not_found(class_name)
 
-        typedefs = self._collect_typedefs_and_packing(class_infos)
+        typedefs = self.workflow.collect_typedefs_and_packing(class_infos)
 
         header_start = time()
         assert self.header_generator is not None
@@ -189,21 +189,21 @@ class HeaderGenerationMixin:
         logger.info(f"Generating complete hierarchy header for: {class_name}")
 
         # Step 1: Expand typedef search
-        self._expand_typedef_search(full_hierarchy=True)
+        self.workflow.expand_typedef_search(full_hierarchy=True)
 
         # Step 2: Build full hierarchy with dependencies
-        class_infos, hierarchy_order = self._build_hierarchy_with_timing(
+        class_infos, hierarchy_order = self.workflow.build_hierarchy_with_timing(
             class_name,
             max_depth=10,
             include_method_signatures=False,
         )
 
         # Step 3: Validate hierarchy
-        if not self._validate_hierarchy(class_infos, class_name):
-            return self._generate_not_found_header(class_name)
+        if not self.workflow.validate_hierarchy(class_infos, class_name):
+            return SpecialHeaderRenderer.render_not_found(class_name)
 
         # Step 4: Add packing info and collect typedefs
-        all_typedefs = self._collect_typedefs_and_packing(class_infos)
+        all_typedefs = self.workflow.collect_typedefs_and_packing(class_infos)
 
         logger.info(
             f"Hierarchy complete: {len(class_infos)} classes in order: "

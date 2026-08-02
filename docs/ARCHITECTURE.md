@@ -18,7 +18,7 @@ must preserve them.
 
 A durable artifact is reusable only when its source identity, producer/schema
 version, and output-affecting configuration match. Writers publish atomically;
-an incompatible or corrupt artifact is rebuilt without making the old valid
+a mismatched or corrupt artifact is rebuilt without making the last valid
 artifact unavailable. The symbol cache and source-identity catalog are
 OS-local. The compressed dump index is a versioned SQLite sidecar next to the
 `.zst` by default, or at an explicit `--dwarf-index` path. The reconstructor
@@ -58,7 +58,7 @@ ELF parser, cache, process, or filesystem adapter supplies their inputs.
               cli.py / artifact_cli.py / main.py
                                │
                                ▼
-       application use cases and compatibility façades
+       application use cases and focused domain services
                                │
                  domain ports and domain policies
                                │
@@ -74,26 +74,28 @@ ELF parser, cache, process, or filesystem adapter supplies their inputs.
 | --- | --- | --- | --- |
 | Core | `src/ddon_dwarf_reconstructor/core/` | Standard library only; no outer package | Core has no runtime dependencies on application, domain, generators, or infrastructure. |
 | Domain policies and ports | `domain/models/`, `domain/services/`, `domain/ports/` | Core, domain models/ports, and standard library | Domain has no infrastructure imports and no `elftools.*` dependency. `DwarfInfo`, `DwarfEntry`, and cache/source-hash protocols keep external types out of signatures. |
-| Application use cases | `application/generators/`, `application/exporters/` | Core, domain, and intentional compatibility seams | Application does not construct infrastructure adapters or import infrastructure. Cache sizing, source identity, dump lookup, and disassembly arrive through constructor ports from the composition root. |
-| Inbound adapters | `cli.py`, `artifact_cli.py`, `main.py` | Application plus concrete infrastructure wiring | `main.py` is the composition root: it supplies factories, cache paths/sizes, and `SourceIdentityCatalog().sha256`. |
-| Outbound adapters | `infrastructure/`, plus the legacy `generators/base_generator.py` ELF façade | Core/domain ports and external libraries | Adapters own `pyelftools`, zstd, SQLite, Orbis processes, durable artifacts, configuration, and logging setup. |
+| Application use cases | `application/generators/`, `application/exporters/` | Core, domain, and typed ports | Application does not construct infrastructure adapters or import infrastructure. Cache sizing, source identity, dump lookup, and disassembly arrive through constructor ports from the composition root. |
+| Inbound adapters | `cli.py`, `artifact_cli.py`, `main.py` | Application plus concrete infrastructure wiring | `main.py` is the composition root: it uses `infrastructure/composition.py`, supplies cache paths/sizes, and injects `SourceIdentityCatalog`. |
+| Outbound adapters | `infrastructure/` including `ElfDwarfSession` and `AtomicHeaderPublisher` | Core/domain ports and external libraries | Adapters own `pyelftools`, zstd, SQLite, Orbis processes, durable artifacts, configuration, and logging setup. |
 | Separate tool boundary | `tools/dwarf_spec_pipeline/` | Its own package, lockfile, and checks | Specification acquisition/conversion is not imported by the runtime package. |
 
 ### Port and adapter rules
 
 1. A port describes a purposeful use-case conversation, not a convenience
    import bucket. Current examples are `ClassParserPort`, `DwarfIndexPort`,
-   `DumpLookupPort`, `DisassemblyProducerPort`, `SymbolCachePort`, and
-   `SourceHashPort`.
+  `DumpLookupPort`, `DisassemblyProducerPort`, `DwarfSessionFactory`,
+  `SymbolCachePort`, and `SourceHashPort`.
 2. Core and domain signatures use project-owned models or structural contracts.
    Concrete `pyelftools`, zstd, SQLite, subprocess, and artifact-catalog types
-   stay in adapters and composition. The legacy ELF façade exposes the
-   pyelftools object through `core.dwarf` contracts while its concrete ELF
-   lifecycle remains in the compatibility adapter.
+   stay in adapters and composition. The current ELF lifecycle adapter exposes
+   pyelftools through `core.dwarf` contracts while its concrete lifecycle remains
+   outside the domain.
 3. Infrastructure may depend inward on ports and models. Application code may
    request a port but may not import or instantiate an infrastructure adapter.
-   `main.py` and `infrastructure/composition.py` are the only normal wiring
-   locations for concrete adapters.
+   `main.py` and `infrastructure/composition.py` form the composition root for
+   concrete adapters. `ElfDwarfSession`
+   owns the ELF/DWARF resource graph and `AtomicHeaderPublisher` owns header
+   publication.
 4. Mocks and fixture doubles implement the same ports as production adapters.
    The architecture suite checks the source package, so test-only imports and
    generated outputs do not become production dependencies.
@@ -103,17 +105,15 @@ ELF parser, cache, process, or filesystem adapter supplies their inputs.
 - New imports are package-relative. Imports through `src.` are forbidden.
 - `TYPE_CHECKING` imports count as dependencies for layer rules and must obey
   the same direction. Runtime-cycle checking ignores type-only edges so
-  annotation-only compatibility cycles do not masquerade as runtime cycles.
-- Thin re-exports are allowed only for compatibility: the logging/path-policy
-  and platform façades delegate to core implementations and do not reimplement
-  policy.
-- Dynamic imports must obey the same direction as static imports. They are
-  retained only for lazy domain/application loading and optional compatibility
-  paths; infrastructure construction belongs in the composition root.
-- The public `application/generators/dwarf_generator.py` still inherits the
-  legacy `generators/base_generator.py` façade because callers patch and import
-  that compatibility surface. This is one named migration seam, not a general
-  application-to-adapter allowlist; new application code must use ports.
+  annotation-only cycles do not masquerade as runtime cycles.
+- Each policy has one owning module. New code imports the owning policy directly;
+  duplicate utility exports are not part of the runtime graph.
+- Dynamic imports must obey the same direction as static imports. Infrastructure
+  construction belongs in the composition root, while application code receives
+  typed ports and workflow services.
+- `application/generators/dwarf_generator.py` accepts a `DwarfSessionFactory`
+  and composes `GeneratorWorkflow`; the composition root supplies
+  `ElfDwarfSession`, while the application owns only the lifecycle contract.
 - `tests/quality/test_architecture.py` scans only `src/` and has an explicit
   non-empty source-root guard. ArchUnitPython's negated rule accepts an empty
   selector, so the suite also keeps a positive empty-selector control to make
@@ -155,13 +155,13 @@ external resources into the ports those decisions consume.
 src/ddon_dwarf_reconstructor/
 ├── core/                              # Technology-neutral contracts and policies
 │   ├── dwarf.py                       # Structural DWARF contracts
-│   ├── observability.py               # Standard-library logging façade
+│   ├── observability.py               # Standard-library logging policy
 │   ├── path_policy.py                 # Canonical output naming policy
 │   └── platform.py                    # Platform value used across ports
 │
 ├── application/
 │   ├── exporters/                     # Deterministic graph/export use cases
-│   └── generators/                    # Public generation façade and workflows
+│   └── generators/                    # Generation workflows
 │
 ├── domain/
 │   ├── ports/                         # Purposeful inbound/outbound conversations
@@ -174,10 +174,9 @@ src/ddon_dwarf_reconstructor/
 │   │   ├── struct_info.py             # Nested structures
 │   │   └── tag_constants.py           # DWARF tag classification constants
 │   │
-│   ├── repositories/cache/             # Cache policies and compatibility façade
+│   ├── repositories/cache/             # Cache policies
 │   │   ├── lru_cache.py               # In-memory LRU cache
-│   │   ├── persistent_symbol_cache.py # Source-bound durable cache
-│   │   └── header_cache.py            # SHA256-based header deduplication
+│   │   └── persistent_symbol_cache.py # Source-bound durable cache
 │   └── services/
 │       ├── parsing/                    # DWARF parsing services
 │       │   ├── class_parser.py        # Multi-CU class discovery & parsing
@@ -198,9 +197,11 @@ src/ddon_dwarf_reconstructor/
 └── infrastructure/
     ├── artifacts.py                    # Source identity and durable artifacts
     ├── composition.py                  # Concrete adapter factories
+    ├── elf_session.py                  # Owned ELF/DWARF resource graph
+    ├── header_output.py                # Atomic header bundle publication
     ├── config/                         # Configuration
-    │   ├── application_config.py      # Application settings
-    │   └── dwarf_config.py            # DWARF-specific constants
+    │   ├── application_config.py      # CLI input/output settings
+    │   └── dwarf_config.py            # Validated runtime settings
     │
     ├── logging/                        # Observability
     │   ├── logger_setup.py            # Structured logging
@@ -245,14 +246,14 @@ rather than implying decompiler-equivalent coverage.
 
 **Responsibilities:**
 - Initializes and coordinates all domain services
-- Manages ELF file lifecycle (open/close)
+- Manages the injected session lifecycle (open/close)
 - Provides generation modes (single class, full hierarchy, multi-file)
-- Handles platform detection automatically
+- Exposes the platform reported by the session
 
 **Why this design:** Centralizing orchestration separates high-level workflows from low-level parsing logic. Clients interact with a simple API while complex multi-CU resolution, caching, and type resolution happen transparently.
 
 ```python
-class DwarfGenerator(BaseGenerator):
+class DwarfGenerator:
     def generate_header(self, class_name: str) -> str:
         """Generate header for a single class.
         
@@ -275,43 +276,22 @@ class DwarfGenerator(BaseGenerator):
         """
 ```
 
-**Helper Methods:** To avoid code duplication between generation modes, common operations are extracted:
+**Workflow services:** Generation modes share typed operations through a composed
+`GeneratorWorkflow`; the generator owns the session lifecycle through the typed
+factory supplied by the composition root and delegates lookup, header rendering,
+multi-file publication, and knowledge export to that workflow.
 
 ```python
-def _expand_typedef_search(self, full_hierarchy: bool = True) -> None:
-    """Configure type resolver for hierarchy mode.
-    
-    Why: Hierarchy generation requires broader typedef search than single class.
-    """
-
-def _build_hierarchy_with_timing(
-    self, class_name: str, max_depth: int = 10
-) -> tuple[dict[str, ClassInfo], list[str]]:
-    """Build complete inheritance chain with dependencies.
-    
-    Why: Centralize hierarchy logic to ensure consistency across modes.
-    Returns: (class_infos dict, hierarchical ordering)
-    """
-
-def _validate_hierarchy(
-    self, class_infos: dict[str, ClassInfo], class_name: str
-) -> bool:
-    """Check if hierarchy contains any classes.
-    
-    Why: Early failure detection prevents downstream errors in generation.
-    """
-
-def _collect_typedefs_and_packing(
-    self, class_infos: dict[str, ClassInfo]
-) -> dict[str, str]:
-    """Analyze memory layout and collect typedef dependencies.
-    
-    Why: Combine two iterations into one for efficiency.
-    Single pass through all classes reduces complexity from O(2n) to O(n).
-    """
+workflow.find_class(name)
+workflow.generate_header(name, include_metadata=True)
+workflow.generate_complete_hierarchy_header(name, include_metadata=True)
+workflow.generate_multi_file_hierarchy(name, include_metadata=True)
 ```
 
-**Rationale for helper extraction:** Both single-file and multi-file modes share ~85% of logic. Extracting shared operations:
+**Rationale for workflow composition:** Both single-file and multi-file modes share
+the same hierarchy and evidence policies. A composed workflow keeps those policies
+in one place while the generator remains responsible for lifecycle and public use
+case coordination:
 - Ensures bug fixes apply to all modes automatically
 - Makes mode-specific differences explicit (FileRegistry, output format)
 - Enables independent testing of each step
@@ -418,7 +398,7 @@ def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
     - Cache first: O(1) for repeated lookups (85% hit rate)
     - Validation catches incomplete cache entries early
     - Targeted search: Faster than full scan (uses symbol indices)
-    - Full scan: Last resort with 600s timeout to prevent hangs
+    - Full scan: Last resort with a bounded timeout to prevent hangs
     
     CU scan optimization:
     - CUs sorted by size (smallest first) for faster discovery
@@ -432,7 +412,7 @@ def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
 
 ```python
 def _find_class_full_scan(
-    self, class_name: str, timeout: float = 600.0
+    self, class_name: str, timeout: float = 180.0
 ) -> tuple[CompileUnit, DIE] | None:
     """Search all CUs with timeout protection and size-based ordering.
     
@@ -440,7 +420,7 @@ def _find_class_full_scan(
     - Large ELF files have 1000+ compilation units
     - Some types (pthread_mutex, system types) lack debug info entirely
     - Without timeout, tool hangs indefinitely on missing types
-    - 600s default: Sufficient for thorough scan while preventing infinite wait
+    - 180s default: Sufficient for thorough scan while preventing infinite wait
     
     CU size sorting optimization:
     - Sorts all CUs by unit_length (smallest first)
@@ -451,7 +431,7 @@ def _find_class_full_scan(
     
     Why this helps:
     - Previous 180s timeout: Reached 100-150 CUs before expiring
-    - New 600s with sorting: Can scan 500+ CUs in same time
+    - Size-sorted bounded scan: Can inspect substantially more CUs before timeout
     - Example: cSetInfoGeneralPoint found in 117s (vs previous timeout)
     - Early exit when score >= 5000 (complete type found)
     """
@@ -480,7 +460,7 @@ def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
        - Nested structs: +500 each
        - Nested unions: +300 each
     5. Select highest-scoring (most complete) definition
-    6. **Always populate cache** with best result
+    6. Publish the selected result with its explicit completeness status
     
     Why exhaustive mode:
     - Problem: Incomplete definitions cached, missing nested types
@@ -507,13 +487,13 @@ def _find_class_with_dump(self, class_name: str) -> tuple[CompileUnit, DIE] | No
     3. Count nested types via parent markers in dump
     4. Score definitions (same algorithm as full scan)
     5. Load only best definition's CU
-    6. **Populate cache** with best result
+    6. Publish the selected result with its explicit completeness status
     
     Performance on the real PS4 dump:
     - Cold SQLite index build: 295.6 seconds
     - Fresh-process class + method lookup pair: 1.52 ms
     - Warm rLayout knowledge export: about 2.4 seconds
-    - Full CU scan: legacy fallback when the dump/index is unavailable
+    - Full CU scan: bounded fallback when the dump/index is unavailable
 
     Build-scoped root authority:
     - `ps4-02020005/rLayout` is pinned to DIE `0x117ec452` in CU `0x117ebf8b`
@@ -531,7 +511,7 @@ def _find_class_with_dump(self, class_name: str) -> tuple[CompileUnit, DIE] | No
     - No pyelftools overhead: Direct text pattern matching
     
     Cache behavior:
-    - Always updates cache with best definition found
+    - Updates cache with the selected definition and its completeness status
     - Includes CU offset + DIE offset for O(1) retrieval
     - Next run bypasses dump entirely via cache
     
@@ -666,8 +646,8 @@ class LazyDwarfIndexService:
 
 ```python
 def targeted_symbol_search(
-    self, symbol_name: str, timeout: float = 600.0
-) -> int | None:
+    self, symbol_name: str, timeout: float = 1.0
+) -> SearchResult:
     """Search all CUs for symbol with scoring and size-based ordering.
     
     Use case: Cache returned forward declaration, need complete definition.
@@ -676,7 +656,7 @@ def targeted_symbol_search(
     - Uses same scoring algorithm as ClassParser (consistency)
     - Tracks global best score across CUs
     - Early exit optimization
-    - Timeout protection (600s)
+    - Timeout protection (1s by default, configured through DwarfRuntimeConfig)
     - CU size sorting: Scans smallest CUs first
     
     Search strategy:
@@ -691,7 +671,7 @@ def targeted_symbol_search(
     - Larger CUs with forward declarations scanned last
     - Maximizes chances of finding complete definition before timeout
     
-    Returns: Offset of best match (or None if not found/timeout)
+    Returns: Typed status, candidate provenance, and diagnostics
     """
 ```
 
@@ -831,7 +811,7 @@ classes_by_file = file_registry.get_classes_by_file()
 **Why important:** Understanding class size and alignment helps:
 - Verify reverse engineering accuracy
 - Identify optimization opportunities
-- Match original struct layout exactly (critical for binary compatibility)
+- Match original struct layout exactly (critical for ABI fidelity)
 
 ```python
 @dataclass
@@ -928,7 +908,7 @@ type_cache: LRUCache[int, str] = LRUCache(maxsize=5000)
   strengthens this to canonical content/producer/schema/config identity
 - Human-readable JSON aids debugging
 
-**Cache Population Strategy (v4.0 Multi-Definition):**
+**Cache Population Strategy (schema 5.0 multi-definition):**
 ```python
 def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
     """All search paths populate cache with multi-definition support.
@@ -937,7 +917,7 @@ def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
     1. Targeted CU search finds definition
     2. Cache updated: add_symbol_cu_mapping(symbol, cu, die, score, complete)
     3. If symbol already has definitions, adds new one
-    4. Best definition auto-selected (highest score among complete)
+    4. Best complete definition is auto-selected; incomplete results remain marked
     5. Next run: <1s via O(1) cache lookup
     
     Exhaustive mode (--exhaustive):
@@ -976,8 +956,7 @@ def add_symbol_cu_mapping(symbol: str, cu_offset: int, die_offset: int,
 def validate_and_repair(self) -> dict[str, Any]:
     """Repair cache corruption without regeneration.
     
-    Repairs automatically:
-    - Missing fields (adds empty dicts)
+    Explicit maintenance repairs:
     - Inconsistent mappings (rebuilds from symbol_definitions)
     - Duplicate definitions (removes exact duplicates)
     - Orphaned entries (removes dangling offsets)
@@ -1008,23 +987,17 @@ manifest, node, and relationship files (3,350 nodes and 3,735 relationships).
 Indexed negative lookups are authoritative; only a missing nested global-name
 entry falls back to its exact referenced DIE offset.
 
-3. **HeaderCache (SHA256-based):**
+3. **AtomicHeaderPublisher:**
 ```python
-def should_regenerate(self, filename: str, new_content: str) -> bool:
-    """Check if header content changed.
-    
-    Use case: Multi-file generation creates many headers.
-    Only write files that actually changed to:
-    - Preserve timestamps for build systems
-    - Reduce disk I/O
-    - Avoid unnecessary recompilation
-    """
+def publish(self, output_dir: Path, platform: ELFPlatform,
+            headers: Mapping[str, str]) -> tuple[Path, int]:
+    """Stage one header bundle, then commit it with a manifest."""
 ```
 
-**Why SHA256?** Content-addressable storage:
-- Small cache files (hashes are 32 bytes)
-- Cryptographically collision-resistant
-- Fast comparison (no need to read full old content)
+The publisher validates filenames, writes UTF-8 content to a private staging
+directory, commits the files atomically, and records byte counts and SHA-256
+digests in `header-bundle.manifest.json`. Failed publication rolls back the
+previous targets and removes staging material.
 
 ### Infrastructure Layer
 
@@ -1061,7 +1034,7 @@ class PlatformDetector:
 **Platform-specific handling:**
 
 ```python
-# In base_generator.py
+# In infrastructure/elf_session.py
 self.platform = PlatformDetector.detect_platform(self.elf_file)
 
 # Different output directories
@@ -1111,11 +1084,15 @@ class ProgressTracker:
 
 ## Generation Workflows
 
+The snippets assume `create_dwarf_session` is imported from
+`infrastructure.composition`; the composition root supplies the concrete
+session to the application generator.
+
 ### Single Class Generation
 
 ```python
 # Generate header for one class without dependencies
-with DwarfGenerator("game.elf") as gen:
+with DwarfGenerator("game.elf", session_factory=create_dwarf_session) as gen:
     header = gen.generate_header("MtObject")
 ```
 
@@ -1132,7 +1109,7 @@ with DwarfGenerator("game.elf") as gen:
 
 ```python
 # Generate complete inheritance chain in one file
-with DwarfGenerator("game.elf") as gen:
+with DwarfGenerator("game.elf", session_factory=create_dwarf_session) as gen:
     header = gen.generate_complete_hierarchy_header("rLayout")
 ```
 
@@ -1178,7 +1155,7 @@ class rLayout : public cResource { /* 528 bytes, 12 members */ };
 
 ```python
 # Generate hierarchy organized by original source files
-with DwarfGenerator("game.elf") as gen:
+with DwarfGenerator("game.elf", session_factory=create_dwarf_session) as gen:
     headers = gen.generate_multi_file_hierarchy("rLayout")
     # Returns: {"MtObject.h": "...", "cResource.h": "...", "rLayout.h": "..."}
 ```
@@ -1188,7 +1165,7 @@ with DwarfGenerator("game.elf") as gen:
 2. FileRegistry extracts `DW_AT_decl_file` from each class
 3. Group classes by source file path
 4. HeaderGenerator creates separate header per file
-5. HeaderCache checks which files changed
+5. AtomicHeaderPublisher stages and commits the bundle with a manifest
 6. Write only modified headers
 
 **Use case:** Reconstructing modular codebase structure.
@@ -1251,7 +1228,7 @@ member.type_offset = 0x20f3c              # For validation
 **Pattern:**
 ```python
 class DwarfGenerator:
-    def __init__(self, elf_path: Path):
+    def __init__(self, elf_path: Path, session_factory: DwarfSessionFactory):
         # Initialize services
         self.lazy_index = LazyDwarfIndexService(dwarf_info)
         self.type_resolver = LazyTypeResolver(lazy_index)
@@ -1366,12 +1343,15 @@ def build_hierarchy(self, name: str, max_depth: int = 10) -> tuple[dict, list]:
 
 ### Performance Trade-offs
 
-**Full scan timeout (600s with CU size sorting):**
+**Search timeouts:**
+- Targeted index searches default to 1 second and are controlled by
+  `DWARF_MAX_SEARCH_TIME_MS`.
+- Full fallback scans default to 180 seconds.
 - **Pro:** Prevents infinite hangs on missing types
 - **Pro:** Size-sorted CUs maximize discovery rate within timeout
 - **Con:** May give up on types in very large CUs late in scan
 - **Mitigation:** Blacklist known problematic types, CU sorting finds most symbols quickly
-- **Performance:** Typical complete definitions found in <120s with sorting
+- **Performance:** Targeted definitions normally resolve before the bounded full scan
 
 **Cache validation:**
 - **Pro:** Detects forward declarations, finds complete types
@@ -1443,7 +1423,7 @@ rLayout: 1144 bytes, 6 members, 0 methods
 - **Big-endian:** Affects bit packing and byte order interpretation
 - **DWARF 2:** Older specification, fewer attributes
 
-**Compatibility approach:** Platform detection automatic, parser adapts to DWARF version.
+**Platform approach:** Detection is automatic and the parser adapts to the supported DWARF versions.
 
 ## Extension Points
 
@@ -1452,8 +1432,8 @@ rLayout: 1144 bytes, 6 members, 0 methods
 **Use case:** Generate formats other than C++ headers.
 
 ```python
-class JsonGenerator(BaseGenerator):
-    """Generate JSON schema from DWARF."""
+class JsonExportService:
+    """Generate a JSON representation from a typed generator context."""
     
     def generate(self, class_name: str) -> str:
         class_info = self.class_parser.parse_class(class_name)
@@ -1517,16 +1497,16 @@ class HeaderValidator:
 ## Refactored boundaries and quality contract
 
 The public `ClassParser`, `LazyTypeResolver`, `HierarchyBuilder`,
-`HeaderGenerator`, `DwarfGenerator`, cache, dump, exporter, and CLI classes are
-compatibility façades over focused services. Shared policies have one owner:
-`definition_selection.py` ranks candidates, `method_evidence.py` merges method
-evidence, `primitive_type_names.py` classifies primitive/excluded names,
-`SourceIdentityCatalog` binds immutable sources, and `SpecialHeaderRenderer`
-renders deterministic namespace/not-found headers.
+`HeaderGenerator`, `DwarfGenerator`, cache, dump, exporter, and CLI classes
+coordinate focused services through one typed service graph. Shared policies have
+one owner: `definition_selection.py` ranks candidates, `method_evidence.py`
+merges method evidence, `primitive_type_names.py` classifies primitive/excluded
+names, `SourceIdentityCatalog` binds immutable sources, and
+`SpecialHeaderRenderer` renders deterministic namespace/not-found headers.
 
 The application layer receives `DumpLookupPort`, `DisassemblyProducerPort`,
 and type/index/parser ports. It does not construct zstd, SQLite, Orbis, or
-pyelftools adapters; `infrastructure.composition` is the composition root.
+pyelftools adapters; `main.py` is the composition root.
 The generated `GenerationRequest` and `HeaderBundle` contracts make single-file
 and multi-file modes one workflow with mode-specific output adapters. Multi-file
 and single-file dependency closure is structural: method signatures render on

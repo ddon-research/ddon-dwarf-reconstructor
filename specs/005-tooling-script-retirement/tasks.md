@@ -1,6 +1,6 @@
 # Tasks: Tooling Script Retirement
 
-## Migration
+## Retirement scope
 
 - [x] Move quality and regression helpers into `tests/support` and update imports.
 - [x] Convert Sonar/MSVC preparation from PowerShell to the typed Python module.

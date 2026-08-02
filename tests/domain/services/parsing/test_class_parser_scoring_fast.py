@@ -8,33 +8,40 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from ddon_dwarf_reconstructor.domain.services.definition_selection import DefinitionCandidate
 from ddon_dwarf_reconstructor.domain.services.parsing import ClassParser, LazyTypeResolver
+from ddon_dwarf_reconstructor.domain.services.parsing.class_parser_scan_state import ScanState
+from ddon_dwarf_reconstructor.domain.services.search_result import SearchResult, SearchStatus
+
+
+@pytest.fixture
+def type_resolver():
+    """Mock the production lazy resolver."""
+    return Mock(spec=LazyTypeResolver)
+
+
+@pytest.fixture
+def dwarf_info():
+    """Mock DWARF info fixture."""
+    return Mock()
+
+
+@pytest.fixture
+def lazy_index():
+    """Mock LazyDwarfIndexService fixture."""
+    return Mock()
+
+
+@pytest.fixture
+def class_parser(type_resolver, dwarf_info, lazy_index):
+    """ClassParser instance with mocked dependencies."""
+    parser = ClassParser(type_resolver, dwarf_info, full_scan_timeout=180.0)
+    parser.lazy_index = lazy_index
+    return parser
 
 
 class TestClassParserScoring:
     """Test suite for ClassParser scoring and timeout features."""
-
-    @pytest.fixture
-    def type_resolver(self):
-        """Mock the production lazy resolver."""
-        return Mock(spec=LazyTypeResolver)
-
-    @pytest.fixture
-    def dwarf_info(self):
-        """Mock DWARF info fixture."""
-        return Mock()
-
-    @pytest.fixture
-    def lazy_index(self):
-        """Mock LazyDwarfIndexService fixture."""
-        return Mock()
-
-    @pytest.fixture
-    def class_parser(self, type_resolver, dwarf_info, lazy_index):
-        """ClassParser instance with mocked dependencies."""
-        parser = ClassParser(type_resolver, dwarf_info, full_scan_timeout=180.0)
-        parser.lazy_index = lazy_index
-        return parser
 
     @pytest.mark.unit
     def test_forward_declaration_detection(self, class_parser):
@@ -176,7 +183,12 @@ class TestClassParserScoring:
         ):
             # Mock targeted search to return better result
             better_offset = 0x2000
-            class_parser.lazy_index.targeted_symbol_search.return_value = better_offset
+            class_parser.lazy_index.targeted_symbol_search.return_value = SearchResult(
+                SearchStatus.COMPLETE,
+                DefinitionCandidate("CachedClass", 0x100, better_offset, 100, True),
+                0.01,
+                1,
+            )
 
             # Mock better DIE (complete definition)
             complete_die = Mock()
@@ -237,26 +249,47 @@ class TestClassParserScoring:
             assert "TimeoutTest" in class_parser.timed_out_symbols
 
     @pytest.mark.unit
-    def test_early_exit_optimization(self, class_parser):
-        """Test that search exits early when finding score >= 5000."""
-        # This tests the early exit logic for typedefs/base types/enums
-        # Score >= 5000 should cause immediate return
+    def test_timeout_does_not_cache_best_candidate_as_complete(self, class_parser):
+        cu = Mock(cu_offset=0x100)
+        die = Mock(offset=0x200, has_children=True)
+        die.attributes = {"DW_AT_byte_size": Mock(value=8)}
+        class_parser.lazy_index.persistent_cache.add_symbol_cu_mapping = Mock()
+        state = ScanState(
+            best_candidate=die,
+            best_cu=cu,
+            best_score=10008,
+            timed_out=True,
+        )
 
-        # Create mock CU with typedef (score 5000)
-        mock_cu1 = Mock()
-        mock_cu1.cu_offset = 0x1000
+        result = class_parser._select_scan_result("Target", state)
 
-        typedef_die = Mock()
-        typedef_die.tag = "DW_TAG_typedef"
-        typedef_die.attributes = {
-            "DW_AT_name": Mock(value=b"u32"),
-            "DW_AT_type": Mock(value=0x1234),
-        }
-        typedef_die.offset = 0x1100
-        typedef_die.has_children = False
+        assert result == (cu, die)
+        class_parser.lazy_index.persistent_cache.add_symbol_cu_mapping.assert_called_once_with(
+            "Target",
+            0x100,
+            0x200,
+            score=10008,
+            complete=False,
+        )
 
-        mock_cu1.iter_DIEs.return_value = [typedef_die]
 
-        # Create second CU that should never be checked due to early exit
-        mock_cu2 = Mock()
-        mock_cu2.cu_offset = 0x2000
+@pytest.mark.unit
+def test_early_exit_optimization(class_parser):
+    """A strong typedef result stops the full scan before the next CU."""
+    mock_cu1 = Mock(cu_offset=0x1000)
+    typedef_die = Mock(
+        tag="DW_TAG_typedef",
+        offset=0x1100,
+        has_children=False,
+        attributes={"DW_AT_name": Mock(value=b"u32"), "DW_AT_type": Mock(value=0x1234)},
+    )
+    typedef_die.is_null.return_value = False
+    mock_cu1.iter_DIEs.return_value = [typedef_die]
+    mock_cu2 = Mock(cu_offset=0x2000)
+    mock_cu2.iter_DIEs.return_value = []
+    class_parser.dwarf_info.iter_CUs.return_value = [mock_cu1, mock_cu2]
+
+    result = class_parser._find_class_full_scan("u32")
+
+    assert result == (mock_cu1, typedef_die)
+    mock_cu2.iter_DIEs.assert_not_called()

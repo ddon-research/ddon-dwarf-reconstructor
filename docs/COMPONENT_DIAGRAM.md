@@ -197,13 +197,11 @@ classDiagram
         -_deserialize(data) ClassInfo
     }
 
-    class HeaderCache {
-        -Path cache_dir
-        -dict~str,str~ _hash_cache
-        +__init__(cache_dir)
-        +should_regenerate(filename, new_content) bool
-        +update(filename, content)
-        -_compute_hash(content) str
+    class AtomicHeaderPublisher {
+        +publish(output_dir, platform, headers) tuple~Path,int~
+        -stage_headers(headers)
+        -commit_manifest()
+        -rollback()
     }
 
     class PackingAnalyzer {
@@ -214,13 +212,11 @@ classDiagram
         -_infer_packing(members) int
     }
 
-    class DwarfConfig {
+    class DwarfRuntimeConfig {
         <<dataclass>>
-        +int max_depth
-        +bool enable_caching
-        +bool verbose_logging
-        +str cache_dir
         +int die_cache_size
+        +int type_cache_size
+        +float search_timeout_seconds
     }
 
     %% Relationships - Application Layer
@@ -248,7 +244,7 @@ classDiagram
     HeaderGenerator --> LazyDwarfIndexService : validates offsets
     HeaderGenerator --> DIETypeClassifier : filters types
     HeaderGenerator --> ClassInfo : reads
-    HeaderGenerator --> HeaderCache : checks changes
+    AtomicHeaderPublisher --> HeaderGenerator : publishes output
 
     HierarchyBuilder --> ClassParser : parses classes
     HierarchyBuilder --> DependencyExtractor : extracts dependencies
@@ -269,7 +265,7 @@ classDiagram
     %% Relationships - Infrastructure
     DwarfGenerator --> PersistentSymbolCache : caches symbols
     DwarfGenerator --> PackingAnalyzer : analyzes packing
-    DwarfGenerator --> DwarfConfig : configured by
+    DwarfGenerator --> DwarfRuntimeConfig : configured by
 
     %% Notes
     note for DwarfGenerator "Application Layer\nOrchestrates parsing and generation"
@@ -283,7 +279,7 @@ classDiagram
 ## Component Responsibilities
 
 ### Application Layer
-- **DwarfGenerator**: Main orchestrator coordinating all components, manages lifecycle, provides public API
+- **DwarfGenerator**: Main orchestrator coordinating all components through an injected session lifecycle, provides public API
 
 ### Domain Layer - Models
 - **ClassInfo**: Complete class representation with members, methods, inheritance
@@ -307,9 +303,9 @@ classDiagram
 
 ### Infrastructure Layer
 - **PersistentSymbolCache**: Disk-based symbol caching with LRU memory cache
-- **HeaderCache**: SHA256-based header change detection for selective file writing
+- **AtomicHeaderPublisher**: staged, manifest-backed header publication with rollback
 - **PackingAnalyzer**: Struct packing and alignment analysis
-- **DwarfConfig**: Configuration management for all components
+- **DwarfRuntimeConfig**: Validated cache sizes and bounded search timeout
 
 ## References
 

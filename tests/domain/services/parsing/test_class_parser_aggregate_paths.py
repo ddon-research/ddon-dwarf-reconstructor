@@ -58,7 +58,6 @@ def test_parse_enum_handles_integer_bytes_and_invalid_values() -> None:
     assert [(item.name, item.value) for item in result.enumerators] == [
         ("Zero", 0),
         ("Minus", -1),
-        ("Bad", 0),
     ]
 
 

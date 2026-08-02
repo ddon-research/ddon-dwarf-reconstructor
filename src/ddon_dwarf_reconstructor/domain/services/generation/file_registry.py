@@ -8,6 +8,7 @@ attributes. Handles compilation unit file lists and normalizes paths.
 
 from typing import TYPE_CHECKING
 
+from ....core.dwarf import decode_dwarf_string
 from ....core.observability import get_logger
 
 if TYPE_CHECKING:
@@ -157,12 +158,12 @@ class FileRegistry:
                         file_paths = []
                         for file_entry in files:
                             # file_entry has name, dir_index, timestamp, size
-                            file_name = file_entry.name.decode("utf-8", errors="ignore")
+                            file_name = decode_dwarf_string(file_entry.name)
                             file_paths.append(file_name)
                         logger.debug(f"Extracted {len(file_paths)} files for CU 0x{cu_offset:x}")
                         return file_paths
-        except Exception as e:
-            logger.debug(f"Failed to extract file list for CU 0x{cu_offset:x}: {e}")
+        except (AttributeError, IndexError, KeyError, RuntimeError, TypeError, ValueError) as error:
+            logger.debug("Failed to extract file list for CU 0x%x: %s", cu_offset, error)
 
         # Fallback: return empty list
         return []

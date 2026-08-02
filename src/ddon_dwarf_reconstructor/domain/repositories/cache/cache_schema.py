@@ -25,23 +25,30 @@ class CacheSchemaMixin:
         try:
             if self.cache_file.exists():
                 with open(self.cache_file, encoding="utf-8") as f:
-                    data: dict[str, Any] = json.load(f)
+                    loaded = json.load(f)
+                    if not isinstance(loaded, dict):
+                        raise ValueError("cache root must be a JSON object")
+                    data: dict[str, Any] = loaded
+                    if data.get("version") != self.CURRENT_VERSION:
+                        logger.info(
+                            "Ignoring cache with schema %s; expected %s: %s",
+                            data.get("version", "missing"),
+                            self.CURRENT_VERSION,
+                            self.cache_file,
+                        )
+                        return self._create_empty_cache()
+                    if not self._has_current_shape(data):
+                        logger.warning(
+                            "Ignoring structurally incomplete cache; rebuilding from source: %s",
+                            self.cache_file,
+                        )
+                        return self._create_empty_cache()
                     if (
                         self.source_fingerprint is not None
                         and data.get("source_fingerprint") != self.source_fingerprint
                     ):
-                        is_valid_unbound_cache = (
-                            data.get("source_fingerprint") is None
-                            and self.unbound_cache_validator is not None
-                            and self.unbound_cache_validator(data)
-                        )
-                        if not is_valid_unbound_cache:
-                            logger.info(
-                                f"Ignoring cache from different source fingerprint: {self.cache_file}"
-                            )
-                            return self._create_empty_cache()
-                    # Migrate cache format if needed
-                    data = self._migrate_cache_format(data)
+                        logger.info("Ignoring cache from a different source: %s", self.cache_file)
+                        return self._create_empty_cache()
                     # Validate cache integrity, attempting auto-repair before failing hard.
                     try:
                         self._validate_cache_integrity(data)
@@ -68,6 +75,20 @@ class CacheSchemaMixin:
         # Return empty cache structure
         return self._create_empty_cache()
 
+    @staticmethod
+    def _has_current_shape(data: dict[str, Any]) -> bool:
+        """Return whether a document has the complete current cache shape."""
+        required_maps = (
+            "symbol_to_offset",
+            "offset_to_symbol",
+            "symbol_to_cu_offset",
+            "symbol_definitions",
+            "cu_offset_to_symbols",
+        )
+        return "source_fingerprint" in data and all(
+            isinstance(data.get(field), dict) for field in required_maps
+        )
+
     def _validate_cache_integrity(self: CacheContext, data: dict[str, Any]) -> None:
         """Validate cache data integrity.
 
@@ -80,8 +101,8 @@ class CacheSchemaMixin:
         Raises:
             ValueError: If cache is corrupted (duplicate keys or inconsistent data)
         """
-        if "symbol_to_cu_offset" not in data or "cu_offset_to_symbols" not in data:
-            return  # Empty or incomplete cache, nothing to validate
+        if not self._has_current_shape(data):
+            raise ValueError("cache document does not have the current structure")
 
         # Rebuild expected mapping from symbol_to_cu_offset
         expected: dict[str, set[str]] = {}
@@ -140,55 +161,3 @@ class CacheSchemaMixin:
             "created": time(),
             "last_updated": time(),
         }
-
-    def _migrate_cache_format(self: CacheContext, data: dict[str, Any]) -> dict[str, Any]:
-        """Migrate cache data to current format with multi-definition support.
-
-        Args:
-            data: Loaded cache data
-
-        Returns:
-            Migrated cache data
-        """
-        version = data.get("version", "1.0")
-
-        if version == "1.0":
-            logger.info("Migrating cache from v1.0 to v1.1 (adding CU mapping support)")
-            data["version"] = "1.1"
-            data["symbol_to_cu_offset"] = {}
-            data["cu_offset_to_symbols"] = {}
-            self._modified = True
-
-        if version in ("1.0", "1.1", "2.0"):
-            logger.info(f"Migrating cache from v{version} to v3.0 (multi-definition support)")
-            data["version"] = "3.0"
-            # Initialize multi-definition tracking from existing single-definition data
-            data["symbol_definitions"] = {}
-            for symbol, cu_offset in data.get("symbol_to_cu_offset", {}).items():
-                die_offset = data.get("symbol_to_offset", {}).get(symbol)
-                if die_offset is not None:
-                    # Convert single definition to multi-definition format
-                    data["symbol_definitions"][symbol] = [
-                        {
-                            "cu_offset": cu_offset,
-                            "die_offset": die_offset,
-                            "score": 0,  # Unknown score for migrated entries
-                            "complete": True,  # Assume complete for backward compat
-                        }
-                    ]
-            self._modified = True
-
-        if version in ("1.0", "1.1", "2.0", "3.0"):
-            logger.info(f"Migrating cache from v{version} to v{self.CURRENT_VERSION}")
-            data["version"] = self.CURRENT_VERSION
-            data["source_fingerprint"] = self.source_fingerprint
-            self._modified = True
-
-        # Ensure all required fields exist
-        empty_cache = self._create_empty_cache()
-        for key, default_value in empty_cache.items():
-            if key not in data:
-                data[key] = default_value
-                self._modified = True
-
-        return data

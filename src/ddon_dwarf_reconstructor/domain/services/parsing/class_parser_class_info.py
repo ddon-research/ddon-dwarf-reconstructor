@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ....core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ....core.dwarf import DwarfCompilationUnit, DwarfEntry, decode_dwarf_string
 from ....core.observability import get_logger, log_timing
 from ...models.dwarf import (
     ClassInfo,
@@ -59,7 +59,10 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
         self: ClassParserContext, cu: DwarfCompilationUnit, class_die: DwarfEntry
     ) -> tuple[str, int, int | None, str | None, int | None, int, str, str, bool, str | None]:
         name_attr = class_die.attributes.get("DW_AT_name")
-        class_name = name_attr.value.decode("utf-8") if name_attr else "unknown_class"
+        class_name = decode_dwarf_string(
+            name_attr.value if name_attr is not None else None,
+            default="unknown_class",
+        )
         aggregate_kind = {
             "DW_TAG_class_type": "class",
             "DW_TAG_structure_type": "struct",
@@ -102,12 +105,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
             parent_name = parent_die.attributes.get("DW_AT_name")
             if parent_name is None:
                 break
-            parent_value = parent_name.value
-            components.append(
-                parent_value.decode("utf-8", errors="replace")
-                if isinstance(parent_value, bytes)
-                else str(parent_value)
-            )
+            components.append(decode_dwarf_string(parent_name.value))
             current_die = parent_die
         return "::".join(reversed(components))
 
@@ -128,11 +126,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
         name_attr = parent_die.attributes.get("DW_AT_name")
         if name_attr is None:
             return None
-        parent_name = (
-            name_attr.value.decode("utf-8", errors="replace")
-            if isinstance(name_attr.value, bytes)
-            else str(name_attr.value)
-        )
+        parent_name = decode_dwarf_string(name_attr.value)
         return self._get_qualified_name(parent_die, parent_name)
 
     @staticmethod
@@ -177,8 +171,8 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
                             f"({union_info.byte_size} bytes)",
                         )
                         return union_info
-            except Exception as e:
-                logger.debug(f"Failed to resolve anonymous member type: {e}")
+            except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
+                logger.debug("Failed to resolve anonymous member type: %s", error)
 
         # Regular member
         return self.parse_member(member_die)
@@ -224,8 +218,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
     def _member_name(member_die: DwarfEntry, type_name: str) -> str | None:
         name_attr = member_die.attributes.get("DW_AT_name")
         if name_attr is not None:
-            value = name_attr.value
-            return value.decode("utf-8") if isinstance(value, bytes) else str(value)
+            return decode_dwarf_string(name_attr.value)
         if "union_type" in type_name or "structure_type" in type_name:
             logger.debug("Skipping unnamed union/struct member: %s", type_name)
             return None

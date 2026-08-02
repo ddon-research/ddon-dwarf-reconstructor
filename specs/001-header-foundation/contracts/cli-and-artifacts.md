@@ -8,9 +8,10 @@ uv run ddon-dwarf-reconstructor export-knowledge <elf> --symbol <symbol> --outpu
 uv run ddon-dwarf-reconstructor artifacts <action> ...
 ```
 
-The root `main.py` launcher may remain as a native-build shim, but it must produce
-behavior equivalent to the packaged Typer entry point. The old argparse option
-syntax and separate `ddon-dwarf-artifacts` executable are not supported.
+The root `main.py` launcher, if retained for native build tooling, is only a
+composition entrypoint. The packaged Typer command tree is the supported runtime
+surface; the removed argparse syntax and separate artifact executable are not
+supported.
 
 ## Header Generation Contract
 
@@ -92,7 +93,7 @@ object containing:
 
 ### `repair-dump-index`
 
-Repairs compatible metadata or builds a missing/stale index. It MUST preserve a
+Repairs current-schema metadata or builds a missing/stale index. It MUST preserve a
 previous valid sidecar until the replacement has been fully committed and published.
 
 ### `rebuild-dump-index`
@@ -110,8 +111,9 @@ file untouched.
 Restores a selected symbol cache as an explicit replacement rather than merging
 unknown source mappings into the current cache.
 
-## Sidecar Compatibility
+## Sidecar schema policy
 
 The current sidecar schema is `1.2`, produced by `ddon-dwarf-zstd-index`, with a
-configuration digest recorded in metadata. A compatible `1.1` sidecar may be enriched
-in place without rescanning when its indexed tables and known source identity match.
+configuration digest recorded in metadata. A sidecar with an older schema is a
+rebuild input, not a runtime contract; the current reader MUST validate the source
+and rebuild explicitly when the schema does not match.

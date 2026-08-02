@@ -22,8 +22,10 @@ warm-cache performance.
 - **MA-004**: Definition selection, source identity, type classification,
   method evidence, and special-header rendering MUST have one canonical policy
   implementation each.
-- **MA-005**: Existing public generation methods and artifact wire formats MUST
-  remain compatible unless a focused migration contract is added.
+- **MA-005**: The implementation MAY make intentional breaking changes when
+  they remove unnecessary indirection. In-repository callers, tests, and artifact
+  contracts MUST be updated together, and no duplicate public path may exist
+  solely to preserve an old shape.
 - **MA-006**: Fixture and real-artifact generated headers MUST remain byte-
   identical to pre-refactor baselines.
 - **MA-007**: Coverage MUST reach at least 80% overall, with at least 80% line
@@ -37,7 +39,8 @@ warm-cache performance.
 
 - Reconstructing source constructs absent from DWARF evidence.
 - Changing generated header syntax, declaration ordering, cache schemas, or
-  knowledge-export formats without an explicit compatibility test.
+  knowledge-export formats without an explicit replacement contract and
+  regression expectation.
 - Committing proprietary ELF files, compressed dumps, generated headers, caches,
   or runtime reports.
 

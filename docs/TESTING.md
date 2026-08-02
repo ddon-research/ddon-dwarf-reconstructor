@@ -1,6 +1,7 @@
 ﻿# Testing
 
-Professional testing infrastructure with xUnit reporting, code coverage, and CI/CD automation.
+Pytest-based testing infrastructure with JUnit XML reporting, code coverage,
+and CI/CD automation.
 
 Real DDON inputs are immutable and expensive derived artifacts are intentionally
 durable. Tests must distinguish cold construction from fresh-process warm reuse.
@@ -97,7 +98,7 @@ Remove-Item Env:DWARF_SPEC_OFFICIAL
 
 It checks the generated DWARF 2/3/4 JSON against the schema, verifies known
 tags/attributes/forms/operations/languages, checks section coverage, and
-rejects legacy Groff/media/table-of-contents garbage. Source downloads and
+rejects converter Groff/media/table-of-contents noise. Source downloads and
 conversion intermediates remain in the ignored cache and are never test
 fixtures or committed artifacts.
 
@@ -107,8 +108,9 @@ fixtures or committed artifacts.
 tests/
  application/
     generators/
-        test_dwarf_generator.py        # Main orchestrator tests
+        test_dwarf_generator_setup.py  # Session and composition tests
         test_dwarf_integration.py      # End-to-end tests
+        test_dwarf_generator_*.py       # Focused generation operations
 
  domain/
     models/
@@ -117,18 +119,18 @@ tests/
    
     services/
         parsing/
-           test_class_parser.py       # DWARF parsing tests
+           test_class_parser_core.py  # DWARF parsing tests
            test_array_parser.py       # Array type tests
            test_type_resolver.py      # Type resolution tests
        
         generation/
-            test_header_generator.py   # C++ generation tests
+            test_header_generator_*.py # C++ generation tests
             test_hierarchy_builder.py  # Inheritance tests
-            test_packing_analyzer.py   # Memory layout tests
+            test_packing_analyzer_*.py # Memory layout tests
 
  infrastructure/
-     config/
-         test_application_config.py     # Config tests
+     test_dwarf_config.py              # Runtime setting tests
+     test_config_paths.py               # Config path tests
 ```
 
 ## Configuration
@@ -162,6 +164,9 @@ markers = [
 
 **Use mocks for external dependencies:**
 
+The examples construct the application with the composition-root factory:
+`from ddon_dwarf_reconstructor.infrastructure.composition import create_dwarf_session`.
+
 ```python
 @pytest.mark.unit
 def test_find_class_success(mocker):
@@ -180,7 +185,7 @@ def test_find_class_success(mocker):
     mocker.patch("builtins.open")
     mocker.patch("pyelftools.elf.elffile.ELFFile", return_value=mock_elf)
     
-    with DwarfGenerator("test.elf") as generator:
+    with DwarfGenerator("test.elf", session_factory=create_dwarf_session) as generator:
         result = generator.find_class("MtObject")
         assert result == (mock_cu, mock_die)
 ```
@@ -199,7 +204,7 @@ def test_find_class_success(mocker):
 @pytest.mark.integration
 def test_mtpropertylist_full_hierarchy():
     """Integration test with real ELF file."""
-    with DwarfGenerator(ELF_PATH) as generator:
+    with DwarfGenerator(ELF_PATH, session_factory=create_dwarf_session) as generator:
         header = generator.generate_complete_hierarchy_header("MtPropertyList")
         
         # Verify typedef resolution
@@ -235,7 +240,7 @@ def test_batch_processing():
     symbol_file.write_text("\n".join(symbols))
     
     # Process all symbols
-    with DwarfGenerator(ELF_PATH) as gen:
+    with DwarfGenerator(ELF_PATH, session_factory=create_dwarf_session) as gen:
         for symbol in symbols:
             header = gen.generate_complete_hierarchy_header(symbol)
             assert symbol in header
@@ -271,7 +276,7 @@ uv run just coverage
 # Open in browser (Windows)
 start htmlcov/index.html
 
-# Generate CI-compatible XML/JUnit reports
+# Generate XML/JUnit reports consumed by CI
 uv run just coverage-ci
 ```
 
@@ -323,7 +328,7 @@ Steps:
 
 ```bash
 # 1. Make changes
-vim src/domain/services/parsing/class_parser.py
+vim src/ddon_dwarf_reconstructor/domain/services/parsing/class_parser.py
 
 # 2. Run fast unit tests
 uv run just test-unit
@@ -393,7 +398,7 @@ uv run just ci
 uv run pytest --collect-only -v
 
 # Run specific test
-uv run pytest tests/domain/services/parsing/test_class_parser.py::test_find_class_success -v
+uv run pytest tests/domain/services/parsing/test_class_parser_core.py -v
 
 # Show print statements
 uv run pytest -s

@@ -22,7 +22,7 @@ class ClassParserScanMixin:
             self.exhaustive_search if exhaustive_override is None else exhaustive_override
         )
         state = self._scan_compilation_units(class_name, use_exhaustive)
-        if state.early_result is not None:
+        if state.early_result is not None and not state.timed_out:
             return state.early_result
         return self._select_scan_result(class_name, state)
 
@@ -41,6 +41,8 @@ class ClassParserScanMixin:
             if self._scan_timed_out(class_name, started_at, state):
                 break
             self._scan_compilation_unit(cu, target_name, class_name, exhaustive, state)
+            if self._scan_timed_out(class_name, started_at, state):
+                break
             if state.early_result is not None:
                 break
             if state.stop_after_non_improving:
@@ -198,10 +200,15 @@ class ClassParserScanMixin:
     def _select_scan_result(
         self: ClassParserContext, class_name: str, state: ScanState
     ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
+        if state.timed_out:
+            if state.best_candidate is not None and state.best_cu is not None:
+                return self._partial_scan_result(class_name, state)
+            if state.fallback_candidate:
+                return self._partial_scan_result(class_name, state)
+            logger.warning("Class %s search timed out without a candidate", class_name)
+            return None
         if state.best_candidate is not None and state.best_cu is not None and state.best_score > 0:
             return self._complete_scan_result(class_name, state)
-        if state.timed_out and state.fallback_candidate:
-            return self._partial_scan_result(class_name, state)
         if state.fallback_candidate:
             return self._forward_scan_result(class_name, state)
         logger.warning("Class %s not found in DWARF info", class_name)
@@ -215,18 +222,21 @@ class ClassParserScanMixin:
         size_value = size_attr.value if size_attr else 0
         if not state.best_candidate.has_children and size_value > 0:
             logger.warning("Found %s with size=%s bytes but no members", class_name, size_value)
-        self._cache_scan_result(
-            state.best_cu, state.best_candidate, class_name, state.best_score, True
+        _cache_scan_result(
+            self, state.best_cu, state.best_candidate, class_name, state.best_score, True
         )
         return state.best_cu, state.best_candidate
 
     def _partial_scan_result(
         self: ClassParserContext, class_name: str, state: ScanState
     ) -> tuple[DwarfCompilationUnit, DwarfEntry]:
-        assert state.fallback_candidate is not None
-        cu, die = state.fallback_candidate
+        if state.best_candidate is not None and state.best_cu is not None:
+            cu, die = state.best_cu, state.best_candidate
+        else:
+            assert state.fallback_candidate is not None
+            cu, die = state.fallback_candidate
         logger.warning("Returning partial result for %s after timeout", class_name)
-        self._cache_scan_result(cu, die, class_name, state.best_score, False)
+        _cache_scan_result(self, cu, die, class_name, state.best_score, False)
         return cu, die
 
     def _forward_scan_result(
@@ -235,23 +245,25 @@ class ClassParserScanMixin:
         assert state.fallback_candidate is not None
         cu, die = state.fallback_candidate
         logger.warning("Found %s only as a forward declaration", class_name)
-        self._cache_scan_result(cu, die, class_name, state.best_score, False)
+        _cache_scan_result(self, cu, die, class_name, state.best_score, False)
         return cu, die
 
-    def _cache_scan_result(
-        self: ClassParserContext,
-        cu: DwarfCompilationUnit,
-        die: DwarfEntry,
-        class_name: str,
-        score: int,
-        complete: bool,
-    ) -> None:
-        if not self.lazy_index:
-            return
-        self.lazy_index.persistent_cache.add_symbol_cu_mapping(
-            class_name,
-            cu.cu_offset,
-            die.offset,
-            score=score,
-            complete=complete,
-        )
+
+def _cache_scan_result(
+    context: ClassParserContext,
+    cu: DwarfCompilationUnit,
+    die: DwarfEntry,
+    class_name: str,
+    score: int,
+    complete: bool,
+) -> None:
+    """Publish one scan candidate with its explicit completeness state."""
+    if not context.lazy_index:
+        return
+    context.lazy_index.persistent_cache.add_symbol_cu_mapping(
+        class_name,
+        cu.cu_offset,
+        die.offset,
+        score=score,
+        complete=complete,
+    )

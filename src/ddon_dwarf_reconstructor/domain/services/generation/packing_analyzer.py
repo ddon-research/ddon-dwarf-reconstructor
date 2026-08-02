@@ -45,7 +45,7 @@ TYPE_SIZES = {
 def _members_by_offset(class_info: ClassInfo) -> list[MemberInfo]:
     return sorted(
         [member for member in class_info.members if member.offset is not None],
-        key=lambda member: member.offset or 0,
+        key=lambda member: member.offset,
     )
 
 
@@ -80,13 +80,16 @@ def _packing_summary(class_info: ClassInfo) -> tuple[int, int]:
     previous_offset = 0
     previous_size = 0
     for index, member in enumerate(members):
+        member_offset = member.offset
+        if member_offset is None:
+            continue
         member_size = estimate_member_size(member.type_name)
         if index:
-            padding = (member.offset or 0) - (previous_offset + previous_size)
+            padding = member_offset - (previous_offset + previous_size)
             if padding > 0:
                 total_padding += padding
         natural_size += member_size
-        previous_offset = member.offset or 0
+        previous_offset = member_offset
         previous_size = member_size
     if members:
         tail_padding = class_info.byte_size - (previous_offset + previous_size)
@@ -125,7 +128,9 @@ def analyze_member_gaps(class_info: ClassInfo) -> list[dict[str, str | int]]:
     gaps: list[dict[str, str | int]] = []
     current_offset = 0
     for index, member in enumerate(members):
-        member_offset = member.offset or 0
+        member_offset = member.offset
+        if member_offset is None:
+            continue
         if member_offset > current_offset:
             gaps.append(
                 {

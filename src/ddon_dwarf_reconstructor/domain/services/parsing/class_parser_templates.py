@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ....core.dwarf import DwarfEntry
+from ....core.dwarf import DwarfEntry, decode_dwarf_string
 from ....core.observability import get_logger
 from ...models.dwarf import (
     TemplateTypeParam,
@@ -69,11 +69,7 @@ class ClassParserTemplatesMixin:
             logger.debug(f"Template type parameter at 0x{param_die.offset:x} has no name")
             return None
 
-        param_name = (
-            name_attr.value.decode("utf-8")
-            if isinstance(name_attr.value, bytes)
-            else str(name_attr.value)
-        )
+        param_name = decode_dwarf_string(name_attr.value)
 
         # Check for default type
         default_type = None
@@ -105,11 +101,7 @@ class ClassParserTemplatesMixin:
             logger.debug(f"Template value parameter at 0x{param_die.offset:x} has no name")
             return None
 
-        param_name = (
-            name_attr.value.decode("utf-8")
-            if isinstance(name_attr.value, bytes)
-            else str(name_attr.value)
-        )
+        param_name = decode_dwarf_string(name_attr.value)
 
         # Get parameter type
         param_type = self.type_resolver.resolve_type_name(param_die)

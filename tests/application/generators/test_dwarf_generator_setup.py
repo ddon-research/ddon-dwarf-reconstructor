@@ -6,7 +6,7 @@ from unittest.mock import Mock, mock_open
 import pytest
 
 from ddon_dwarf_reconstructor.application.generators import DwarfGenerator
-from ddon_dwarf_reconstructor.domain.models.dwarf import ClassInfo
+from ddon_dwarf_reconstructor.infrastructure.elf_session import ElfDwarfSession
 
 
 class TestDwarfGenerator:
@@ -22,7 +22,12 @@ class TestDwarfGenerator:
         sibling_dump = tmp_path / "DDOORBIS.elf.llvmdwarfdump.zst"
         sibling_dump.write_bytes(b"sibling")
 
-        generator = DwarfGenerator(elf_path, exhaustive_search=False, dwarf_dump_path=explicit_dump)
+        generator = DwarfGenerator(
+            elf_path,
+            session_factory=ElfDwarfSession,
+            exhaustive_search=False,
+            dwarf_dump_path=explicit_dump,
+        )
 
         assert generator._resolve_dwarf_dump_path() == explicit_dump
 
@@ -37,7 +42,9 @@ class TestDwarfGenerator:
         env_dump.write_bytes(b"dump")
         monkeypatch.setenv("DDON_DWARF_DUMP_PATH", str(env_dump))
 
-        generator = DwarfGenerator(elf_path, exhaustive_search=True)
+        generator = DwarfGenerator(
+            elf_path, session_factory=ElfDwarfSession, exhaustive_search=True
+        )
 
         assert generator._resolve_dwarf_dump_path() == env_dump
 
@@ -52,7 +59,9 @@ class TestDwarfGenerator:
         sibling_dump.write_bytes(b"dump")
         monkeypatch.delenv("DDON_DWARF_DUMP_PATH", raising=False)
 
-        generator = DwarfGenerator(elf_path, exhaustive_search=True)
+        generator = DwarfGenerator(
+            elf_path, session_factory=ElfDwarfSession, exhaustive_search=True
+        )
 
         assert generator._resolve_dwarf_dump_path() == sibling_dump
 
@@ -64,10 +73,9 @@ class TestDwarfGenerator:
         # Mock the file operations
         mocker.patch("pathlib.Path.exists", return_value=True)
 
-        generator = DwarfGenerator(mock_path)
+        generator = DwarfGenerator(mock_path, session_factory=ElfDwarfSession)
 
         assert generator.elf_path == mock_path
-        assert generator.elf_file is None  # Not loaded yet
         assert generator.dwarf_info is None  # Not loaded yet
 
     @pytest.mark.unit
@@ -79,14 +87,13 @@ class TestDwarfGenerator:
         mocker.patch("pathlib.Path.exists", return_value=True)
         mocker.patch("pathlib.Path.mkdir", return_value=None)  # Mock cache directory creation
         mock_open_file = mocker.patch("builtins.open", mock_open())
-        # Patch ELFFile where it's actually used (in base_generator)
+        # Patch ELFFile where the infrastructure session constructs it.
         mocker.patch(
-            "ddon_dwarf_reconstructor.generators.base_generator.ELFFile",
+            "ddon_dwarf_reconstructor.infrastructure.elf_session.ELFFile",
             return_value=mock_elf_file,
         )
 
-        with DwarfGenerator(mock_path) as generator:
-            assert generator.elf_file is not None
+        with DwarfGenerator(mock_path, session_factory=ElfDwarfSession) as generator:
             assert generator.dwarf_info is not None
             # Verify new lazy loading components are initialized
             assert generator.type_resolver is not None
@@ -107,13 +114,13 @@ class TestDwarfGenerator:
         mocker.patch("pathlib.Path.exists", return_value=True)
         mocker.patch("builtins.open", mock_open())
         mocker.patch(
-            "ddon_dwarf_reconstructor.generators.base_generator.ELFFile",
+            "ddon_dwarf_reconstructor.infrastructure.elf_session.ELFFile",
             return_value=mock_elf_file,
         )
 
         mock_elf_file.get_dwarf_info.return_value.iter_CUs.return_value = [mock_compilation_unit]
 
-        with DwarfGenerator(mock_path) as generator:
+        with DwarfGenerator(mock_path, session_factory=ElfDwarfSession) as generator:
             result = generator.find_class("MtObject")
 
         assert result == (mock_compilation_unit, mock_die)
@@ -131,7 +138,7 @@ class TestDwarfGenerator:
         mocker.patch("pathlib.Path.exists", return_value=True)
         mocker.patch("builtins.open", mock_open())
         mocker.patch(
-            "ddon_dwarf_reconstructor.generators.base_generator.ELFFile",
+            "ddon_dwarf_reconstructor.infrastructure.elf_session.ELFFile",
             return_value=mock_elf_file,
         )
 
@@ -144,7 +151,7 @@ class TestDwarfGenerator:
             else:
                 child.get_parent = Mock(return_value=mock_die)
 
-        with DwarfGenerator(mock_path) as generator:
+        with DwarfGenerator(mock_path, session_factory=ElfDwarfSession) as generator:
             header_content = generator.generate_header("MtObject")
 
         # Verify header contains expected C++ elements
@@ -161,37 +168,13 @@ class TestDwarfGenerator:
         generator.type_resolver = Mock()
         generator.header_generator = Mock()
         generator.hierarchy_builder = Mock()
-
-        target_info = ClassInfo("Target", 16, [], [], [], [], [], [])
-        generator.find_class = Mock(return_value=(Mock(), Mock()))
-        generator.is_namespace = Mock(return_value=False)
-        generator._expand_typedef_search = Mock()
-        generator._build_hierarchy_with_timing = Mock(
-            return_value=(
-                {"Target": target_info},
-                ["Target"],
-            )
-        )
-        generator._validate_hierarchy = Mock(return_value=True)
-        generator._collect_typedefs_and_packing = Mock(return_value={})
-        generator.header_generator.generate_single_file_hierarchy_header.return_value = "header"
+        generator.workflow = Mock()
+        generator.workflow.generate_header.return_value = "header"
 
         header = DwarfGenerator.generate_header(generator, "Target", include_metadata=False)
 
         assert header == "header"
-        generator._build_hierarchy_with_timing.assert_called_once_with(
-            "Target",
-            max_depth=10,
-            include_method_signatures=False,
-        )
-        generator.header_generator.generate_single_file_hierarchy_header.assert_called_once_with(
-            {"Target": target_info},
-            ["Target"],
-            "Target",
-            typedefs={},
-            include_metadata=False,
-            guard_suffix="_H",
-        )
+        generator.workflow.generate_header.assert_called_once_with("Target", False)
 
     @pytest.mark.unit
     def test_no_dwarf_info_error(self, mocker):
@@ -205,10 +188,13 @@ class TestDwarfGenerator:
         mocker.patch("pathlib.Path.exists", return_value=True)
         mocker.patch("builtins.open", mock_open())
         mocker.patch(
-            "ddon_dwarf_reconstructor.generators.base_generator.ELFFile", return_value=mock_elf
+            "ddon_dwarf_reconstructor.infrastructure.elf_session.ELFFile", return_value=mock_elf
         )
 
-        with pytest.raises(ValueError, match="No DWARF info found"), DwarfGenerator(mock_path):
+        with (
+            pytest.raises(ValueError, match="No DWARF info found"),
+            DwarfGenerator(mock_path, session_factory=ElfDwarfSession),
+        ):
             # This should raise before we can do anything with the generator
             pass
 
@@ -220,9 +206,26 @@ class TestDwarfGenerator:
         # Mock the open function to raise FileNotFoundError
         mocker.patch("builtins.open", side_effect=FileNotFoundError("File not found"))
 
-        generator = DwarfGenerator(mock_path)  # Constructor doesn't check existence
+        generator = DwarfGenerator(mock_path, session_factory=ElfDwarfSession)
 
         # The error should occur when entering the context manager
         with pytest.raises(FileNotFoundError), generator:
             # Should not reach here due to file not found
             pass
+
+    @pytest.mark.unit
+    def test_failed_entry_closes_open_handle(self, mocker) -> None:
+        handle = Mock()
+        mocker.patch("builtins.open", return_value=handle)
+        mocker.patch(
+            "ddon_dwarf_reconstructor.infrastructure.elf_session.ELFFile",
+            side_effect=RuntimeError("invalid ELF"),
+        )
+
+        with (
+            pytest.raises(RuntimeError, match="invalid ELF"),
+            DwarfGenerator(Path("broken.elf"), session_factory=ElfDwarfSession),
+        ):
+            pass
+
+        handle.close.assert_called_once_with()

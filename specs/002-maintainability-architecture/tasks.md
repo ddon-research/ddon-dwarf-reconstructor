@@ -3,7 +3,7 @@
 ## Baseline and tooling
 
 - [x] T001 Capture fixture and real-artifact output manifests outside source control.
-- [x] T002 Add typed generation/evidence contracts and compatibility tests.
+- [x] T002 Add typed generation/evidence contracts and focused behavior tests.
 - [x] T003 Add structure and complexity checks plus the pinned ArchUnitPython architecture suite
   with positive, negative-control, and empty-selector tests.
 - [x] T004 Add Hypothesis, pytest-regressions, and pinned Prospector dev tooling.
@@ -20,7 +20,7 @@
 ## Infrastructure and tests
 
 - [x] T011 Split cache/index/dump/exporter/CLI responsibilities behind ports.
-- [x] T012 Remove forbidden legacy-layer imports, move concrete wiring to the composition root,
+- [x] T012 Remove forbidden layer imports, move concrete wiring to the composition root,
   and add the executable architecture policy.
 - [x] T013 Reorganize oversized tests and extract typed DIE factories.
 - [x] T014 Add missing parser, renderer, cache, CLI, exporter, and failure-path tests.
@@ -32,5 +32,5 @@
 - [x] T017 Run unit, full, static, coverage, compiler, real-artifact, and performance tiers.
 - [x] T018 Update architecture, testing, README, CI, and Spec Kit documentation.
 
-All unit, non-performance, static, fixture, compatibility, cold-index, warm
+All unit, non-performance, static, fixture, cold-index, warm
 real-artifact, and performance tiers have been executed successfully.

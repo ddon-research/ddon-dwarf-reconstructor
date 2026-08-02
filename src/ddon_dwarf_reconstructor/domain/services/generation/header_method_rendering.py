@@ -1,4 +1,4 @@
-"""Focused operations extracted from the public compatibility façade."""
+"""Method rendering operations."""
 
 from __future__ import annotations
 
@@ -147,6 +147,8 @@ class HeaderMethodRenderingMixin:
     def _method_prefix(method: MethodInfo) -> str:
         """Return static/virtual method declaration qualifiers."""
         qualifiers = []
+        if method.is_noreturn:
+            qualifiers.append("[[noreturn]]")
         if method.is_static:
             qualifiers.append("static")
         if method.is_virtual and not method.is_static:

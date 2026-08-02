@@ -1,4 +1,4 @@
-"""Focused operations extracted from the public compatibility façade."""
+"""Member rendering operations."""
 
 from __future__ import annotations
 
@@ -146,7 +146,12 @@ class HeaderMemberRenderingMixin:
         lines = [
             f"// {class_info.name} - DWARF Information:",
             f"// - Size: {class_info.byte_size} bytes",
-            f"// - DIE Offset: 0x{class_info.die_offset:08x}",
+            "// - DIE Offset: "
+            + (
+                f"0x{class_info.die_offset:08x}"
+                if class_info.die_offset is not None
+                else "unavailable"
+            ),
         ]
         if self.class_parser and class_info.name in self.class_parser.timed_out_symbols:
             lines.append(

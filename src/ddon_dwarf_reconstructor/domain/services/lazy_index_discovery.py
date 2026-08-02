@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ...core.dwarf import DwarfCompilationUnit, DwarfEntry, decode_dwarf_string
 from ...core.observability import get_logger
 from ..models.dwarf.tag_registry import DwarfTagRegistry
 from .lazy_index_context import LazyIndexContext
@@ -21,8 +21,7 @@ class LazyIndexDiscoveryMixin:
 
     @staticmethod
     def _extract_symbol_name(name_attr: Any) -> str:
-        value = name_attr.value
-        return value.decode("utf-8") if isinstance(value, bytes) else str(value)
+        return decode_dwarf_string(name_attr.value)
 
     def _process_die_symbol(
         self: LazyIndexContext, die: DwarfEntry, cu_offset: int | None = None

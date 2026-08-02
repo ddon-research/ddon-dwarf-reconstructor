@@ -1,0 +1,30 @@
+{
+  "created": 1785702537.705079,
+  "cu_offset_to_symbols": {
+    "3229": [
+      "MtObject"
+    ]
+  },
+  "last_updated": 1785702537.705792,
+  "offset_to_symbol": {
+    "34029": "MtObject"
+  },
+  "source_fingerprint": null,
+  "symbol_definitions": {
+    "MtObject": [
+      {
+        "complete": true,
+        "cu_offset": 3229,
+        "die_offset": 34029,
+        "score": 10008
+      }
+    ]
+  },
+  "symbol_to_cu_offset": {
+    "MtObject": 3229
+  },
+  "symbol_to_offset": {
+    "MtObject": 34029
+  },
+  "version": "5.0"
+}

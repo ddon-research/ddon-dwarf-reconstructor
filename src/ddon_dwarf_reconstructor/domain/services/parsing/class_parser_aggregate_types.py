@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ....core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ....core.dwarf import DwarfCompilationUnit, DwarfEntry, decode_dwarf_string
 from ....core.observability import get_logger
 from ...models.dwarf import (
     EnumeratorInfo,
@@ -27,11 +27,13 @@ class ClassParserAggregateTypesMixin:
         """
         # Get enum name
         name_attr = enum_die.attributes.get("DW_AT_name")
-        enum_name = name_attr.value.decode("utf-8") if name_attr else "unknown_enum"
+        enum_name = (
+            decode_dwarf_string(name_attr.value) if name_attr is not None else "unknown_enum"
+        )
 
         # Get enum size
         size_attr = enum_die.attributes.get("DW_AT_byte_size")
-        byte_size = size_attr.value if size_attr else 4
+        byte_size = size_attr.value if size_attr is not None else 4
 
         # Parse enumerators
         enumerators = []
@@ -52,24 +54,35 @@ class ClassParserAggregateTypesMixin:
     ) -> EnumeratorInfo | None:
         """Parse an enumerator value."""
         name_attr = enumerator_die.attributes.get("DW_AT_name")
-        if not name_attr:
+        if name_attr is None:
             return None
-        enumerator_name = name_attr.value.decode("utf-8")
+        enumerator_name = decode_dwarf_string(name_attr.value)
 
         value_attr = enumerator_die.attributes.get("DW_AT_const_value")
-        if not value_attr:
+        if value_attr is None:
             return None
 
-        value = value_attr.value
-        if isinstance(value, bytes):
-            value = int.from_bytes(value, byteorder="little", signed=True) if len(value) <= 8 else 0
-        elif not isinstance(value, int):
-            try:
-                value = int(value)
-            except ValueError, TypeError:
-                value = 0
+        value = self._enumerator_value(value_attr.value)
+        if value is None:
+            logger.warning("Ignoring invalid value for enumerator %s", enumerator_name)
+            return None
 
         return EnumeratorInfo(name=enumerator_name, value=value)
+
+    @staticmethod
+    def _enumerator_value(raw_value: object) -> int | None:
+        if isinstance(raw_value, int):
+            return raw_value
+        if isinstance(raw_value, bytes):
+            if not 0 < len(raw_value) <= 8:
+                return None
+            return int.from_bytes(raw_value, byteorder="little", signed=True)
+        if isinstance(raw_value, str):
+            try:
+                return int(raw_value, 0)
+            except ValueError, TypeError:
+                return None
+        return None
 
     def parse_nested_structure(
         self: ClassParserContext, struct_die: DwarfEntry
@@ -85,16 +98,12 @@ class ClassParserAggregateTypesMixin:
         # Get structure name (can be None for anonymous structs)
         name_attr = struct_die.attributes.get("DW_AT_name")
         struct_name = None
-        if name_attr:
-            struct_name = (
-                name_attr.value.decode("utf-8")
-                if isinstance(name_attr.value, bytes)
-                else str(name_attr.value)
-            )
+        if name_attr is not None:
+            struct_name = decode_dwarf_string(name_attr.value)
 
         # Get structure size
         size_attr = struct_die.attributes.get("DW_AT_byte_size")
-        struct_size = size_attr.value if size_attr else 0
+        struct_size = size_attr.value if size_attr is not None else 0
 
         # Parse members
         members = []
@@ -122,11 +131,11 @@ class ClassParserAggregateTypesMixin:
         """
         # Get union name (might be None for anonymous unions)
         name_attr = union_die.attributes.get("DW_AT_name")
-        union_name = name_attr.value.decode("utf-8") if name_attr else ""
+        union_name = decode_dwarf_string(name_attr.value) if name_attr is not None else ""
 
         # Get union size
         size_attr = union_die.attributes.get("DW_AT_byte_size")
-        union_size = size_attr.value if size_attr else 0
+        union_size = size_attr.value if size_attr is not None else 0
 
         # Parse members and nested structs
         members = []
@@ -157,20 +166,17 @@ class ClassParserAggregateTypesMixin:
     ) -> str | None:
         """Get declaration file name from line program."""
         decl_file_attr = die.attributes.get("DW_AT_decl_file")
-        if not decl_file_attr:
+        if decl_file_attr is None:
             return None
 
         try:
             line_program = self.dwarf_info.line_program_for_CU(cu)
             file_index = decl_file_attr.value
-            if line_program and 0 < file_index <= len(line_program.header.file_entry):
+            if line_program is not None and 0 < file_index <= len(line_program.header.file_entry):
                 file_entry = line_program.header.file_entry[decl_file_attr.value - 1]
-                return (
-                    file_entry.name.decode("utf-8")
-                    if hasattr(file_entry.name, "decode")
-                    else str(file_entry.name)
-                )
-        except Exception:
+                return decode_dwarf_string(file_entry.name)
+        except (AttributeError, IndexError, KeyError, RuntimeError, TypeError, ValueError) as error:
+            logger.debug("Unable to resolve declaration file for CU %s: %s", cu.cu_offset, error)
             pass
 
         return None

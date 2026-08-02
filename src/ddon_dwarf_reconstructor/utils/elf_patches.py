@@ -1,8 +1,9 @@
-"""Compatibility patches for PS4-specific pyelftools ELF sections."""
+"""PS4 ELF normalization patches for pyelftools."""
 
 from __future__ import annotations
 
 from collections.abc import Callable, Container
+from threading import RLock
 from typing import Any, cast
 
 from elftools.common.exceptions import ELFError
@@ -10,14 +11,30 @@ from elftools.elf import elffile
 from elftools.elf.dynamic import DynamicSection
 from elftools.elf.sections import NullSection, Section
 
+_PATCH_MARKER = "_ddon_ps4_patch"
+_PATCH_LOCK = RLock()
+
 
 def patch_pyelftools_for_ps4() -> None:
-    """Apply narrowly scoped PS4 section and dynamic-linker fallbacks."""
-    original_make_section = elffile.ELFFile._make_section
-    original_get_section = elffile.ELFFile.get_section
-    elffile.ELFFile._make_section = _make_section_patch(original_make_section)  # type: ignore[method-assign]
-    elffile.ELFFile.get_section = _get_section_patch(original_get_section)  # type: ignore[method-assign]
-    DynamicSection.__init__ = _dynamic_init_patch()  # type: ignore[method-assign]
+    """Install PS4 section handling once for the process."""
+    with _PATCH_LOCK:
+        _patch_method(elffile.ELFFile, "_make_section", _make_section_patch)
+        _patch_method(elffile.ELFFile, "get_section", _get_section_patch)
+        _patch_method(DynamicSection, "__init__", lambda _original: _dynamic_init_patch())
+
+
+def _patch_method(
+    target: type[Any],
+    name: str,
+    factory: Callable[[Callable[..., Any]], Callable[..., Any]],
+) -> None:
+    original = getattr(target, name, None)
+    if original is None or getattr(original, _PATCH_MARKER, None) is True:
+        return
+    patched = factory(original)
+    setattr(patched, _PATCH_MARKER, True)
+    cast(Any, patched)._ddon_original = original
+    setattr(target, name, patched)
 
 
 def _make_section_patch(original: Callable[..., Any]) -> Callable[..., Any]:

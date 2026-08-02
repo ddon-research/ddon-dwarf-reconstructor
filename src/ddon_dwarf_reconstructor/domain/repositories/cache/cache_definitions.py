@@ -61,6 +61,14 @@ class CacheDefinitionsMixin:
         result = self.data["symbol_to_cu_offset"].get(symbol_name)
         return int(result) if result is not None else None
 
+    def get_symbol_completeness(self: CacheContext, symbol_name: str) -> bool | None:
+        """Return the completeness of the selected definition, when recorded."""
+        definition = self._get_best_definition(symbol_name)
+        if definition is None:
+            return None
+        value = definition.get("complete")
+        return value if isinstance(value, bool) else None
+
     def add_symbol_cu_mapping(
         self: CacheContext,
         symbol_name: str,
@@ -181,7 +189,7 @@ class CacheDefinitionsMixin:
             return None
 
         # Prefer complete definitions with highest score
-        complete_defs = [d for d in definitions if d.get("complete", True)]
+        complete_defs = [d for d in definitions if d.get("complete") is True]
         if complete_defs:
             return max(complete_defs, key=lambda d: d.get("score", 0))
 

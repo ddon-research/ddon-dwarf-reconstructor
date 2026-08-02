@@ -3,7 +3,8 @@
 ## Phase 0: Baseline and contracts
 
 - [x] Capture fixture and real PS4 header manifests before refactoring.
-- [x] Add typed generation/evidence contracts without changing public façades.
+- [x] Add typed generation/evidence contracts and identify the coordinator seams
+  that should be removed in the next slice.
 - [x] Record current output, cache, coverage, and performance observations.
 
 ## Phase 1: Quality gates
@@ -19,13 +20,13 @@
 - [x] Centralize definition selection, method evidence, source identity, type
   classification, and special-header rendering.
 - [x] Split class parsing, type resolution, hierarchy building, and header rendering
-  behind compatibility façades.
+  into focused services; remove duplicate indirection in the next architecture slice.
 - [x] Replace repeated generation workflows with one typed application workflow.
 
 ## Phase 3: Infrastructure and test reorganization
 
 - [x] Split cache, index, compressed-dump, exporter, Orbis, and CLI responsibilities.
-- [x] Move or re-export legacy utilities using package-relative imports.
+- [x] Move utility policy to its owning package and update in-repository imports.
 - [x] Mirror tests to the owning package and extract typed fixture builders.
 
 ## Phase 4: Convergence

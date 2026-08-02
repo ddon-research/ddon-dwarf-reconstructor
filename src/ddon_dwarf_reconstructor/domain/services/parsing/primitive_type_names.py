@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ....core.dwarf import DwarfEntry
+from ....core.dwarf import DwarfEntry, decode_dwarf_string
 from ....core.observability import get_logger
 from .type_resolver_context import TypeResolverContext
 
@@ -88,8 +88,7 @@ class PrimitiveTypeNamesMixin:
         name_attr = type_die.attributes.get("DW_AT_name")
         if name_attr is None:
             return None
-        value = name_attr.value
-        return value.decode("utf-8") if isinstance(value, bytes) else str(value)
+        return decode_dwarf_string(name_attr.value)
 
     def _extract_base_type(self: TypeResolverContext, type_name: str) -> str:
         """Remove qualifiers, array dimensions, and indirection from a type name."""

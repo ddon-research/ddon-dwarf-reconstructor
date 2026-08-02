@@ -7,7 +7,7 @@ Dragon's Dogma Online research and modding.
 
 - Complete type dependency and inheritance resolution across compilation units.
 - PS4 DWARF 3/4 and PS3 DWARF 2 platform detection.
-- Deterministic multi-file or legacy single-file header generation.
+- Deterministic single-file and multi-file header generation.
 - Persistent source-bound symbol caches and streaming compressed-DWARF indexes.
 - Knowledge-graph exports with explicit producer and Orbis evidence provenance.
 - Typed CLI, locked uv dependencies, Ruff, Pyrefly, deptry, and just automation.
@@ -34,10 +34,10 @@ ddon-dwarf-reconstructor --help
 The installed tool contains the runtime package and dependencies only; repository quality and
 SonarQube maintenance commands remain checkout-local `just` or Python-module workflows.
 
-The committed `[tool.pyrefly]` sections are the curated result of the Pyrefly migration. If a
-fresh checkout reports a legacy editor mode, run `uv run pyrefly init` once against its
-`pyproject.toml`, then retain the explicit project configuration and use the recommended Pyrefly
-VS Code extension. Normal validation is `uv run just type-check`.
+The committed `[tool.pyrefly]` sections are the authoritative project configuration. If a fresh
+checkout has no Pyrefly section, run `uv run pyrefly init pyproject.toml` once, review the result,
+and retain the explicit configuration with the recommended Pyrefly VS Code extension. Normal
+validation is `uv run just type-check`.
 
 The standalone specification pipeline has its own dependency boundary:
 
@@ -107,6 +107,18 @@ dump in one streaming pass. Subsequent fresh processes reuse source-bound indexe
 caches. Preserve these artifacts locally; routine cleanup must not delete validated indexes or
 exports. The full PS4 dump is more than 30 GB expanded, so real-asset work is opt-in and should use
 the local acceptance paths documented in [TESTING.md](docs/TESTING.md).
+
+Runtime DWARF settings are validated at startup:
+
+```text
+DWARF_DIE_CACHE_SIZE       positive integer, default 10000
+DWARF_TYPE_CACHE_SIZE      positive integer, default 5000
+DWARF_MAX_SEARCH_TIME_MS   positive milliseconds, default 1000
+```
+
+ELF/DWARF handles are owned by one session boundary. Generated headers are staged and committed
+through a source-independent atomic bundle publisher with `header-bundle.manifest.json`; failed
+publication restores the previous bundle.
 
 ## Development automation
 

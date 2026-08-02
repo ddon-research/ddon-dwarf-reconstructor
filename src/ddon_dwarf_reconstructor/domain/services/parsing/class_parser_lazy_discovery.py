@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from ....core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ....core.dwarf import DwarfCompilationUnit, DwarfEntry, compilation_unit_length
 from ....core.observability import get_logger
+from ..search_result import SearchStatus
 from .class_parser_context import ClassParserContext
 
 logger = get_logger(__name__)
@@ -32,6 +33,12 @@ class ClassParserLazyDiscoveryMixin:
         self: ClassParserContext, class_name: str
     ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         assert self.lazy_index is not None
+        completeness = self.lazy_index.persistent_cache.get_symbol_completeness(class_name)
+        if completeness is False:
+            logger.warning(
+                "Cached entry for %s is incomplete; repeating bounded search", class_name
+            )
+            return None
         offset = self.lazy_index.find_symbol_offset(class_name)
         if offset is None:
             return None
@@ -71,14 +78,27 @@ class ClassParserLazyDiscoveryMixin:
         self: ClassParserContext, class_name: str
     ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         assert self.lazy_index is not None
-        offset = self.lazy_index.targeted_symbol_search(class_name)
-        if offset is None:
-            logger.warning("Class %s not found via lazy loading", class_name)
+        search = self.lazy_index.targeted_symbol_search(class_name)
+        if search.die_offset is None:
+            logger.warning(
+                "Class %s unavailable from lazy loading (%s): %s",
+                class_name,
+                search.status.value,
+                "; ".join(search.diagnostics),
+            )
             return None
+        offset = search.die_offset
         result = self._find_die_and_cu_by_offset(offset)
         if result is None:
             return None
         cu, die = result
+        if search.status is not SearchStatus.COMPLETE:
+            logger.warning(
+                "Targeted search for %s returned %s evidence at offset 0x%x",
+                class_name,
+                search.status.value,
+                offset,
+            )
         if "DW_AT_declaration" in die.attributes:
             logger.warning(
                 "Targeted search found forward declaration for %s at 0x%x", class_name, offset
@@ -132,10 +152,8 @@ class ClassParserLazyDiscoveryMixin:
 
     @staticmethod
     def _offset_in_cu(cu: DwarfCompilationUnit, offset: int) -> bool:
-        unit_length = cu["unit_length"]
-        return (
-            isinstance(unit_length, int) and cu.cu_offset <= offset < cu.cu_offset + unit_length + 4
-        )
+        unit_length = compilation_unit_length(cu)
+        return cu.cu_offset <= offset < cu.cu_offset + unit_length + 4
 
     @staticmethod
     def _find_die_in_cu(cu: DwarfCompilationUnit, offset: int) -> DwarfEntry | None:

@@ -122,7 +122,7 @@ class DependencyExtractor:
 
         for offset in offsets:
             die = self.dwarf_index.get_die_by_offset(offset)
-            if not die:
+            if die is None:
                 logger.debug(f"Could not resolve DIE at offset 0x{offset:x}")
                 continue
 
@@ -150,7 +150,7 @@ class DependencyExtractor:
             Type name if found, None otherwise
         """
         die = self.dwarf_index.get_die_by_offset(offset)
-        if not die:
+        if die is None:
             return None
 
         return DIETypeClassifier.get_type_name(die)

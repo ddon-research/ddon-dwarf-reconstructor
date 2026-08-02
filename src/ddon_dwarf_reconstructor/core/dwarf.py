@@ -47,6 +47,28 @@ class DwarfCompilationUnit(Protocol):
     def __getitem__(self, key: str) -> Any: ...
 
 
+def compilation_unit_length(cu: DwarfCompilationUnit) -> int:
+    """Read the normalized CU length at the DWARF boundary."""
+    header = cu.header
+    raw_length = (
+        header.get("unit_length")
+        if isinstance(header, Mapping)
+        else getattr(header, "unit_length", None)
+    )
+    if not isinstance(raw_length, int):
+        raise ValueError(f"Compilation unit 0x{cu.cu_offset:x} has no integer unit_length")
+    return raw_length
+
+
+def decode_dwarf_string(value: Any, default: str = "") -> str:
+    """Decode a DWARF string attribute without allowing malformed bytes to escape."""
+    if value is None:
+        return default
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
 class DwarfEntry(Protocol):
     """A debug-information entry as seen through the core port."""
 

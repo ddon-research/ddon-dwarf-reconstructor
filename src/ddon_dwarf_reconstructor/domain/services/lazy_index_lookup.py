@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import cast
 
-from ...core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ...core.dwarf import DwarfCompilationUnit, DwarfEntry, compilation_unit_length
 from ...core.observability import get_logger
 from .lazy_index_context import LazyIndexContext
 
@@ -27,7 +27,7 @@ class LazyIndexLookupMixin:
         return die
 
     def _find_die_at_offset(self: LazyIndexContext, offset: int) -> DwarfEntry | None:
-        """Use pyelftools' indexed reference lookup with a compatibility fallback."""
+        """Use pyelftools' indexed reference lookup with a bounded direct scan."""
         try:
             if not self.dwarf_info:
                 logger.error("DWARF info is None!")
@@ -39,7 +39,7 @@ class LazyIndexLookupMixin:
                 logger.debug("Found DIE at offset 0x%x: %s", offset, die.tag)
                 return die
             logger.warning(
-                "Indexed lookup returned offset %r for 0x%x; using compatibility scan",
+                "Indexed lookup returned offset %r for 0x%x; using bounded direct scan",
                 die.offset,
                 offset,
             )
@@ -51,7 +51,7 @@ class LazyIndexLookupMixin:
     def _scan_die_at_offset(self: LazyIndexContext, offset: int) -> DwarfEntry | None:
         """Scan only the CU whose bounds contain the requested offset."""
         for cu in self.dwarf_info.iter_CUs():
-            if cu.cu_offset <= offset < cu.cu_offset + cu["unit_length"] + 4:
+            if cu.cu_offset <= offset < cu.cu_offset + compilation_unit_length(cu) + 4:
                 return self._find_die_in_cu(cu, offset)
         return None
 

@@ -120,3 +120,173 @@ public:
 0x0001328f:       NULL
 
 ```
+
+
+DONE: Upgrade Python to 3.14.6, I already installed it via uv. Enforce it at all levels.
+--
+DONE: 
+Review the tooling setup and check for best practices outlined here:
+[cookiecutter/cookiecutter](https://github.com/cookiecutter/cookiecutter)
+[audreyfeldroy/cookiecutter-pypackage](https://github.com/audreyfeldroy/cookiecutter-pypackage)
+[casey/just](https://github.com/casey/just)
+[facebook/pyrefly](https://github.com/facebook/pyrefly)
+[fastapi/typer](https://github.com/fastapi/typer)
+[osprey-oss/deptry](https://github.com/osprey-oss/deptry)
+
+Specifically, I want you to review our existing CLI setup and check how to migrate to typer. We are mainly a CLI-based application. Improving the interface and reducing boilerplate is important, similar to what you can do with Picocli in Java.
+I also want you to check our mypy-based setup and check how to migrate to pyrefly. VSCode seems to also report that we are running Pyrefly already but in Legacy mode and that we need to run init. We should improve that.
+Check how "just" can improve the existing setup and improve automation or if it competes with anything existing.
+Check other best practices in the cookiecutter setup since this standardizes the project setup.
+Include dependency quality checks via deptry.
+Afterwards, review the current copilot and codex instructions and revalidate the tooling loop for changes. Update the python instructions as well.
+--
+DONE: 
+Review whether the scripts folder is really needed. I think we should stick to standard CLI tooling or wrap it with just/Python code. This scripts-folder pattern goes against our new approach, at the very least the random ps1 powershell scripts do.
+Also make sure the reconstructor can be installed as a uv tool.
+--
+DONE: 
+Review improvements to the existing hexagonal architecture by deriving patterns and best practices from these sources:
+Reference:
+https://en.wikipedia.org/wiki/Hexagonal_architecture_(software)
+https://alistair.cockburn.us/hexagonal-architecture
+https://wiki.c2.com/?HexagonalArchitecture
+https://wiki.c2.com/?PortsAndAdaptersArchitecture
+https://github.com/dohorn/java/blob/f18fdad9f97a0608b6a7d5b19a5c392859bacaea/modules/ROOT/pages/architecture/hexagonal_architecture.adoc
+Afterwards refactor and replace the custom architectural unit tests using something that reduces boilerplate, decide between:
+https://github.com/zyskarch/pytestarch
+https://github.com/LukasNiessen/ArchUnitPython
+or some other alternative.
+Ensure hexagonal architecture is enforced.
+--
+WIP:
+Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
+Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
+
+Review the whole codebase and identify subtle bugs and false or brittle assumptions.
+Review the code base and identify a refactoring plan from this perspective: remove any hints towards backwards compatibility and legacy-related language. Clean architecture is more important, we don't care about breaking changes. Remove abstractions that only exist to avoid refactoring. Replace any helpers that only exist because we haven't introduced the right patterns yet.
+
+Afterwards, review the current copilot, codex, python instructions and revalidate the tooling loop for changes. Update documentation, specs and the knowledge base.
+Derive a plan first and refactor the code aggressively.
+--
+We went through large refactoring. Clean all artifact caches and temporary and intermediate files. Then regenerate them all to ensure we have not introduced any regressions by accident. It might make sense to compare the previous results and fil.es and keep them in an archive before deleting them and until we are sure nothing is broken.
+--
+TODO:
+Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
+Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
+
+Review the testing setup. Follow the testing pyramid. Do we have enough functional and non-functional tests? We should not just rely on unit tests and technical tests.
+We need to have appropriate well-understood regression and integration tests. We should make sure we categorize our tests based on the purpose they fulfill, e.g. performance tests should be marked as such. We should make sure critical integration tests are not opt-in but are actually part of the testing loop, regardless of slowness.
+References:
+https://www.tdda.info/tagging-pytest-tests
+https://realpython.com/pytest-python-testing/
+https://www.geeksforgeeks.org/python/grouping-the-tests-in-pytest/
+https://medium.com/homeaway-tech-blog/write-better-python-with-hypothesis-5b31ac268b69
+https://hypothesis.readthedocs.io/en/latest/quickstart.html
+https://realpython.com/ref/best-practices/code-testing/
+https://docs.python-guide.org/writing/tests/
+https://martinfowler.com/articles/practical-test-pyramid.html
+https://www.geeksforgeeks.org/python/python-pyramid-testing/
+https://realpython.com/ref/software-engineering-glossary/test-pyramid/
+
+Afterwards, review the current copilot, codex, python instructions and revalidate the tooling loop for changes. Update documentation, specs and the knowledge base.
+Derive a plan first and refactor the code aggressively.
+--
+TODO:
+Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
+Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
+
+Identify ways to improve observability, traceability, debuggability, instrumanetability by choosing the right logging setup, framework and approach. I am partial towards anything that can support things like open telemetry in the future and are extensible and will support JSON and end-to-end tracing and support rich exception stack traces with line references and nestedness like in Java.
+As the application gets more complex we need better logs that help us find bugs faster in a pin-pointed way. Structlog seems to support this.
+Check the references:
+https://www.highlight.io/blog/5-best-python-logging-libraries
+https://www.dash0.com/guides/python-logging-libraries
+https://docs.python.org/3/library/logging.html
+https://docs.python.org/3/library/traceback.html
+https://github.com/hynek/structlog
+https://www.structlog.org/en/stable/
+https://www.structlog.org/en/stable/getting-started.html
+https://realpython.com/ref/best-practices/logging/
+https://betterstack.com/community/guides/logging/python/python-logging-best-practices/
+https://www.bugsink.com/blog/capture-stacktrace-no-exception/
+https://docs.python.org/3/howto/logging.html
+https://stackoverflow.com/questions/63404899/combining-python-trace-information-and-logging
+Review the whole codebase and check for spots where we should add warning, debug and error logs. Some simple info logs to understand pipeline/stage progress is also needed.
+Associated with that is good exception handling. Identify gaps and consider refactoring our setup so far.
+References:
+https://docs.python.org/3/tutorial/errors.html
+https://docs.python.org/3/library/exceptions.html
+https://www.geeksforgeeks.org/python/python-exception-handling/
+https://realpython.com/python-exceptions/
+https://blog.miguelgrinberg.com/post/the-ultimate-guide-to-error-handling-in-python
+https://realpython.com/ref/best-practices/exception-handling/
+https://jerrynsh.com/python-exception-handling-patterns-and-best-practices/
+https://mimo.org/glossary/python/error-handling
+
+
+Highest priority is on improving existing critical code paths with appropriate logging statements and exception handling.
+Structured logs that also expose input/output and data objects for tracing or optional performance would be ideal.
+But be careful not to be too verbose and spam logs, otherwise they will be hard to digest and understand.
+
+Afterwards, review the current copilot, codex, python instructions and revalidate the tooling loop for changes. Update documentation, specs and the knowledge base.
+Derive a plan first and refactor the code aggressively.
+--
+TODO:
+Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
+Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
+
+The PS4 ELF binary likely uses some subset/form of DWARF2-DWARF4 variation, since the game was developed for PS4 which is based on freebsd and it ran on earlier versions of the PS4 up until roughly 2018. This should be verifiable by inspecting the headers and/or checking on the existing LLVM-based DWARF dump/export.
+Check our current conceptual assumptions and usage of DWARF symbols against the newly exported DWARF2, DWARF3, and DWARF4 specifications. These are large technical specifications, it might be necessary to first build an index or further extract information out of these.
+Validate gaps and wrong relationships or understanding. Accuracy and correctness is paramount. While the DWARF data may be game-specific, the underlying DWARF structure is well-defined and ultimately related to the original C++ code base which is why the loop back check with MSVC is important on the final generated files. We are essentially writing a converter in this pipeline: original C++ (unavailable) -> embedded DWARF debug data -> binary PS4 ELF file -> parse assembly + DWARF AST -> generate C++ header stubs -> reverse engineer methods -> recompile code (final goal)
+Thus, getting the DWARF parsing correct is important.
+
+Afterwards, review the current copilot, codex, python instructions and revalidate the tooling loop for changes. Update documentation, specs and the knowledge base.
+Derive a plan first and refactor the code aggressively.
+--
+Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
+Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
+
+More aggressively incorporate tools from the LLVM and Orbis toolchain and other common compilation tools that would generate useful one-time exports/dumps. Since these are mostly well-established command line tools, they should all have valuable --help outputs.
+Check the Orbis tools here: D:\SCE\ORBIS SDKs\8.000\host_tools
+Check the LLVM tools in msys2: C:\msys64\ucrt64\bin
+Otherwise just build a custom Docker container with compose that includes useful debugging and probing toolchains for binary files.
+Refactor the code and adapt our ingestion/lookups with potential new metadata.
+
+Afterwards, review the current copilot, codex, python instructions and revalidate the tooling loop for changes. Update documentation, specs and the knowledge base.
+Derive a plan first and refactor the code aggressively.
+--
+TODO:
+Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
+Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
+
+Scan the entire codebase and documentation. Completely revamp the documentation approach. Introduce a wiki-like setup with a knowledge graph. I want to have a static site publishable to GitHub pages. Consider we need functional and technical documentation incl. high-level architecture and low-level solution approaches. Check out the following resources and derive the next best step. I am leaning toward zensical as tool with arc42-style docs for architecture and an overarching diataxis-style approach. Diagrams and visualizations should be generated with an as-code approach using mermaid. Not sure if flint fits in anywhere yet. Our specs should serve as a roadmap. Identify gaps, fill them based on the source code analysis and how things currently work and throw away all obsolete documentation.
+https://github.com/zensical/zensical
+https://zensical.org/docs/get-started/
+https://zensical.org/docs/publish-your-site/
+https://mermaid.ai/open-source/intro/index.html
+https://arc42.org/
+https://github.com/arc42/arc42-template/tree/master/EN
+https://diataxis.fr/
+https://github.com/evildmp/diataxis-documentation-framework
+
+Afterwards, review the current copilot, codex, python instructions and revalidate the tooling loop for changes. Update documentation, specs and the knowledge base.
+Derive a plan first and refactor the code aggressively.
+--
+TODO:
+Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
+Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
+
+Profile the application. The goal for now is collecting metrics and evidence. Check approaches outlined here and derive an action plan and a reusable pattern for the future whenever we want to profile the application again. Derive new specs based on the findings:
+https://daily.dev/blog/top-7-python-profiling-tools-for-performance/
+https://docs.python.org/3/library/profile.html
+https://github.com/joerick/pyinstrument
+https://docs.nersc.gov/development/languages/python/profiling-debugging-python/
+https://realpython.com/python-profiling/
+https://researchcomputing.princeton.edu/python-profiling
+https://rse.shef.ac.uk/pando-python/index.html
+https://github.com/python/pyperformance
+https://locust.io/
+https://www.browserstack.com/guide/python-performance-testing
+https://blog.sentry.io/python-performance-testing-a-comprehensive-guide/
+
+Afterwards, review the current copilot, codex, python instructions and revalidate the tooling loop for changes. Update documentation, specs and the knowledge base.
+Derive a plan first and refactor the code aggressively.

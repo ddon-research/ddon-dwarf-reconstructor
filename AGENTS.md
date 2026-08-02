@@ -12,7 +12,7 @@ unbounded in-memory intermediates. Preserve stable output ordering and source of
 - Run fast tests with `uv run just test-unit` and the locked quality gate with `uv run just check`.
 - Use `uv run ddon-dwarf-reconstructor` as the canonical unified Typer entry point. Generation uses
   `generate`, knowledge export uses `export-knowledge`, and durable maintenance is grouped under
-  `artifacts`. If the native launcher remains, test that it produces byte-identical exports.
+  `artifacts`. Other launchers are implementation details, not separate behavior contracts.
 - Real ELF tests are opt-in and must use explicit local paths. Never commit game binaries, dump
   files, generated headers, runtime caches, or credentials.
 - The inputs for an identified DDON build are immutable. Retain deterministic SQLite indexes,
@@ -21,6 +21,13 @@ unbounded in-memory intermediates. Preserve stable output ordering and source of
 - Key durable artifacts by source identity plus producer/schema/configuration identity, validate
   before reuse, and publish atomically. Routine cleanup must preserve them; make purge, repair, or
   rebuild narrowly targeted and explicit.
+- `SourceIdentityCatalog` is the shared source-binding implementation. A warm identity may reuse a
+  verified metadata key, while explicit verification rehashes the complete source; do not create
+  boundary-sampling or path-only identity schemes.
+- `SearchResult` is the contract for bounded targeted lookup. Preserve status and candidate
+  provenance; partial results are never complete evidence and must not be consumed as complete.
+- `ElfDwarfSession` owns the opened ELF/DWARF graph and one-time PS4 normalization. Generated
+  headers go through `AtomicHeaderPublisher`, which writes a manifest and rolls back failed bundles.
 
 ## Local acceptance artifact
 
@@ -49,16 +56,17 @@ ordering.
   `pyelftools`, SQLite, zstd, Orbis/process integration, and filesystem adapters. Only composition
   roots construct concrete infrastructure adapters.
 - Prefer typed internal contracts such as `GenerationRequest`, `HeaderBundle`,
-  `DefinitionCandidate`, and type/declarator models. Preserve public compatibility façades and
-  thin re-exports when callers may rely on existing imports or methods.
+  `DefinitionCandidate`, and type/declarator models. Breaking changes are allowed: update all
+  in-repository callers, tests, and contracts together. Old import and method shapes are not
+  design constraints.
 - Keep one canonical implementation for definition selection, source identity, primitive and
   excluded-type classification, method evidence, special-header rendering, and array/declarator
-  parsing. Do not reimplement policy in legacy generators or adapters.
+  parsing. Do not reimplement policy in alternate generators or adapters.
 - Use explicit `is not None` checks for offsets and other optional evidence; offset `0` is valid.
   Convert expected failures into specific exceptions or structured diagnostics rather than
   swallowing them with broad `except` clauses.
 - New imports must be package-relative. Do not import the package through the repository's `src`
-  directory, and do not make domain code aware of compatibility or infrastructure details.
+  directory, and do not make domain code aware of launchers or infrastructure details.
 
 ## Test and regression discipline
 
@@ -75,8 +83,8 @@ ordering.
   modules each require at least 80% line coverage and 70% branch coverage; keep the explicit
   failure-mode branches tested rather than excluding them from measurement.
 - Every generation change must preserve qualified names, inheritance, field offsets, sizes, source
-  locations, DIE/CU provenance, deterministic ordering, cache formats, and source identity. Compare
-  canonical and compatibility entrypoints when both exist, in fresh and warm-cache processes.
+  locations, DIE/CU provenance, deterministic ordering, cache formats, and source identity. Validate
+  the canonical entry point and each intentional output mode in fresh and warm-cache processes.
 - Keep real-asset manifests and generated headers outside source control. Commit only deterministic
   manifests or small structured expectations that describe those external baselines.
 

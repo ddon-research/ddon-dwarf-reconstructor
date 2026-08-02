@@ -8,6 +8,7 @@ from ...core.dwarf import DwarfCompilationUnit, DwarfEntry, DwarfInfo
 from ..ports.cache import SymbolCachePort
 from ..repositories.cache import LRUCache
 from .definition_selection import DefinitionCandidate
+from .search_result import SearchResult, SearchStatus
 
 
 class LazyIndexContext(Protocol):
@@ -18,6 +19,7 @@ class LazyIndexContext(Protocol):
     die_cache: LRUCache
     type_cache: LRUCache
     _discovered_symbols: set[str]
+    search_timeout: float
 
     def find_symbol_offset(self, symbol_name: str) -> int | None: ...
 
@@ -39,7 +41,9 @@ class LazyIndexContext(Protocol):
         self, cu: DwarfCompilationUnit, target_types: set[str] | None = None
     ) -> int: ...
 
-    def targeted_symbol_search(self, symbol_name: str, timeout: float = 600.0) -> int | None: ...
+    def targeted_symbol_search(
+        self, symbol_name: str, timeout: float | None = None
+    ) -> SearchResult: ...
 
     def _search_timed_out(
         self, symbol_name: str, started_at: float, timeout: float, state: object
@@ -63,7 +67,18 @@ class LazyIndexContext(Protocol):
 
     def _ordered_cus(self, hint: int | None) -> list[DwarfCompilationUnit]: ...
 
-    def _finish_targeted_search(self, symbol_name: str, state: object) -> int | None: ...
+    def _finish_targeted_search(
+        self, symbol_name: str, state: object, started_at: float
+    ) -> SearchResult: ...
+
+    @staticmethod
+    def _result(
+        status: SearchStatus,
+        candidate: DefinitionCandidate | None,
+        state: object,
+        started_at: float,
+        *diagnostics: str,
+    ) -> SearchResult: ...
 
     def _search_cu_candidate(
         self,

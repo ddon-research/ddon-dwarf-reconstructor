@@ -25,6 +25,7 @@ class MethodInfo:
     is_volatile: bool = False
     ref_qualifier: str | None = None
     is_noexcept: bool = False
+    is_noreturn: bool = False
     is_pure_virtual: bool = False
     is_deleted: bool = False
     is_defaulted: bool = False

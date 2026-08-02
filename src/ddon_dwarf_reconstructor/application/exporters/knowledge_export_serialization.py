@@ -1,4 +1,4 @@
-"""Focused knowledge-export operations for the compatibility façade."""
+"""Serialization helpers for knowledge export."""
 
 from __future__ import annotations
 

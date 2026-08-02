@@ -9,6 +9,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from ddon_dwarf_reconstructor.domain.services.parsing import ClassParser, LazyTypeResolver
+from ddon_dwarf_reconstructor.domain.services.search_result import SearchResult, SearchStatus
 
 
 class TestClassParser:
@@ -35,6 +36,7 @@ class TestClassParser:
         # Setup lazy index mock
         mock_lazy_index = Mock()
         class_parser.lazy_index = mock_lazy_index
+        mock_lazy_index.persistent_cache.get_symbol_completeness.return_value = False
 
         # Mock cache returns an offset
         mock_lazy_index.find_symbol_offset.return_value = 0x1000
@@ -123,7 +125,9 @@ class TestClassParser:
         class_parser.lazy_index = mock_lazy_index
         class_parser.dwarf_dump_path = Path("dump.zst")
         mock_lazy_index.find_symbol_offset.return_value = None
-        mock_lazy_index.targeted_symbol_search.return_value = None
+        mock_lazy_index.targeted_symbol_search.return_value = SearchResult(
+            SearchStatus.NOT_FOUND, None, 0.01, 1
+        )
 
         with patch.object(class_parser, "_find_class_with_dump_status", return_value=(False, None)):
             class_parser._find_class_lazy("CMD")

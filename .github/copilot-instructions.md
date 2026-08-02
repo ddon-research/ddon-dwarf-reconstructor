@@ -31,11 +31,14 @@ Use the existing domain-driven and hexagonal structure:
 - Infrastructure implements adapters for ELF/DWARF, compressed dumps, SQLite, caches, disassembly,
   filesystem, and processes. Composition roots construct those adapters.
 - Prefer typed contracts such as `GenerationRequest`, `HeaderBundle`, `DefinitionCandidate`, and
-  structured type/declarator models. Keep public compatibility façades and thin re-exports where
-  existing callers depend on them.
+  structured type/declarator models. Breaking changes are acceptable when they remove unnecessary
+  indirection; update in-repository callers and tests instead of preserving old import shapes.
+- `ElfDwarfSession` owns ELF/DWARF lifetime and the single PS4 normalization boundary;
+  `DwarfRuntimeConfig` owns validated cache/search settings; `SearchResult` owns lookup status and
+  CU/DIE provenance; and `AtomicHeaderPublisher` owns generated-bundle publication and manifests.
 - Reuse canonical policy services for definition selection, source identity, type classification,
   method evidence, special-header rendering, and array/declarator parsing. Do not add a second
-  implementation in a legacy generator or adapter.
+  implementation in an alternate generator or adapter.
 
 ## Commands
 
@@ -61,8 +64,8 @@ import, complexity, and maintainability diagnostics.
 - Compare generated `.h` and `.hpp` files byte-for-byte using
   `uv run python -m tests.support.regression.output_manifest`; do not replace header regression
   tests with snapshots.
-- Compare canonical and compatibility entrypoints when both exist. Validate fresh-process and
-  warm-cache runs, and record input identity, producer/configuration identity, and cache state.
+- Validate the packaged entry point and each intentional output mode in fresh-process and warm-cache
+  runs, and record input identity, producer/configuration identity, and cache state.
 - Keep real-artifact baselines outside source control; commit only small deterministic manifests or
   structured expectations. Real PS4 runs are opt-in and require explicit local paths.
 - Stream compressed dumps in one pass with bounded memory. Avoid repeated ELF hashing, repeated

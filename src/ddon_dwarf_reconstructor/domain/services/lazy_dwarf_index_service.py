@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 
-"""Compatibility façade for bounded, offset-based DWARF lookups."""
+"""Bounded, offset-based DWARF lookup service."""
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from ...core.dwarf import DwarfInfo
 from ...core.observability import get_logger
 from ..ports.cache import SymbolCachePort
+from ..ports.source_identity import SourceIdentityPort
 from ..repositories.cache import LRUCache, PersistentSymbolCache
-from .lazy_index_context import LazyIndexContext
 from .lazy_index_discovery import LazyIndexDiscoveryMixin
 from .lazy_index_lookup import LazyIndexLookupMixin
 from .lazy_index_search import LazyIndexSearchMixin
@@ -27,7 +26,7 @@ class LazyDwarfIndexService(
     LazyIndexDiscoveryMixin,
     LazyIndexSearchMixin,
 ):
-    """Preserve the public index API while delegating focused responsibilities."""
+    """Coordinate source-bound index lookup, discovery, and search operations."""
 
     persistent_cache: SymbolCachePort
 
@@ -37,26 +36,22 @@ class LazyDwarfIndexService(
         cache_file: str = ".dwarf_cache.json",
         die_cache_size: int = 10000,
         type_cache_size: int = 5000,
+        search_timeout: float = 1.0,
         source_file_path: str | Path | None = None,
+        source_identity: SourceIdentityPort | None = None,
     ) -> None:
         self.dwarf_info = dwarf_info
+        if search_timeout <= 0:
+            raise ValueError("search_timeout must be positive")
+        self.search_timeout = search_timeout
         source_fingerprint = (
-            self._source_fingerprint(Path(source_file_path))
-            if source_file_path is not None
+            self._source_fingerprint(source_identity, Path(source_file_path))
+            if source_file_path is not None and source_identity is not None
             else None
         )
-        validator: Callable[[dict[str, Any]], bool] | None = None
-        if source_fingerprint is not None:
-            context = cast(LazyIndexContext, self)
-
-            def validate_cache(data: dict[str, Any]) -> bool:
-                return LazyIndexSourceMixin._validate_unbound_cache(context, data)
-
-            validator = validate_cache
         self.persistent_cache = PersistentSymbolCache(
             cache_file,
             source_fingerprint,
-            validator,
         )
         self.die_cache = LRUCache(die_cache_size)
         self.type_cache = LRUCache(type_cache_size)

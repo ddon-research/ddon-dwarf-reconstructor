@@ -60,18 +60,6 @@ class DwarfTagRegistry:
         ]
     )
 
-    # Legacy type names to new tag mapping (for backward compatibility)
-    LEGACY_TYPE_TO_TAGS: dict[str, frozenset[str]] = {
-        "class": frozenset(["DW_TAG_class_type", "DW_TAG_structure_type"]),
-        "struct": frozenset(["DW_TAG_structure_type"]),
-        "union": frozenset(["DW_TAG_union_type"]),
-        "typedef": frozenset(["DW_TAG_typedef"]),
-        "base_type": frozenset(["DW_TAG_base_type"]),
-        "enum": frozenset(["DW_TAG_enumeration_type"]),
-        "namespace": frozenset(["DW_TAG_namespace"]),
-        "primitive_type": frozenset(["DW_TAG_typedef", "DW_TAG_base_type"]),
-    }
-
     @classmethod
     def get_tag_category(cls, tag: str) -> DwarfTagCategory:
         """Get category for a DWARF tag.
@@ -95,18 +83,6 @@ class DwarfTagRegistry:
             Frozenset of DWARF tag strings
         """
         return cls.CATEGORY_TO_TAGS.get(category, frozenset())
-
-    @classmethod
-    def get_tags_for_legacy_type(cls, legacy_type: str) -> frozenset[str]:
-        """Get tags for legacy type name (for backward compatibility).
-
-        Args:
-            legacy_type: Legacy type name (e.g., "class", "typedef")
-
-        Returns:
-            Frozenset of DWARF tag strings
-        """
-        return cls.LEGACY_TYPE_TO_TAGS.get(legacy_type, frozenset())
 
     @classmethod
     def get_cache_key(cls, tag: str) -> str:

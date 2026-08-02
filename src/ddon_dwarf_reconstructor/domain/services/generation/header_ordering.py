@@ -1,4 +1,4 @@
-"""Focused operations extracted from the public compatibility façade."""
+"""Header ordering operations."""
 
 from __future__ import annotations
 
@@ -106,6 +106,9 @@ class HeaderOrderingMixin:
         preferred.extend(sorted(set(remaining) - set(preferred)))
         while remaining:
             ready = HeaderOrderingMixin._ready_names(remaining, preferred)
+            if not ready:
+                cycle = ", ".join(sorted(remaining))
+                raise ValueError(f"Cannot order cyclic by-value dependencies: {cycle}")
             for name in ready:
                 ordered.append(name)
                 del remaining[name]
@@ -115,7 +118,7 @@ class HeaderOrderingMixin:
     @staticmethod
     def _ready_names(remaining: dict[str, set[str]], preferred: list[str]) -> list[str]:
         ready = [name for name in preferred if name in remaining and not remaining[name]]
-        return ready or [min(remaining)]
+        return ready
 
     @staticmethod
     def _remove_dependency(remaining: dict[str, set[str]], name: str) -> None:

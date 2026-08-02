@@ -9,6 +9,7 @@ Detects the target platform of an ELF file (PS3, PS4, PC, etc.) based on:
 - OS/ABI field
 """
 
+from elftools.common.exceptions import ELFError
 from elftools.elf.elffile import ELFFile
 
 from ..core.observability import get_logger
@@ -45,40 +46,52 @@ class PlatformDetector:
         """
         try:
             with open(elf_path, "rb") as f:
-                elf = ELFFile(f)
+                return PlatformDetector.detect_elf(ELFFile(f), elf_path)
 
-                # Get machine type and endianness
-                # pyelftools returns machine as a string like "EM_X86_64"
-                machine_str = elf.header["e_machine"]
-                is_little_endian: bool = elf.little_endian
+        except (
+            ELFError,
+            OSError,
+            AttributeError,
+            KeyError,
+            RuntimeError,
+            TypeError,
+            ValueError,
+        ) as error:
+            logger.error("Failed to detect platform from %s: %s", elf_path, error)
+            return ELFPlatform.UNKNOWN
 
-                # Try to get DWARF version for additional confirmation
-                dwarf_version = PlatformDetector._get_dwarf_version(elf)
-
-                # Debug logging
-                logger.debug(
-                    f"ELF Characteristics: machine={machine_str}, "
-                    f"little_endian={is_little_endian}, "
-                    f"dwarf_version={dwarf_version}"
-                )
-
-                # PS3: PowerPC64 big-endian with DWARF2
-                if machine_str == PlatformDetector.MACHINE_POWERPC64_STR and not is_little_endian:
-                    logger.info("Detected PS3 ELF (PowerPC64 big-endian)")
-                    return ELFPlatform.PS3
-
-                # PS4: x86-64 little-endian with DWARF3/4
-                if machine_str == PlatformDetector.MACHINE_X86_64_STR and is_little_endian:
-                    logger.info("Detected PS4 ELF (x86-64 little-endian)")
-                    return ELFPlatform.PS4
-
-                logger.warning(
-                    f"Unknown platform: machine={machine_str} (little_endian={is_little_endian})"
-                )
-                return ELFPlatform.UNKNOWN
-
-        except Exception as e:
-            logger.error(f"Failed to detect platform from {elf_path}: {e}")
+    @staticmethod
+    def detect_elf(elf: ELFFile, elf_path: str = "<open ELF>") -> ELFPlatform:
+        """Classify an already-open ELF without reopening the source path."""
+        try:
+            machine_str = elf.header["e_machine"]
+            is_little_endian: bool = elf.little_endian
+            dwarf_version = PlatformDetector._get_dwarf_version(elf)
+            logger.debug(
+                "ELF characteristics: machine=%s, little_endian=%s, dwarf_version=%s",
+                machine_str,
+                is_little_endian,
+                dwarf_version,
+            )
+            if machine_str == PlatformDetector.MACHINE_POWERPC64_STR and not is_little_endian:
+                logger.info("Detected PS3 ELF (PowerPC64 big-endian)")
+                return ELFPlatform.PS3
+            if machine_str == PlatformDetector.MACHINE_X86_64_STR and is_little_endian:
+                logger.info("Detected PS4 ELF (x86-64 little-endian)")
+                return ELFPlatform.PS4
+            logger.warning(
+                "Unknown platform: machine=%s (little_endian=%s)", machine_str, is_little_endian
+            )
+            return ELFPlatform.UNKNOWN
+        except (
+            ELFError,
+            AttributeError,
+            KeyError,
+            RuntimeError,
+            TypeError,
+            ValueError,
+        ) as error:
+            logger.error("Failed to classify ELF %s: %s", elf_path, error)
             return ELFPlatform.UNKNOWN
 
     @staticmethod
@@ -101,7 +114,7 @@ class PlatformDetector:
                 version: int = cu.header["version"]
                 return version
 
-        except Exception:
-            pass
+        except (ELFError, AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
+            logger.debug("Unable to read DWARF version: %s", error)
 
         return None

@@ -3,20 +3,20 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
-from ...core.dwarf import DwarfCompilationUnit, DwarfEntry, DwarfInfo
+from ...core.dwarf import DwarfInfo
 from ...core.platform import ELFPlatform
-from ...domain.models.dwarf import ClassInfo
 from ...domain.ports.class_parser import ClassParserPort
 from ...domain.ports.disassembly import DisassemblyProducerFactory
 from ...domain.ports.dump_lookup import DumpLookupFactory
-from ...domain.ports.source_identity import SourceHashPort
+from ...domain.ports.source_identity import SourceHashPort, SourceIdentityPort
 from ...domain.ports.type_resolution import TypeResolverPort
-from ...domain.repositories.cache import HeaderCache
-from ...domain.services.generation import FileRegistry, HeaderGenerator, HierarchyBuilder
+from ...domain.services.generation import HeaderGenerator, HierarchyBuilder
 from ...domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
-from .generation_contracts import GenerationRequest, HeaderBundle
+
+if TYPE_CHECKING:
+    from .generator_workflow import GeneratorWorkflow
 
 
 class DwarfGeneratorContext(Protocol):
@@ -33,76 +33,5 @@ class DwarfGeneratorContext(Protocol):
     dump_lookup_factory: DumpLookupFactory | None
     disassembly_factory: DisassemblyProducerFactory | None
     source_hash: SourceHashPort | None
-
-    def find_class(self, class_name: str) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...
-
-    def is_namespace(self, die: DwarfEntry) -> bool: ...
-
-    def parse_class_info(self, cu: DwarfCompilationUnit, class_die: DwarfEntry) -> ClassInfo: ...
-
-    def build_inheritance_hierarchy(self, class_name: str) -> list[str]: ...
-
-    def generate_header(self, class_name: str, include_metadata: bool = True) -> str: ...
-
-    def generate_bundle(self, request: GenerationRequest) -> HeaderBundle: ...
-
-    def generate_complete_hierarchy_header(
-        self, class_name: str, include_metadata: bool = True
-    ) -> str: ...
-
-    def generate_multi_file_hierarchy(
-        self, class_name: str, include_metadata: bool = True
-    ) -> dict[str, str]: ...
-
-    def export_knowledge_graph(
-        self,
-        root_symbol: str,
-        output_dir: Path,
-        build_id: str,
-        *,
-        orbis_objdump_path: Path | None = None,
-    ) -> Path: ...
-
-    def _generate_not_found_header(self, class_name: str) -> str: ...
-
-    def _generate_namespace_header(
-        self, namespace_name: str, cu: DwarfCompilationUnit, namespace_die: DwarfEntry
-    ) -> str: ...
-
-    def _expand_typedef_search(self, full_hierarchy: bool = True) -> None: ...
-
-    def _build_hierarchy_with_timing(
-        self,
-        class_name: str,
-        max_depth: int = 10,
-        *,
-        include_method_signatures: bool = True,
-    ) -> tuple[dict[str, ClassInfo], list[str]]: ...
-
-    def _validate_hierarchy(self, class_infos: dict[str, ClassInfo], class_name: str) -> bool: ...
-
-    def _collect_typedefs_and_packing(
-        self, class_infos: dict[str, ClassInfo]
-    ) -> dict[str, str]: ...
-
-    def _build_file_registry(self, class_infos: dict[str, ClassInfo]) -> FileRegistry: ...
-
-    def _render_file_headers(
-        self,
-        class_infos: dict[str, ClassInfo],
-        hierarchy_order: list[str],
-        classes_by_file: dict[str, list[str]],
-        typedefs: dict[str, str],
-        include_metadata: bool,
-        cache: HeaderCache,
-    ) -> dict[str, str]: ...
-
-    def _render_uncategorized_header(
-        self,
-        class_infos: dict[str, ClassInfo],
-        hierarchy_order: list[str],
-        uncategorized: list[str],
-        typedefs: dict[str, str],
-        include_metadata: bool,
-        cache: HeaderCache,
-    ) -> dict[str, str]: ...
+    source_identity: SourceIdentityPort | None
+    workflow: GeneratorWorkflow

@@ -10,7 +10,7 @@ checking their tags first. Critical for preventing bugs like treating
 namespaces as classes or enums as forward-declarable types.
 """
 
-from ....core.dwarf import DwarfEntry
+from ....core.dwarf import DwarfEntry, decode_dwarf_string
 from ....core.observability import get_logger
 from ...models.dwarf.tag_constants import (
     FORWARD_DECLARABLE_TYPES,
@@ -117,11 +117,7 @@ class DIETypeClassifier:
         if not name_attr:
             return False
 
-        # Decode name bytes to string
-        if isinstance(name_attr.value, bytes):
-            name = name_attr.value.decode("utf-8")
-        else:
-            name = str(name_attr.value)
+        name = decode_dwarf_string(name_attr.value)
 
         return name in PRIMITIVE_TYPE_NAMES
 
@@ -152,10 +148,7 @@ class DIETypeClassifier:
         if not name_attr:
             return None
 
-        # Decode name bytes to string
-        if isinstance(name_attr.value, bytes):
-            return name_attr.value.decode("utf-8")
-        return str(name_attr.value)
+        return decode_dwarf_string(name_attr.value)
 
     @staticmethod
     def requires_resolution(die: DwarfEntry) -> bool:

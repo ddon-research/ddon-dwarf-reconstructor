@@ -1,9 +1,4 @@
-"""Durable identity for immutable reverse-engineering inputs.
-
-DDON build inputs do not change during normal operation.  This module records
-one strong SHA-256 per source and uses a cheap size/boundary fingerprint to find
-that identity on later fresh-process runs, including after relocation.
-"""
+"""Durable identity for immutable reverse-engineering inputs."""
 
 from __future__ import annotations
 
@@ -18,8 +13,9 @@ from pathlib import Path
 from time import monotonic, sleep, time, time_ns
 from typing import Any, cast
 
+from ..domain.ports.source_identity import SourceIdentity
+
 CATALOG_SCHEMA_VERSION = "1.0"
-BOUNDARY_BYTES = 64 * 1024
 LOCK_TIMEOUT_SECONDS = 30.0
 STALE_LOCK_SECONDS = 300.0
 
@@ -39,31 +35,33 @@ def get_artifact_cache_dir() -> Path:
 
 
 @dataclass(frozen=True)
-class SourceIdentity:
-    """Strong source identity with a cheap immutable-input lookup key."""
+class SourceMetadata:
+    """Filesystem metadata used to decide whether a cached strong hash is current."""
 
-    sha256: str
     size: int
-    boundary_sha256: str
+    mtime_ns: int
+    ctime_ns: int
+    device: int
+    inode: int
 
     @property
     def lookup_key(self) -> str:
-        """Return the relocation-stable catalog key."""
-        payload = f"{self.size}:{self.boundary_sha256}".encode()
+        """Return a relocation-stable key for an unchanged filesystem object."""
+        payload = ":".join(str(value) for value in asdict(self).values()).encode()
         return hashlib.sha256(payload).hexdigest()
 
 
-def probe_source(path: Path) -> tuple[int, str]:
-    """Return source size and a hash of its first/last bounded regions."""
+def probe_source(path: Path) -> SourceMetadata:
+    """Return metadata sufficient to detect ordinary source replacement."""
     resolved = path.resolve()
     stat = resolved.stat()
-    digest = hashlib.sha256()
-    with resolved.open("rb") as source:
-        digest.update(source.read(BOUNDARY_BYTES))
-        if stat.st_size > BOUNDARY_BYTES:
-            source.seek(max(0, stat.st_size - BOUNDARY_BYTES))
-            digest.update(source.read(BOUNDARY_BYTES))
-    return stat.st_size, digest.hexdigest()
+    return SourceMetadata(
+        size=stat.st_size,
+        mtime_ns=stat.st_mtime_ns,
+        ctime_ns=stat.st_ctime_ns,
+        device=stat.st_dev,
+        inode=stat.st_ino,
+    )
 
 
 def sha256_file(path: Path) -> str:
@@ -82,31 +80,24 @@ class SourceIdentityCatalog:
         self.path = path or get_artifact_cache_dir() / "source-identities-v1.json"
 
     def identify(self, source_path: Path, *, verify: bool = False) -> SourceIdentity:
-        """Return a strong identity, hashing all bytes only when required.
-
-        Warm reuse trusts the project's immutable-input contract after matching
-        file size and both boundary regions.  ``verify=True`` forces a complete
-        hash for explicit integrity checks.
-        """
+        """Return a strong identity, hashing all bytes only when metadata changes."""
         resolved = source_path.resolve()
-        size, boundary_sha256 = probe_source(resolved)
-        lookup_key = self._lookup_key(size, boundary_sha256)
+        metadata = probe_source(resolved)
+        lookup_key = metadata.lookup_key
         with self._exclusive_lock():
             catalog = self._load()
             record = catalog["sources"].get(lookup_key)
-            if not verify and self._valid_record(record, size, boundary_sha256):
+            if not verify and self._valid_record(record, metadata):
                 identity = SourceIdentity(
                     sha256=str(record["sha256"]),
-                    size=size,
-                    boundary_sha256=boundary_sha256,
+                    **asdict(metadata),
                 )
                 self._remember_path(catalog, lookup_key, record, resolved)
                 return identity
 
             identity = SourceIdentity(
                 sha256=sha256_file(resolved),
-                size=size,
-                boundary_sha256=boundary_sha256,
+                **asdict(metadata),
             )
             paths = [] if record is None else list(record.get("paths", []))
             resolved_text = str(resolved)
@@ -157,8 +148,10 @@ class SourceIdentityCatalog:
     def record(self, source_path: Path, identity: SourceIdentity) -> None:
         """Record an already-established strong identity without rehashing."""
         resolved = source_path.resolve()
-        size, boundary_sha256 = probe_source(resolved)
-        if size != identity.size or boundary_sha256 != identity.boundary_sha256:
+        metadata = probe_source(resolved)
+        if asdict(metadata) != {
+            key: value for key, value in asdict(identity).items() if key != "sha256"
+        }:
             raise ValueError(f"Source no longer matches supplied identity: {resolved}")
         with self._exclusive_lock():
             catalog = self._load()
@@ -175,16 +168,10 @@ class SourceIdentityCatalog:
             self._save(catalog)
 
     @staticmethod
-    def _lookup_key(size: int, boundary_sha256: str) -> str:
-        payload = f"{size}:{boundary_sha256}".encode()
-        return hashlib.sha256(payload).hexdigest()
-
-    @staticmethod
-    def _valid_record(record: Any, size: int, boundary_sha256: str) -> bool:
+    def _valid_record(record: Any, metadata: SourceMetadata) -> bool:
         return (
             isinstance(record, dict)
-            and record.get("size") == size
-            and record.get("boundary_sha256") == boundary_sha256
+            and all(record.get(key) == value for key, value in asdict(metadata).items())
             and isinstance(record.get("sha256"), str)
             and len(record["sha256"]) == 64
         )
@@ -207,8 +194,10 @@ class SourceIdentityCatalog:
             data = json.loads(self.path.read_text(encoding="utf-8"))
         except OSError, json.JSONDecodeError:
             return {"schema_version": CATALOG_SCHEMA_VERSION, "sources": {}}
-        if data.get("schema_version") != CATALOG_SCHEMA_VERSION or not isinstance(
-            data.get("sources"), dict
+        if (
+            not isinstance(data, dict)
+            or data.get("schema_version") != CATALOG_SCHEMA_VERSION
+            or not isinstance(data.get("sources"), dict)
         ):
             return {"schema_version": CATALOG_SCHEMA_VERSION, "sources": {}}
         return cast(dict[str, Any], data)

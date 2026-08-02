@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TypeVar
 
-from ....core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ....core.dwarf import DwarfCompilationUnit, DwarfEntry, decode_dwarf_string
 from ....core.observability import get_logger
 from ...models.dwarf import (
     ClassInfo,
@@ -141,7 +141,10 @@ class ClassParserChildrenMixin:
     @staticmethod
     def _log_unhandled_child(class_name: str, child: DwarfEntry) -> None:
         child_name = child.attributes.get("DW_AT_name")
-        child_name_str = child_name.value.decode("utf-8") if child_name else "unnamed"
+        child_name_str = decode_dwarf_string(
+            child_name.value if child_name is not None else None,
+            default="unnamed",
+        )
         logger.warning(
             "Unhandled DWARF tag in class %s: %s (name: %s) at offset 0x%x",
             class_name,

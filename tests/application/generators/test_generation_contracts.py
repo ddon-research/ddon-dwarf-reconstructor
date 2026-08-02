@@ -23,7 +23,7 @@ def test_header_bundle_sorts_and_freezes_output_mapping() -> None:
 
     assert isinstance(bundle.headers, MappingProxyType)
     assert list(bundle.headers) == ["a.h", "z.h"]
-    assert bundle.as_dict() == {"a.h": "a", "z.h": "z"}
+    assert dict(bundle.headers) == {"a.h": "a", "z.h": "z"}
 
 
 @pytest.mark.unit
@@ -44,17 +44,18 @@ def test_generation_request_is_immutable() -> None:
 @pytest.mark.unit
 def test_dwarf_generator_bundle_selects_each_rendering_mode() -> None:
     generator = object.__new__(DwarfGenerator)
-    generator.generate_header = Mock(return_value="single")
-    generator.generate_complete_hierarchy_header = Mock(return_value="complete")
-    generator.generate_multi_file_hierarchy = Mock(return_value={"a.h": "multi"})
+    generator.workflow = Mock()
+    generator.workflow.generate_header.return_value = "single"
+    generator.workflow.generate_complete_hierarchy_header.return_value = "complete"
+    generator.workflow.generate_multi_file_hierarchy.return_value = {"a.h": "multi"}
 
-    assert generator.generate_bundle(GenerationRequest("A")).as_dict() == {"A.h": "single"}
+    assert dict(generator.generate_bundle(GenerationRequest("A")).headers) == {"A.h": "single"}
     assert generator.generate_bundle(
         GenerationRequest("A", full_hierarchy=True, single_file=True)
-    ).as_dict() == {"A.h": "complete"}
+    ).headers == {"A.h": "complete"}
     assert generator.generate_bundle(
         GenerationRequest("A", full_hierarchy=True, single_file=False)
-    ).as_dict() == {"a.h": "multi"}
+    ).headers == {"a.h": "multi"}
 
 
 @pytest.mark.unit

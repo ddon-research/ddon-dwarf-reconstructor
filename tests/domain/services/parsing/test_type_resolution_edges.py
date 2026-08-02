@@ -9,6 +9,7 @@ import pytest
 from ddon_dwarf_reconstructor.domain.models.dwarf import MemberInfo, MethodInfo, ParameterInfo
 from ddon_dwarf_reconstructor.domain.services.parsing.die_type_classifier import DIETypeClassifier
 from ddon_dwarf_reconstructor.domain.services.parsing.type_resolver import LazyTypeResolver
+from ddon_dwarf_reconstructor.domain.services.search_result import SearchResult, SearchStatus
 
 
 def _die(tag: str, name: object | None = None, *, offset: int = 1) -> Mock:
@@ -74,7 +75,7 @@ def test_primitive_lookup_handles_exclusions_misses_and_typedefs() -> None:
     resolver = LazyTypeResolver(Mock(), index)
     assert resolver._resolve_primitive_typedef("int*") == "int"
     index.find_symbol_offset.return_value = None
-    index.targeted_symbol_search.return_value = None
+    index.targeted_symbol_search.return_value = SearchResult(SearchStatus.NOT_FOUND, None, 0.01, 0)
     assert resolver._resolve_primitive_typedef("Alias") is None
     index.find_symbol_offset.return_value = 0x20
     index.get_die_by_offset.return_value = None

@@ -105,6 +105,34 @@ def test_catalog_rejects_same_path_source_replacement(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
+def test_catalog_rehashes_same_size_middle_replacement(tmp_path: Path) -> None:
+    """A replacement outside the sampled regions receives a new strong identity."""
+    source = tmp_path / "DDOORBIS.elf"
+    source.write_bytes(b"a" * 200_000)
+    catalog = SourceIdentityCatalog(tmp_path / "source-identities.json")
+    first = catalog.identify(source)
+
+    replacement = bytearray(b"a" * 200_000)
+    replacement[100_000:100_010] = b"changed!!!"
+    source.write_bytes(replacement)
+    os.utime(source, ns=(first.mtime_ns + 1_000_000, first.mtime_ns + 1_000_000))
+
+    second = catalog.identify(source)
+
+    assert second.size == first.size
+    assert second.sha256 != first.sha256
+
+
+@pytest.mark.unit
+def test_catalog_rejects_non_object_root_document(tmp_path: Path) -> None:
+    """Malformed catalog roots are treated as empty catalogs."""
+    catalog_path = tmp_path / "catalog.json"
+    catalog_path.write_text("[]", encoding="utf-8")
+
+    assert SourceIdentityCatalog(catalog_path).inspect()["source_count"] == 0
+
+
+@pytest.mark.unit
 def test_cache_directory_selection_honors_all_supported_environment_paths(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -146,7 +174,7 @@ def test_catalog_inspection_pruning_and_record_validation(tmp_path: Path) -> Non
     assert catalog.prune_missing_paths() == {"paths_removed": 2, "records_removed": 1}
     catalog.record(source, identity)
     with pytest.raises(ValueError, match="no longer matches"):
-        catalog.record(source, artifacts.SourceIdentity("0" * 64, 1, "0" * 64))
+        catalog.record(source, artifacts.SourceIdentity("0" * 64, 1, 0, 0, 0, 0))
 
 
 @pytest.mark.unit

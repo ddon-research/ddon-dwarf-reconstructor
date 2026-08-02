@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from ....core.dwarf import DwarfEntry
 from ....core.observability import get_logger
+from ..search_result import SearchStatus
 from .type_resolver_context import TypeResolverContext
 
 logger = get_logger(__name__)
@@ -52,7 +53,15 @@ class PrimitiveLookupMixin:
         if isinstance(offset, int):
             return offset
         result = self.index.targeted_symbol_search(type_name)
-        return result if isinstance(result, int) else None
+        if result.status is not SearchStatus.COMPLETE:
+            logger.debug(
+                "Primitive search for %s ended as %s: %s",
+                type_name,
+                result.status.value,
+                "; ".join(result.diagnostics),
+            )
+            return None
+        return result.die_offset
 
     def _resolve_primitive_die(
         self: TypeResolverContext, type_name: str, die: DwarfEntry

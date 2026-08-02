@@ -8,8 +8,8 @@ import pytest
 
 from ddon_dwarf_reconstructor.infrastructure.config import Config
 from ddon_dwarf_reconstructor.infrastructure.config.dwarf_config import (
+    DwarfRuntimeConfig,
     get_cache_file_path,
-    get_config,
 )
 
 
@@ -45,18 +45,35 @@ def test_config_validation_and_output_directories(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
-def test_dwarf_config_converts_environment_types(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_dwarf_config_reads_validated_environment_types(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DWARF_DIE_CACHE_SIZE", "42")
-    monkeypatch.setenv("DWARF_ENABLE_LAZY_LOADING", "off")
-    monkeypatch.setenv("DWARF_CACHE_HIT_THRESHOLD", "0.25")
+    monkeypatch.setenv("DWARF_TYPE_CACHE_SIZE", "17")
+    monkeypatch.setenv("DWARF_MAX_SEARCH_TIME_MS", "250")
+
+    config = DwarfRuntimeConfig.from_environment()
+
+    assert config.die_cache_size == 42
+    assert config.type_cache_size == 17
+    assert config.search_timeout_seconds == 0.25
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("value", ["invalid", "0", "-1"])
+def test_dwarf_config_rejects_invalid_cache_size(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    monkeypatch.setenv("DWARF_DIE_CACHE_SIZE", value)
+
+    with pytest.raises(ValueError, match="DWARF_DIE_CACHE_SIZE"):
+        DwarfRuntimeConfig.from_environment()
+
+
+@pytest.mark.unit
+def test_dwarf_config_rejects_invalid_search_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DWARF_MAX_SEARCH_TIME_MS", "invalid")
 
-    config = get_config()
-
-    assert config["DIE_CACHE_SIZE"] == 42
-    assert config["ENABLE_LAZY_LOADING"] is False
-    assert config["CACHE_HIT_THRESHOLD"] == 0.25
-    assert config["MAX_SEARCH_TIME_MS"] == 1000
+    with pytest.raises(ValueError, match="DWARF_MAX_SEARCH_TIME_MS"):
+        DwarfRuntimeConfig.from_environment()
 
 
 @pytest.mark.unit

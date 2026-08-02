@@ -103,7 +103,10 @@ def verify_source(
                 "identity": {
                     "sha256": identity.sha256,
                     "size": identity.size,
-                    "boundary_sha256": identity.boundary_sha256,
+                    "mtime_ns": identity.mtime_ns,
+                    "ctime_ns": identity.ctime_ns,
+                    "device": identity.device,
+                    "inode": identity.inode,
                 },
             }
         )
@@ -121,7 +124,7 @@ def repair_dump_index(
     dwarf_dump: Path = typer.Argument(..., help="Compressed DWARF dump path."),
     index_path: Path | None = typer.Option(None, "--index-path", help="Explicit sidecar path."),
 ) -> None:
-    """Repair compatible metadata or build a missing dump index."""
+    """Repair metadata or build a missing dump index."""
     _run_operation(lambda: _dump_operation(dwarf_dump, index_path, rebuild=False))
 
 

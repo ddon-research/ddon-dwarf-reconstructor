@@ -1,4 +1,4 @@
-"""Focused operations extracted from the public compatibility façade."""
+"""Aggregate member rendering operations."""
 
 from __future__ import annotations
 
@@ -50,7 +50,7 @@ class HeaderAggregateRenderingMixin:
         # Sort members by offset
         sorted_members = sorted(
             [m for m in struct.members if m.offset is not None],
-            key=lambda m: m.offset or 0,
+            key=lambda m: m.offset,
         )
 
         for member in sorted_members:

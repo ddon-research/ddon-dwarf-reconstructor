@@ -35,10 +35,6 @@ class HeaderBundle:
         """Create a one-file bundle using the canonical filename policy."""
         return cls({create_header_filename(symbol): content})
 
-    def as_dict(self) -> dict[str, str]:
-        """Return a mutable copy for output adapters and legacy callers."""
-        return dict(self.headers)
-
     def only(self) -> str:
         """Return the sole header content, raising for multi-file results."""
         if len(self.headers) != 1:

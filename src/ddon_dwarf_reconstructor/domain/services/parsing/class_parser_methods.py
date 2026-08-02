@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import time
 
-from ....core.dwarf import DwarfEntry
+from ....core.dwarf import DwarfEntry, decode_dwarf_string
 from ....core.observability import get_logger
 from ...models.dwarf import (
     MethodInfo,
@@ -22,9 +22,9 @@ class ClassParserMethodsMixin:
     def parse_method(self: ClassParserContext, method_die: DwarfEntry) -> MethodInfo | None:
         """Parse a class method using pyelftools."""
         name_attr = method_die.attributes.get("DW_AT_name")
-        if not name_attr:
+        if name_attr is None:
             return None
-        method_name = name_attr.value.decode("utf-8")
+        method_name = decode_dwarf_string(name_attr.value)
         return_type = self.type_resolver.resolve_type_name(method_die)
         return_type_offset = TypeChainTraverser.get_terminal_type_offset(method_die)
         is_virtual, vtable_index = self._virtual_method_info(method_die)
@@ -53,7 +53,8 @@ class ClassParserMethodsMixin:
                 if "DW_AT_reference" in method_die.attributes
                 else None
             ),
-            is_noexcept="DW_AT_noreturn" in method_die.attributes,
+            is_noexcept=self._has_noexcept_evidence(method_die),
+            is_noreturn="DW_AT_noreturn" in method_die.attributes,
             is_pure_virtual="DW_AT_pure" in method_die.attributes,
             is_deleted="DW_AT_deleted" in method_die.attributes,
             is_defaulted="DW_AT_defaulted" in method_die.attributes,
@@ -68,15 +69,22 @@ class ClassParserMethodsMixin:
         if not is_virtual:
             return False, None
         vtable_attr = method_die.attributes.get("DW_AT_vtable_elem_location")
-        return True, self._parse_vtable_index(vtable_attr) if vtable_attr else None
+        return True, self._parse_vtable_index(vtable_attr) if vtable_attr is not None else None
 
     @staticmethod
     def _parent_name(method_die: DwarfEntry) -> str:
         parent_die = method_die.get_parent()
-        if not parent_die or "DW_AT_name" not in parent_die.attributes:
+        if parent_die is None or "DW_AT_name" not in parent_die.attributes:
             return ""
         value = parent_die.attributes["DW_AT_name"].value
-        return value.decode("utf-8", errors="ignore") if isinstance(value, bytes) else str(value)
+        return decode_dwarf_string(value)
+
+    @staticmethod
+    def _has_noexcept_evidence(method_die: DwarfEntry) -> bool:
+        return any(
+            attribute in method_die.attributes
+            for attribute in ("DW_AT_noexcept", "DW_AT_GNU_nothrow", "DW_AT_GNU_noexcept")
+        )
 
     def _parse_method_parameters(
         self: ClassParserContext, method_die: DwarfEntry
@@ -101,8 +109,11 @@ class ClassParserMethodsMixin:
         if isinstance(value, int):
             return value
         if isinstance(value, str):
-            match = re.search(r"DW_OP_constu\s+(\d+)", value)
-            return int(match.group(1)) if match else None
+            match = re.search(r"DW_OP_constu\s+(0[xX][0-9a-fA-F]+|[0-9]+)", value)
+            if match is None:
+                return None
+            token = match.group(1)
+            return int(token, 16) if token.lower().startswith("0x") else int(token)
         raw = ClassParserMethodsMixin._vtable_raw_bytes(value)
         if raw is None or not raw or raw[0] != 0x10:
             return None
@@ -146,7 +157,11 @@ class ClassParserMethodsMixin:
         name_attr = param_die.attributes.get("DW_AT_name")
         # Auto-increment unnamed parameters to avoid C++ syntax errors
         # (param1, param2, param3, ...) instead of all being "param"
-        param_name = name_attr.value.decode("utf-8") if name_attr else f"param{param_index + 1}"
+        param_name = (
+            decode_dwarf_string(name_attr.value)
+            if name_attr is not None
+            else f"param{param_index + 1}"
+        )
 
         # Get parameter type (for display)
         param_type = self.type_resolver.resolve_type_name(param_die)
@@ -162,7 +177,7 @@ class ClassParserMethodsMixin:
         # Get default value if present
         default_value = None
         const_attr = param_die.attributes.get("DW_AT_default_value")
-        if const_attr:
+        if const_attr is not None:
             default_value = str(const_attr.value)
 
         # Mark artificial parameters for filtering

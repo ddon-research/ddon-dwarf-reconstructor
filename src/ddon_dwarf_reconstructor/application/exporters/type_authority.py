@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ...core.dwarf import DwarfEntry
+from ...core.dwarf import DwarfEntry, decode_dwarf_string
 from ...domain.models.dwarf import ClassInfo
 
 
@@ -40,9 +40,9 @@ class TypeAuthority:
     def validate_die(self, die: DwarfEntry) -> None:
         """Fail when direct offset resolution does not produce the approved DIE."""
         name_attribute = die.attributes.get("DW_AT_name")
-        raw_name = name_attribute.value if name_attribute is not None else None
-        actual_name = (
-            raw_name.decode("utf-8", errors="replace") if isinstance(raw_name, bytes) else raw_name
+        actual_name = decode_dwarf_string(
+            name_attribute.value if name_attribute is not None else None,
+            default="",
         )
         errors: list[str] = []
         if die.offset != self.die_offset:

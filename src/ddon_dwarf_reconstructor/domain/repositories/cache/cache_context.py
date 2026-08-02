@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from contextlib import AbstractContextManager
 from pathlib import Path
 from typing import Any, Protocol
@@ -13,7 +12,6 @@ class CacheContext(Protocol):
 
     cache_file: Path
     source_fingerprint: dict[str, int | str] | None
-    unbound_cache_validator: Callable[[dict[str, Any]], bool] | None
     data: dict[str, Any]
     _modified: bool
     CURRENT_VERSION: str
@@ -24,7 +22,6 @@ class CacheContext(Protocol):
         self,
         cache_file: str | Path,
         source_fingerprint: dict[str, int | str] | None = None,
-        unbound_cache_validator: Callable[[dict[str, Any]], bool] | None = None,
     ) -> None: ...
 
     def _load_cache(self) -> dict[str, Any]: ...
@@ -33,9 +30,10 @@ class CacheContext(Protocol):
 
     def _create_empty_cache(self) -> dict[str, Any]: ...
 
-    def _migrate_cache_format(self, data: dict[str, Any]) -> dict[str, Any]: ...
-
     def _validate_cache_integrity(self, data: dict[str, Any]) -> None: ...
+
+    @staticmethod
+    def _has_current_shape(data: dict[str, Any]) -> bool: ...
 
     def validate_and_repair(self) -> dict[str, Any]: ...
 

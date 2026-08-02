@@ -113,7 +113,7 @@ def generate(
         False, "--full-hierarchy", help="Generate the full hierarchy."
     ),
     single_file: bool = typer.Option(
-        False, "--single-file", help="Use legacy single-file hierarchy mode."
+        False, "--single-file", help="Render the full hierarchy into one header."
     ),
     exhaustive: bool = typer.Option(
         False, "--exhaustive", help="Search all CUs for the best definition."

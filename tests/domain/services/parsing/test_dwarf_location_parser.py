@@ -8,7 +8,7 @@ to ensure robust handling of member offset extraction across DWARF versions.
 
 import pytest
 
-from src.ddon_dwarf_reconstructor.generators.utils.dwarf_location_parser import (
+from ddon_dwarf_reconstructor.domain.services.parsing.dwarf_location_parser import (
     parse_location_offset,
 )
 
@@ -153,8 +153,8 @@ class TestParseLocationOffsetRealWorldData:
             assert parse_location_offset(offset) == expected
 
     @pytest.mark.unit
-    def test_mixed_formats_compatibility(self) -> None:
-        """Test that code handles both PS3 and PS4 formats in same call."""
+    def test_mixed_location_formats(self) -> None:
+        """Test that one call handles both PS3 and PS4 location formats."""
         # Simulate processing members from both PS3 and PS4 files
         results = [
             parse_location_offset(4),  # PS4 integer

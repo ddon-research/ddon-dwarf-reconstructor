@@ -7,8 +7,14 @@ from typing import cast
 
 from ..domain.ports.disassembly import DisassemblyProducerPort
 from ..domain.ports.dump_lookup import DumpLookupPort
+from .elf_session import ElfDwarfSession
 from .orbis_objdump import OrbisObjdumpProducer
 from .zstd_dump_parser import ZstdDumpParser
+
+
+def create_dwarf_session(elf_path: Path) -> ElfDwarfSession:
+    """Build the concrete ELF/DWARF lifecycle adapter for the application."""
+    return ElfDwarfSession(elf_path)
 
 
 def create_dump_lookup(path: Path, index_path: Path | None) -> DumpLookupPort:

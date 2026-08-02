@@ -139,7 +139,7 @@ class TestPlatformDetector:
             patch("builtins.open", mock_open()),
             patch(
                 "ddon_dwarf_reconstructor.infrastructure.elf_platform.ELFFile",
-                side_effect=Exception("Invalid ELF"),
+                side_effect=RuntimeError("Invalid ELF"),
             ),
         ):
             result = PlatformDetector.detect("invalid.elf")
@@ -175,7 +175,7 @@ class TestPlatformDetector:
         """Test exception handling in DWARF version extraction."""
         mock_elf = Mock()
         mock_elf.has_dwarf_info.return_value = True
-        mock_elf.get_dwarf_info.side_effect = Exception("DWARF error")
+        mock_elf.get_dwarf_info.side_effect = RuntimeError("DWARF error")
 
         result = PlatformDetector._get_dwarf_version(mock_elf)
         assert result is None

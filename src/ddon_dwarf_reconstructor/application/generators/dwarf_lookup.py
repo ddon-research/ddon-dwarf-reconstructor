@@ -1,4 +1,4 @@
-"""Focused operations extracted from the public compatibility façade."""
+"""DWARF lookup operations for the application generator."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from ...domain.services.generation import calculate_packing_info
 from .dwarf_generator_context import DwarfGeneratorContext
 
 
-class GeneratorLookupMixin:
+class GeneratorLookupService:
     def find_class(
         self: DwarfGeneratorContext, class_name: str
     ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:

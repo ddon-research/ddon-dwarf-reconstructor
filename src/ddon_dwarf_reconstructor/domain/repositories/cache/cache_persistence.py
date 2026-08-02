@@ -135,7 +135,7 @@ class CachePersistenceMixin:
                 temporary_path.unlink()
 
     def _merge_with_disk(self: CacheContext, disk_data: dict[str, Any]) -> dict[str, Any]:
-        """Preserve compatible updates published by another process while waiting."""
+        """Preserve matching updates published by another process while waiting."""
         if not self._can_merge_disk_data(disk_data):
             return self.data
 
@@ -184,8 +184,8 @@ class CachePersistenceMixin:
                 by_location[key] = deepcopy(definition)
                 continue
             existing["score"] = max(existing.get("score", 0), definition.get("score", 0))
-            existing["complete"] = existing.get("complete", True) or definition.get(
-                "complete", True
+            existing["complete"] = (
+                existing.get("complete") is True or definition.get("complete") is True
             )
         return list(by_location.values())
 
@@ -195,7 +195,7 @@ class CachePersistenceMixin:
         for symbol, definitions in merged_definitions.items():
             if not definitions:
                 continue
-            complete = [item for item in definitions if item.get("complete", True)]
+            complete = [item for item in definitions if item.get("complete") is True]
             best = max(complete or definitions, key=lambda item: item.get("score", 0))
             merged["symbol_to_offset"][symbol] = best["die_offset"]
             merged["symbol_to_cu_offset"][symbol] = best["cu_offset"]

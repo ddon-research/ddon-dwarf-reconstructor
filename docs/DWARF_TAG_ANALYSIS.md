@@ -867,14 +867,17 @@ uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf \
 **Code Reduction:**
 - hierarchy_builder.py: 614→243 lines (60% reduction, 371 lines deleted)
 - header_generator.py: 18 lines deleted (_extract_base_type removed)
-- Total: 389 lines of legacy string parsing eliminated
+- Total: 389 lines of string parsing eliminated
 
 **Reliability:**
-- Before: Multiple parsing bugs, infinite loops, invalid typedefs
-- After: 289/289 success rate, zero bugs, clean output
+- The 289-case validation sample passed after the offset-based changes.
+- This sample is not a proof of corpus-wide correctness; current edge cases and
+  unresolved evidence are tracked in `specs/006-clean-architecture-audit/`.
 
 **Architecture:**
 - Before: String parsing, linear searches, bug-prone assumptions
 - After: Offset-based validation, O(1) lookups, tag verification
 
-This analysis correctly predicted all requirements. The offset-based architecture delivers 100% reliability with significantly reduced code complexity.
+The offset-based architecture reduces repeated string parsing and makes type
+references auditable. Correctness remains tied to explicit evidence status,
+source identity, and the focused regression suite.

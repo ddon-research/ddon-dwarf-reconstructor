@@ -12,7 +12,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.ddon_dwarf_reconstructor.utils.elf_patches import patch_pyelftools_for_ps4
+from ddon_dwarf_reconstructor.utils.elf_patches import patch_pyelftools_for_ps4
 
 
 class TestElfPatches:
@@ -30,7 +30,7 @@ class TestElfPatches:
     @pytest.mark.unit
     def test_patch_pyelftools_for_ps4_modifies_elffile(self):
         """Test that patching modifies ELFFile behavior."""
-        with patch("src.ddon_dwarf_reconstructor.utils.elf_patches.elffile") as mock_elffile:
+        with patch("ddon_dwarf_reconstructor.utils.elf_patches.elffile") as mock_elffile:
             mock_elffile.ELFFile = Mock()
 
             patch_pyelftools_for_ps4()
@@ -78,22 +78,23 @@ class TestElfPatches:
 
     @pytest.mark.unit
     def test_patch_idempotency(self):
-        """Test that applying patches multiple times is safe."""
-        # First application
+        """Repeated installation preserves the first wrapper identity."""
         patch_pyelftools_for_ps4()
+        from elftools.elf.elffile import ELFFile
 
-        # Second application should not cause issues
+        make_section = ELFFile._make_section
+        get_section = ELFFile.get_section
         patch_pyelftools_for_ps4()
-
-        # Third application
+        assert ELFFile._make_section is make_section
+        assert ELFFile.get_section is get_section
         patch_pyelftools_for_ps4()
-
-        # Should not raise any exceptions
+        assert ELFFile._make_section is make_section
+        assert ELFFile.get_section is get_section
 
     @pytest.mark.unit
     def test_patch_with_mock_elffile_module(self):
         """Test patching with mocked elffile module."""
-        with patch("src.ddon_dwarf_reconstructor.utils.elf_patches.elffile") as mock_elffile:
+        with patch("ddon_dwarf_reconstructor.utils.elf_patches.elffile") as mock_elffile:
             # Create mock ELFFile class
             mock_elffile_class = Mock()
             mock_elffile.ELFFile = mock_elffile_class
@@ -107,7 +108,7 @@ class TestElfPatches:
     @pytest.mark.unit
     def test_patch_preserves_original_methods(self):
         """Test that patching preserves original method behavior where appropriate."""
-        with patch("src.ddon_dwarf_reconstructor.utils.elf_patches.elffile") as mock_elffile:
+        with patch("ddon_dwarf_reconstructor.utils.elf_patches.elffile") as mock_elffile:
             # Set up mock with original methods
             original_make_section = Mock()
             original_get_section = Mock()
@@ -127,7 +128,7 @@ class TestElfPatches:
     @pytest.mark.unit
     def test_patch_handles_missing_methods_gracefully(self):
         """Test that patching works even if some expected methods don't exist."""
-        with patch("src.ddon_dwarf_reconstructor.utils.elf_patches.elffile") as mock_elffile:
+        with patch("ddon_dwarf_reconstructor.utils.elf_patches.elffile") as mock_elffile:
             # Create mock ELFFile class without expected methods
             mock_elffile_class = Mock()
             # Deliberately don't set _make_section or get_section
@@ -144,7 +145,7 @@ class TestElfPatches:
         # Combine context managers as suggested by SIM117
         with (
             patch(
-                "src.ddon_dwarf_reconstructor.utils.elf_patches.elffile",
+                "ddon_dwarf_reconstructor.utils.elf_patches.elffile",
                 side_effect=ImportError,
             ),
             contextlib.suppress(ImportError),
@@ -199,7 +200,7 @@ class TestElfPatches:
     @pytest.mark.unit
     def test_patch_effects_on_section_parsing(self):
         """Test that patches affect section parsing behavior."""
-        with patch("src.ddon_dwarf_reconstructor.utils.elf_patches.elffile") as mock_elffile:
+        with patch("ddon_dwarf_reconstructor.utils.elf_patches.elffile") as mock_elffile:
             mock_elffile_class = Mock()
             mock_elffile.ELFFile = mock_elffile_class
 

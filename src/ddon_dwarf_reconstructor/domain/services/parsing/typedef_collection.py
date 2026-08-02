@@ -1,10 +1,11 @@
-"""Focused type-resolution operations for the compatibility façade."""
+"""Typedef collection operations for lazy type resolution."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any
 
+from ....core.dwarf import decode_dwarf_string
 from ....core.observability import get_logger
 from .type_resolver_context import TypeResolverContext
 
@@ -60,10 +61,8 @@ class TypedefCollectionMixin:
         attributes = getattr(die, "attributes", None)
         name_attribute = attributes.get("DW_AT_name") if isinstance(attributes, Mapping) else None
         if is_aggregate and name_attribute is not None:
-            aggregate_name = name_attribute.value
-            if isinstance(aggregate_name, bytes):
-                aggregate_name = aggregate_name.decode("utf-8", errors="replace")
-            is_aggregate = str(aggregate_name) == type_name
+            aggregate_name = decode_dwarf_string(name_attribute.value)
+            is_aggregate = aggregate_name == type_name
         if is_aggregate:
             logger.debug(
                 f"Skipping typedef probe for aggregate method type {type_name} "

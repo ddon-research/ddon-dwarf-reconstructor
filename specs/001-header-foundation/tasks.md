@@ -43,15 +43,15 @@ assertions with the source evidence.
 - [x] T012 [P] [US1] Extend `ClassInfo` in `src/ddon_dwarf_reconstructor/domain/models/dwarf/class_info.py` with qualified identity, aggregate kind, completeness, and diagnostics.
 - [x] T013 [P] [US1] Extend `MemberInfo` in `src/ddon_dwarf_reconstructor/domain/models/dwarf/member_info.py` with access, qualifiers, bitfield width/offset, and raw location evidence.
 - [x] T014 [P] [US1] Extend `MethodInfo` and parameter models in `src/ddon_dwarf_reconstructor/domain/models/dwarf/method_info.py` and `parameter_info.py` with access, cv/ref/noexcept, virtuality, and declaration-state evidence.
-- [x] T015 [US1] Parse the new evidence fields in `src/ddon_dwarf_reconstructor/domain/services/parsing/class_parser.py` and add focused fixtures in `tests/generators/test_class_parser.py`.
+- [x] T015 [US1] Parse the new evidence fields in `src/ddon_dwarf_reconstructor/domain/services/parsing/class_parser.py` and add focused fixtures under `tests/domain/services/parsing/`.
 - [ ] T016 [US1] Centralize deterministic duplicate-definition selection across `src/ddon_dwarf_reconstructor/domain/services/definition_selection.py`, `class_parser.py`, `lazy_dwarf_index_service.py`, and `zstd_dump_parser.py`.
 - [ ] T017 [US1] Replace name-only dependency keys with qualified/scope-safe identities in `src/ddon_dwarf_reconstructor/domain/services/generation/hierarchy_builder.py` and `dependency_extractor.py`.
 - [ ] T018 [US1] Implement structured type-chain rendering for arrays, qualifiers, function pointers, pointer-to-member types, and unresolved references in `src/ddon_dwarf_reconstructor/domain/services/parsing/type_resolver.py` and `src/ddon_dwarf_reconstructor/domain/services/generation/header_generator.py`.
 - [ ] T019 [US1] Render aggregate kinds, access sections, inheritance attributes, templates, and deterministic declarations in `src/ddon_dwarf_reconstructor/domain/services/generation/header_generator.py` (aggregate/access/qualifier subset implemented; templates remain).
 - [ ] T020 [US1] Make dependency traversal stable and layout-aware in `src/ddon_dwarf_reconstructor/domain/services/generation/hierarchy_builder.py` and add ordering tests in `tests/domain/services/generation/test_hierarchy_builder.py`.
 - [ ] T021 [US1] Repair include closure, basename collision handling, and per-file rendering in `src/ddon_dwarf_reconstructor/application/generators/dwarf_generator.py`, `file_registry.py`, and `header_generator.py`.
-- [ ] T022 [US1] Add synthetic evidence and header regression cases for namespaces, unions/enums, access, bitfields, templates, arrays, function pointers, and duplicate definitions in `tests/generators/` and `tests/domain/`.
-- [ ] T023 [US1] Add MSVC x64 C++23 header checks in `tests/generators/test_header_compilation.py`, using `VsDevCmd.bat -arch=x64` and recording missing DDON closure types separately from syntax failures.
+- [ ] T022 [US1] Add synthetic evidence and header regression cases for namespaces, unions/enums, access, bitfields, templates, arrays, function pointers, and duplicate definitions under `tests/application/generators/`, `tests/domain/services/parsing/`, and `tests/domain/services/generation/`.
+- [ ] T023 [US1] Add MSVC x64 C++23 header checks under `tests/application/generators/`, using `VsDevCmd.bat -arch=x64` and recording missing DDON closure types separately from syntax failures.
 
 **Checkpoint**: User Story 1 generates deterministic headers with explicit evidence
 and diagnostics. The five representative standalone probes compile under the
@@ -66,9 +66,9 @@ source relocations without stale output.
 **Independent Test**: Generate a bundle twice in fresh processes, compare bytes, then
 replace the input at the same path and verify invalidation and atomic replacement.
 
-- [ ] T024 [P] [US2] Add source/configuration identity fields to `HeaderCache` in `src/ddon_dwarf_reconstructor/domain/repositories/cache/header_cache.py`.
-- [ ] T025 [US2] Route header cache validation and writes through atomic publication in `src/ddon_dwarf_reconstructor/main.py` and `header_cache.py`.
-- [ ] T026 [US2] Add deterministic fresh-process and warm-cache tests in `tests/repositories/cache/test_header_cache.py` and `tests/generators/test_dwarf_generator.py`.
+- [x] T024 [P] [US2] Bind durable symbol/cache artifacts to source identity in `src/ddon_dwarf_reconstructor/infrastructure/artifacts.py`, `src/ddon_dwarf_reconstructor/domain/repositories/cache/`, and the lazy-index source port.
+- [x] T025 [US2] Route generated headers through atomic publication and manifest validation in `src/ddon_dwarf_reconstructor/main.py` and `src/ddon_dwarf_reconstructor/infrastructure/header_output.py`.
+- [ ] T026 [US2] Add deterministic fresh-process and warm-cache tests in `tests/domain/repositories/cache/`, `tests/infrastructure/test_artifacts.py`, and `tests/application/generators/`.
 - [ ] T027 [US2] Add artifact status and repair regression tests for corrupt, stale, migrated, and valid indexes in `tests/test_artifact_cli.py` and `tests/infrastructure/test_zstd_dump_parser.py`.
 - [ ] T028 [US2] Benchmark cold index construction, warm lookup, negative lookup, and batch closure in `tests/performance/` without deleting durable artifacts.
 
@@ -86,7 +86,7 @@ assembly/DWARF fixtures and inspect deterministic diagnostics.
 - [ ] T029 [P] [US3] Define a validation contract in `specs/001-header-foundation/contracts/assembly-validation.md` for method ownership, ranges, vtable signals, and member-offset hypotheses.
 - [ ] T030 [US3] Implement an assembly/header validation service beside `src/ddon_dwarf_reconstructor/infrastructure/orbis_objdump.py` and `src/ddon_dwarf_reconstructor/application/exporters/`.
 - [ ] T031 [US3] Emit stable evidence-linked disagreements in `src/ddon_dwarf_reconstructor/application/exporters/knowledge_exporter.py` without modifying declarations from assembly alone.
-- [ ] T032 [US3] Add matching/conflicting fixture tests in `tests/infrastructure/test_orbis_objdump.py` and `tests/generators/test_knowledge_exporter.py`.
+- [ ] T032 [US3] Add matching/conflicting fixture tests in `tests/infrastructure/test_orbis_objdump.py` and `tests/application/exporters/`.
 
 **Checkpoint**: Assembly validation reports every seeded disagreement with both
 contributing evidence identifiers and leaves the header facts traceable.
@@ -104,19 +104,19 @@ contributing evidence identifiers and leaves the header facts traceable.
 
 ## Phase 7: Verification Adaptation
 
-- [x] T041 [US1] Decode simple PS4 `DW_OP_constu` vtable locations in `src/ddon_dwarf_reconstructor/domain/services/parsing/class_parser.py` and cover them in `tests/generators/test_class_parser.py`.
+- [x] T041 [US1] Decode simple PS4 `DW_OP_constu` vtable locations in `src/ddon_dwarf_reconstructor/domain/services/parsing/class_parser_methods.py` and cover them under `tests/domain/services/parsing/`.
 - [x] T042 [US1] Generate and compile `rTextureMemory`, `rTexture`, and `rTutorialDialogMessage` with the MSVC wrapper in `output/msvc-header-validation-20260801/`, then classify every compiler diagnostic.
 - [x] T043 [US3] Generate `cSetInfoOmBreakTarget` and `rLayout` from the warm source-bound index and compare recoverable facts against `resources/sample-ida-dump-cSetInfoOmBreakTarget.h` and `resources/sample-ida-dump-rLayout.h`.
 - [x] T044 [US3] Record the sample generation, compilation, IDA comparison, and vtable-slot results in `specs/001-header-foundation/` without committing runtime outputs.
 - [x] T045 [US1] Preserve containing-type scope and nested class definitions in `src/ddon_dwarf_reconstructor/domain/models/dwarf/` and `class_parser.py`, then render legal nested template arguments for `rTutorialDialogMessage`.
 - [x] T046 [US1] Build complete base and by-value dependency closure for standalone headers in `hierarchy_builder.py`, `dependency_extractor.py`, and `header_generator.py`; add regression coverage for `rTexture`, `cSetInfoOmBreakTarget`, and `rLayout` compilation.
 - [ ] T047 [US3] Add an evidence-availability record to the IDA comparison report distinguishing pseudo-header declarations from unavailable method-body pseudocode and control-flow evidence.
-- [ ] T048 [US1] Propagate complete, declaration-only, partial, unresolved, and conflicting completeness through `src/ddon_dwarf_reconstructor/domain/services/definition_selection.py`, `class_parser.py`, `domain/services/generation/hierarchy_builder.py`, and `header_generator.py`; block declaration-only bases and by-value dependencies with deterministic diagnostics. Add unit coverage in `tests/domain/services/test_definition_selection.py`, `tests/domain/services/generation/test_hierarchy_builder.py`, and `tests/generators/test_header_generator.py`.
-- [ ] T049 [US1] Replace name-only dependency and registry identity with qualified, containing-scope-safe keys in `src/ddon_dwarf_reconstructor/domain/models/dwarf/`, `domain/services/generation/dependency_extractor.py`, `hierarchy_builder.py`, and `header_generator.py`; preserve nested names such as `cOmControl::InputLot`. Add parser and renderer regressions in `tests/generators/test_class_parser.py` and `tests/generators/test_header_generator.py`.
-- [ ] T050 [US1] Close aggregate and multi-file dependency publication in `src/ddon_dwarf_reconstructor/application/generators/dwarf_generator.py`, `domain/services/generation/file_registry.py`, `hierarchy_builder.py`, and `header_generator.py`: deduplicate shared framework declarations, include cross-file base/by-value dependencies, and make same-basename filenames collision-safe. Add an aggregate translation-unit regression in `tests/generators/test_header_compilation.py` and update file-registry/generator tests.
-- [ ] T051 [US1] Render structured declarators and templates from type-chain evidence in `src/ddon_dwarf_reconstructor/domain/services/parsing/type_resolver.py` and `domain/services/generation/header_generator.py`, covering qualifiers, arrays, function pointers, pointer-to-member forms, multi-parameter and non-type templates, and unresolved bounds/references. Add focused cases in `tests/domain/services/parsing/test_type_resolver.py` and `tests/generators/test_header_generator.py`.
+- [ ] T048 [US1] Propagate complete, declaration-only, partial, unresolved, and conflicting completeness through the current parser and generation services; block declaration-only bases and by-value dependencies with deterministic diagnostics. Add unit coverage in `tests/domain/services/parsing/` and `tests/domain/services/generation/`.
+- [ ] T049 [US1] Replace name-only dependency and registry identity with qualified, containing-scope-safe keys in `src/ddon_dwarf_reconstructor/domain/models/dwarf/` and the generation services; preserve nested names such as `cOmControl::InputLot`. Add parser and renderer regressions under `tests/domain/services/`.
+- [ ] T050 [US1] Close aggregate and multi-file dependency publication in `src/ddon_dwarf_reconstructor/application/generators/` and the generation services: deduplicate shared framework declarations, include cross-file base/by-value dependencies, and make same-basename filenames collision-safe. Add an aggregate translation-unit regression under `tests/application/generators/` and update file-registry/generator tests.
+- [ ] T051 [US1] Render structured declarators and templates from type-chain evidence in `src/ddon_dwarf_reconstructor/domain/services/parsing/type_resolver.py` and the generation services, covering qualifiers, arrays, function pointers, pointer-to-member forms, multi-parameter and non-type templates, and unresolved bounds/references. Add focused cases under `tests/domain/services/parsing/` and `tests/domain/services/generation/`.
 - [ ] T052 [US1] Make MSVC validation truthful in the checkout-local `tools/sonar/` reporting layer with tests under `tests/tools/`: propagate every per-translation-unit exit code, compile and report `compile_tutorial.cpp`, capture stdout/stderr, record compiler/version/flags/object status, report aggregate status separately, and classify C4201 explicitly. Treat `output/msvc-header-validation-20260801/compile_stubs.cmd` and its current files as read-only evidence; do not edit generated output.
-- [ ] T053 [US3] Extend the IDA comparison report in `src/ddon_dwarf_reconstructor/application/exporters/knowledge_exporter.py` and `tests/generators/test_knowledge_exporter.py` with evidence-availability metadata for pseudo-header declarations, layout/assembly facts, calling conventions, vtable slots, IDA-only methods, and unavailable method-body pseudocode; distinguish unavailable evidence from a mismatch.
+- [ ] T053 [US3] Extend the IDA comparison report in `src/ddon_dwarf_reconstructor/application/exporters/knowledge_exporter.py` and `tests/application/exporters/` with evidence-availability metadata for pseudo-header declarations, layout/assembly facts, calling conventions, vtable slots, IDA-only methods, and unavailable method-body pseudocode; distinguish unavailable evidence from a mismatch.
 
 ## Dependencies and Execution Order
 

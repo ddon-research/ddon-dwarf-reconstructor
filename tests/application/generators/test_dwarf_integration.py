@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from ddon_dwarf_reconstructor.application.generators import DwarfGenerator
+from ddon_dwarf_reconstructor.infrastructure.elf_session import ElfDwarfSession
 
 
 class TestDwarfGeneratorIntegration:
@@ -25,7 +26,7 @@ class TestDwarfGeneratorIntegration:
     )
     def test_real_elf_processing(self, test_elf_path: Path):
         """Test processing real ELF file without writing output."""
-        with DwarfGenerator(test_elf_path) as generator:
+        with DwarfGenerator(test_elf_path, session_factory=ElfDwarfSession) as generator:
             # Test that we can find a known class
             result = generator.find_class("MtObject")
             assert result is not None, "Should find MtObject class in test data"
@@ -57,7 +58,7 @@ class TestDwarfGeneratorIntegration:
     )
     def test_dwarf_info_access(self, test_elf_path: Path):
         """Test that DWARF information is properly accessible."""
-        with DwarfGenerator(test_elf_path) as generator:
+        with DwarfGenerator(test_elf_path, session_factory=ElfDwarfSession) as generator:
             # Verify we have DWARF info
             assert generator.dwarf_info is not None
 

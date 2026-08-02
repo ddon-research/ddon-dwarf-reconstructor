@@ -3,7 +3,7 @@
 The authoritative DWARF 2, 3, and 4 specifications are published here as
 deterministic, machine-readable JSON and readable Markdown. The source
 documents remain official `.mm` and `.doc` downloads; PDFs, DOCX exports,
-Rust constant modules, and the legacy shell pipeline are not part of the
+Rust constant modules, and the retired shell pipeline are not part of the
 artifact contract.
 
 ## Published artifacts

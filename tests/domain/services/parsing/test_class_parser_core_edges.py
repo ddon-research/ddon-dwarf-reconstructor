@@ -51,6 +51,54 @@ class TestClassParser:
         assert method.vtable_index == 5
 
     @pytest.mark.unit
+    @pytest.mark.parametrize(
+        ("expression", "expected"),
+        [("DW_OP_constu 0x11", 0x11), ("DW_OP_constu 17", 17)],
+    )
+    def test_parse_method_decodes_textual_vtable_expression(
+        self, class_parser, expression: str, expected: int
+    ) -> None:
+        method_die = Mock()
+        method_die.tag = "DW_TAG_subprogram"
+        method_die.offset = 0x7001
+        method_die.attributes = {
+            "DW_AT_name": Mock(value=b"load"),
+            "DW_AT_virtuality": Mock(value=1),
+            "DW_AT_vtable_elem_location": Mock(value=expression),
+        }
+        method_die.iter_children.return_value = []
+        parent_die = Mock()
+        parent_die.attributes = {"DW_AT_name": Mock(value=b"TestClass")}
+        method_die.get_parent.return_value = parent_die
+        class_parser.type_resolver.resolve_type_name.return_value = "bool"
+
+        method = class_parser.parse_method(method_die)
+
+        assert method is not None
+        assert method.vtable_index == expected
+
+    @pytest.mark.unit
+    def test_noreturn_does_not_imply_noexcept(self, class_parser) -> None:
+        method_die = Mock()
+        method_die.tag = "DW_TAG_subprogram"
+        method_die.offset = 0x7001
+        method_die.attributes = {
+            "DW_AT_name": Mock(value=b"abort"),
+            "DW_AT_noreturn": Mock(value=True),
+        }
+        method_die.iter_children.return_value = []
+        parent_die = Mock()
+        parent_die.attributes = {"DW_AT_name": Mock(value=b"TestClass")}
+        method_die.get_parent.return_value = parent_die
+        class_parser.type_resolver.resolve_type_name.return_value = "void"
+
+        method = class_parser.parse_method(method_die)
+
+        assert method is not None
+        assert method.is_noreturn is True
+        assert method.is_noexcept is False
+
+    @pytest.mark.unit
     def test_parse_parameter_basic(self, class_parser):
         """Test parameter parsing."""
         # Mock parameter DIE

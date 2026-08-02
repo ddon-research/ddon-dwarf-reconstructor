@@ -5,7 +5,9 @@ from unittest.mock import Mock
 import pytest
 
 from ddon_dwarf_reconstructor.domain.models.dwarf import MemberInfo, MethodInfo, ParameterInfo
+from ddon_dwarf_reconstructor.domain.services.definition_selection import DefinitionCandidate
 from ddon_dwarf_reconstructor.domain.services.parsing.type_resolver import LazyTypeResolver
+from ddon_dwarf_reconstructor.domain.services.search_result import SearchResult, SearchStatus
 
 
 @pytest.fixture
@@ -76,7 +78,12 @@ def test_find_typedef_falls_back_to_targeted_search(
     resolver: LazyTypeResolver, index: Mock
 ) -> None:
     index.find_symbol_offset.return_value = None
-    index.targeted_symbol_search.return_value = 0x100
+    index.targeted_symbol_search.return_value = SearchResult(
+        SearchStatus.COMPLETE,
+        DefinitionCandidate("alias", 0x10, 0x100, 100, True),
+        0.01,
+        1,
+    )
     typedef = Mock(tag="DW_TAG_typedef", offset=0x100)
     typedef.attributes = {"DW_AT_type": Mock()}
     base = Mock(tag="DW_TAG_base_type", offset=0x200)

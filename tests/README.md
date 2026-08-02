@@ -26,20 +26,19 @@ explicitly when validating the standalone uv tool installation.
 
 ```
 tests/
-├── conftest.py          # Pytest configuration and shared fixtures
-├── test_utils.py        # Legacy utilities (deprecated - use conftest.py fixtures)
-├── config/              # Configuration tests
-│   └── test_config.py
-├── core/                # Core DWARF parsing tests
-│   └── test_dwarf_core.py
-├── generators/          # Header generation tests
-│   └── test_header_generation.py
-├── performance/         # Performance benchmarks
-│   ├── test_performance.py
-│   ├── test_cu_caching.py
-│   └── test_parallel_parsing.py
-└── utils/               # Utility tests
-    └── test_utilities.py
+├── conftest.py                 # Pytest configuration and shared fixtures
+├── application/                # Use-case and exporter tests
+│   ├── exporters/
+│   └── generators/
+├── domain/                     # Model, parser, cache, and rendering tests
+│   ├── models/
+│   ├── repositories/
+│   └── services/
+├── infrastructure/             # Filesystem, ELF, config, and dump adapters
+├── performance/                # Explicitly opt-in benchmark tests
+├── quality/                    # Structure, architecture, coverage, and output gates
+├── support/                    # Typed DIE builders and shared test helpers
+└── utils/                      # Small platform and patching tests
 ```
 
 ## Test Categories
@@ -246,24 +245,20 @@ The test suite is designed for CI/CD pipelines:
     uv run just coverage-ci
 ```
 
-## Migration Notes
+## Test runner
 
-**DEPRECATED**: The legacy `run_tests.py` custom test runner has been removed.
-**All tests MUST use pytest.**
+Pytest is the only supported test runner. Use fixtures and markers directly:
 
-If you find old test code patterns:
-- `from test_utils import TestRunner` → Use pytest fixtures
-- `runner.run_test(test_func)` → Use `def test_func()` with markers
-- `handle_test_skip(reason)` → Use `pytest.skip(reason)`
-- `if __name__ == "__main__"` blocks → Remove (use pytest)
+- `runner.run_test(test_func)` becomes a marked `def test_func()`.
+- Conditional test availability uses `pytest.skip(reason)`.
+- Test modules are collected by pytest; they do not need `__main__` blocks.
 
 ## Ownership and quality gates
 
 New tests live beside the owning package under `tests/application`,
 `tests/domain`, `tests/infrastructure`, or `tests/quality`; `tests/support`
-contains shared typed DIE builders and fixtures. Legacy `tests/generators`
-modules remain only as compatibility coverage while behavior moves to the
-owning package.
+contains shared typed DIE builders and fixtures. Keep parser, rendering, and
+adapter tests in the package-shaped directory that owns the behavior.
 
 Every test change must preserve the structure limits (400-line modules,
 250-line classes, 75-line functions, McCabe 10) and the executable hexagonal

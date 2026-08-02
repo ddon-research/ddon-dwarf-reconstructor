@@ -86,7 +86,7 @@ def acquire_source(source: SourceSpec, cache_dir: Path, *, offline: bool = False
     try:
         verify_source(temporary_path, source)
         os.replace(temporary_path, destination)
-    except Exception:
+    except OSError, SourceError:
         temporary_path.unlink(missing_ok=True)
         raise
     return destination

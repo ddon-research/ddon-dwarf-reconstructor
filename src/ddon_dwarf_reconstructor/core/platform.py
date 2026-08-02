@@ -11,5 +11,5 @@ class ELFPlatform(Enum):
     UNKNOWN = "unknown"
 
     def __str__(self) -> str:
-        """Return the historical uppercase representation."""
+        """Return the uppercase platform label used in diagnostics."""
         return self.value.upper()

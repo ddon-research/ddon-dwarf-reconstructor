@@ -17,7 +17,7 @@ DWARF specification pipeline without changing generated evidence or durable-arti
   commands through Typer.
 - **TM-003**: Pyrefly MUST be the authoritative type checker for `src`, typed test support, and
   checkout-local operational Python modules;
-  both projects MUST pass at warning severity without a legacy-mode fallback.
+  both projects MUST pass at warning severity without an alternate checker mode.
 - **TM-004**: deptry MUST pass for both project boundaries with explicit first-party and
   package-to-module mappings.
 - **TM-005**: just MUST be the canonical task runner, and CI MUST invoke locked uv environments
@@ -30,7 +30,7 @@ DWARF specification pipeline without changing generated evidence or durable-arti
 - Changing DWARF traversal, evidence authority, cache schemas, generated-header syntax, knowledge
   export formats, or source identity behavior.
 - Making real PS4 assets part of the default test or CI path.
-- Raising Pyrefly to strict/all presets in this migration.
+- Raising Pyrefly to strict/all presets in this tooling slice.
 
 ## Acceptance
 

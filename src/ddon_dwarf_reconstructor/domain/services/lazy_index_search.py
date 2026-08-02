@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
-from ...core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ...core.dwarf import DwarfCompilationUnit, DwarfEntry, compilation_unit_length
 from ...core.observability import get_logger
 from ..models.dwarf.tag_registry import DwarfTagRegistry
 from .definition_selection import (
@@ -16,6 +16,7 @@ from .definition_selection import (
 )
 from .lazy_index_context import LazyIndexContext
 from .lazy_index_search_reporting import LazyIndexSearchReportingMixin
+from .search_result import SearchResult, SearchStatus
 
 logger = get_logger(__name__)
 
@@ -38,12 +39,13 @@ class _SearchState:
 
 class LazyIndexSearchMixin(LazyIndexSearchReportingMixin):
     def targeted_symbol_search(
-        self: LazyIndexContext, symbol_name: str, timeout: float = 600.0
-    ) -> int | None:
+        self: LazyIndexContext, symbol_name: str, timeout: float | None = None
+    ) -> SearchResult:
         """Find the strongest definition while keeping scans bounded."""
         logger.info("Performing targeted search for %s", symbol_name)
         state = _SearchState()
         started_at = time.time()
+        effective_timeout = self.search_timeout if timeout is None else timeout
         target_tags = set(DwarfTagRegistry.ALL_SEARCHABLE_TAGS)
         target_name = symbol_name.encode("utf-8")
         hint = self.persistent_cache.get_symbol_cu_offset(symbol_name)
@@ -53,9 +55,9 @@ class LazyIndexSearchMixin(LazyIndexSearchReportingMixin):
                 state.cus_searched += 1
                 state.record(hinted)
                 if hinted.score >= 10_000:
-                    return hinted.die_offset
+                    return self._result(SearchStatus.COMPLETE, hinted, state, started_at)
             for cu in self._ordered_cus(hint):
-                if self._search_timed_out(symbol_name, started_at, timeout, state):
+                if self._search_timed_out(symbol_name, started_at, effective_timeout, state):
                     break
                 state.cus_searched += 1
                 candidate = self._search_cu_candidate(cu, symbol_name, target_tags, target_name)
@@ -64,14 +66,33 @@ class LazyIndexSearchMixin(LazyIndexSearchReportingMixin):
                 state.record(candidate)
                 if candidate.score >= 5_000:
                     self._cache_candidate(candidate)
-                    return candidate.die_offset
-            return self._finish_targeted_search(symbol_name, state)
+                    return self._result(SearchStatus.COMPLETE, candidate, state, started_at)
+            return self._finish_targeted_search(symbol_name, state, started_at)
         except (AttributeError, KeyError, OSError, RuntimeError, TypeError, ValueError) as error:
             logger.error("Error in targeted search for %s: %s", symbol_name, error)
-        logger.warning(
-            "Symbol %s not found after searching %s CUs", symbol_name, state.cus_searched
+            return self._result(
+                SearchStatus.UNAVAILABLE,
+                None,
+                state,
+                started_at,
+                str(error),
+            )
+
+    @staticmethod
+    def _result(
+        status: SearchStatus,
+        candidate: DefinitionCandidate | None,
+        state: _SearchState,
+        started_at: float,
+        *diagnostics: str,
+    ) -> SearchResult:
+        return SearchResult(
+            status=status,
+            candidate=candidate,
+            elapsed_seconds=max(0.0, time.time() - started_at),
+            cus_searched=state.cus_searched,
+            diagnostics=tuple(diagnostics),
         )
-        return None
 
     def _search_hinted_cu(
         self: LazyIndexContext,
@@ -96,7 +117,7 @@ class LazyIndexSearchMixin(LazyIndexSearchReportingMixin):
         candidates = [
             cu for cu in self.dwarf_info.iter_CUs() if hint is None or cu.cu_offset != hint
         ]
-        return sorted(candidates, key=lambda cu: cu.header.unit_length)
+        return sorted(candidates, key=compilation_unit_length)
 
     @staticmethod
     def _search_timed_out(
@@ -121,8 +142,20 @@ class LazyIndexSearchMixin(LazyIndexSearchReportingMixin):
         return True
 
     def _finish_targeted_search(
-        self: LazyIndexContext, symbol_name: str, state: _SearchState
-    ) -> int | None:
+        self: LazyIndexContext, symbol_name: str, state: _SearchState, started_at: float
+    ) -> SearchResult:
+        if state.timed_out:
+            candidate = state.best or state.fallback
+            if candidate is None:
+                return self._result(SearchStatus.UNAVAILABLE, None, state, started_at)
+            partial = replace(candidate, complete=False)
+            self._cache_candidate(partial)
+            logger.warning(
+                "Returning partial result for %s after timeout: offset=0x%x",
+                symbol_name,
+                partial.die_offset,
+            )
+            return self._result(SearchStatus.PARTIAL, partial, state, started_at)
         if state.best is not None and state.best.score > 0:
             self._cache_candidate(state.best)
             logger.info(
@@ -132,33 +165,17 @@ class LazyIndexSearchMixin(LazyIndexSearchReportingMixin):
                 state.best.cu_offset,
                 state.best.score,
             )
-            return state.best.die_offset
+            return self._result(SearchStatus.COMPLETE, state.best, state, started_at)
         if state.fallback is None:
-            return None
-        if state.timed_out:
-            logger.warning(
-                "Returning partial result for %s after timeout: offset=0x%x",
-                symbol_name,
-                state.fallback.die_offset,
-            )
-            return state.fallback.die_offset
+            return self._result(SearchStatus.NOT_FOUND, None, state, started_at)
         logger.warning(
             "Found %s at 0x%x but only as forward declaration (score=%s)",
             symbol_name,
             state.fallback.die_offset,
             state.best.score if state.best is not None else -1,
         )
-        if state.best is not None:
-            self._cache_candidate(
-                DefinitionCandidate(
-                    symbol_name,
-                    state.best.cu_offset,
-                    state.fallback.die_offset,
-                    state.best.score,
-                    False,
-                )
-            )
-        return state.fallback.die_offset
+        self._cache_candidate(state.fallback)
+        return self._result(SearchStatus.PARTIAL, state.fallback, state, started_at)
 
     def _cache_candidate(self: LazyIndexContext, candidate: DefinitionCandidate) -> None:
         self.persistent_cache.add_symbol_cu_mapping(
@@ -182,17 +199,6 @@ class LazyIndexSearchMixin(LazyIndexSearchReportingMixin):
         if offset is None:
             return None
         return DefinitionCandidate(symbol_name, cu.cu_offset, offset, score, score > 0)
-
-    def _search_cu_for_symbol(
-        self: LazyIndexContext,
-        cu: DwarfCompilationUnit,
-        symbol_name: str,
-        target_tags: set[str],
-        target_name: bytes,
-    ) -> int | None:
-        """Compatibility wrapper returning only the selected DIE offset."""
-        candidate = self._search_cu_candidate(cu, symbol_name, target_tags, target_name)
-        return candidate.die_offset if candidate is not None else None
 
     def _search_cu_for_symbol_with_score(
         self: LazyIndexContext,

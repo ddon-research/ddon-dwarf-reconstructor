@@ -1,6 +1,6 @@
 """Render deterministic headers for namespaces and unresolved symbols."""
 
-from ....core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ....core.dwarf import DwarfCompilationUnit, DwarfEntry, decode_dwarf_string
 from ....core.observability import get_logger
 from ....core.path_policy import sanitize_for_filesystem
 
@@ -55,11 +55,7 @@ class SpecialHeaderRenderer:
                 name_attr = child.attributes.get("DW_AT_name")
                 if name_attr is None:
                     continue
-                class_name = (
-                    name_attr.value.decode("utf-8")
-                    if isinstance(name_attr.value, bytes)
-                    else str(name_attr.value)
-                )
+                class_name = decode_dwarf_string(name_attr.value)
                 item_type = "class" if child.tag == "DW_TAG_class_type" else "struct"
                 child_items.append((item_type, class_name))
         except (AttributeError, RuntimeError, TypeError) as error:

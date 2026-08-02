@@ -1,4 +1,4 @@
-"""Focused operations extracted from the public compatibility façade."""
+"""Header type-planning operations."""
 
 from __future__ import annotations
 
@@ -11,6 +11,45 @@ logger = get_logger(__name__)
 
 
 class HeaderTypePlanningMixin:
+    @classmethod
+    def _template_forward_declaration(cls, type_name: str) -> str | None:
+        """Build a forward declaration with one parameter per specialization argument."""
+        opening = type_name.find("<")
+        if opening <= 0 or not type_name.endswith(">"):
+            return None
+        primary = type_name[:opening].strip()
+        if not re.fullmatch(r"[A-Za-z_]\w*(?:::[A-Za-z_]\w*)*", primary):
+            return None
+        arguments = cls._split_template_arguments(type_name[opening + 1 : -1])
+        if not arguments:
+            return None
+        type_names = ("T", "U", "V", "W")
+        parameters = [
+            f"auto N{index}"
+            if re.fullmatch(r"[-+]?\d+|true|false", argument.strip())
+            else f"typename {type_names[index] if index < len(type_names) else f'T{index}'}"
+            for index, argument in enumerate(arguments)
+        ]
+        return f"template <{', '.join(parameters)}> class {primary};"
+
+    @staticmethod
+    def _split_template_arguments(arguments: str) -> list[str]:
+        parts: list[str] = []
+        start = 0
+        depth = 0
+        for index, character in enumerate(arguments):
+            if character == "<":
+                depth += 1
+            elif character == ">":
+                depth -= 1
+            elif character == "," and depth == 0:
+                parts.append(arguments[start:index].strip())
+                start = index + 1
+        final = arguments[start:].strip()
+        if final:
+            parts.append(final)
+        return parts
+
     @staticmethod
     def _forward_declaration_name(declaration: str) -> str:
         """Extract the declared type name from a C++ forward declaration."""
@@ -52,8 +91,9 @@ class HeaderTypePlanningMixin:
             if cls._is_builtin_type(clean_name) or candidate.startswith("std::"):
                 continue
 
-            if "<" in clean_name:
-                declarations.add(f"template <typename T> class {candidate};")
+            template_declaration = cls._template_forward_declaration(clean_name)
+            if template_declaration is not None:
+                declarations.add(template_declaration)
             else:
                 declarations.add(f"class {candidate};")
 

@@ -12,6 +12,16 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import (
     MethodInfo,
     ParameterInfo,
 )
+from ddon_dwarf_reconstructor.infrastructure.artifacts import SourceIdentityCatalog
+
+
+def _exporter(elf_path: Path, **kwargs: object) -> KnowledgeExporter:
+    return KnowledgeExporter(
+        elf_path,
+        "ps4-02020005",
+        source_hash=SourceIdentityCatalog().sha256,
+        **kwargs,
+    )
 
 
 @pytest.mark.unit
@@ -58,7 +68,7 @@ def test_export_preserves_layout_and_source_metadata(tmp_path: Path) -> None:
         cu_offset=2,
     )
 
-    manifest_path = KnowledgeExporter(elf_path, "ps4-02020005").export(
+    manifest_path = _exporter(elf_path).export(
         "rLayout",
         {"cResource": base, "rLayout": layout, "rLayout::SetInfo": nested},
         ["cResource", "rLayout", "rLayout::SetInfo"],
@@ -95,7 +105,7 @@ def test_export_records_root_authority_in_manifest(tmp_path: Path) -> None:
     layout = ClassInfo("rLayout", 528, [], [], [], [], [], [], die_offset=0x117EC452)
     authority = {"symbol": "rLayout", "die_offset_hex": "0x117ec452"}
 
-    manifest_path = KnowledgeExporter(elf_path, "ps4-02020005").export(
+    manifest_path = _exporter(elf_path).export(
         "rLayout",
         {"rLayout": layout},
         ["rLayout"],
@@ -164,7 +174,7 @@ def test_export_retains_logical_field_reference_outside_concrete_closure(tmp_pat
         cu_offset=2,
     )
 
-    manifest_path = KnowledgeExporter(elf_path, "ps4-02020005").export(
+    manifest_path = _exporter(elf_path).export(
         "rLayout", {"rLayout": layout}, ["rLayout"], tmp_path / "export"
     )
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -215,7 +225,7 @@ def test_export_keeps_signature_only_references_outside_layout_closure(tmp_path:
         cu_offset=2,
     )
 
-    manifest_path = KnowledgeExporter(elf_path, "ps4-02020005").export(
+    manifest_path = _exporter(elf_path).export(
         "rLayout", {"rLayout": layout}, ["rLayout"], tmp_path / "export"
     )
 
@@ -250,7 +260,7 @@ def test_export_accepts_self_and_builtin_references_via_offsets(tmp_path: Path) 
         cu_offset=2,
     )
 
-    manifest_path = KnowledgeExporter(elf_path, "ps4-02020005").export(
+    manifest_path = _exporter(elf_path).export(
         "stLayoutID",
         {"stLayoutID": layout},
         ["stLayoutID"],
@@ -278,9 +288,8 @@ def test_export_ignores_non_structural_unresolved_offsets(tmp_path: Path) -> Non
         cu_offset=2,
     )
 
-    manifest_path = KnowledgeExporter(
+    manifest_path = _exporter(
         elf_path,
-        "ps4-02020005",
         requires_resolution=lambda offset: offset != 35167,
     ).export(
         "MtAllocator",
@@ -320,7 +329,7 @@ def test_export_gives_overloaded_methods_distinct_stable_ids(tmp_path: Path) -> 
         die_offset=20,
         cu_offset=2,
     )
-    exporter = KnowledgeExporter(elf_path, "ps4-02020005")
+    exporter = _exporter(elf_path)
 
     first_manifest = exporter.export(
         "rLayout", {"rLayout": layout}, ["rLayout"], tmp_path / "first"

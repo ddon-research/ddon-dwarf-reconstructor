@@ -33,6 +33,7 @@ def test_add_multiple_definitions_for_symbol(tmp_path: Path):
     # Verify best definition (highest score complete definition) is used as primary
     assert cache.get_symbol_offset("rLayout") == 293519450
     assert cache.get_symbol_cu_offset("rLayout") == 293519243
+    assert cache.get_symbol_completeness("rLayout") is True
 
 
 @pytest.mark.unit
@@ -71,11 +72,20 @@ def test_prefer_complete_definition_over_incomplete(tmp_path: Path):
     assert best["complete"] is True
     assert best["score"] == 100
     assert best["cu_offset"] == 3229
+    assert cache.get_symbol_completeness("cSetInfo") is True
 
 
 @pytest.mark.unit
-def test_cache_migration_from_v2_to_v4(tmp_path: Path):
-    """Test migration from v2.0 into source-aware multi-definition format."""
+def test_incomplete_definition_is_visible_without_being_complete(tmp_path: Path):
+    cache = PersistentSymbolCache(tmp_path / "partial.json")
+    cache.add_symbol_cu_mapping("Pending", 100, 200, score=20, complete=False)
+
+    assert cache.get_symbol_completeness("Pending") is False
+
+
+@pytest.mark.unit
+def test_cache_with_old_schema_requires_rebuild(tmp_path: Path):
+    """Old schema records are rejected instead of guessing missing evidence."""
     cache_file = tmp_path / "migration_cache.json"
 
     # Create v2.0 cache file
@@ -103,32 +113,21 @@ def test_cache_migration_from_v2_to_v4(tmp_path: Path):
     with open(cache_file, "w", encoding="utf-8") as f:
         json.dump(v2_data, f)
 
-    # Load cache - should auto-migrate
+    # Load cache - the caller must rebuild it from the current source.
     cache = PersistentSymbolCache(cache_file)
 
-    assert cache.data["version"] == "4.0"
-
-    # Verify symbol_definitions created from v2 data
-    assert "symbol_definitions" in cache.data
-    assert "MtObject" in cache.data["symbol_definitions"]
-    assert "u32" in cache.data["symbol_definitions"]
-
-    # Verify migrated definitions
-    mtobject_defs = cache.get_all_definitions("MtObject")
-    assert len(mtobject_defs) == 1
-    assert mtobject_defs[0]["cu_offset"] == 3229
-    assert mtobject_defs[0]["die_offset"] == 34029
-    assert mtobject_defs[0]["complete"] is True  # Backward compat assumes complete
+    assert cache.data["version"] == "5.0"
+    assert cache.get_all_definitions("MtObject") == []
 
 
 @pytest.mark.unit
-def test_validate_and_repair_missing_fields(tmp_path: Path):
-    """Test that validation detects fields migrated during load."""
+def test_cache_with_missing_fields_requires_rebuild(tmp_path: Path):
+    """An incomplete current record is not reconstructed from partial fields."""
     cache_file = tmp_path / "missing_fields_cache.json"
 
     # Create cache missing symbol_definitions field
     incomplete_data = {
-        "version": "2.0",
+        "version": "5.0",
         "symbol_to_offset": {"MtObject": 34029},
         "offset_to_symbol": {"34029": "MtObject"},
         "symbol_to_cu_offset": {"MtObject": 3229},
@@ -140,9 +139,8 @@ def test_validate_and_repair_missing_fields(tmp_path: Path):
 
     cache = PersistentSymbolCache(cache_file)
 
-    # Migration should have added missing fields
-    assert "symbol_definitions" in cache.data
-    assert cache.data["version"] == "4.0"
+    assert cache.get_all_definitions("MtObject") == []
+    assert cache.data["version"] == "5.0"
 
 
 @pytest.mark.unit
@@ -183,15 +181,15 @@ def test_get_statistics_includes_multi_def_metrics(tmp_path: Path):
     assert stats["symbols"] == 2  # 2 unique symbols
     assert stats["multi_definition_symbols"] == 1  # Only rLayout has multiple defs
     assert stats["total_definitions"] == 3  # 3 total definitions
-    assert stats["version"] == "4.0"
+    assert stats["version"] == "5.0"
 
 
 @pytest.mark.unit
-def test_empty_cache_initializes_with_v4_structure(tmp_path: Path):
-    """Test that new empty cache uses source-aware v4.0 format."""
+def test_empty_cache_initializes_with_current_structure(tmp_path: Path):
+    """Test that new empty cache uses the current source-aware format."""
     cache_file = tmp_path / "new_cache.json"
     cache = PersistentSymbolCache(cache_file)
 
-    assert cache.data["version"] == "4.0"
+    assert cache.data["version"] == "5.0"
     assert "symbol_definitions" in cache.data
     assert isinstance(cache.data["symbol_definitions"], dict)

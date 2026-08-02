@@ -2,7 +2,7 @@
 
 import importlib
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import ANY, Mock
 
 import pytest
 
@@ -15,8 +15,8 @@ def _patch_runtime_wiring(mocker) -> tuple[Path, Mock]:
     cache_file = Path("cache/dwarf.json")
     source_hash = Mock(name="source_hash")
     mocker.patch(
-        "ddon_dwarf_reconstructor.main.get_config",
-        return_value={"DIE_CACHE_SIZE": 10000, "TYPE_CACHE_SIZE": 5000},
+        "ddon_dwarf_reconstructor.main.DwarfRuntimeConfig.from_environment",
+        return_value=Mock(die_cache_size=10000, type_cache_size=5000, search_timeout_seconds=1.0),
     )
     mocker.patch("ddon_dwarf_reconstructor.main.get_cache_file_path", return_value=cache_file)
     mocker.patch(
@@ -59,6 +59,7 @@ def test_run_generation_uses_export_knowledge_path(mocker) -> None:
 
     generator_cls.assert_called_once_with(
         Path("resources/DDOORBIS.elf"),
+        session_factory=cli_main.create_dwarf_session,
         exhaustive_search=True,
         dwarf_dump_path=Path("dump.zst"),
         dwarf_index_path=Path("dump.index.sqlite3"),
@@ -68,7 +69,9 @@ def test_run_generation_uses_export_knowledge_path(mocker) -> None:
         cache_file=cache_file,
         die_cache_size=10000,
         type_cache_size=5000,
+        search_timeout=1.0,
         source_hash=source_hash,
+        source_identity=ANY,
     )
     mock_generator.export_knowledge_graph.assert_called_once_with(
         "rLayout",
@@ -106,6 +109,7 @@ def test_run_generation_uses_dump_index_as_fast_lookup_without_exhaustive_mode(m
     assert cli_main.run_generation(options) == 0
     generator_cls.assert_called_once_with(
         Path("resources/DDOORBIS.elf"),
+        session_factory=cli_main.create_dwarf_session,
         exhaustive_search=False,
         dwarf_dump_path=Path("dump.zst"),
         dwarf_index_path=Path("dump.index.sqlite3"),
@@ -115,5 +119,7 @@ def test_run_generation_uses_dump_index_as_fast_lookup_without_exhaustive_mode(m
         cache_file=cache_file,
         die_cache_size=10000,
         type_cache_size=5000,
+        search_timeout=1.0,
         source_hash=source_hash,
+        source_identity=ANY,
     )

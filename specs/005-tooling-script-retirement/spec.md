@@ -26,7 +26,7 @@ usable as an isolated uv-installed command-line tool.
 
 - Changing DWARF traversal, generated evidence, cache formats, artifact semantics, or runtime
   Typer commands.
-- Removing the root `main.py` native-build compatibility launcher.
+- Removing the root `main.py` native-build launcher.
 - Making Sonar/MSVC validation part of the default test path on machines without Visual Studio.
 
 ## Acceptance

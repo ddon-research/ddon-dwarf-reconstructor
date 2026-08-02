@@ -1,9 +1,10 @@
-"""Focused type-resolution operations for the compatibility façade."""
+"""Type-resolution operations for lazy DWARF lookup."""
 
 from __future__ import annotations
 
-from ....core.dwarf import DwarfEntry
+from ....core.dwarf import DwarfEntry, decode_dwarf_string
 from ....core.observability import get_logger
+from ..search_result import SearchStatus
 from .array_parser import parse_array_type
 from .type_resolver_context import TypeResolverContext
 
@@ -54,7 +55,7 @@ class TypeResolutionMixin:
 
             # Use pyelftools' efficient offset resolution
             type_die = die.get_DIE_from_attribute(type_attr_name)
-            if not type_die:
+            if type_die is None:
                 logger.debug(f"Could not resolve {type_attr_name} reference")
                 return "unknown_type"
 
@@ -70,8 +71,8 @@ class TypeResolutionMixin:
 
             return resolved_name
 
-        except Exception as e:
-            logger.warning(f"Failed to resolve type reference for {die.tag}: {e}")
+        except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
+            logger.warning("Failed to resolve type reference for %s: %s", die.tag, error)
             return "unknown_type"
 
     def _resolve_die_type_name(self: TypeResolverContext, type_die: DwarfEntry) -> str:
@@ -97,8 +98,7 @@ class TypeResolutionMixin:
         name_attr = type_die.attributes.get("DW_AT_name")
         if name_attr is None:
             return None
-        value = name_attr.value
-        return value.decode("utf-8") if isinstance(value, bytes) else str(value)
+        return decode_dwarf_string(name_attr.value)
 
     def _resolve_qualified_type(self: TypeResolverContext, type_die: DwarfEntry) -> str:
         base_type = self.resolve_type_name(type_die)
@@ -142,7 +142,16 @@ class TypeResolutionMixin:
         # Check the persistent index once, then perform one targeted fallback.
         offset = self.index.find_symbol_offset(typedef_name)
         if offset is None:
-            offset = self.index.targeted_symbol_search(typedef_name)
+            search = self.index.targeted_symbol_search(typedef_name)
+            if search.status is not SearchStatus.COMPLETE:
+                logger.debug(
+                    "Typedef search for %s ended as %s: %s",
+                    typedef_name,
+                    search.status.value,
+                    "; ".join(search.diagnostics),
+                )
+                return None
+            offset = search.die_offset
         if offset is None:
             logger.debug(f"Typedef not found: {typedef_name}")
             return None
@@ -232,7 +241,7 @@ class TypeResolutionMixin:
                         used_typedefs.add(resolved_type)
                         logger.debug(f"Found used typedef: {member_type} -> {resolved_type}")
 
-        except Exception as e:
-            logger.warning(f"Error collecting typedefs from class: {e}")
+        except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
+            logger.warning("Error collecting typedefs from class: %s", error)
 
         return used_typedefs

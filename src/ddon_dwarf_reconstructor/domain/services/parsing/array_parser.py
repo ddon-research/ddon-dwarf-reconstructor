@@ -19,31 +19,9 @@ class ArrayInfo:
 
     name: str
     element_type: str
-    dimensions: tuple[int, ...]
-    total_elements: int
+    dimensions: tuple[int | None, ...]
+    total_elements: int | None
     die_offset: int
-
-    def __getitem__(self, key: str) -> str | tuple[int, ...] | int:
-        if key == "name":
-            return self.name
-        if key == "element_type":
-            return self.element_type
-        if key == "dimensions":
-            return self.dimensions
-        if key == "total_elements":
-            return self.total_elements
-        if key == "die_offset":
-            return self.die_offset
-        raise KeyError(key)
-
-    def as_dict(self) -> dict[str, str | list[int] | int]:
-        return {
-            "name": self.name,
-            "element_type": self.element_type,
-            "dimensions": list(self.dimensions),
-            "total_elements": self.total_elements,
-            "die_offset": self.die_offset,
-        }
 
     @property
     def declarator(self) -> TypeDeclarator:
@@ -75,42 +53,48 @@ def parse_array_type(array_die: DwarfEntry, type_resolver: TypeNameResolver) -> 
     return ArrayInfo(name, element_type, tuple(dimensions), total_elements, array_die.offset)
 
 
-def _collect_dimensions(array_die: DwarfEntry) -> list[int]:
-    dimensions: list[int] = []
+def _collect_dimensions(array_die: DwarfEntry) -> list[int | None]:
+    dimensions: list[int | None] = []
     for child in array_die.iter_children():
         if child.tag == "DW_TAG_subrange_type":
             dimensions.append(_subrange_size(child))
     return dimensions
 
 
-def _subrange_size(subrange_die: DwarfEntry) -> int:
+def _subrange_size(subrange_die: DwarfEntry) -> int | None:
     count_attribute = subrange_die.attributes.get("DW_AT_count")
     upper_attribute = subrange_die.attributes.get("DW_AT_upper_bound")
     lower_attribute = subrange_die.attributes.get("DW_AT_lower_bound")
     if count_attribute is not None:
-        return max(0, _as_dimension(count_attribute.value))
+        count = _as_dimension(count_attribute.value)
+        return count if count is None or count >= 0 else None
     if upper_attribute is None:
-        return 0
+        return None
     upper_bound = _as_dimension(upper_attribute.value)
     lower_bound = _as_dimension(lower_attribute.value) if lower_attribute else 0
-    return max(0, upper_bound - lower_bound + 1)
+    if upper_bound is None or lower_bound is None:
+        return None
+    size = upper_bound - lower_bound + 1
+    return size if size >= 0 else None
 
 
-def _total_elements(dimensions: list[int]) -> int:
+def _total_elements(dimensions: list[int | None]) -> int | None:
+    if not dimensions or any(dimension is None for dimension in dimensions):
+        return None
     total = 1
     for dimension in dimensions:
-        if dimension > 0:
-            total *= dimension
+        assert dimension is not None
+        total *= dimension
     return total
 
 
-def _array_name(element_type: str, dimensions: list[int]) -> str:
-    dimension_text = "][".join(str(size) if size > 0 else "" for size in dimensions)
+def _array_name(element_type: str, dimensions: list[int | None]) -> str:
+    dimension_text = "][".join(str(size) if size is not None else "" for size in dimensions)
     return f"{element_type}[{dimension_text}]" if dimensions else f"{element_type}[]"
 
 
-def _as_dimension(value: Any) -> int:
+def _as_dimension(value: Any) -> int | None:
     try:
         return int(value)
     except TypeError, ValueError:
-        return 0
+        return None

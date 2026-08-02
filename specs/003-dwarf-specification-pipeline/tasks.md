@@ -14,7 +14,7 @@
 - [x] Add Debian Dockerfile, Compose configuration, and CI quality job.
 - [x] Regenerate DWARF 2/3/4 JSON, Markdown, and manifest artifacts from the
   locked official sources.
-- [x] Remove the legacy heredoc/Rust shell pipeline and stale generated Rust/
+- [x] Remove the retired heredoc/Rust shell pipeline and stale generated Rust/
   constant outputs.
 - [x] Synchronize architecture, testing, README, tool, and feature
   documentation.

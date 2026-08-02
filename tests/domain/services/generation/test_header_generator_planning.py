@@ -236,3 +236,10 @@ class TestHeaderGenerator:
         assert "ValueType m_value;" in header
         assert header.count("class ValueType\n{") == 1
         assert header.count("class DerivedClass : public BaseClass\n{") == 1
+
+
+@pytest.mark.unit
+def test_template_forward_declaration_matches_multiple_argument_arity() -> None:
+    declaration = HeaderGenerator._template_forward_declaration("Box<Pair<int, float>, 4>")
+
+    assert declaration == "template <typename T, auto N1> class Box;"

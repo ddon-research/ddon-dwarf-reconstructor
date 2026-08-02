@@ -1,6 +1,6 @@
 """Method-implementation evidence scoring and parameter-name merging."""
 
-from ....core.dwarf import DwarfEntry
+from ....core.dwarf import DwarfEntry, decode_dwarf_string
 from ....core.observability import get_logger
 from ...models.dwarf import ParameterInfo
 
@@ -50,8 +50,7 @@ def _implementation_parameter_names(implementation: DwarfEntry) -> list[str]:
             continue
         name_attribute = child.attributes.get("DW_AT_name")
         if name_attribute:
-            raw_name = name_attribute.value
-            names.append(raw_name.decode("utf-8") if isinstance(raw_name, bytes) else str(raw_name))
+            names.append(decode_dwarf_string(name_attribute.value))
     return names
 
 

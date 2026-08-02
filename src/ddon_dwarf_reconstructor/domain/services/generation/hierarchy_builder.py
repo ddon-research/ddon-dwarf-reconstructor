@@ -127,8 +127,7 @@ class HierarchyBuilder(
         This traverses not just the inheritance chain, but recursively resolves
         all types referenced in members, methods, nested structs, and unions.
 
-        Uses offset-based dependency extraction if DependencyExtractor is available,
-        otherwise falls back to legacy string-based extraction.
+        Uses the dependency extractor and DIE offsets to resolve referenced types.
 
         Args:
             class_name: Name of the target class

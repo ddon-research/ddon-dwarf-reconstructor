@@ -1,4 +1,4 @@
-"""Focused operations extracted from the public compatibility façade."""
+"""Single-file hierarchy header generation operations."""
 
 from __future__ import annotations
 
@@ -26,11 +26,10 @@ class HierarchyHeaderGenerationMixin:
         resolve_forward_declarations: bool = True,
         guard_suffix: str = "_HIERARCHY_H",
     ) -> str:
-        """Generate C++ header with complete inheritance hierarchy (single file, legacy mode).
+        """Generate a C++ header with the complete inheritance hierarchy in one file.
 
         This method generates all classes in a single file with forward declarations
-        for dependencies. Used for backward compatibility when --full-hierarchy --single-file
-        is specified.
+        for dependencies when the single-file rendering mode is selected.
 
         Args:
             class_infos: Dictionary of class name -> ClassInfo
@@ -111,7 +110,12 @@ class HierarchyHeaderGenerationMixin:
             "",
             f"// Target Class: {target_class}",
             f"// - Size: {main_class.byte_size} bytes",
-            f"// - DIE Offset: 0x{main_class.die_offset:08x}",
+            "// - DIE Offset: "
+            + (
+                f"0x{main_class.die_offset:08x}"
+                if main_class.die_offset is not None
+                else "unavailable"
+            ),
         ]
         if main_class.packing_info:
             lines.append(

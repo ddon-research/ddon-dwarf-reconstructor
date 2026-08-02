@@ -91,7 +91,6 @@ class TypeChainTraverser:
         if "DW_AT_name" not in current.attributes:
             logger.debug("Anonymous %s at 0x%x is terminal", current.tag, current.offset)
             return current
-        logger.warning("Named aggregate reached traversal fallback at 0x%x", current.offset)
         return current
 
     @staticmethod
@@ -122,13 +121,13 @@ class TypeChainTraverser:
 
         # Get type DIE
         type_die = member_die.get_DIE_from_attribute("DW_AT_type")
-        if not type_die:
+        if type_die is None:
             logger.debug(f"Could not resolve DW_AT_type reference from 0x{member_die.offset:x}")
             return None
 
         # Follow chain to terminal
         terminal_die = TypeChainTraverser.follow_to_terminal_type(type_die)
-        if not terminal_die:
+        if terminal_die is None:
             return None
 
         return terminal_die.offset

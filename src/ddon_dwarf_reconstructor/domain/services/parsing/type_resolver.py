@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Compatibility façade for lazy DWARF type resolution."""
+"""Lazy DWARF type resolution services."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ class LazyTypeResolver(
     PrimitiveLookupMixin,
     PrimitiveTypeNamesMixin,
 ):
-    """Compatibility façade for typed, lazy DWARF type services."""
+    """Coordinate typed, lazy DWARF type services."""
 
     PRIMITIVE_TYPEDEFS = frozenset(
         {
@@ -87,7 +87,7 @@ class LazyTypeResolver(
         # Recursion tracking
         self._types_in_progress: set[str] = set()
 
-        # Add instance attribute for test compatibility
+        # Keep the configured set mutable so callers can register observed aliases.
         self._primitive_typedefs: set[str] = set(self.PRIMITIVE_TYPEDEFS)
 
         logger.info("Initialized LazyTypeResolver with offset-based caching")

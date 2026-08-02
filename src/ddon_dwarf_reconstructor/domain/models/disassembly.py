@@ -65,7 +65,7 @@ class OrbisDisassemblyReport:
     functions: tuple[OrbisFunctionDisassembly, ...]
 
     def to_dict(self) -> dict[str, object]:
-        """Return a stable JSON-compatible representation."""
+        """Return a stable representation suitable for JSON serialization."""
         return asdict(self)
 
     @classmethod

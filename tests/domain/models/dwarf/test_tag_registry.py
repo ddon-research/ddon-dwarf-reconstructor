@@ -1,4 +1,4 @@
-"""Test the DWARF tag registry and cache migration functionality."""
+"""Test the DWARF tag registry."""
 
 import pytest
 
@@ -41,27 +41,6 @@ class TestDwarfTagRegistry:
             ["DW_TAG_class_type", "DW_TAG_structure_type", "DW_TAG_union_type"]
         )
         assert class_tags == expected_class_tags
-
-    def test_legacy_type_mapping(self):
-        """Test legacy type name to tags mapping."""
-        # Test class mapping
-        class_tags = DwarfTagRegistry.get_tags_for_legacy_type("class")
-        expected_class_tags = frozenset(["DW_TAG_class_type", "DW_TAG_structure_type"])
-        assert class_tags == expected_class_tags
-
-        # Test typedef mapping
-        typedef_tags = DwarfTagRegistry.get_tags_for_legacy_type("typedef")
-        expected_typedef_tags = frozenset(["DW_TAG_typedef"])
-        assert typedef_tags == expected_typedef_tags
-
-        # Test primitive type mapping (should include both typedef and base_type)
-        primitive_tags = DwarfTagRegistry.get_tags_for_legacy_type("primitive_type")
-        expected_primitive_tags = frozenset(["DW_TAG_typedef", "DW_TAG_base_type"])
-        assert primitive_tags == expected_primitive_tags
-
-        # Test unknown legacy type
-        unknown_tags = DwarfTagRegistry.get_tags_for_legacy_type("unknown_type")
-        assert unknown_tags == frozenset()
 
     def test_is_searchable_tag(self):
         """Test searchable tag checking."""
@@ -106,26 +85,3 @@ class TestDwarfTagRegistry:
             assert human_name != tag or tag.startswith("DW_TAG_"), (
                 f"Tag {tag} should have human name"
             )
-
-    def test_legacy_backward_compatibility(self):
-        """Test that all legacy types are properly mapped."""
-        legacy_types = [
-            "class",
-            "struct",
-            "union",
-            "typedef",
-            "base_type",
-            "enum",
-            "namespace",
-            "primitive_type",
-        ]
-
-        for legacy_type in legacy_types:
-            tags = DwarfTagRegistry.get_tags_for_legacy_type(legacy_type)
-            assert len(tags) > 0, f"Legacy type '{legacy_type}' should map to at least one tag"
-
-            # All mapped tags should be searchable
-            for tag in tags:
-                assert DwarfTagRegistry.is_searchable_tag(tag), (
-                    f"Mapped tag {tag} should be searchable"
-                )

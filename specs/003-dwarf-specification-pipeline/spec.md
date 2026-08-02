@@ -37,7 +37,7 @@ machine-readable representation for all supported specification versions.
   decorative media, and converter-only control text are omitted.
 - JSON is validated against the checked-in JSON Schema before publication.
 - A complete output directory is staged and atomically swapped into place.
-- No generated Rust constants or legacy `pipeline.sh` output is part of the
+- No generated Rust constants or retired `pipeline.sh` output is part of the
   public contract.
 
 ## Non-goals
@@ -54,6 +54,6 @@ machine-readable representation for all supported specification versions.
   checksum failures, offline mode, missing tools, and atomic publication.
 - Two builds from identical locked intermediates are byte-identical.
 - An opt-in official-source Docker build validates DWARF 2/3/4 coverage and
-  rejects legacy table/media artifacts.
+  rejects converter table/media artifacts.
 - The generated JSON, Markdown, manifest, schema, and repository docs are
   synchronized with this contract.

@@ -9,9 +9,15 @@ from pathlib import Path
 
 from .application.generators import DwarfGenerator, GenerationRequest
 from .core.observability import get_logger, log_timing
+from .core.platform import ELFPlatform
 from .infrastructure.artifacts import SourceIdentityCatalog
-from .infrastructure.composition import create_disassembly_producer, create_dump_lookup
-from .infrastructure.config import Config, get_cache_file_path, get_config
+from .infrastructure.composition import (
+    create_disassembly_producer,
+    create_dump_lookup,
+    create_dwarf_session,
+)
+from .infrastructure.config import Config, DwarfRuntimeConfig, get_cache_file_path
+from .infrastructure.header_output import AtomicHeaderPublisher
 from .infrastructure.logging import LoggerSetup
 
 
@@ -100,11 +106,7 @@ def _log_options(
 def _generation_mode(options: GenerationOptions) -> str:
     if not options.full_hierarchy:
         return "single-header"
-    return (
-        "full-hierarchy (single-file, legacy)"
-        if options.single_file
-        else "full-hierarchy (multi-file)"
-    )
+    return "full-hierarchy (single-file)" if options.single_file else "full-hierarchy (multi-file)"
 
 
 def _run_generation(
@@ -113,9 +115,11 @@ def _run_generation(
     success_count = 0
     failed_symbols: list[tuple[str, str]] = []
     try:
-        dwarf_config = get_config()
+        dwarf_config = DwarfRuntimeConfig.from_environment()
+        identity_catalog = SourceIdentityCatalog()
         with DwarfGenerator(
             config.elf_file_path,
+            session_factory=create_dwarf_session,
             exhaustive_search=options.exhaustive,
             dwarf_dump_path=options.dwarf_dump,
             dwarf_index_path=options.dwarf_index,
@@ -123,9 +127,11 @@ def _run_generation(
             dump_lookup_factory=create_dump_lookup,
             disassembly_factory=create_disassembly_producer,
             cache_file=get_cache_file_path(str(config.elf_file_path)),
-            die_cache_size=int(dwarf_config["DIE_CACHE_SIZE"]),
-            type_cache_size=int(dwarf_config["TYPE_CACHE_SIZE"]),
-            source_hash=SourceIdentityCatalog().sha256,
+            die_cache_size=dwarf_config.die_cache_size,
+            type_cache_size=dwarf_config.type_cache_size,
+            search_timeout=dwarf_config.search_timeout_seconds,
+            source_hash=identity_catalog.sha256,
+            source_identity=identity_catalog,
         ) as generator:
             for index, symbol_name in enumerate(symbols, 1):
                 logger.info("[%s/%s] Processing: %s", index, len(symbols), symbol_name)
@@ -173,23 +179,21 @@ def _build_headers(
         full_hierarchy=options.full_hierarchy,
         single_file=options.single_file,
     )
-    return generator.generate_bundle(request).as_dict()
+    return dict(generator.generate_bundle(request).headers)
 
 
 def _write_headers(
     config: Config, generator: DwarfGenerator, headers: dict[str, str], logger: Logger
 ) -> int:
     platform = getattr(generator, "platform", None)
-    platform_str = platform.value if platform is not None else "unknown"
-    platform_dir = config.output_dir / platform_str
-    platform_dir.mkdir(parents=True, exist_ok=True)
-    total_bytes = 0
+    output_platform = platform if isinstance(platform, ELFPlatform) else ELFPlatform.UNKNOWN
+    platform_dir, total_bytes = AtomicHeaderPublisher().publish(
+        config.output_dir, output_platform, headers
+    )
     for filename, content in headers.items():
         output_file = platform_dir / filename
-        output_file.write_text(content, encoding="utf-8")
-        total_bytes += len(content)
         logger.info("[SUCCESS] Generated: %s", output_file)
-        logger.info("Size: %s bytes", len(content))
+        logger.info("Size: %s bytes", len(content.encode("utf-8")))
     return total_bytes
 
 
@@ -274,11 +278,6 @@ def run_generation(options: GenerationOptions) -> int:
     except (OSError, RuntimeError, ValueError) as error:
         print(f"Generation failed: {error}", file=sys.stderr)
         return 1
-
-
-def main(options: GenerationOptions) -> int:
-    """Compatibility façade for callers that invoke the generation workflow directly."""
-    return run_generation(options)
 
 
 if __name__ == "__main__":  # pragma: no cover

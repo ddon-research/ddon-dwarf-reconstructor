@@ -104,6 +104,44 @@ def test_write_headers_uses_platform_directory_and_logs_success(tmp_path: Path) 
 
 
 @pytest.mark.unit
+def test_write_headers_does_not_publish_partial_bundle(tmp_path: Path, monkeypatch) -> None:
+    import os
+
+    from ddon_dwarf_reconstructor.infrastructure import header_output
+
+    real_replace = os.replace
+
+    def fail_second_header(source, destination):
+        if Path(source).name == "B.h":
+            raise OSError("interrupted publication")
+        return real_replace(source, destination)
+
+    monkeypatch.setattr(header_output.os, "replace", fail_second_header)
+    with pytest.raises(OSError, match="interrupted publication"):
+        header_output.AtomicHeaderPublisher().publish(
+            tmp_path, ELFPlatform.PS4, {"A.h": "a", "B.h": "b"}
+        )
+
+    platform_dir = tmp_path / "ps4"
+    assert not (platform_dir / "A.h").exists()
+    assert not (platform_dir / "B.h").exists()
+    assert not (platform_dir / "header-bundle.manifest.json").exists()
+
+
+@pytest.mark.unit
+def test_header_publisher_removes_files_from_previous_manifest(tmp_path: Path) -> None:
+    from ddon_dwarf_reconstructor.infrastructure.header_output import AtomicHeaderPublisher
+
+    publisher = AtomicHeaderPublisher()
+    publisher.publish(tmp_path, ELFPlatform.PS4, {"A.h": "a", "B.h": "b"})
+    publisher.publish(tmp_path, ELFPlatform.PS4, {"A.h": "new"})
+
+    platform_dir = tmp_path / "ps4"
+    assert (platform_dir / "A.h").read_text(encoding="utf-8") == "new"
+    assert not (platform_dir / "B.h").exists()
+
+
+@pytest.mark.unit
 def test_process_symbol_saves_cache_after_header_output(tmp_path: Path) -> None:
     options = _options()
     config = Mock(output_dir=tmp_path, verbose=False)

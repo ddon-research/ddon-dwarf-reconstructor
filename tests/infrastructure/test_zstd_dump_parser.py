@@ -110,7 +110,7 @@ SAMPLE_DUMP_WITH_METHOD = """
 
 
 class GuardedDump:
-    """Legacy file-like guard retained for compatibility tests."""
+    """File-like guard that detects reads beyond an expected parser boundary."""
 
     def __init__(self, lines: list[str]):
         self._lines = iter(lines)

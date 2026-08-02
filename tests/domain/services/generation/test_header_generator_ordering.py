@@ -107,6 +107,11 @@ class TestHeaderGenerator:
         assert "class MyDTI : public MtDTI" in header
 
     @pytest.mark.unit
+    def test_by_value_dependency_cycles_are_blocking(self, header_generator) -> None:
+        with pytest.raises(ValueError, match="cyclic by-value dependencies"):
+            header_generator._stable_topological_order({"A": {"B"}, "B": {"A"}}, ["A", "B"])
+
+    @pytest.mark.unit
     def test_hierarchy_declares_opaque_typedef_targets(self, header_generator):
         """Typedefs to external opaque types must be declared before the alias."""
         sample_class = ClassInfo(

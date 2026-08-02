@@ -252,3 +252,23 @@ class TestHeaderGenerator:
         header = header_generator.generate_header(layout, include_metadata=False)
 
         assert "static int read() const volatile && noexcept = delete;" in header
+
+
+@pytest.mark.unit
+def test_generate_header_marks_unreturning_methods() -> None:
+    class_info = ClassInfo(
+        name="Fatal",
+        byte_size=1,
+        members=[],
+        methods=[MethodInfo(name="abort", return_type="void", is_noreturn=True)],
+        base_classes=[],
+        enums=[],
+        nested_structs=[],
+        unions=[],
+        die_offset=None,
+    )
+
+    header = HeaderGenerator(Mock()).generate_header(class_info)
+
+    assert "// - DIE Offset: unavailable" in header
+    assert "[[noreturn]] void abort();" in header

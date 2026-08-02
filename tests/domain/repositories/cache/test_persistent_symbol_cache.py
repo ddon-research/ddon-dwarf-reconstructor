@@ -147,7 +147,8 @@ def test_corrupted_cache_is_auto_repaired(tmp_path: Path):
 
     # Create a corrupted cache file with duplicate keys (simulating the bug)
     corrupted_data = {
-        "version": "2.0",
+        "version": "5.0",
+        "source_fingerprint": None,
         "symbol_to_offset": {
             "MtObject": 34029,
             "u32": 16675,
@@ -174,6 +175,15 @@ def test_corrupted_cache_is_auto_repaired(tmp_path: Path):
             "3229": ["MtPropertyList"],  # Lost MtObject and u32!
             "0": ["bool"],  # Lost size_t!
         },
+        "symbol_definitions": {
+            "MtObject": [{"cu_offset": 3229, "die_offset": 34029, "score": 1, "complete": True}],
+            "u32": [{"cu_offset": 3229, "die_offset": 16675, "score": 1, "complete": True}],
+            "MtPropertyList": [
+                {"cu_offset": 3229, "die_offset": 76092, "score": 1, "complete": True}
+            ],
+            "size_t": [{"cu_offset": 0, "die_offset": 2360, "score": 1, "complete": True}],
+            "bool": [{"cu_offset": 0, "die_offset": 1347, "score": 1, "complete": True}],
+        },
         "created": 1760200259.362108,
         "last_updated": 1760200804.847423,
     }
@@ -192,17 +202,49 @@ def test_corrupted_cache_is_auto_repaired(tmp_path: Path):
 def test_source_fingerprint_mismatch_invalidates_cache(tmp_path: Path) -> None:
     """Offsets from one ELF cannot be reused for a different fingerprint."""
     cache_file = tmp_path / "fingerprinted.json"
-    first = PersistentSymbolCache(cache_file, {"size": 10, "boundary_sha256": "a" * 64})
+    first_fingerprint = {
+        "sha256": "a" * 64,
+        "size": 10,
+        "mtime_ns": 1,
+        "ctime_ns": 1,
+        "device": 1,
+        "inode": 1,
+    }
+    second_fingerprint = {**first_fingerprint, "sha256": "b" * 64, "size": 11}
+    first = PersistentSymbolCache(cache_file, first_fingerprint)
     first.add_symbol("rLayout", 0x1234)
     first.save()
 
-    second = PersistentSymbolCache(cache_file, {"size": 11, "boundary_sha256": "b" * 64})
+    second = PersistentSymbolCache(cache_file, second_fingerprint)
 
     assert second.get_symbol_offset("rLayout") is None
-    assert second.data["source_fingerprint"] == {
-        "size": 11,
-        "boundary_sha256": "b" * 64,
-    }
+    assert second.data["source_fingerprint"] == second_fingerprint
+
+
+@pytest.mark.unit
+def test_non_object_cache_root_is_rebuilt(tmp_path: Path) -> None:
+    """A JSON array cannot be treated as a current cache document."""
+    cache_file = tmp_path / "non_object.json"
+    cache_file.write_text("[]", encoding="utf-8")
+
+    cache = PersistentSymbolCache(cache_file)
+
+    assert cache.data["version"] == "5.0"
+    assert cache.get_all_definitions("rLayout") == []
+
+
+@pytest.mark.unit
+def test_repair_cache_preserves_source_fingerprint(tmp_path: Path) -> None:
+    """Repair construction must retain the source binding of the owner cache."""
+    source_fingerprint = {"sha256": "a" * 64, "size": 1}
+    source_file = tmp_path / "source.json"
+    destination_file = tmp_path / "destination.json"
+    source_file.write_text("{}", encoding="utf-8")
+    cache = PersistentSymbolCache(destination_file, source_fingerprint)
+
+    replacement = cache._new_cache(source_file)
+
+    assert replacement.source_fingerprint == source_fingerprint
 
 
 @pytest.mark.unit
@@ -243,7 +285,7 @@ def test_interrupted_atomic_write_preserves_previous_cache(
 
 
 @pytest.mark.unit
-def test_serialized_writers_merge_compatible_updates(tmp_path: Path) -> None:
+def test_serialized_writers_merge_concurrent_updates(tmp_path: Path) -> None:
     """A writer initialized before another save does not erase the newer symbols."""
     cache_file = tmp_path / "concurrent.json"
     first = PersistentSymbolCache(cache_file)

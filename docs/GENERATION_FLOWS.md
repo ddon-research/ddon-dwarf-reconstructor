@@ -89,11 +89,12 @@ flowchart TD
     GroupFiles --> GenMulti[HeaderGenerator.generate_multi_file_hierarchy]
     GenMulti --> ForEachFile{For each source file}
     ForEachFile --> GenFileHeader[Generate header for file's classes]
-    GenFileHeader --> CheckCache{HeaderCache: Content changed?}
-    CheckCache -->|Changed| WriteFile[Write header file]
-    CheckCache -->|Unchanged| Skip[Skip write, preserve timestamp]
+    GenFileHeader --> StageBundle[AtomicHeaderPublisher stages headers]
+    StageBundle --> CommitBundle{Commit succeeds?}
+    CommitBundle -->|Yes| WriteFile[Commit header files and manifest]
+    CommitBundle -->|No| Rollback[Restore previous bundle]
     WriteFile --> NextFile{More files?}
-    Skip --> NextFile
+    Rollback --> NextFile
     NextFile -->|Yes| ForEachFile
     NextFile -->|No| Output([Multiple .h files organized by source])
     
@@ -115,8 +116,8 @@ flowchart TD
 5. **Collect typedefs and packing**: Single pass through all classes for efficiency
 6. **FileRegistry**: Extract DW_AT_decl_file attribute, group classes by source file
 7. **Generate headers**: Create separate .h file for each source file
-8. **HeaderCache**: Check SHA256 hash, only write files that changed
-9. **Preserve timestamps**: Unchanged files keep original timestamps (helps build systems)
+8. **AtomicHeaderPublisher**: Stage UTF-8 files, validate names, and calculate SHA-256 records
+9. **Commit manifest**: Publish the bundle or roll back all targets when a write fails
 
 ### Output Example
 
@@ -127,60 +128,60 @@ output/ps4/
 └── rLayout.h         (target class)
 ```
 
-## Shared Helper Methods
+## Shared workflow services
 
-Both generation modes use identical helper methods in `DwarfGenerator`:
+Both generation modes use the same operations through the composed `GeneratorWorkflow`:
 
 ```mermaid
 flowchart LR
-    SingleFile[generate_complete_hierarchy_header] --> Helper1[_expand_typedef_search]
-    MultiFile[generate_multi_file_hierarchy] --> Helper1
+    SingleFile[generate_complete_hierarchy_header] --> Service1[expand typedef search]
+    MultiFile[generate_multi_file_hierarchy] --> Service1
     
-    SingleFile --> Helper2[_build_hierarchy_with_timing]
-    MultiFile --> Helper2
+    SingleFile --> Service2[build hierarchy with timing]
+    MultiFile --> Service2
     
-    SingleFile --> Helper3[_validate_hierarchy]
-    MultiFile --> Helper3
+    SingleFile --> Service3[validate hierarchy]
+    MultiFile --> Service3
     
-    SingleFile --> Helper4[_collect_typedefs_and_packing]
-    MultiFile --> Helper4
+    SingleFile --> Service4[collect typedefs and packing]
+    MultiFile --> Service4
     
-    Helper1 --> TypeResolver[LazyTypeResolver configuration]
-    Helper2 --> HierarchyBuilder[HierarchyBuilder invocation]
-    Helper3 --> Validation[Early failure detection]
-    Helper4 --> Combined[Single-pass typedef + packing]
+    Service1 --> TypeResolver[LazyTypeResolver configuration]
+    Service2 --> HierarchyBuilder[HierarchyBuilder invocation]
+    Service3 --> Validation[Early failure detection]
+    Service4 --> Combined[Single-pass typedef + packing]
     
-    style Helper1 fill:#d1ecf1
-    style Helper2 fill:#d1ecf1
-    style Helper3 fill:#d1ecf1
-    style Helper4 fill:#d1ecf1
+    style Service1 fill:#d1ecf1
+    style Service2 fill:#d1ecf1
+    style Service3 fill:#d1ecf1
+    style Service4 fill:#d1ecf1
     style SingleFile fill:#fff3cd
     style MultiFile fill:#fff3cd
 ```
 
-### Helper Method Details
+### Workflow operation details
 
-#### `_expand_typedef_search(full_hierarchy: bool)`
+#### Expand typedef search
 Configures LazyTypeResolver to search all compilation units for typedefs. Required for hierarchy mode because dependencies may use typedefs defined in different CUs.
 
-#### `_build_hierarchy_with_timing(class_name: str, max_depth: int = 10)`
+#### Build hierarchy with timing
 Wraps HierarchyBuilder invocation with timing instrumentation. Returns `(class_infos dict, hierarchy_order list)`.
 
-#### `_validate_hierarchy(class_infos: dict, class_name: str) -> bool`
+#### Validate hierarchy
 Checks if hierarchy contains any classes. Early failure detection prevents downstream errors in generation phase.
 
-#### `_collect_typedefs_and_packing(class_infos: dict) -> dict[str, str]`
+#### Collect typedefs and packing
 Single-pass iteration through all classes to:
 1. Collect typedefs using LazyTypeResolver
 2. Compute packing information using PackingAnalyzer
 
 Reduces complexity from O(2n) to O(n).
 
-### Rationale for Shared Helpers
+### Rationale for Workflow Composition
 
-**Problem:** Both modes originally contained ~75% duplicate code for hierarchy building, validation, and typedef collection.
+**Problem:** Both modes need the same hierarchy, validation, and typedef policies.
 
-**Solution:** Extract shared operations into reusable helper methods.
+**Solution:** Compose one workflow from typed operation services.
 
 **Benefits:**
 - Bug fixes automatically apply to both modes
@@ -198,8 +199,8 @@ Reduces complexity from O(2n) to O(n).
 | 4. Collect | Typedefs + packing (single pass) | Typedefs + packing (single pass) |
 | 5. Organize | N/A | FileRegistry groups by source file |
 | 6. Generate | Single monolithic header | One header per source file |
-| 7. Cache | N/A | HeaderCache checks for changes |
-| 8. Output | Write single .h file | Write only changed files |
+| 7. Publish | Atomic bundle commit | Atomic bundle commit with manifest |
+| 8. Output | One committed .h file | Committed per-file bundle |
 
 ## Performance Characteristics
 
@@ -208,7 +209,7 @@ Reduces complexity from O(2n) to O(n).
 | Hierarchy building | 4.6s | 4.6s | Same algorithm, same performance |
 | Typedef collection | 0.042s | 0.042s | Single pass in both modes |
 | Header generation | 0.1s | 0.3s | Multi-file slower (more I/O) |
-| Disk writes | Always | Selective | HeaderCache avoids unnecessary writes |
+| Disk writes | One atomic commit | One atomic bundle commit |
 | Output size | 341KB (1 file) | 341KB (many files) | Same total size, different organization |
 
 ## Use Cases
@@ -242,7 +243,7 @@ flowchart TD
     Request["GenerationRequest"] --> Lookup["candidate lookup\ncache -> dump -> bounded fallback"]
     Lookup --> Parse["ClassParser + TypeDeclarator models"]
     Parse --> Closure["hierarchy/dependency closure\nstructural, deterministic order"]
-    Closure --> Render["HeaderGenerator façade\nfocused renderers"]
+    Closure --> Render["HeaderGenerator\nfocused renderers"]
     Render --> Bundle["HeaderBundle"]
     Bundle --> Output["atomic/output adapter"]
     Bundle --> Manifest["sorted SHA-256 manifest"]
@@ -250,9 +251,9 @@ flowchart TD
 
 After source changes, run the unit/static tier, then the non-performance
 coverage tier and `uv run python -m tests.support.quality.check_coverage`. The fixture acceptance run compares the
-five retained legacy single-file headers byte-for-byte. The native launcher and
-canonical console entrypoints are compared with the same
-manifest. The explicit real PS4 run uses the external ELF, compressed dump, and
+five retained single-file headers byte-for-byte. The packaged console entrypoint
+is compared across the intentional output modes with the same manifest. The
+explicit real PS4 run uses the external ELF, compressed dump, and
 validated SQLite sidecar; fresh-process warm reruns must reproduce the same
 header manifest.
 

@@ -1,4 +1,4 @@
-"""Focused knowledge-export operations for the compatibility façade."""
+"""Field and type-reference records for knowledge export."""
 
 from __future__ import annotations
 

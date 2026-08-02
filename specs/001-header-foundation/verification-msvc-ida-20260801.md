@@ -125,7 +125,7 @@ by T052 rather than silently treated as complete validation.
 
 | Fact | DWARF/generated | IDA pseudo-header | Status |
 | --- | --- | --- | --- |
-| Aggregate kind | `class` | `struct __cppobj` | Representation difference; layout-compatible aggregate intent. |
+| Aggregate kind | `class` | `struct __cppobj` | Representation difference; aggregate layout intent. |
 | Size | 120 bytes | Implied by DWARF fixture | MATCH. |
 | Direct base | `cSetInfoOm` | `cSetInfoOm` | MATCH. |
 | `mBreakHitNum` | `u32`, offset 112 | `u32 mBreakHitNum` | MATCH; offset is explicit in DWARF/generated metadata. |

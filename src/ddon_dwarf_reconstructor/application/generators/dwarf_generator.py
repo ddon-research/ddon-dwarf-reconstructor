@@ -20,23 +20,16 @@ from typing import TYPE_CHECKING, cast
 from ...core.dwarf import DwarfCompilationUnit, DwarfEntry
 from ...core.observability import get_logger
 from ...core.path_policy import create_header_filename
+from ...domain.models.dwarf import ClassInfo
 from ...domain.ports.class_parser import ClassParserPort
 from ...domain.ports.disassembly import DisassemblyProducerFactory
 from ...domain.ports.dump_lookup import DumpLookupFactory
-from ...domain.ports.source_identity import SourceHashPort
+from ...domain.ports.source_identity import SourceHashPort, SourceIdentityPort
 from ...domain.ports.type_resolution import TypeResolverPort
-from ...domain.services.generation import (
-    HeaderGenerator,
-    HierarchyBuilder,
-    SpecialHeaderRenderer,
-)
-from ...generators.base_generator import BaseGenerator
-from .dwarf_generator_context import DwarfGeneratorContext
-from .dwarf_header_generation import HeaderGenerationMixin
-from .dwarf_knowledge import KnowledgeExportMixin
-from .dwarf_lookup import GeneratorLookupMixin
-from .dwarf_multi_file import MultiFileGenerationMixin
+from ...domain.services.generation import HeaderGenerator, HierarchyBuilder
 from .generation_contracts import GenerationRequest, HeaderBundle
+from .generator_workflow import GeneratorWorkflow
+from .session import DwarfSessionFactory
 
 if TYPE_CHECKING:
     from ...domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
@@ -44,26 +37,13 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-class DwarfGenerator(
-    GeneratorLookupMixin,
-    HeaderGenerationMixin,
-    MultiFileGenerationMixin,
-    KnowledgeExportMixin,
-    BaseGenerator,
-    DwarfGeneratorContext,
-):
-    """DWARF-to-C++ header generator using modular architecture.
-
-    This refactored implementation delegates responsibilities to specialized modules:
-    - Parsing is handled by ClassParser
-    - Type resolution by TypeResolver
-    - Header generation by HeaderGenerator
-    - Hierarchy management by HierarchyBuilder
-    """
+class DwarfGenerator:
+    """Coordinate one ELF/DWARF session and its typed generation workflow."""
 
     def __init__(
         self,
         elf_path: Path,
+        session_factory: DwarfSessionFactory,
         exhaustive_search: bool = False,
         dwarf_dump_path: Path | None = None,
         dwarf_index_path: Path | None = None,
@@ -73,18 +53,24 @@ class DwarfGenerator(
         cache_file: Path | None = None,
         die_cache_size: int = 10000,
         type_cache_size: int = 5000,
+        search_timeout: float = 1.0,
         source_hash: SourceHashPort | None = None,
+        source_identity: SourceIdentityPort | None = None,
     ):
         """Initialize generator with ELF file path using lazy loading.
 
         Args:
             elf_path: Path to ELF file containing DWARF information
+            session_factory: Composition-root factory for the ELF/DWARF session
             exhaustive_search: Enable exhaustive search mode (scan all CUs for best definition)
             dwarf_dump_path: Optional path to compressed llvm-dwarfdump .zst file for fast lookups
             dwarf_index_path: Optional explicit SQLite sidecar path for the dump index
             resolve_param_names: Enable method implementation search for parameter names (expensive)
         """
-        super().__init__(elf_path)
+        self.session = session_factory(elf_path)
+        self.elf_path = elf_path
+        self.dwarf_info = None
+        self.platform = self.session.platform
         self.exhaustive_search = exhaustive_search
         self._configured_dwarf_dump_path = dwarf_dump_path
         self.dwarf_dump_path = self._resolve_dwarf_dump_path()
@@ -95,7 +81,10 @@ class DwarfGenerator(
         self.cache_file = cache_file
         self.die_cache_size = die_cache_size
         self.type_cache_size = type_cache_size
+        self.search_timeout = search_timeout
         self.source_hash = source_hash
+        self.source_identity = source_identity
+        self.workflow = GeneratorWorkflow(self)
         self.type_resolver: TypeResolverPort | None = None
         self.class_parser: ClassParserPort | None = None
         self.header_generator: HeaderGenerator | None = None
@@ -134,18 +123,21 @@ class DwarfGenerator(
 
     def __enter__(self) -> DwarfGenerator:
         """Context manager entry - initializes all modules."""
-        super().__enter__()
-
-        # Initialize modules (dwarf_info is guaranteed non-None after __enter__)
-        initialization_start = time()
-        assert self.dwarf_info is not None
-
-        # Initialize components with lazy loading (only approach)
-        self._initialize_components()
-
-        total_elapsed = time() - initialization_start
-        logger.info(f"DwarfGenerator initialized with modular architecture in {total_elapsed:.3f}s")
-        return self
+        active_session = self.session.__enter__()
+        self.dwarf_info = active_session.dwarf_info
+        self.platform = active_session.platform
+        try:
+            initialization_start = time()
+            self._initialize_components()
+            total_elapsed = time() - initialization_start
+            logger.info(
+                "DwarfGenerator initialized with modular architecture in %.3fs", total_elapsed
+            )
+            return self
+        except BaseException:
+            self.session.close()
+            self.dwarf_info = None
+            raise
 
     def __exit__(
         self,
@@ -154,14 +146,14 @@ class DwarfGenerator(
         exc_tb: object | None,
     ) -> None:
         """Context manager exit - saves cache and closes resources."""
-        # Save cache before parent cleanup
-        if self.lazy_index is not None:
-            logger.debug("Saving DWARF cache to disk")
-            self.lazy_index.save_cache()
-            logger.info("DWARF cache saved successfully")
-
-        # Call parent cleanup
-        super().__exit__(exc_type, exc_val, exc_tb)
+        try:
+            if self.lazy_index is not None:
+                logger.debug("Saving DWARF cache to disk")
+                self.lazy_index.save_cache()
+                logger.info("DWARF cache saved successfully")
+        finally:
+            self.session.__exit__(exc_type, exc_val, exc_tb)
+            self.dwarf_info = None
 
     def _initialize_components(self) -> None:
         """Initialize components with lazy loading and memory monitoring."""
@@ -179,7 +171,9 @@ class DwarfGenerator(
             str(cache_file),
             die_cache_size=self.die_cache_size,
             type_cache_size=self.type_cache_size,
+            search_timeout=self.search_timeout,
             source_file_path=self.elf_path,
+            source_identity=self.source_identity,
         )
         lazy_elapsed = time() - lazy_start
         logger.debug(f"LazyDwarfIndex initialization: {lazy_elapsed:.3f}s")
@@ -227,17 +221,7 @@ class DwarfGenerator(
         logger.debug(f"HierarchyBuilder initialization: {hierarchy_elapsed:.3f}s")
 
     def generate(self, symbol: str, **options: bool) -> str:
-        """Generate C++ header for the specified symbol.
-
-        Args:
-            symbol: Target symbol name to generate header for
-            **options: Generation options
-                - full_hierarchy (bool): Generate complete inheritance hierarchy
-                - no_metadata (bool): Skip DWARF metadata comments
-
-        Returns:
-            Generated C++ header as string
-        """
+        """Generate one header using a typed request."""
         request = GenerationRequest(
             symbol=symbol,
             full_hierarchy=options.get("full_hierarchy", False),
@@ -246,26 +230,58 @@ class DwarfGenerator(
         )
         return self.generate_bundle(request).only()
 
+    def find_class(self, class_name: str) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
+        return self.workflow.find_class(class_name)
+
+    def is_namespace(self, die: DwarfEntry) -> bool:
+        return self.workflow.is_namespace(die)
+
+    def parse_class_info(self, cu: DwarfCompilationUnit, class_die: DwarfEntry) -> ClassInfo:
+        return self.workflow.parse_class_info(cu, class_die)
+
+    def build_inheritance_hierarchy(self, class_name: str) -> list[str]:
+        return self.workflow.build_inheritance_hierarchy(class_name)
+
+    def generate_header(self, class_name: str, include_metadata: bool = True) -> str:
+        return self.workflow.generate_header(class_name, include_metadata)
+
+    def generate_complete_hierarchy_header(
+        self, class_name: str, include_metadata: bool = True
+    ) -> str:
+        return self.workflow.generate_complete_hierarchy_header(class_name, include_metadata)
+
+    def generate_multi_file_hierarchy(
+        self, class_name: str, include_metadata: bool = True
+    ) -> dict[str, str]:
+        return self.workflow.generate_multi_file_hierarchy(class_name, include_metadata)
+
+    def export_knowledge_graph(
+        self,
+        root_symbol: str,
+        output_dir: Path,
+        build_id: str,
+        *,
+        orbis_objdump_path: Path | None = None,
+    ) -> Path:
+        return self.workflow.export_knowledge_graph(
+            root_symbol,
+            output_dir,
+            build_id,
+            orbis_objdump_path=orbis_objdump_path,
+        )
+
     def generate_bundle(self, request: GenerationRequest) -> HeaderBundle:
         """Run one typed workflow and adapt its result to a header bundle."""
         if request.full_hierarchy and not request.single_file:
             return HeaderBundle(
-                self.generate_multi_file_hierarchy(request.symbol, request.include_metadata)
+                self.workflow.generate_multi_file_hierarchy(
+                    request.symbol, request.include_metadata
+                )
             )
         if request.full_hierarchy:
-            content = self.generate_complete_hierarchy_header(
+            content = self.workflow.generate_complete_hierarchy_header(
                 request.symbol, request.include_metadata
             )
         else:
-            content = self.generate_header(request.symbol, request.include_metadata)
+            content = self.workflow.generate_header(request.symbol, request.include_metadata)
         return HeaderBundle({create_header_filename(request.symbol): content})
-
-    def _generate_not_found_header(self, class_name: str) -> str:
-        """Generate a deterministic placeholder for an unresolved symbol."""
-        return SpecialHeaderRenderer.render_not_found(class_name)
-
-    def _generate_namespace_header(
-        self, namespace_name: str, cu: DwarfCompilationUnit, namespace_die: DwarfEntry
-    ) -> str:
-        """Generate a namespace header through the shared renderer."""
-        return SpecialHeaderRenderer.render_namespace(namespace_name, cu, namespace_die)

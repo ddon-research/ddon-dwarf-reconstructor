@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Compatibility façade for DWARF class parsing services."""
+"""DWARF class parsing services."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ class ClassParser(
     ClassParserMethodLookupMixin,
     ClassParserTemplatesMixin,
 ):
-    """Compatibility façade for discovery, parsing, and evidence services."""
+    """Coordinate class discovery, parsing, and evidence services."""
 
     def __init__(
         self,

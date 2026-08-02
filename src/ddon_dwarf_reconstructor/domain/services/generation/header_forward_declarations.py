@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from ...models.dwarf import ClassInfo, StructInfo
 from ..parsing.die_type_classifier import DIETypeClassifier
+from .header_type_planning import HeaderTypePlanningMixin
 
 if TYPE_CHECKING:
     from .header_generator_context import HeaderGeneratorContext
@@ -167,7 +168,7 @@ class HeaderForwardDeclarationMixin:
 
     @staticmethod
     def _aggregate_forward_declaration(clean_name: str) -> str:
-        template_match = re.match(r"^([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)<", clean_name)
-        if template_match:
-            return f"template <typename T> class {template_match.group(1)};"
+        template_declaration = HeaderTypePlanningMixin._template_forward_declaration(clean_name)
+        if template_declaration is not None:
+            return template_declaration
         return f"class {clean_name};"

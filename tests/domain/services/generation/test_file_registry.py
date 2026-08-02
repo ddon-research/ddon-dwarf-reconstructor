@@ -6,7 +6,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from src.ddon_dwarf_reconstructor.domain.services.generation.file_registry import (
+from ddon_dwarf_reconstructor.domain.services.generation.file_registry import (
     FileRegistry,
 )
 

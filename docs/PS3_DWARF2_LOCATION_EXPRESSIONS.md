@@ -59,14 +59,14 @@ Because `last_offset` is `[35, 4]` (list), not `4` (int).
 
 ### Affected Code Paths
 
-1. **ClassParser** (`src/ddon_dwarf_reconstructor/generators/utils/class_parser.py`)
+1. **ClassParser** (`src/ddon_dwarf_reconstructor/domain/services/parsing/class_parser.py`)
    - `parse_members()` - extracts member offsets from DIE
    - Line: Wherever it sets `member.offset`
 
 2. **MemberInfo** (model)
    - `offset` field - expects `int`, receives `list`
 
-3. **PackingAnalyzer** (`src/ddon_dwarf_reconstructor/generators/utils/packing_analyzer.py`)
+3. **PackingAnalyzer** (`src/ddon_dwarf_reconstructor/domain/services/generation/packing_analyzer.py`)
    - `calculate_packing_info()` - fails when using list offsets
    - Assumes all `member.offset` values are integers
 
@@ -156,15 +156,15 @@ Most PS3 member locations appear to be:
 ## Files to Modify
 
 1. **Create new utility module:**
-   - `src/ddon_dwarf_reconstructor/generators/utils/dwarf_location_parser.py`
+   - `src/ddon_dwarf_reconstructor/domain/services/parsing/dwarf_location_parser.py`
    - Function: `parse_location_offset(attr_value) -> int | None`
 
 2. **Modify ClassParser:**
-   - `src/ddon_dwarf_reconstructor/generators/utils/class_parser.py`
+   - `src/ddon_dwarf_reconstructor/domain/services/parsing/class_parser.py`
    - Import and use `parse_location_offset()`
 
 3. **Add Tests:**
-   - `tests/generators/utils/test_dwarf_location_parser.py`
+   - `tests/domain/services/parsing/test_dwarf_location_parser.py`
    - Test cases for:
      - PS4 style: integer offset
      - PS3 style: `[35, offset]` location expression

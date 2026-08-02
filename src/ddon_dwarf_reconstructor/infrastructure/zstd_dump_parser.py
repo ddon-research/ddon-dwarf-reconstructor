@@ -109,7 +109,6 @@ class ZstdDumpParser(ZstdDumpQueryMixin, ZstdDumpScanMixin):
         return {
             "source_sha256": identity.sha256,
             "source_size": str(identity.size),
-            "source_boundary_sha256": identity.boundary_sha256,
         }
 
     def _index_matches_source(self, source_metadata: dict[str, str]) -> bool:
@@ -124,7 +123,7 @@ class ZstdDumpParser(ZstdDumpQueryMixin, ZstdDumpScanMixin):
 
     @staticmethod
     def _metadata_matches_source(metadata: dict[str, str], source_metadata: dict[str, str]) -> bool:
-        for key in ("source_size", "source_boundary_sha256", "source_sha256"):
+        for key in ("source_size", "source_sha256"):
             stored = metadata.get(key)
             if stored is not None and stored != source_metadata[key]:
                 return False

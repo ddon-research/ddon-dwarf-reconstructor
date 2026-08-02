@@ -8,6 +8,7 @@ import pytest
 from ddon_dwarf_reconstructor.domain.services.lazy_dwarf_index_service import (
     LazyDwarfIndexService,
 )
+from ddon_dwarf_reconstructor.infrastructure.artifacts import SourceIdentityCatalog
 
 
 @pytest.mark.unit
@@ -48,12 +49,17 @@ def test_same_path_source_replacement_discards_symbol_cache(tmp_path: Path) -> N
     source.write_bytes(b"source-v1" * 20_000)
     cache_file = tmp_path / "symbols.json"
 
-    first = LazyDwarfIndexService(Mock(), str(cache_file), source_file_path=source)
+    identity = SourceIdentityCatalog(tmp_path / "identities.json")
+    first = LazyDwarfIndexService(
+        Mock(), str(cache_file), source_file_path=source, source_identity=identity
+    )
     first.persistent_cache.add_symbol("OldType", 0x1234)
     first.save_cache()
 
     source.write_bytes(b"source-v2" * 20_000)
-    second = LazyDwarfIndexService(Mock(), str(cache_file), source_file_path=source)
+    second = LazyDwarfIndexService(
+        Mock(), str(cache_file), source_file_path=source, source_identity=identity
+    )
 
     assert second.find_symbol_offset("OldType") is None
     assert second.persistent_cache.source_fingerprint != first.persistent_cache.source_fingerprint

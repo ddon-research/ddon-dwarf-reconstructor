@@ -22,7 +22,7 @@ uv run dwarf-spec-pipeline sources
 ```
 
 `--manifest`, `--output-dir`, `--work-dir`, `--schema`, repeated `--version 2|3|4`, and
-`--cache-dir` retain their existing meanings. Use Docker Compose for the legacy `.doc` and `.mm`
+`--cache-dir` retain their existing meanings. Use Docker Compose for the `.doc` and `.mm`
 conversion environment:
 
 ```text

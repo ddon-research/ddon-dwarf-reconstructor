@@ -11,6 +11,7 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import (
     MethodInfo,
     ParameterInfo,
 )
+from ddon_dwarf_reconstructor.infrastructure.artifacts import SourceIdentityCatalog
 from ddon_dwarf_reconstructor.infrastructure.orbis_objdump import (
     OrbisDisassemblyReport,
     OrbisFunctionDisassembly,
@@ -18,6 +19,14 @@ from ddon_dwarf_reconstructor.infrastructure.orbis_objdump import (
     OrbisInstruction,
     OrbisToolIdentity,
 )
+
+
+def _exporter(elf_path: Path) -> KnowledgeExporter:
+    return KnowledgeExporter(
+        elf_path,
+        "ps4-02020005",
+        source_hash=SourceIdentityCatalog().sha256,
+    )
 
 
 def _read_jsonl(path: Path) -> list[dict[str, object]]:
@@ -29,7 +38,7 @@ def test_dwarf_method_ids_are_scoped_to_the_selected_owner_die(tmp_path: Path) -
     """Duplicate class definitions must remain distinct source observations."""
     elf_path = tmp_path / "DDOORBIS.elf"
     elf_path.write_bytes(b"deterministic dwarf fixture")
-    exporter = KnowledgeExporter(elf_path, "ps4-02020005")
+    exporter = _exporter(elf_path)
     method = MethodInfo("load", "bool", parameters=[ParameterInfo("in", "MtStream&")])
     first = ClassInfo("rLayout", 528, [], [method], [], [], [], [], die_offset=0x76133)
     second = ClassInfo("rLayout", 528, [], [method], [], [], [], [], die_offset=0x117EC452)
@@ -86,7 +95,7 @@ def test_export_projects_reconstructed_cpp_and_orbis_instructions(tmp_path: Path
         ),
     )
 
-    manifest_path = KnowledgeExporter(elf_path, "ps4-02020005").export(
+    manifest_path = _exporter(elf_path).export(
         "rLayout",
         {"rLayout": layout},
         ["rLayout"],

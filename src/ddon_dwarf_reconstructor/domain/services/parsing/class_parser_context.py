@@ -121,10 +121,6 @@ class ClassParserOperations(ClassParserImplementationContext, Protocol):
         state: object,
     ) -> None: ...
 
-    def _cache_scan_result(
-        self, cu: DwarfCompilationUnit, die: DwarfEntry, class_name: str, score: int, complete: bool
-    ) -> None: ...
-
     def _parse_class_child(
         self,
         cu: DwarfCompilationUnit,
@@ -252,9 +248,15 @@ class ClassParserOperations(ClassParserImplementationContext, Protocol):
 
     def _parse_enumerator(self, enumerator_die: DwarfEntry) -> EnumeratorInfo | None: ...
 
+    @staticmethod
+    def _enumerator_value(raw_value: object) -> int | None: ...
+
     def _virtual_method_info(self, method_die: DwarfEntry) -> tuple[bool, int | None]: ...
 
     def _parent_name(self, method_die: DwarfEntry) -> str: ...
+
+    @staticmethod
+    def _has_noexcept_evidence(method_die: DwarfEntry) -> bool: ...
 
     def _parse_vtable_index(self, attribute: object) -> int | None: ...
 
@@ -263,6 +265,24 @@ class ClassParserOperations(ClassParserImplementationContext, Protocol):
     def parse_parameter(
         self, param_die: DwarfEntry, param_index: int = 0
     ) -> ParameterInfo | None: ...
+
+
+class ClassParserContext(ClassParserOperations, Protocol):
+    """State and cross-cutting operations shared by parser responsibilities."""
+
+    type_resolver: TypeNameResolver
+    dwarf_info: DwarfInfo
+    lazy_index: DwarfIndexPort | None
+    full_scan_timeout: float
+    exhaustive_search: bool
+    dwarf_dump_path: Path | None
+    dwarf_index_path: Path | None
+    resolve_param_names: bool
+    timed_out_symbols: set[str]
+    _implementation_cache: dict[int, tuple[DwarfCompilationUnit, DwarfEntry] | None]
+    _dump_parser: DumpLookupPort | None
+    _dump_lookup_authoritative_miss: bool
+    _dump_lookup_unavailable: bool
 
     def _find_method_implementation(
         self, declaration_offset: int, method_name: str
@@ -284,21 +304,3 @@ class ClassParserOperations(ClassParserImplementationContext, Protocol):
     def _resolve_parameter_names_from_implementation(
         self, method_die: DwarfEntry, method_name: str, parameters: list[ParameterInfo]
     ) -> None: ...
-
-
-class ClassParserContext(ClassParserOperations, Protocol):
-    """State and cross-cutting operations shared by parser responsibilities."""
-
-    type_resolver: TypeNameResolver
-    dwarf_info: DwarfInfo
-    lazy_index: DwarfIndexPort | None
-    full_scan_timeout: float
-    exhaustive_search: bool
-    dwarf_dump_path: Path | None
-    dwarf_index_path: Path | None
-    resolve_param_names: bool
-    timed_out_symbols: set[str]
-    _implementation_cache: dict[int, tuple[DwarfCompilationUnit, DwarfEntry] | None]
-    _dump_parser: DumpLookupPort | None
-    _dump_lookup_authoritative_miss: bool
-    _dump_lookup_unavailable: bool

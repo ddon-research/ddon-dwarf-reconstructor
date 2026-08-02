@@ -1,4 +1,4 @@
-"""Focused operations extracted from the public compatibility façade."""
+"""Knowledge-export operations for the application generator."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from .dwarf_generator_context import DwarfGeneratorContext
 logger = get_logger(__name__)
 
 
-class KnowledgeExportMixin:
+class KnowledgeExportService:
     def export_knowledge_graph(
         self: DwarfGeneratorContext,
         root_symbol: str,
@@ -32,17 +32,17 @@ class KnowledgeExportMixin:
         """
         from ...application.exporters.knowledge_exporter import KnowledgeExporter
 
-        self._expand_typedef_search(full_hierarchy=True)
+        self.workflow.expand_typedef_search(full_hierarchy=True)
         # Knowledge export keeps method declarations but uses structural closure
         # so signature-only types cannot trigger an unbounded cold CU search.
-        class_infos, hierarchy_order = self._build_hierarchy_with_timing(
+        class_infos, hierarchy_order = self.workflow.build_hierarchy_with_timing(
             root_symbol,
             include_method_signatures=False,
         )
-        if not self._validate_hierarchy(class_infos, root_symbol):
+        if not self.workflow.validate_hierarchy(class_infos, root_symbol):
             raise ValueError(f"No classes found in hierarchy for {root_symbol}")
 
-        all_typedefs = self._collect_typedefs_and_packing(class_infos)
+        all_typedefs = self.workflow.collect_typedefs_and_packing(class_infos)
         assert self.header_generator is not None
         reconstructed_cpp = self.header_generator.generate_single_file_hierarchy_header(
             class_infos,
@@ -59,11 +59,9 @@ class KnowledgeExportMixin:
                 self.elf_path, root_symbol
             )
 
-        exporter_options = {}
-        source_hash = getattr(self, "source_hash", None)
-        if source_hash is not None:
-            exporter_options["source_hash"] = source_hash
-        exporter = KnowledgeExporter(self.elf_path, build_id, **exporter_options)
+        if self.source_hash is None:
+            raise RuntimeError("Knowledge export requires a source identity service")
+        exporter = KnowledgeExporter(self.elf_path, build_id, source_hash=self.source_hash)
         return exporter.export(
             root_symbol,
             class_infos,

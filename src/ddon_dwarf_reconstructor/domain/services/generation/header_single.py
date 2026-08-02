@@ -1,4 +1,4 @@
-"""Focused operations extracted from the public compatibility façade."""
+"""Single-header rendering operations."""
 
 from __future__ import annotations
 
@@ -204,7 +204,12 @@ class SingleHeaderGenerationMixin:
             "",
             "// DWARF Debug Information:",
             f"// - Size: {class_info.byte_size} bytes",
-            f"// - DIE Offset: 0x{class_info.die_offset:08x}",
+            "// - DIE Offset: "
+            + (
+                f"0x{class_info.die_offset:08x}"
+                if class_info.die_offset is not None
+                else "unavailable"
+            ),
         ]
 
         if cu_offset is not None:
