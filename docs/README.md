@@ -22,11 +22,20 @@ Complete documentation for the DWARF-to-C++ header reconstructor.
 
 ### Knowledge Base
 - [knowledge-base/](knowledge-base/) - Research notes, external references, and technical investigations
-  - [dwarf-specification/](knowledge-base/dwarf-specification/) - Official DWARF 2 and DWARF 4 specifications
+  - [dwarf-specification/](knowledge-base/dwarf-specification/) - Official DWARF 2, 3, and 4 JSON/Markdown specifications
   - [dwarf/](knowledge-base/dwarf/) - DWARF parsing patterns from other projects
   - [pyelftools/](knowledge-base/pyelftools/) - pyelftools API reference and examples
   - [ps4-elf/](knowledge-base/ps4-elf/) - PS4 ELF format specifics
   - [tools/](knowledge-base/tools/) - Analysis of similar tools
+
+### DWARF specification pipeline
+
+The official DWARF 2/3/4 sources are converted into canonical structured
+artifacts by [`tools/dwarf_spec_pipeline/`](../tools/dwarf_spec_pipeline/).
+Use Docker Compose for the full source conversion and the standalone `uv`
+project for parser tests and quality checks. The generated JSON, Markdown, and
+provenance manifest are linked from the
+[DWARF specification knowledge base](knowledge-base/dwarf-specification/).
 
 ## Document Overview
 

@@ -365,7 +365,7 @@ docs/
  DWARF_TAG_ANALYSIS.md
  PS3_DWARF2_LOCATION_EXPRESSIONS.md
  knowledge-base/
-   dwarf-specification/     # DWARF 2/4 specifications
+   dwarf-specification/     # DWARF 2/3/4 canonical JSON/Markdown artifacts
    dwarf/                   # DWARF parsing patterns
    pyelftools/              # pyelftools usage
    ps4-elf/                 # PS4 ELF format
@@ -376,7 +376,10 @@ Root files:
  README.md
  pyproject.toml
  pytest.ini
- Makefile
+Makefile
+
+tools/
+  dwarf_spec_pipeline/      # Standalone source-to-artifact specification tool
 ```
 
 ### Where to Put New Code

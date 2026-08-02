@@ -340,7 +340,7 @@ except Exception as e:
 
 - [pyelftools GitHub](https://github.com/eliben/pyelftools)
 - [pyelftools Documentation](https://github.com/eliben/pyelftools/wiki)
-- [DWARF 4 Specification](http://dwarfstd.org/doc/DWARF4.pdf)
+- [Official DWARF document index](https://dwarfstd.org/doc/)
 
 ---
 

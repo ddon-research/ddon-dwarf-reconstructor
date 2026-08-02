@@ -1,0 +1,43 @@
+name: DWARF Specification Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tool-quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/dwarf_spec_pipeline
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install tool dependencies
+        run: uv sync --extra dev --frozen
+
+      - name: Run tool tests
+        run: uv run pytest
+
+      - name: Run Ruff
+        run: |
+          uv run ruff check src tests
+          uv run ruff format --check src tests
+
+      - name: Run mypy
+        run: uv run mypy src
+
+      - name: Validate Docker Compose configuration
+        working-directory: .
+        run: docker compose -f tools/dwarf_spec_pipeline/compose.yaml config

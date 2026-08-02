@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "source_id": "dwarf-2.0.0",
+      "standard_version": 2,
+      "title": "DWARF Debugging Information Format, Version 2.0.0",
+      "filename": "dwarf.v2.mm",
+      "format": "mm",
+      "url": "https://dwarfstd.org/doc/dwarf.v2.mm",
+      "source_page": "https://dwarfstd.org/download.html",
+      "sha256": "9b009b470582a1224c54ed00ee4ace296db67c828f421b631d938e5711e4441f"
+    },
+    {
+      "source_id": "dwarf-3.0",
+      "standard_version": 3,
+      "title": "DWARF Debugging Information Format, Version 3",
+      "filename": "Dwarf3.doc",
+      "format": "doc",
+      "url": "https://dwarfstd.org/doc/Dwarf3.doc",
+      "source_page": "https://dwarfstd.org/download.html",
+      "sha256": "bab64e473c7ae7bb728c3504d609a1524055cb9c903e554901b636cdf903c87a"
+    },
+    {
+      "source_id": "dwarf-4.0",
+      "standard_version": 4,
+      "title": "DWARF Debugging Information Format, Version 4",
+      "filename": "DWARF4.doc",
+      "format": "doc",
+      "url": "https://dwarfstd.org/doc/DWARF4.doc",
+      "source_page": "https://dwarfstd.org/download.html",
+      "sha256": "8912e26450dac4fa4d6895725d205d5ffe2bb90c211ab0c9a4dec5a2fe4460f9"
+    }
+  ]
+}

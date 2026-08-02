@@ -80,3 +80,6 @@ ops/langfuse/.env
 /references/references.md
 /.claude/settings.local.json
 .dwarf_cache/
+
+# Rebuildable DWARF specification source downloads and converter intermediates
+/.cache/dwarf_spec_pipeline/

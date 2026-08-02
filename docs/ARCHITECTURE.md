@@ -27,6 +27,24 @@ exact-path purge operations via `ddon-dwarf-artifacts`; convergence with
 knowledge-graph inventories and bundles remains tracked in the active Spec Kit
 feature.
 
+### Specification knowledge artifacts
+
+The runtime reconstructor and the specification publishing tool are separate
+projects. `tools/dwarf_spec_pipeline/` owns source acquisition, Debian-based
+`.doc`/`.mm` conversion, logical parsing, normalization, table/constant
+extraction, rendering, and schema validation. It publishes only the
+machine-readable contract in
+`docs/knowledge-base/dwarf-specification/generated/`: one JSON and one
+Markdown artifact for each of DWARF 2, 3, and 4 plus a checksum manifest.
+
+The raw official downloads and converter intermediates are ignored cache data,
+not repository inputs. Each generated source location retains the source ID,
+intermediate format, and block index; the manifest retains URL, filename,
+format, SHA-256, parser version, and artifact hashes. Docker Compose is the
+canonical full-build boundary so Windows and Ubuntu use the same LibreOffice
+and Groff converters. The main runtime package consumes neither generated
+Rust constants nor presentation files.
+
 ## System Architecture
 
 The architecture follows domain-driven design with clear separation between orchestration, business logic, and infrastructure:
@@ -1407,7 +1425,9 @@ class HeaderValidator:
 
 ## References
 
-- [DWARF 4 Standard](http://dwarfstd.org/doc/DWARF4.pdf)
+- [DWARF specification pipeline](../tools/dwarf_spec_pipeline/README.md)
+- [DWARF 2/3/4 generated artifacts](knowledge-base/dwarf-specification/)
+- [Official DWARF downloads](https://dwarfstd.org/download.html)
 - [pyelftools Documentation](https://github.com/eliben/pyelftools)
 - [PS4 ELF Format](knowledge-base/ps4-elf/)
 - [Testing Guide](TESTING.md)

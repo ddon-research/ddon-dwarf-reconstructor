@@ -1,0 +1,25 @@
+name: ddon-dwarf-spec-pipeline
+
+services:
+  dwarf-spec-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /workspace
+    environment:
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ../..:/workspace
+      - dwarf_spec_pipeline_cache:/workspace/.cache/dwarf_spec_pipeline
+    command:
+      - build
+      - --manifest
+      - /workspace/tools/dwarf_spec_pipeline/config/sources.json
+      - --output-dir
+      - /workspace/docs/knowledge-base/dwarf-specification/generated
+      - --work-dir
+      - /workspace/.cache/dwarf_spec_pipeline
+
+volumes:
+  dwarf_spec_pipeline_cache:
+    name: ddon-dwarf-spec-pipeline-cache

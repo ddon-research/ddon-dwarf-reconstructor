@@ -53,6 +53,33 @@ uv run pytest -m "not slow"          # Skip slow tests
 uv run pytest -m "unit or integration" # Both categories
 ```
 
+## DWARF specification pipeline
+
+The specification tool has its own lockfile, test markers, and quality
+commands. Run these from the repository root:
+
+```bash
+uv run --project tools/dwarf_spec_pipeline --extra dev pytest
+uv run --project tools/dwarf_spec_pipeline --extra dev ruff check tools/dwarf_spec_pipeline/src tools/dwarf_spec_pipeline/tests
+uv run --project tools/dwarf_spec_pipeline --extra dev ruff format --check tools/dwarf_spec_pipeline/src tools/dwarf_spec_pipeline/tests
+uv run --project tools/dwarf_spec_pipeline --extra dev mypy tools/dwarf_spec_pipeline/src
+docker compose -f tools/dwarf_spec_pipeline/compose.yaml config
+```
+
+The official-source integration assertion is opt-in after a Docker build:
+
+```powershell
+$env:DWARF_SPEC_OFFICIAL = '1'
+uv run --project tools/dwarf_spec_pipeline --extra dev pytest -m integration
+Remove-Item Env:DWARF_SPEC_OFFICIAL
+```
+
+It checks the generated DWARF 2/3/4 JSON against the schema, verifies known
+tags/attributes/forms/operations/languages, checks section coverage, and
+rejects legacy Groff/media/table-of-contents garbage. Source downloads and
+conversion intermediates remain in the ignored cache and are never test
+fixtures or committed artifacts.
+
 ## Test Structure
 
 ```

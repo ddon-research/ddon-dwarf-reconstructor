@@ -545,6 +545,8 @@ Follow conventions in .github/copilot-instructions.md:
 - [TESTING.md](docs/TESTING.md) - Testing guide
 - [SONARQUBE.md](docs/SONARQUBE.md) - Local SonarQube C/C++ analysis with MSVC
 - [LANGFUSE_TRACING.md](docs/LANGFUSE_TRACING.md) - Local Langfuse and agent tracing setup
+- [DWARF specification knowledge base](docs/knowledge-base/dwarf-specification/) - Canonical DWARF 2/3/4 JSON and Markdown artifacts
+- [DWARF specification tool](tools/dwarf_spec_pipeline/) - Docker Compose rebuild and standalone `uv` checks
 
 ## Performance
 

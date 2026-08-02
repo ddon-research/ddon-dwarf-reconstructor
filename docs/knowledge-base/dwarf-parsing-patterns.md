@@ -766,5 +766,5 @@ def should_resolve_typedef(self, name: str) -> bool:
 
 - [pyelftools-api-reference.md](pyelftools-api-reference.md) - PyElfTools API
 - [pyelftools-examples.md](pyelftools-examples.md) - Code examples
-- [DWARF 4 Standard](http://dwarfstd.org/doc/DWARF4.pdf)
-- [DWARF 5 Standard](http://dwarfstd.org/doc/DWARF5.pdf)
+- [Official DWARF downloads](https://dwarfstd.org/download.html)
+- [Official DWARF document index](https://dwarfstd.org/doc/)

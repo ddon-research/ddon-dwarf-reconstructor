@@ -8,12 +8,9 @@ This knowledge base documents our approach to DWARF-to-C++ header reconstruction
 
 ```
 knowledge-base/
-├── dwarf-specification/  # Official DWARF format specifications
-│   ├── DWARF2.pdf       # DWARF 2.0.0 specification (PS3)
-│   ├── DWARF2.mm.txt    # DWARF2 text extraction
-│   ├── DWARF4.pdf       # DWARF 4 specification (PS4)
-│   ├── DWARF4.txt       # DWARF4 text extraction
-│   └── README.md
+├── dwarf-specification/  # Canonical DWARF 2/3/4 JSON and Markdown
+│   ├── generated/        # Checked-in artifacts and deterministic manifest
+│   └── README.md         # Build and provenance contract
 ├── ps4-elf/             # PS4-specific ELF format information
 │   ├── ps4-constants.md
 │   └── ida-loader-insights.md
@@ -27,6 +24,16 @@ knowledge-base/
 └── optimization/        # Performance optimization strategies
     └── indexing-strategy.md
 ```
+
+## Machine-readable DWARF specifications
+
+The standalone [`tools/dwarf_spec_pipeline/`](../../tools/dwarf_spec_pipeline/)
+project downloads checksum-locked official `.mm`/`.doc` sources and publishes
+the canonical artifacts in `dwarf-specification/generated/`. Docker Compose is
+the reproducible conversion environment on Windows and Ubuntu; `uv` manages
+the ordinary Python development and test environment. Use the
+[dwarf-specification README](dwarf-specification/README.md) for the full
+contract, commands, source provenance, and schema link.
 
 ## Sources
 

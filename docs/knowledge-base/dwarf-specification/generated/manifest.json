@@ -1,0 +1,62 @@
+{
+  "artifacts": [
+    {
+      "path": "dwarf2.json",
+      "sha256": "591c9914c1a3fdf55d59786b3e64835b6540e2b575a3482d37cb0a5d465f6038"
+    },
+    {
+      "path": "dwarf2.md",
+      "sha256": "8ed2e05f47dec4c52586cddffce2254e6bf02398b4fd0d328f8769ce06a6f259"
+    },
+    {
+      "path": "dwarf3.json",
+      "sha256": "d825fd999108ea46f3a738d945db61557320c6a22dd8982729f5ee7803aff12b"
+    },
+    {
+      "path": "dwarf3.md",
+      "sha256": "30ec4760207fc790896f41209e3e44d304c9b40b193c52718b5e371e3356bc7d"
+    },
+    {
+      "path": "dwarf4.json",
+      "sha256": "b0b0c9825cb18cc3f5ef022da741b48f52794b11b732aa99c4351967bcd4a76c"
+    },
+    {
+      "path": "dwarf4.md",
+      "sha256": "b0b37876cb20539ec057f740573257cafd53f4a01f95cea730c2e837ba474526"
+    }
+  ],
+  "parser_version": "0.1.0",
+  "schema_version": 1,
+  "sources": [
+    {
+      "filename": "dwarf.v2.mm",
+      "format": "mm",
+      "sha256": "9b009b470582a1224c54ed00ee4ace296db67c828f421b631d938e5711e4441f",
+      "source_id": "dwarf-2.0.0",
+      "source_page": "https://dwarfstd.org/download.html",
+      "standard_version": 2,
+      "title": "DWARF Debugging Information Format, Version 2.0.0",
+      "url": "https://dwarfstd.org/doc/dwarf.v2.mm"
+    },
+    {
+      "filename": "Dwarf3.doc",
+      "format": "doc",
+      "sha256": "bab64e473c7ae7bb728c3504d609a1524055cb9c903e554901b636cdf903c87a",
+      "source_id": "dwarf-3.0",
+      "source_page": "https://dwarfstd.org/download.html",
+      "standard_version": 3,
+      "title": "DWARF Debugging Information Format, Version 3",
+      "url": "https://dwarfstd.org/doc/Dwarf3.doc"
+    },
+    {
+      "filename": "DWARF4.doc",
+      "format": "doc",
+      "sha256": "8912e26450dac4fa4d6895725d205d5ffe2bb90c211ab0c9a4dec5a2fe4460f9",
+      "source_id": "dwarf-4.0",
+      "source_page": "https://dwarfstd.org/download.html",
+      "standard_version": 4,
+      "title": "DWARF Debugging Information Format, Version 4",
+      "url": "https://dwarfstd.org/doc/DWARF4.doc"
+    }
+  ]
+}

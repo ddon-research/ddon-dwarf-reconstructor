@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ddon.example/schema/dwarf-specification.json",
+  "title": "DDON canonical DWARF specification document",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "parser_version",
+    "specification",
+    "source",
+    "sections",
+    "tables",
+    "constants",
+    "omissions",
+    "statistics"
+  ],
+  "properties": {
+    "schema_version": {"type": "integer", "minimum": 1},
+    "parser_version": {"type": "string", "minLength": 1},
+    "specification": {"$ref": "#/$defs/specification"},
+    "source": {"$ref": "#/$defs/source"},
+    "sections": {"type": "array", "items": {"$ref": "#/$defs/section"}},
+    "tables": {"type": "array", "items": {"$ref": "#/$defs/table"}},
+    "constants": {"type": "array", "items": {"$ref": "#/$defs/constant"}},
+    "omissions": {"type": "array", "items": {"$ref": "#/$defs/omission"}},
+    "statistics": {"$ref": "#/$defs/statistics"}
+  },
+  "$defs": {
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "intermediate"],
+      "properties": {
+        "source_id": {"type": "string"},
+        "intermediate": {"enum": ["html", "docx"]},
+        "block_index": {"type": ["integer", "null"], "minimum": 0},
+        "page": {"type": ["integer", "null"], "minimum": 1},
+        "figure": {"type": ["string", "null"]}
+      }
+    },
+    "paragraph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "text", "source"],
+      "properties": {
+        "kind": {"const": "paragraph"},
+        "text": {"type": "string"},
+        "source": {"anyOf": [{"$ref": "#/$defs/location"}, {"type": "null"}]}
+      }
+    },
+    "code": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "text", "language", "source"],
+      "properties": {
+        "kind": {"const": "code"},
+        "text": {"type": "string"},
+        "language": {"type": ["string", "null"]},
+        "source": {"anyOf": [{"$ref": "#/$defs/location"}, {"type": "null"}]}
+      }
+    },
+    "list": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ordered", "items", "source"],
+      "properties": {
+        "kind": {"const": "list"},
+        "ordered": {"type": "boolean"},
+        "items": {"type": "array", "items": {"type": "string"}},
+        "source": {"anyOf": [{"$ref": "#/$defs/location"}, {"type": "null"}]}
+      }
+    },
+    "table_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "table_id", "source"],
+      "properties": {
+        "kind": {"const": "table_ref"},
+        "table_id": {"type": "string"},
+        "source": {"anyOf": [{"$ref": "#/$defs/location"}, {"type": "null"}]}
+      }
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "number", "title", "level", "blocks", "source"],
+      "properties": {
+        "id": {"type": "string"},
+        "number": {"type": ["string", "null"]},
+        "title": {"type": "string"},
+        "level": {"type": "integer", "minimum": 0, "maximum": 6},
+        "blocks": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {"$ref": "#/$defs/paragraph"},
+              {"$ref": "#/$defs/code"},
+              {"$ref": "#/$defs/list"},
+              {"$ref": "#/$defs/table_ref"}
+            ]
+          }
+        },
+        "source": {"anyOf": [{"$ref": "#/$defs/location"}, {"type": "null"}]}
+      }
+    },
+    "span": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_row", "end_row", "start_column", "end_column"],
+      "properties": {
+        "start_row": {"type": "integer", "minimum": 0},
+        "end_row": {"type": "integer", "minimum": 0},
+        "start_column": {"type": "integer", "minimum": 0},
+        "end_column": {"type": "integer", "minimum": 0}
+      }
+    },
+    "table": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "caption", "headers", "rows", "spans", "source"],
+      "properties": {
+        "id": {"type": "string"},
+        "caption": {"type": ["string", "null"]},
+        "headers": {"type": "array", "items": {"type": "string"}},
+        "rows": {"type": "array", "items": {"type": "array", "items": {"type": "string"}}},
+        "spans": {"type": "array", "items": {"$ref": "#/$defs/span"}},
+        "source": {"anyOf": [{"$ref": "#/$defs/location"}, {"type": "null"}]}
+      }
+    },
+    "constant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "name", "value", "value_hex", "value_text", "meaning", "aliases", "table_id", "source"],
+      "properties": {
+        "namespace": {"type": "string"},
+        "name": {"type": "string"},
+        "value": {"type": ["integer", "null"]},
+        "value_hex": {"type": ["string", "null"]},
+        "value_text": {"type": "string"},
+        "meaning": {"type": ["string", "null"]},
+        "aliases": {"type": "array", "items": {"type": "string"}},
+        "table_id": {"type": "string"},
+        "source": {"anyOf": [{"$ref": "#/$defs/location"}, {"type": "null"}]}
+      }
+    },
+    "omission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "description", "count"],
+      "properties": {
+        "kind": {"enum": ["table_of_contents", "index", "page_furniture", "decorative_media", "converter_artifact"]},
+        "description": {"type": "string"},
+        "count": {"type": "integer", "minimum": 1}
+      }
+    },
+    "statistics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_block_count", "section_count", "table_count", "table_row_count", "constant_count", "omission_count"],
+      "properties": {
+        "source_block_count": {"type": "integer", "minimum": 0},
+        "section_count": {"type": "integer", "minimum": 0},
+        "table_count": {"type": "integer", "minimum": 0},
+        "table_row_count": {"type": "integer", "minimum": 0},
+        "constant_count": {"type": "integer", "minimum": 0},
+        "omission_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "specification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["family", "version", "title"],
+      "properties": {
+        "family": {"const": "DWARF"},
+        "version": {"type": "integer", "minimum": 2, "maximum": 4},
+        "title": {"type": "string"}
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "filename", "format", "url", "source_page", "sha256"],
+      "properties": {
+        "source_id": {"type": "string"},
+        "filename": {"type": "string"},
+        "format": {"enum": ["mm", "doc"]},
+        "url": {"type": "string", "format": "uri"},
+        "source_page": {"type": "string", "format": "uri"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    }
+  }
+}
