@@ -6,14 +6,16 @@ This module provides the foundational abstract class for all DWARF generators,
 establishing the interface and context management patterns.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from pathlib import Path
 
 from elftools.dwarf.dwarfinfo import DWARFInfo
 from elftools.elf.elffile import ELFFile
 
-from ..infrastructure.logging import get_logger
 from ..infrastructure.elf_platform import ELFPlatform, PlatformDetector
+from ..infrastructure.logging import get_logger
 from ..utils.elf_patches import patch_pyelftools_for_ps4
 
 # Apply PS4 ELF patches globally
@@ -43,7 +45,7 @@ class BaseGenerator(ABC):
         self.dwarf_info: DWARFInfo | None = None
         self.platform: ELFPlatform = ELFPlatform.UNKNOWN
 
-    def __enter__(self) -> "BaseGenerator":
+    def __enter__(self) -> BaseGenerator:
         """Context manager entry - opens ELF file and validates DWARF info.
 
         Returns:
@@ -54,20 +56,23 @@ class BaseGenerator(ABC):
         """
         logger.debug(f"Opening ELF file: {self.elf_path}")
         self.file_handle = open(self.elf_path, "rb")
-        self.elf_file = ELFFile(self.file_handle)  # type: ignore[no-untyped-call]
+        self.elf_file = ELFFile(self.file_handle)
 
         # Detect platform
         self.platform = PlatformDetector.detect(str(self.elf_path))
 
-        if not self.elf_file.has_dwarf_info():  # type: ignore[no-untyped-call]
+        if not self.elf_file.has_dwarf_info():
             raise ValueError(f"No DWARF info found in {self.elf_path}")
 
-        self.dwarf_info = self.elf_file.get_dwarf_info()  # type: ignore[no-untyped-call]
+        self.dwarf_info = self.elf_file.get_dwarf_info()
         logger.info(f"DWARF info loaded from {self.elf_path}")
         return self
 
     def __exit__(
-        self, exc_type: type | None, exc_val: Exception | None, exc_tb: object | None
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object | None,
     ) -> None:
         """Context manager exit - closes ELF file handle."""
         if hasattr(self, "file_handle"):

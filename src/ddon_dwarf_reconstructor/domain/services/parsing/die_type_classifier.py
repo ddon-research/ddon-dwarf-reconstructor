@@ -25,7 +25,7 @@ logger = get_logger(__name__)
 
 class DIETypeClassifier:
     """Classifies DIE types and validates tag usage.
-    
+
     All methods are static as they operate on DIE objects without state.
     Use these methods instead of checking tags directly to ensure consistent
     type classification throughout the codebase.
@@ -44,7 +44,7 @@ class DIETypeClassifier:
 
         Returns:
             True if DIE has a name and is a terminal type
-            
+
         Examples:
             - DW_TAG_class_type with name "MyClass": True
             - DW_TAG_pointer_type (no name): False
@@ -64,7 +64,7 @@ class DIETypeClassifier:
 
         Returns:
             True if DIE is a class/struct/union with a name
-            
+
         Examples:
             - DW_TAG_class_type with name: True
             - DW_TAG_enumeration_type with name: False (enums can't be forward declared)
@@ -85,7 +85,7 @@ class DIETypeClassifier:
 
         Returns:
             True if DIE is a qualifier tag
-            
+
         Examples:
             - DW_TAG_pointer_type: True
             - DW_TAG_const_type: True
@@ -105,7 +105,7 @@ class DIETypeClassifier:
 
         Returns:
             True if DIE is a base_type with primitive name
-            
+
         Examples:
             - DW_TAG_base_type with name "int": True
             - DW_TAG_base_type with name "MyCustomInt": False
@@ -140,7 +140,7 @@ class DIETypeClassifier:
 
         Returns:
             Type name if available, None otherwise
-            
+
         Examples:
             - DW_TAG_class_type with name "MyClass": "MyClass"
             - DW_TAG_pointer_type (no name): None
@@ -161,25 +161,30 @@ class DIETypeClassifier:
     @staticmethod
     def requires_resolution(die: DIE) -> bool:
         """Check if DIE represents a type that needs dependency resolution.
-        
+
         Types that need resolution are:
         - Classes, structs, unions (forward declarable)
         - Non-primitive types
-        
+
         Types that DON'T need resolution:
         - Primitives (int, char, etc.)
         - Enums (just values)
         - Typedefs (aliases)
         - Qualifiers (transparent wrappers)
-        
+
         Args:
             die: DIE to check
-            
+
         Returns:
             True if type should be included in dependencies
         """
         # Must be forward declarable (class/struct/union with name)
         if not DIETypeClassifier.is_forward_declarable(die):
+            return False
+
+        # Forward declarations provide no structural layout and should not
+        # trigger expensive recursive resolution.
+        if "DW_AT_declaration" in die.attributes:
             return False
 
         # Must not be a primitive

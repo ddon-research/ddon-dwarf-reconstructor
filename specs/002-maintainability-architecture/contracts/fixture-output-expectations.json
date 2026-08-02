@@ -1,0 +1,25 @@
+{
+  "source_sha256": "4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0",
+  "headers": {
+    "ps4/cSetInfoOmBreakTarget.h": {
+      "bytes": 16400,
+      "sha256": "6ef84efedff9f14e5ac4cfc93baa2a26920114c5114112f1363c5a9a9cccec52"
+    },
+    "ps4/rLayout.h": {
+      "bytes": 20424,
+      "sha256": "0c3e3a3cc4d6e443ac0aac4878c9a1541026fe77420e4edfbd3f00e3a19ec104"
+    },
+    "ps4/rTexture.h": {
+      "bytes": 15627,
+      "sha256": "144131b83e0c518557636804e32b8174295539b5e90f1ce61de3f68b791c1f4e"
+    },
+    "ps4/rTextureMemory.h": {
+      "bytes": 16302,
+      "sha256": "6a3dfdccc0bde48aab60e06dbb857574f0de94af93333a5d70453cb375f5c889"
+    },
+    "ps4/rTutorialDialogMessage.h": {
+      "bytes": 14211,
+      "sha256": "4b696fa29c421cfaacda6d6e143e3008bf57c746120bfd229628a81eeb4ffb14"
+    }
+  }
+}

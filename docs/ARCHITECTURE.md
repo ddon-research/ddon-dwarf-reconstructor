@@ -8,6 +8,25 @@ This tool reconstructs C++ header files from compiled binaries (ELF format) for 
 
 **Key Challenge:** DWARF debug information references types across multiple compilation units (CUs), can contain incomplete definitions (forward declarations), and requires complex resolution to reconstruct complete class hierarchies. The tool must efficiently search potentially thousands of CUs while avoiding performance pitfalls and handling edge cases.
 
+### Runtime Artifact Policy
+
+The ELF and decompilation dump for a named DDON build are immutable. Runtime
+optimization therefore targets fresh-process warm reruns after one cold
+bootstrap. Deterministic SQLite indexes and JSON caches are durable local build
+products: they remain excluded from Git and reproducible, but routine cleanup
+must preserve them.
+
+A durable artifact is reusable only when its source identity, producer/schema
+version, and output-affecting configuration match. Writers publish atomically;
+an incompatible or corrupt artifact is rebuilt without making the old valid
+artifact unavailable. The symbol cache and source-identity catalog are
+OS-local. The compressed dump index is a versioned SQLite sidecar next to the
+`.zst` by default, or at an explicit `--dwarf-index` path. The reconstructor
+slice of the common lifecycle provides inspect, verify, repair, rebuild, and
+exact-path purge operations via `ddon-dwarf-artifacts`; convergence with
+knowledge-graph inventories and bundles remains tracked in the active Spec Kit
+feature.
+
 ## System Architecture
 
 The architecture follows domain-driven design with clear separation between orchestration, business logic, and infrastructure:
@@ -35,6 +54,7 @@ The architecture follows domain-driven design with clear separation between orch
 ┌─────────────────────────────────────────────────────────────┐
 │  Infrastructure Layer: Configuration & External Interfaces   │
 │  - ELF file handling (PS3/PS4 compatibility)                │
+│  - Pinned Orbis objdump adapter and durable report cache    │
 │  - Logging and performance tracking                         │
 │  - Configuration management                                 │
 └─────────────────────────────────────────────────────────────┘
@@ -66,21 +86,19 @@ src/ddon_dwarf_reconstructor/
 │   └── services/
 │       ├── parsing/                    # DWARF parsing services
 │       │   ├── class_parser.py        # Multi-CU class discovery & parsing
-│       │   ├── array_parser.py        # Array type handling
 │       │   ├── die_type_classifier.py # Tag validation with O(1) lookup
-│       │   └── type_chain_traverser.py # Type reference resolution
+│       │   ├── method_evidence.py     # Implementation scoring/name evidence
+│       │   ├── type_chain_traverser.py # Type reference resolution
+│       │   └── type_resolver.py       # Lazy type resolution and filtering
 │       │
 │       ├── generation/                 # Code generation services
 │       │   ├── header_generator.py    # C++ header file generation
 │       │   ├── hierarchy_builder.py   # Inheritance hierarchy construction
 │       │   ├── dependency_extractor.py # Dependency graph analysis
 │       │   ├── file_registry.py       # Source file organization
-│       │   └── packing_analyzer.py    # Memory layout analysis
+│       │   └── special_header_renderer.py # Namespace/missing-type rendering
 │       │
 │       └── lazy_dwarf_index_service.py # Lazy DIE loading with offset index
-│
-├── core/
-│   └── lazy_type_resolver.py          # Type resolution with filtering
 │
 └── infrastructure/
     ├── config/                         # Configuration
@@ -93,6 +111,30 @@ src/ddon_dwarf_reconstructor/
     │
     └── elf_platform.py                 # Platform detection (PS3/PS4)
 ```
+
+### Knowledge Export and Instruction Evidence
+
+`KnowledgeExporter` is an application-layer boundary: it serializes recovered
+facts into stable graph nodes, relationships, structured instructions, and a
+hash-bearing manifest. Layout dependencies include inheritance and concrete
+member types. Method parameter and return types remain attributes on declared
+function nodes but do not recursively expand the layout closure; doing so for
+every dependency approaches a whole-client traversal without improving the
+requested class layout.
+
+`OrbisObjdumpProducer` is the PS4 machine-code evidence adapter. It verifies and
+records the exact SDK executable identity and ELF target, selects exact
+`ClassName::` symbols, disassembles bounded address groups, and converts output
+to a cached typed report. It uses `-EL -l -C -w -d` so instruction bytes,
+demangled names, and available DWARF line mappings are retained. Only syntactic
+direct call operands become `CALLS` edges; indirect calls stay as instruction
+evidence. Decompiled or reconstructed high-level behavior is a distinct future
+producer and must not overwrite this evidence.
+
+Generated `reconstructed.hpp` currently represents accurate declarations and
+layout syntax, not method bodies. Its graph unit carries
+`METHOD_BODY_RECONSTRUCTION_NOT_IMPLEMENTED`, making that limitation queryable
+rather than implying decompiler-equivalent coverage.
 
 ## Core Components
 
@@ -331,7 +373,7 @@ def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
     
     Exhaustive mode (--exhaustive flag):
     1. Bypass cache (ensure freshness)
-    2. Use DWARF dump if available (--dwarf-dump) → ~10 minutes
+    2. Use the durable SQLite dump index if available (--dwarf-dump)
     3. Fall back to full scan → ~60 minutes
     4. Score ALL definitions with enhanced algorithm:
        - Byte size: +1 per byte
@@ -344,13 +386,13 @@ def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
     Why exhaustive mode:
     - Problem: Incomplete definitions cached, missing nested types
     - Solution: Find most complete definition across all CUs
-    - Trade-off: Slow first run (~10-60 min), instant thereafter
+    - Trade-off: Expensive cold bootstrap, fast fresh-process warm runs
     
     Why cache population:
     - First exhaustive run expensive but thorough
     - Cache grows asymptotically to cover regular use cases
     - Subsequent runs use cached offset → <1s lookups
-    - Cache file: resources/.cache/{elf_name}_dwarf_cache.json
+    - Cache file: OS-local cache directory (or `DWARF_CACHE_DIR`)
     """
 ```
 
@@ -368,10 +410,20 @@ def _find_class_with_dump(self, class_name: str) -> tuple[CompileUnit, DIE] | No
     5. Load only best definition's CU
     6. **Populate cache** with best result
     
-    Performance:
-    - Dump scan: ~10 minutes (1GB compressed, streamed)
-    - Full scan: ~60 minutes (iterate all CUs, heavy I/O)
-    - Cache hit: <1 second (O(1) offset lookup)
+    Performance on the real PS4 dump:
+    - Cold SQLite index build: 295.6 seconds
+    - Fresh-process class + method lookup pair: 1.52 ms
+    - Warm rLayout knowledge export: about 2.4 seconds
+    - Full CU scan: legacy fallback when the dump/index is unavailable
+
+    Build-scoped root authority:
+    - `ps4-02020005/rLayout` is pinned to DIE `0x117ec452` in CU `0x117ebf8b`
+    - knowledge export resolves that DIE directly and validates class, header,
+      inheritance, layout, and nearby `MyDTI` evidence
+    - the lower-completeness `0x76133` candidate is retained as an explicit
+      rejected alternative in the manifest, not silently hidden by the cache
+    - generic header generation and unpinned symbols continue to use the normal
+      ranked/exhaustive policy
     
     Why dump faster than full scan:
     - Sequential text parsing vs random DWARF DIE traversal
@@ -727,9 +779,9 @@ type_cache: LRUCache[int, str] = LRUCache(maxsize=5000)
 
 2. **PersistentSymbolCache (disk-based JSON):**
 ```python
-# Cache v3.0: Multi-definition support with automatic best selection
+# Cache v4.0: source-bound multi-definition support
 {
-  "version": "3.0",
+  "version": "4.0",
   "symbol_to_offset": {
     "MtObject": 34021,
     "cResource": 77887,
@@ -740,7 +792,7 @@ type_cache: LRUCache[int, str] = LRUCache(maxsize=5000)
     "rLayout": 291815307  # Primary: best definition's CU offset
   },
   "symbol_definitions": {
-    # NEW in v3.0: ALL definitions with metadata
+    # Multi-definition records retained in v4.0
     "rLayout": [
       {
         "cu_offset": 291815307,  # 0x117ebf8b
@@ -770,13 +822,14 @@ type_cache: LRUCache[int, str] = LRUCache(maxsize=5000)
 ```
 
 **Rationale:**
-- Repeated tool runs avoid re-parsing (5-10s saved per run)
+- Repeated tool runs avoid rebuilding immutable-input indexes and mappings
 - **Exhaustive search always populates cache** with best definition
 - Cache grows asymptotically to cover all regular symbols
-- Cache invalidation via ELF file modification time
+- Cache validation uses an ELF source fingerprint; the durable-artifact roadmap
+  strengthens this to canonical content/producer/schema/config identity
 - Human-readable JSON aids debugging
 
-**Cache Population Strategy (v3.0 Multi-Definition):**
+**Cache Population Strategy (v4.0 Multi-Definition):**
 ```python
 def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
     """All search paths populate cache with multi-definition support.
@@ -797,10 +850,10 @@ def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
     6. No need to re-run exhaustive search
     
     DWARF dump mode (--dwarf-dump):
-    1. Fast ~10min scan of compressed dump
-    2. Finds ALL definitions with completeness scoring
-    3. **Populates cache** with all definitions + metadata
-    4. Next run: <1s cache hit (exhaustive not needed)
+    1. Validate or atomically build the source-bound SQLite sidecar
+    2. Query exact class/specification indexes
+    3. Populate the symbol cache with selected definitions + metadata
+    4. Later fresh processes reuse both artifacts
     
     Result: Cache coverage increases with usage, asymptotically
     approaching 100% for regular symbols. First exhaustive run
@@ -838,17 +891,23 @@ def validate_and_repair(self) -> dict[str, Any]:
       "warnings": ["Symbol X has empty definition list", ...]
     }
     
-    Saves user from expensive 10-60 minute regeneration!
+    Avoids unnecessary regeneration when a supported repair is safe.
     """
 ```
 
-**Location:** `resources/.cache/{elf_name}_dwarf_cache.json`
+**Location:** OS-local cache directory (`%LOCALAPPDATA%` on Windows,
+`$XDG_CACHE_HOME`/`~/.cache` elsewhere), overridable with `DWARF_CACHE_DIR`.
 
 **Performance Impact:**
-- Cache hit: <1 second (O(1) offset→DIE lookup)
-- Cache miss + default: ~1-5 seconds (targeted search)
-- Cache miss + exhaustive: ~10 minutes (with dump) or ~60 minutes (full scan)
-- Cache always populated after any successful find
+- Cold real dump index build: 295.6 seconds, producing a 206,422,016-byte sidecar
+- Fresh-process indexed class + method lookup pair: 1.52 ms
+- Warm real `rLayout` knowledge export: 1.57-1.59 seconds (116 types)
+- Successful searches populate the source-bound symbol cache
+
+Two fresh-process exports of the real `02020005` pilot produced byte-identical
+manifest, node, and relationship files (3,350 nodes and 3,735 relationships).
+Indexed negative lookups are authoritative; only a missing nested global-name
+entry falls back to its exact referenced DIE offset.
 
 3. **HeaderCache (SHA256-based):**
 ```python
@@ -1148,13 +1207,10 @@ def build_hierarchy(self, name: str, max_depth: int = 10) -> tuple[dict, list]:
 
 | Operation | Time | Details |
 |-----------|------|---------|
-| Initial load + cache build | 0.3s | First run, no cache |
-| Cached load | 0.002s | Subsequent runs |
-| Single class (MtObject) | 0.1s | 8 bytes, 0 members |
-| Complex class (rLayout) | 0.2s | 528 bytes, 12 members, 19 methods |
-| Full hierarchy (rLayout) | 4.6s | 285 classes, 341KB output |
-| Multi-CU search (complete scan) | 8-12s | 1000+ CUs, no early exit |
-| Multi-CU search (early exit) | 0.5-2s | Finds complete type quickly |
+| Compressed dump index build | 295.6s | One-time streaming build from the real `.zst` |
+| Indexed class + method lookup | 1.52ms | Fresh process, published SQLite sidecar |
+| Warm `rLayout` knowledge export | ~2.4s | Real ELF and retained source-bound caches |
+| Unit/non-performance suite | <1s typical | 276 passed, 1 deselected at the 2026-07-26 checkpoint |
 
 ## Limitations and Trade-offs
 
@@ -1232,18 +1288,18 @@ def build_hierarchy(self, name: str, max_depth: int = 10) -> tuple[dict, list]:
 
 **Test categories:**
 
-1. **Unit tests (216):** Mock all external dependencies
+1. **Fast tests:** Use focused fixtures and mocks at external boundaries
    - ClassParser with mocked DWARF structures
    - TypeResolver with mocked offset lookups
    - HeaderGenerator with mocked ClassInfo
    
-2. **Integration tests (2):** Use real ELF files
+2. **Integration/performance tests:** Opt in to local real ELF/dump files
    - PS4: `resources/DDOORBIS.elf`
    - PS3: `resources/PS3/EBOOT.ELF`
    
 **Why this split:**
-- Unit tests: Fast (<1s), test logic in isolation
-- Integration tests: Slow (~4s), validate end-to-end with real data
+- Fast tests validate logic in isolation
+- Real tests validate cold/warm behavior and deterministic output end to end
 
 **Critical test cases:**
 - Multi-CU resolution: Verify complete definitions chosen over forward declarations
@@ -1356,3 +1412,28 @@ class HeaderValidator:
 - [PS4 ELF Format](knowledge-base/ps4-elf/)
 - [Testing Guide](TESTING.md)
 - [Dragon's Dogma Online](https://en.wikipedia.org/wiki/Dragon%27s_Dogma_Online) - Target game
+
+## Refactored boundaries and quality contract
+
+The public `ClassParser`, `LazyTypeResolver`, `HierarchyBuilder`,
+`HeaderGenerator`, `DwarfGenerator`, cache, dump, exporter, and CLI classes are
+compatibility façades over focused services. Shared policies have one owner:
+`definition_selection.py` ranks candidates, `method_evidence.py` merges method
+evidence, `primitive_type_names.py` classifies primitive/excluded names,
+`SourceIdentityCatalog` binds immutable sources, and `SpecialHeaderRenderer`
+renders deterministic namespace/not-found headers.
+
+The application layer receives `DumpLookupPort`, `DisassemblyProducerPort`,
+and type/index/parser ports. It does not construct zstd, SQLite, Orbis, or
+pyelftools adapters; `infrastructure.composition` is the composition root.
+The generated `GenerationRequest` and `HeaderBundle` contracts make single-file
+and multi-file modes one workflow with mode-specific output adapters. Multi-file
+and single-file dependency closure is structural: method signatures render on
+declarations but method-only types do not trigger unbounded transitive scans.
+
+The structure checker enforces the 400/250/75/10 module/class/function/
+complexity limits with no baseline exemption. Boundary checks and the output
+manifest checker are part of `scripts/check.ps1`, CI, and the documented local
+acceptance sequence. See
+[`specs/002-maintainability-architecture/`](../specs/002-maintainability-architecture/)
+for the contracts and evidence record.

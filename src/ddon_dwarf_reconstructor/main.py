@@ -1,125 +1,21 @@
-"""Main entry point for the DDON DWARF Reconstructor."""
+"""Canonical command-line entry point for the DDON DWARF reconstructor."""
 
-import argparse
+from __future__ import annotations
+
 import sys
+from argparse import Namespace
+from logging import Logger
 from pathlib import Path
 from typing import NoReturn
 
-from .application.generators import DwarfGenerator
+from .application.generators import DwarfGenerator, GenerationRequest
+from .cli_arguments import parse_args
+from .infrastructure.composition import create_disassembly_producer, create_dump_lookup
 from .infrastructure.config import Config
 from .infrastructure.logging import LoggerSetup, get_logger, log_timing
-from .utils.path_utils import create_header_filename
 
 
-def parse_args() -> argparse.Namespace:
-    """Parse command line arguments."""
-    parser = argparse.ArgumentParser(
-        description="Reconstruct C++ headers from DWARF debug symbols in ELF files "
-        "using pyelftools",
-        epilog="""
-Examples:
-  # Generate header (quiet mode - default)
-  python main.py resources/DDOORBIS.elf --generate MtObject
-
-  # Generate multiple headers
-  python main.py resources/DDOORBIS.elf --generate MtObject,MtVector4,rTbl2Base
-
-  # Generate with full hierarchy
-  python main.py resources/DDOORBIS.elf --generate MtPropertyList --full-hierarchy
-
-  # Generate header (verbose mode with debug logs)
-  python main.py resources/DDOORBIS.elf --generate MtObject --verbose
-
-  # Custom output directory
-  python main.py resources/DDOORBIS.elf --generate MtObject -o headers/
-
-  # Generate from file (289 symbols)
-  python main.py resources/DDOORBIS.elf --symbols-file resources/season2-resources.txt
-
-  # Generate from file with full hierarchy
-  python main.py resources/DDOORBIS.elf --symbols-file my-symbols.txt --full-hierarchy
-
-  # Exhaustive search for most complete definition (slower first run)
-  python main.py resources/DDOORBIS.elf --generate rLayout --exhaustive
-
-  # Exhaustive search with compressed DWARF dump (requires Python 3.14)
-  python main.py resources/DDOORBIS.elf --generate rLayout --exhaustive --dwarf-dump dump.zst
-
-  # Using .env file for configuration
-  echo 'ELF_FILE_PATH=resources/DDOORBIS.elf' > .env
-  python main.py --generate MtObject
-        """,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    parser.add_argument(
-        "elf_file",
-        type=Path,
-        nargs="?",
-        help="Path to the ELF file to analyze (optional if using .env)",
-    )
-    parser.add_argument(
-        "-o",
-        "--output",
-        type=Path,
-        help="Output directory for reconstructed headers (default: ./output)",
-    )
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Enable verbose output with debug logs",
-    )
-    parser.add_argument(
-        "--generate",
-        type=str,
-        metavar="SYMBOL",
-        help="Generate C++ header file for the specified symbol(s). "
-        "Supports comma-separated list: 'MtObject,MtVector4,rTbl2Base'",
-    )
-    parser.add_argument(
-        "--symbols-file",
-        type=Path,
-        metavar="FILE",
-        help="Read symbols from file (one symbol per line). "
-        "Alternative to --generate for processing large lists",
-    )
-    parser.add_argument(
-        "--full-hierarchy",
-        action="store_true",
-        help="Generate complete inheritance hierarchy (includes all base classes)",
-    )
-    parser.add_argument(
-        "--single-file",
-        action="store_true",
-        help="With --full-hierarchy: generate single file with all classes and forward declarations (legacy mode). "
-        "Without --full-hierarchy: has no effect",
-    )
-    parser.add_argument(
-        "--exhaustive",
-        action="store_true",
-        help="Enable exhaustive search mode: scan all CUs to find most complete definition "
-        "(default: fast mode with early-exit on first complete definition). "
-        "Useful when classes have multiple definitions with varying nested types.",
-    )
-    parser.add_argument(
-        "--dwarf-dump",
-        type=Path,
-        metavar="PATH",
-        help="Path to compressed llvm-dwarfdump .zst file for fast lookups. "
-        "Requires Python 3.14+. Used with --exhaustive for targeted CU loading.",
-    )
-    return parser.parse_args()
-
-
-@log_timing
-def main() -> NoReturn:
-    """Main entry point for DWARF-to-C++ header generation using pyelftools."""
-    logger = get_logger(__name__)
-    logger.debug("Starting DDON DWARF Reconstructor main program")
-
-    args = parse_args()
-
-    # Load configuration
+def _load_config(args: Namespace) -> Config:
     try:
         config = Config.from_args(
             elf_file_path=args.elf_file,
@@ -127,187 +23,230 @@ def main() -> NoReturn:
             verbose=args.verbose,
         )
         config.validate()
-    except Exception as e:
-        print(f"Configuration error: {e}", file=sys.stderr)
-        sys.exit(1)
+        return config
+    except Exception as error:
+        print(f"Configuration error: {error}", file=sys.stderr)
+        raise SystemExit(1) from error
 
-    # Initialize logging
-    log_dir = Path("logs")
-    LoggerSetup.initialize(log_dir, verbose=config.verbose)
-    logger = get_logger(__name__)
 
-    logger.debug(f"ELF file: {config.elf_file_path}")
-    logger.debug(f"Output directory: {config.output_dir}")
-
-    # Ensure output directory exists
-    config.ensure_output_dir()
-
-    # Parse symbol list (support both --generate and --symbols-file)
-    symbols = []
-    
+def _read_symbols(args: Namespace, logger: Logger) -> list[str]:
     if args.generate and args.symbols_file:
         logger.error("Cannot use both --generate and --symbols-file options")
-        sys.exit(1)
-    elif args.generate:
-        # Parse comma-separated symbols
-        symbols = [s.strip() for s in args.generate.split(",") if s.strip()]
+        raise SystemExit(1)
+    if args.generate:
+        symbols = [symbol.strip() for symbol in args.generate.split(",") if symbol.strip()]
     elif args.symbols_file:
-        # Read symbols from file
-        try:
-            with open(args.symbols_file, encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith("#"):  # Skip empty lines and comments
-                        symbols.append(line)
-            logger.info(f"Read {len(symbols)} symbols from {args.symbols_file}")
-        except FileNotFoundError:
-            logger.error(f"Symbols file not found: {args.symbols_file}")
-            sys.exit(1)
-        except Exception as e:
-            logger.error(f"Error reading symbols file: {e}")
-            sys.exit(1)
+        symbols = _read_symbol_file(args.symbols_file, logger)
     else:
         logger.error("Must provide either --generate or --symbols-file option")
-        sys.exit(1)
-
+        raise SystemExit(1)
     if not symbols:
         logger.error("No symbols provided")
-        sys.exit(1)
+        raise SystemExit(1)
+    return symbols
 
-    logger.info(f"Generating headers for {len(symbols)} symbol(s)")
-    generation_mode = "full-hierarchy"
-    if args.full_hierarchy:
-        if args.single_file:
-            generation_mode = "full-hierarchy (single-file, legacy)"
-        else:
-            generation_mode = "full-hierarchy (multi-file)"
-    
+
+def _read_symbol_file(path: Path, logger: Logger) -> list[str]:
+    try:
+        with path.open(encoding="utf-8") as symbol_file:
+            symbols = [
+                line.strip()
+                for line in symbol_file
+                if line.strip() and not line.strip().startswith("#")
+            ]
+        logger.info("Read %s symbols from %s", len(symbols), path)
+        return symbols
+    except FileNotFoundError as error:
+        logger.error("Symbols file not found: %s", path)
+        raise SystemExit(1) from error
+    except (OSError, UnicodeError) as error:
+        logger.error("Error reading symbols file: %s", error)
+        raise SystemExit(1) from error
+
+
+def _log_options(args: Namespace, config: Config, symbols: list[str], logger: Logger) -> None:
+    logger.info("Generating headers for %s symbol(s)", len(symbols))
+    generation_mode = _generation_mode(args)
     search_mode = "exhaustive" if args.exhaustive else "fast (early-exit)"
-    logger.debug(f"Generation mode: {generation_mode}")
-    logger.debug(f"Search mode: {search_mode}")
-    
+    parameter_mode = (
+        "enabled (searching implementations)"
+        if args.resolve_param_names
+        else "disabled (auto-increment)"
+    )
+    logger.debug("ELF file: %s", config.elf_file_path)
+    logger.debug("Output directory: %s", config.output_dir)
+    logger.debug("Generation mode: %s", generation_mode)
+    logger.debug("Search mode: %s", search_mode)
+    logger.debug("Parameter name resolution: %s", parameter_mode)
     if args.dwarf_dump:
-        if not args.exhaustive:
-            logger.warning("--dwarf-dump specified without --exhaustive, will be ignored")
-        else:
-            logger.debug(f"DWARF dump: {args.dwarf_dump}")
+        logger.debug("DWARF dump: %s", args.dwarf_dump)
+    if args.dwarf_index:
+        logger.debug("DWARF index: %s", args.dwarf_index)
 
-    # Track results
+
+def _generation_mode(args: Namespace) -> str:
+    if not args.full_hierarchy:
+        return "single-header"
+    return (
+        "full-hierarchy (single-file, legacy)"
+        if args.single_file
+        else "full-hierarchy (multi-file)"
+    )
+
+
+def _run_generation(
+    args: Namespace, config: Config, symbols: list[str], logger: Logger
+) -> tuple[int, list[tuple[str, str]]]:
     success_count = 0
-    failed_symbols = []
-
-    # Process each symbol
+    failed_symbols: list[tuple[str, str]] = []
     try:
         with DwarfGenerator(
             config.elf_file_path,
             exhaustive_search=args.exhaustive,
-            dwarf_dump_path=args.dwarf_dump if args.exhaustive else None,
+            dwarf_dump_path=args.dwarf_dump,
+            dwarf_index_path=args.dwarf_index,
+            resolve_param_names=args.resolve_param_names,
+            dump_lookup_factory=create_dump_lookup,
+            disassembly_factory=create_disassembly_producer,
         ) as generator:
-            for i, symbol_name in enumerate(symbols, 1):
-                logger.info(f"[{i}/{len(symbols)}] Processing: {symbol_name}")
-
+            for index, symbol_name in enumerate(symbols, 1):
+                logger.info("[%s/%s] Processing: %s", index, len(symbols), symbol_name)
                 try:
-                    # Generate header(s)
-                    is_multi_file = False
-                    headers_to_write: dict[str, str] = {}
-                    
-                    if args.full_hierarchy:
-                        if args.single_file:
-                            # Legacy single-file mode
-                            header_content = generator.generate_complete_hierarchy_header(symbol_name)
-                            filename = create_header_filename(symbol_name)
-                            headers_to_write[filename] = header_content
-                        else:
-                            # New multi-file mode
-                            is_multi_file = True
-                            headers_to_write = generator.generate_multi_file_hierarchy(symbol_name)
-                    else:
-                        header_content = generator.generate_header(symbol_name)
-                        filename = create_header_filename(symbol_name)
-                        headers_to_write[filename] = header_content
-
-                    # Determine output path - use platform-specific subdirectory
-                    platform_str = generator.platform.value if generator.platform else "unknown"
-                    platform_dir = config.output_dir / platform_str
-                    platform_dir.mkdir(parents=True, exist_ok=True)
-
-                    # Write header(s)
-                    total_bytes = 0
-                    for header_filename, header_content in headers_to_write.items():
-                        output_file = platform_dir / header_filename
-                        output_file.write_text(header_content, encoding="utf-8")
-                        total_bytes += len(header_content)
-
-                        logger.info(f"[SUCCESS] Generated: {output_file}")
-                        logger.info(f"Size: {len(header_content)} bytes")
-
+                    _process_symbol(args, config, generator, symbol_name, symbols, logger)
                     success_count += 1
+                except (OSError, RuntimeError, ValueError) as error:
+                    _record_failure(symbol_name, error, failed_symbols, logger, config.verbose)
+    except Exception as error:
+        logger.error("Fatal error during generation: %s", error)
+        _print_traceback(config.verbose)
+        raise SystemExit(1) from error
+    return success_count, failed_symbols
 
-                    # Save cache after each successful generation
-                    if generator.lazy_index is not None:
-                        generator.lazy_index.save_cache()
-                        logger.debug("Cache saved after successful generation")
 
-                    # Calculate lines and provide summary statistics
-                    if not is_multi_file:
-                        # Single file mode - show preview
-                        single_filename = list(headers_to_write.keys())[0] if headers_to_write else ""
-                        lines = headers_to_write[single_filename].split("\n") if single_filename in headers_to_write else []
-                        logger.debug(f"Generated header contains {len(lines)} lines")
+def _process_symbol(
+    args: Namespace,
+    config: Config,
+    generator: DwarfGenerator,
+    symbol_name: str,
+    symbols: list[str],
+    logger: Logger,
+) -> None:
+    if args.export_knowledge:
+        build_id = args.build_id or f"{generator.platform.value}-{config.elf_file_path.stem}"
+        generator.export_knowledge_graph(
+            symbol_name, args.export_knowledge, build_id, orbis_objdump_path=args.orbis_objdump
+        )
+        return
+    headers = _build_headers(args, generator, symbol_name)
+    total_bytes = _write_headers(config, generator, headers, logger)
+    if generator.lazy_index is not None:
+        generator.lazy_index.save_cache()
+    _log_header_summary(args, generator, headers, total_bytes, symbols, logger)
 
-                        if config.verbose and len(symbols) == 1:
-                            # Only show preview for single symbol in verbose mode
-                            logger.debug("\nPreview (first 30 lines):")
-                            logger.debug("=" * 60)
-                            for line in lines[:30]:
-                                logger.debug(line)
-                            if len(lines) > 30:
-                                logger.debug(f"... and {len(lines) - 30} more lines")
-                            logger.debug("=" * 60)
-                    else:
-                        # Multi-file mode - show summary
-                        logger.debug(f"Generated {len(headers_to_write)} headers, {total_bytes} total bytes")
-                        if config.verbose:
-                            logger.debug("Generated files:")
-                            for fname in sorted(headers_to_write.keys()):
-                                logger.debug(f"  - {fname}")
 
-                except ValueError as e:
-                    logger.error(f"[FAILED] {symbol_name}: {e}")
-                    failed_symbols.append((symbol_name, str(e)))
-                except Exception as e:
-                    logger.error(f"[FAILED] {symbol_name}: {e}")
-                    failed_symbols.append((symbol_name, str(e)))
-                    if config.verbose:
-                        import traceback
+def _build_headers(args: Namespace, generator: DwarfGenerator, symbol_name: str) -> dict[str, str]:
+    request = GenerationRequest(
+        symbol=symbol_name,
+        full_hierarchy=args.full_hierarchy,
+        single_file=args.single_file,
+    )
+    return generator.generate_bundle(request).as_dict()
 
-                        traceback.print_exc()
 
-    except Exception as e:
-        logger.error(f"Fatal error during generation: {e}")
-        if config.verbose:
-            import traceback
+def _write_headers(
+    config: Config, generator: DwarfGenerator, headers: dict[str, str], logger: Logger
+) -> int:
+    platform_str = generator.platform.value if generator.platform else "unknown"
+    platform_dir = config.output_dir / platform_str
+    platform_dir.mkdir(parents=True, exist_ok=True)
+    total_bytes = 0
+    for filename, content in headers.items():
+        output_file = platform_dir / filename
+        output_file.write_text(content, encoding="utf-8")
+        total_bytes += len(content)
+        logger.info("[SUCCESS] Generated: %s", output_file)
+        logger.info("Size: %s bytes", len(content))
+    return total_bytes
 
-            traceback.print_exc()
-        sys.exit(1)
 
-    # Print summary
+def _log_header_summary(
+    args: Namespace,
+    generator: DwarfGenerator,
+    headers: dict[str, str],
+    total_bytes: int,
+    symbols: list[str],
+    logger: Logger,
+) -> None:
+    if args.full_hierarchy and not args.single_file:
+        logger.debug("Generated %s headers, %s total bytes", len(headers), total_bytes)
+        if args.verbose:
+            for filename in sorted(headers):
+                logger.debug("  - %s", filename)
+        return
+    filename = next(iter(headers), "")
+    lines = headers[filename].split("\n") if filename else []
+    logger.debug("Generated header contains %s lines", len(lines))
+    if args.verbose and len(symbols) == 1:
+        logger.debug("\nPreview (first 30 lines):")
+        for line in lines[:30]:
+            logger.debug(line)
+        if len(lines) > 30:
+            logger.debug("... and %s more lines", len(lines) - 30)
+
+
+def _record_failure(
+    symbol_name: str,
+    error: Exception,
+    failed_symbols: list[tuple[str, str]],
+    logger: Logger,
+    verbose: bool,
+) -> None:
+    logger.error("[FAILED] %s: %s", symbol_name, error)
+    failed_symbols.append((symbol_name, str(error)))
+    if verbose:
+        _print_traceback(True)
+
+
+def _print_traceback(enabled: bool) -> None:
+    if not enabled:
+        return
+    import traceback
+
+    traceback.print_exc()
+
+
+def _log_summary(
+    symbols: list[str],
+    success_count: int,
+    failed_symbols: list[tuple[str, str]],
+    logger: Logger,
+) -> None:
     logger.info("=" * 70)
     logger.info("GENERATION SUMMARY")
     logger.info("=" * 70)
-    logger.info(f"Total symbols: {len(symbols)}")
-    logger.info(f"Successfully generated: {success_count}")
-    logger.info(f"Failed: {len(failed_symbols)}")
-
+    logger.info("Total symbols: %s", len(symbols))
+    logger.info("Successfully generated: %s", success_count)
+    logger.info("Failed: %s", len(failed_symbols))
     if failed_symbols:
         logger.info("\nFailed symbols:")
         for symbol_name, error in failed_symbols:
-            logger.info(f"  - {symbol_name}: {error}")
+            logger.info("  - %s: %s", symbol_name, error)
 
-    logger.debug("Main program completed successfully")
 
-    # Exit with error code if any symbols failed
-    sys.exit(0 if len(failed_symbols) == 0 else 1)
+@log_timing
+def main() -> NoReturn:
+    """Run the canonical DWARF-to-header workflow."""
+    logger = get_logger(__name__)
+    args = parse_args()
+    config = _load_config(args)
+    LoggerSetup.initialize(Path("logs"), verbose=config.verbose)
+    logger = get_logger(__name__)
+    config.ensure_output_dir()
+    symbols = _read_symbols(args, logger)
+    _log_options(args, config, symbols, logger)
+    success_count, failed_symbols = _run_generation(args, config, symbols, logger)
+    _log_summary(symbols, success_count, failed_symbols, logger)
+    raise SystemExit(0 if not failed_symbols else 1)
 
 
 if __name__ == "__main__":

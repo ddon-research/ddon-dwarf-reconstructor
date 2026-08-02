@@ -7,6 +7,8 @@ Complete documentation for the DWARF-to-C++ header reconstructor.
 ### Getting Started
 - [README](../README.md) - Project overview, installation, and usage examples
 - [TESTING](TESTING.md) - Testing strategy, running tests, and coverage
+- [SONARQUBE](SONARQUBE.md) - Local SonarQube for VS Code C/C++ analysis with MSVC
+- [LANGFUSE_TRACING](LANGFUSE_TRACING.md) - Local Langfuse tracing for Copilot and Codex
 
 ### Architecture Documentation
 - [ARCHITECTURE](ARCHITECTURE.md) - Complete architecture documentation with design rationale
@@ -16,6 +18,7 @@ Complete documentation for the DWARF-to-C++ header reconstructor.
 ### Technical Reference
 - [DWARF_TAG_ANALYSIS](DWARF_TAG_ANALYSIS.md) - DWARF tag analysis and classification
 - [PS3_DWARF2_LOCATION_EXPRESSIONS](PS3_DWARF2_LOCATION_EXPRESSIONS.md) - PS3 DWARF2 location expression handling
+- [LANGFUSE_TRACING](LANGFUSE_TRACING.md) - Docker Compose operations and agent configuration
 
 ### Knowledge Base
 - [knowledge-base/](knowledge-base/) - Research notes, external references, and technical investigations
@@ -81,6 +84,18 @@ Complete documentation for the DWARF-to-C++ header reconstructor.
 - Troubleshooting common issues
 
 **When to read:** Running tests, writing new tests, understanding test coverage requirements.
+
+### SONARQUBE.md
+
+**Purpose:** Local SonarQube for VS Code C/C++ analysis using the Visual Studio MSVC toolchain.
+
+**Contents:**
+
+- Sonar Build Wrapper installation outside the repository
+- MSVC compilation-database generation
+- VS Code activation and troubleshooting
+
+**When to read:** Setting up or refreshing SonarQube analysis for generated C++ headers.
 
 ### DWARF_TAG_ANALYSIS.md
 **Purpose:** Analysis of DWARF tags and type classification.

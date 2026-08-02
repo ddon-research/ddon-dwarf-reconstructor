@@ -1,4560 +1,1300 @@
 {
   "version": "3.0",
   "symbol_to_offset": {
-    "rLayout": 293520466,
-    "u8": 42701,
-    "MT_CTSTR": 35133,
-    "MtArray": 99004,
-    "unsigned char": 1949,
-    "cSetInfoOmLadder": 111782946,
-    "TYPE": 36327,
-    "cSetInfoOmBowlOfLife": 111780377,
-    "u64": 16723,
-    "s32": 35756,
-    "cSetInfoOmWall": 111784072,
-    "cSetInfoOmNav": 111783388,
-    "cSetInfoOmFall": 111781881,
-    "size_t": 2360,
-    "cSetInfoOmRange": 111783585,
-    "MyDTI": 32859,
-    "cSetInfoOmCtrl": 111780703,
-    "cSetInfoOmDoor": 111781379,
-    "MtDTI": 34433,
-    "cSetInfoOmElfSW": 111781675,
-    "stLayoutID": 477216,
-    "MtAllocator": 44017,
-    "MtStream": 78818,
-    "u32": 16675,
-    "cSetInfoNpc": 111778153,
-    "cSetInfoOmGather": 111782087,
-    "SetInfo": 483775,
-    "cSetInfoOmTreasureBox": 111782351,
-    "unsigned int": 2866,
-    "stSplitID": 477492,
-    "cSetInfoOmBadStatus": 111784905,
-    "cSetInfoOmWarp": 111784293,
-    "cSetInfoOmHakuryuu": 111782542,
-    "cSetInfoOmLever": 111783152,
-    "cResource": 77375,
-    "MtObject": 34029,
-    "MtTime": 51612,
-    "MtVector3": 8408,
-    "cSetInfoOmHeal": 111782748,
-    "MtMatrix": 13368,
-    "MtPropertyList": 76092,
-    "MtFloat4": 7748,
-    "MtFloat3x3": 16196,
-    "cResPath<rAIFSM>": 498332,
-    "MtString": 42847,
-    "MtHalf4": 12900,
-    "STRING": 42868,
-    "tm": 346,
-    "MtVector2": 10130,
-    "MtFloat2": 11924,
-    "MtFloat2A": 12693,
-    "MtFloat3": 8096,
-    "MtFloat4x4": 16554,
-    "cUnit": 161546,
-    "MtFloat3A": 12467,
-    "MtFloat4A": 12222,
-    "MtFloat4x3": 16322,
-    "MtUI": 35269,
-    "cDraw": 163783,
-    "OBJECT": 136391,
-    "BlendState": 133319,
-    "Material": 131534,
-    "BLEND_DESC": 133584,
-    "AlphaToMaskControl": 115409,
-    "MtProperty": 36306,
-    "MtVariable": 72918,
-    "BRANCH_STATE": 166114,
-    "MtColor": 45289,
-    "ConstantTable": 139509,
-    "MtRangeU16": 71413,
-    "MtVector4": 4345,
-    "MT_ENUM": 71929,
-    "MtRect3D": 74498,
-    "MtPointF": 47882,
-    "MtTriangle": 68875,
-    "MtRayY": 75537,
-    "MtRange": 70419,
-    "MtRangeF": 70933,
-    "MtRect": 48406,
-    "Texture": 110930,
-    "MtOscillator": 71972,
-    "CMD_BRANCH": 166188,
-    "TAG": 164146,
-    "MtRect3D_XZ": 73523,
-    "CONTEXT": 164662,
-    "MtColorF": 46903,
-    "MtHalf2": 13113,
-    "BLEND_STATES": 133435,
-    "SHADER_STATE": 134232,
-    "OBJECT_INFO": 137023,
-    "MtPoint": 47457,
-    "MtRect3DC": 63847,
-    "VARIABLE": 136556,
-    "MtPlane": 55669,
-    "MtPlaneXZ": 75130,
-    "MtLineSegment4": 57216,
-    "IndexBuffer": 137098,
-    "STATE_CUE": 166283,
-    "CMD": 164250,
-    "cSetInfo": 485278,
-    "TARGET_STATE": 165294,
-    "MtEaseCurve": 51122,
-    "MtCone": 70079,
-    "SORT_WORK": 168385,
-    "Scene": 138179,
-    "MtSizeF": 35787,
-    "MtLineSegment": 52684,
-    "STATE": 132045,
-    "MtDataWriter": 102348,
-    "MtSphere": 54739,
-    "poolChain": 76247,
-    "MtAABB4": 67547,
-    "MtSize": 35292,
-    "CBufferSystem": 135134,
-    "MtCylinder": 68072,
-    "cLinkParam": 111780848,
-    "MtRectF": 49648,
-    "MtOBB": 56333,
-    "VertexBuffer": 131075,
-    "MtQuaternion": 6164,
-    "RasterizerState": 130580,
-    "MtMatrix33": 15386,
-    "MISC_STATE": 165918,
-    "MtLine": 52263,
-    "MtCriticalSection": 45099,
-    "Custom": 37428,
-    "MtFloat3x4": 16438,
-    "MtTorus": 70205,
-    "DepthStencilView": 130112,
-    "ANIMATION_STATE": 132162,
-    "cFSMRelate": 111779397,
-    "RenderTargetView": 129617,
-    "Frame": 102492,
-    "DepthStencilState": 133734,
-    "SizeAlign": 112230,
-    "MtCapsule": 66664,
-    "VIEWPORT": 165490,
-    "SHADER": 137333,
-    "MtHermiteCurve": 51337,
-    "cHardwareDispCtrl": 161930,
-    "PROCEDURAL_TEXTURE": 132234,
-    "MtRay": 66186,
-    "RASTERIZER_STATES": 130696,
-    "GeometryShaderObject": 169121,
-    "PARAM": 37538,
-    "DRAW_STATE": 165542,
-    "Animation": 134314,
-    "GEOM_STATE": 164524,
-    "MtAABB": 53428,
-    "Label": 102582,
-    "BlendControl": 115387,
-    "MtEllipsoid": 70331,
-    "SHADER_PARAMINFO": 137918,
-    "CBuffer": 135363,
-    "InputResourceOffsets": 117444,
-    "PrimitiveSetup": 114891,
-    "DEPTHSTENCIL_STATES": 133850,
-    "VertexShaderObject": 168672,
-    "DepthStencilControl": 115433,
-    "MtSoaVector3": 57578,
-    "RenderTarget": 112374,
-    "DataFormat": 110335,
-    "StencilControl": 115457,
-    "ANIMATION_LIST": 134417,
-    "KEY_INT": 134940,
-    "ANIMATION": 134465,
-    "StencilOpControl": 115538,
-    "InputLayouts": 138075,
-    "RASTERIZER_DESC": 130915,
-    "GsShader": 118119,
-    "DEPTHSTENCIL_DESC": 133999,
-    "KEY_FLOAT": 135033,
-    "SHADER_DESC": 137595,
-    "Layout": 138113,
-    "MtDataReader": 101762,
-    "GsStageRegisters": 116619,
-    "EsShader": 117137,
-    "MtVectorU4": 61337,
-    "DepthRenderTarget": 113575,
-    "KEY_VECTOR": 135104,
-    "EsStageRegisters": 116166,
-    "MtVectorU43": 63431,
-    "SHADER_PARAM": 137697,
-    "VsShader": 116803,
-    "PixelShaderObject": 169039,
-    "MtSoaVector1": 59554,
-    "PsShader": 117963,
-    "InputUsageSlot": 115917,
-    "PixelInputSemantic": 116514,
-    "ShaderCommonData": 117054,
-    "VertexInputSemantic": 116070,
-    "VertexExportSemantic": 116131,
-    "VsStageRegisters": 115756,
-    "PsStageRegisters": 116292,
-    "cSetInfoOmText": 111783836,
-    "cSetInfoOmBoard": 111780171,
-    "cSetInfoEnemy": 156520147,
-    "cSetInfoOm": 111779671,
-    "CONVERT_TYPE": 78480,
-    "SEEK_ORIGIN": 79441,
-    "f32": 3606,
-    "u16": 42724,
-    "SceFiosDate": 52221,
-    "t64": 52068,
-    "MT_CHAR": 35155,
-    "MT_STR": 45247,
-    "s16": 13080,
-    "s8": 42757,
-    "uintptr": 45077,
-    "PRIMITIVE_TOPOLOGY": 135965,
-    "PASS_TYPE": 131310,
-    "DRAW_MODE": 135791,
-    "DRAW_VIEW": 135889,
-    "EARLY_STENCIL_CULLING": 136071,
-    "SO_HANDLE": 152066,
-    "COMPARISON_FUNC": 131476,
-    "SLOT_TYPE": 132802,
-    "uint32_t": 2844,
-    "MT_MFUNC": 42531,
-    "MT_MFUNC32": 42558,
-    "s64": 42790,
-    "f64": 42824,
-    "MT_MFUNC64": 42590,
-    "Type": 71993,
-    "SS_HANDLE": 169771,
-    "SV_HANDLE": 169750,
-    "TextureType": 110047,
-    "uint8_t": 2800,
-    "TileMode": 109781,
-    "NumSamples": 109707,
-    "TextureChannelType": 109149,
-    "__uint32_t": 2855,
-    "SamplerModulationFactor": 110105,
-    "NumFragments": 109747,
-    "TextureChannel": 109237,
-    "UpdateFunc": 72230,
-    "MAP_TYPE": 127659,
-    "HIndexBuffer": 137321,
-    "HDR_TYPE": 135602,
-    "DEFERRED_LIGHTING_LIGHT_TYPE": 135704,
-    "DEFERRED_LIGHTING_TRANSPARENT_TYPE": 135764,
-    "ANTIALIAS_TYPE": 135635,
-    "DEFERRED_LIGHTING_HDR_TYPE": 135731,
-    "HVertexBuffer": 131298,
-    "ScanModeControlViewportScissor": 110291,
-    "ScanModeControlAa": 110313,
-    "ScePthreadMutex": 45195,
-    "GPUFORMAT_TYPE": 129593,
-    "HDepthStencil": 130568,
-    "HRenderTarget": 130100,
-    "AlignmentType": 112303,
-    "HInputLayout": 138063,
-    "HHullShader": 138027,
-    "HVertexShader": 137991,
-    "HGeometryShader": 138015,
-    "HDomainShader": 138039,
-    "HPixelShader": 138003,
-    "HComputeShader": 138051,
-    "UNIT_HDC_KIND_BIT": 162342,
-    "uint16_t": 2822,
-    "__uint16_t": 2833,
-    "ZFormat": 109657,
-    "BufferChannelType": 109599,
-    "RenderTargetChannelType": 109419,
-    "SurfaceFormat": 108857,
-    "RenderTargetFormat": 109283,
-    "RenderTargetChannelOrder": 109465,
-    "BufferFormat": 109499,
-    "GsMaxOutputVertexCount": 115722,
-    "GsMaxOutputPrimitiveDwordSize": 115688,
-    "StencilFormat": 109685,
-    "ZCompareBase": 109959,
-    "__uint8_t": 2811,
-    "InputLot": 489661,
-    "cGroupParam": 477842,
-    "MtTypedArray<cAreaHit>": 487069,
-    "cLifeArea": 478899,
-    "stLoadCondition": 478134,
-    "GuardData": 478419,
-    "DropItemInfo": 482571,
-    "stSetCondition": 478505,
-    "MtTypedArray<AreaHitShape>": 485742,
-    "cOmControl": 488843,
-    "stInsValue": 497567,
-    "CommunicateData": 489395,
-    "Data": 497590,
-    "MtTypedArray<cGroupParam::cID>": 487913,
-    "uOmSimple": 491496,
-    "AreaHitShape": 485879,
-    "MtTypedArray<cGroupParam::cLifeArea>": 486945,
-    "cArray<CNamedEnemyParamClient, 5>": 19489,
-    "stDeleteCondition": 478764,
-    "cZoneIndoorHandle": 505468,
-    "CDataNamedEnemyParamClient": 488092,
-    "ShapeInfoOBB": 309410,
-    "ShapeInfoArea": 306373,
-    "ShapeInfoAABB": 308434,
-    "ShapeInfoCone": 307945,
-    "cZoneUnitCtrl": 505070,
-    "uSoundGenerator": 4651538,
-    "cID": 479476,
-    "ShapeInfoCylinder": 307450,
-    "res_ptr<rCollision>": 491785,
-    "uBaseModel": 169797,
-    "rModel": 173897,
-    "cOmParam": 491851,
-    "cSoundGeneratorListener": 4661080,
-    "CACHE_ID": 170842,
-    "MODEL_INFO": 174954,
-    "cResPath<rCollision>": 495991,
-    "ShapeInfoSphere": 307072,
-    "cResPath<rModel>": 492929,
-    "cResPath<rCaughtInfoParam>": 496016,
-    "cResPath<rSoundRequest>": 493972,
-    "cResPath<rObjCollision>": 492954,
-    "cResPath<rEffectProvider>": 493997,
-    "cResPath<rMotionList>": 492979,
-    "cResPath<rSwingModel>": 494022,
-    "cResPath<rSoundMotionSe>": 493004,
-    "JOINT_INFO": 174034,
-    "ShapeInfoBase": 303093,
-    "BOUNDARY_INFO": 174606,
-    "MATERIAL_NAME": 175118,
-    "RECALCNORMAL_INFO": 175157,
-    "cArray<cZoneUnitCtrl::unZoneGroup, 8>": 19533,
-    "rCollision": 259157,
-    "cArray<u32, 5>": 19576,
-    "PRIMITIVE_INFO": 174202,
-    "cSoundZoneListener": 1613773,
-    "cResPath<rZone>": 496773,
-    "Leaf": 260234,
-    "PartsInfo": 259720,
-    "cGridCollision": 267415,
-    "Vertex": 260765,
-    "cResPath<rJointInfo>": 496798,
-    "PARTS_INFO": 174806,
-    "CACHE": 170730,
-    "CommandCache": 140534,
-    "cResPath<rDeformWeightMap>": 494854,
-    "Header": 259351,
-    "cResPath<rRigidBody>": 494879,
-    "rMaterial": 31468293,
-    "rTexture": 150808,
-    "LIST_STACK": 141134,
-    "cBVHCollision": 262995,
-    "unZoneGroup": 505191,
-    "Triangle": 260469,
-    "HEADER": 224641,
-    "SHFACTOR": 150939,
-    "StaticGridInfo": 268190,
-    "cCellRegisterArray<u16, 2>": 269215,
-    "MtGeomConvex": 205733,
-    "NodeBinaryBasic": 263624,
-    "PATCH_INFO": 140744,
-    "MaterialInfo": 260052,
-    "MtContact": 202719,
-    "cCellRegisterArrayBase": 267764,
-    "TEXTURE_INFO": 31468539,
-    "TraverseStack": 263191,
-    "cGridCollisionRegistInfo": 270912,
-    "cCellRegisterArray<u32, 2>": 269388,
-    "LUT_INFO": 31468640,
-    "ScrMaterialInfo": 226414,
-    "cWorkBuildOnlineFast": 266460,
-    "MATERIAL_INFO": 31468779,
-    "NodeBinaryOptimize": 266010,
-    "TraverseSystemParam": 270649,
-    "KILL_AREA_TYPE": 479258,
-    "InsValue": 497555,
-    "SBC_HANDLE": 226390,
-    "ZShape": 486893,
-    "SHAPE_TYPE": 303328,
-    "cOmContentsArray": 505179,
-    "CACHE_MODE": 172056,
-    "VFCULL_LEVEL": 171434,
-    "SHADER_QUALITY": 171741,
-    "LOD_TYPE": 171659,
-    "unsigned short": 319,
-    "cU16Array": 269204,
-    "cU32Array": 269377,
-    "INSIDE_TRAVERSE_CALLBACK": 269787,
-    "NodeQuad": 264893,
-    "NodeBinaryCommon": 264519,
-    "JOBHANDLE": 267340,
-    "MtGeometry": 200461,
-    "JobParamOfLine": 266819,
+    "MtPropertyList": 263560682,
+    "rLayout": 483635,
+    "cResource": 283374984,
+    "MtObject": 599865512,
+    "MtDTI": 599864480,
+    "MtAllocator": 603539045,
+    "MyDTI": 599865560,
+    "MtString": 600705472,
+    "stLayoutID": 380440649,
+    "MtCriticalSection": 658506415,
+    "MtTime": 600704704,
+    "stSplitID": 380440903,
+    "MtProperty": 263524020,
+    "MtUI": 263510597,
+    "MtPlane": 603560885,
+    "MtPlaneXZ": 263559755,
+    "MtLineSegment4": 263543381,
+    "MtRay": 263550811,
+    "MtSize": 600616505,
+    "MtVector4": 600835621,
+    "MtSizeF": 600616989,
+    "MtPoint": 600603222,
+    "MtFloat4x4": 600845936,
+    "MtVector2": 600841427,
+    "MtFloat2A": 600843990,
+    "MtHalf2": 600844403,
+    "MtQuaternion": 600837468,
+    "MtFloat2": 600843221,
+    "MtMatrix33": 600844668,
+    "MtFloat3A": 600843764,
+    "poolChain": 263560837,
+    "MtAABB": 603562714,
+    "MtHermiteCurve": 600574795,
+    "MtFloat3x4": 600845820,
+    "MtEllipsoid": 263554956,
+    "MtFloat4": 600839052,
+    "MtCone": 263554704,
+    "MtLineSegment": 603564950,
+    "MtVector3": 600839705,
+    "MtHalf4": 600844197,
+    "MtFloat3x3": 600845478,
+    "MtVariable": 263557543,
+    "MtSphere": 603564020,
+    "MtAABB4": 263552172,
+    "MtEaseCurve": 600562191,
+    "MtCylinder": 263552697,
+    "MtArray": 79963730,
+    "MtSoaVector3": 263543743,
+    "MtRangeU16": 600621271,
+    "MT_ENUM": 263556554,
+    "MtRangeF": 600620791,
+    "MtStream": 602829332,
+    "MtRect3D": 263559123,
+    "STRING": 600705493,
+    "MtTriangle": 603561559,
+    "MtFloat3": 600839393,
+    "MtOBB": 603565704,
+    "MtRayY": 263560162,
+    "MtRange": 600620277,
+    "MtMatrix": 600833769,
+    "MtColor": 600554476,
+    "tm": 600189066,
+    "MtRectF": 600618789,
+    "MtOscillator": 263556597,
+    "MtFloat4A": 600843519,
+    "MtRect3D_XZ": 263558148,
+    "MtPointF": 600603694,
+    "MtTorus": 263554830,
+    "Custom": 263525142,
+    "MtRect": 600617518,
+    "MtFloat4x3": 600845704,
+    "MtLine": 263538428,
+    "MtCapsule": 263551289,
+    "MtRect3DC": 603547903,
+    "MtColorF": 600556108,
+    "MtVectorU4": 603517356,
+    "MtSoaVector1": 603519450,
+    "PARAM": 263525252,
+    "MtVectorU43": 263549596,
+    "cSetInfo": 247906036,
+    "cUnit": 659930153,
+    "MtDataReader": 602586440,
+    "MtDataWriter": 602613960,
+    "cHardwareDispCtrl": 659930537,
+    "Label": 602614194,
+    "Frame": 602614104,
+    "MT_CTSTR": 600191051,
+    "cSetInfoOmLadder": 293594665,
+    "SetInfo": 293520621,
+    "cSetInfoOmElfSW": 293593060,
+    "cSetInfoOmBowlOfLife": 293584016,
+    "unsigned int": 668257676,
+    "cSetInfoOm": 293583253,
+    "cSetInfoNpc": 293582186,
+    "cSetInfoOmBadStatus": 293597007,
+    "u8": 600825410,
+    "cSetInfoOmDoor": 293592712,
+    "cSetInfoOmWall": 293596071,
+    "cSetInfoOmFall": 293593324,
+    "cSetInfoOmHeal": 293594412,
+    "unsigned char": 668257500,
+    "cSetInfoOmTreasureBox": 293593898,
+    "cSetInfoOmText": 293595779,
+    "u32": 637951408,
+    "cSetInfoEnemy": 293581104,
+    "cSetInfoOmWarp": 293596349,
+    "cSetInfoOmRange": 293595473,
+    "cSetInfoOmNav": 293595221,
+    "cSetInfoOmCtrl": 293584392,
     "cSetInfoGeneralPoint": 248989287,
-    "cSetInfoCoord": 248989840,
-    "cSetInfoCharacter": 248010069,
-    "Resource": 635067383,
-    "Buffer": 634679965,
-    "ShaderObject": 665835991,
-    "BufferObject": 665836011,
-    "KEY": 643498871,
-    "cResPathBase": 298702565,
-    "uDDOModel": 218744627,
-    "CPacketDataBase": 70081962,
-    "uSoundZoneBase": 596650960,
-    "cResPtrBase": 290458225,
-    "uCoord": 611968780,
-    "cZoneListener": 627231297,
-    "uModel": 647509963,
-    "USAGE_TYPE": 634681137,
-    "cpTalk": 130588986,
-    "cpRotateCtrl": 233191797,
-    "cpPartsCtrl": 229520744,
-    "cpActionRequest": 183417353,
-    "cpEquip": 289709168,
-    "cpDDMrlMgr": 97036468,
-    "uControl": 115543040,
-    "cpMotionHistory": 218415743,
-    "cpSoftBody": 289934979,
-    "cpShlShotCtrl": 87944942,
-    "cArray<uDDOModel::stTouchReleaseInfo, 8>": 218784935,
-    "cDelegate_6<void, u32, u32, f32, f32, f32, u32>": 218751090,
-    "cpSequenceCtrl": 96860594,
-    "cpEffectProvider": 194248923,
-    "cpOcdCtrl": 69856627,
-    "cpStateManager": 183124490,
-    "cHitGeom": 51000521,
-    "cpWallExitCtrl": 100861569,
-    "cpCheckWallCliff": 218784145,
-    "GuardComponent": 218745596,
-    "uCharacter": 12872516,
-    "cDelegate_0<void>": 233172581,
-    "cAttackParam": 297289485,
-    "cpRegionStatusCtrl": 231989401,
-    "cpPivotCtrl": 231745382,
-    "cpActionSelect": 183198811,
-    "uShlBase": 251634423,
-    "uHuman": 86407848,
-    "cHitInfoAfter": 178385849,
-    "cUnitDieInfo": 261053147,
-    "uPlayer": 65771228,
-    "cpActionManager": 183118655,
-    "cpEffectStatusManager": 194802875,
-    "rShlParamList": 304512009,
-    "cpObjCollisionBase": 87468132,
-    "cpInput": 240754105,
-    "cpComponent": 233119831,
-    "cContextInstance": 115528174,
-    "cpKeepAtkAdjust": 213495171,
-    "cpScrCollision": 235715419,
-    "cHitInfo": 87550431,
-    "MtTypedArray<cAsyncArc>": 218852675,
-    "uHumanEnemy": 99510676,
-    "cpPathFinding": 92096268,
-    "uEnemy": 71244954,
-    "cpModelConst": 96702680,
-    "cpPawnThink": 183419768,
-    "cpLayout": 380443438,
-    "cpInvincibleCtrl": 180907295,
-    "cComponentManager": 22762975,
-    "MOT_TYPE": 647523980,
-    "cShlNotifyInfo": 251378814,
-    "cpSlave": 183418800,
-    "cContextCharacter": 87819844,
-    "cpWorkRate": 242404963,
-    "cpChargeCtrl": 203527328,
-    "cpLockOnTargetManager": 217251837,
-    "cpCatchCtrl": 182773187,
-    "cOutLineController": 218746195,
-    "cpAISensor": 183445010,
-    "MtTypedArray<cDamageMsg>": 218777403,
-    "uNpc": 362312219,
-    "MtTypedStorageArray<uDDOModel, 8>": 218852479,
-    "cCollNode": 297287429,
-    "uAimCheck": 365685387,
-    "cpLockOn": 216999388,
-    "TOUCH_RELEASE_TYPE": 218852432,
-    "TOUCH_TYPE": 218852326,
-    "cpHpDamageCtrl": 138334755,
-    "HP_DATATYPE": 304380242,
-    "cDamageSeInfo": 138339935,
-    "cContextInterface": 218751802,
-    "cpNpc": 219689198,
-    "cOcdInfo": 180690191,
-    "Motion": 647511713,
-    "InterpolationJoint": 647513934,
-    "MPARAM_WORK": 634485120,
-    "rMotionList": 642919168,
-    "Joint": 286878832,
-    "cZoneLayout": 626989975,
-    "cLayoutElement": 627031768,
-    "cGroupManager": 626991973,
-    "cSoundLayoutInfo": 280648819,
-    "rZone": 626991634,
-    "cInGameGroupManager": 626990268
+    "cSetInfoOmHakuryuu": 293594148,
+    "cSetInfoOmBoard": 293583752,
+    "cSetInfoOmGather": 293593588,
+    "s32": 600829621,
+    "u64": 600703422,
+    "TYPE": 603539410,
+    "cSetInfoOmLever": 293594929,
+    "CONVERT_TYPE": 283376061,
+    "size_t": 600190688,
+    "uintptr": 637951438,
+    "u16": 600829385,
+    "MT_CHAR": 600191073,
+    "MT_STR": 600826433,
+    "ScePthreadMutex": 658506511,
+    "t64": 600705232,
+    "SceFiosDate": 600705399,
+    "MT_MFUNC32": 263528791,
+    "f64": 600851753,
+    "MT_MFUNC64": 263528823,
+    "s8": 602590529,
+    "f32": 638973651,
+    "MT_MFUNC": 263528764,
+    "s16": 602832588,
+    "s64": 264697663,
+    "Type": 263556618,
+    "SEEK_ORIGIN": 602829955,
+    "UpdateFunc": 263556855,
+    "cDraw": 663911540,
+    "intptr": 602615260,
+    "UNIT_HDC_KIND_BIT": 659930949
   },
   "offset_to_symbol": {
-    "293520466": "rLayout",
-    "42701": "u8",
-    "35133": "MT_CTSTR",
-    "99004": "MtArray",
-    "1949": "unsigned char",
-    "111782946": "cSetInfoOmLadder",
-    "36327": "TYPE",
-    "111780377": "cSetInfoOmBowlOfLife",
-    "16723": "u64",
-    "35756": "s32",
-    "111784072": "cSetInfoOmWall",
-    "111783388": "cSetInfoOmNav",
-    "111781881": "cSetInfoOmFall",
-    "2360": "size_t",
-    "111783585": "cSetInfoOmRange",
-    "32859": "MyDTI",
-    "111780703": "cSetInfoOmCtrl",
-    "111781379": "cSetInfoOmDoor",
-    "34433": "MtDTI",
-    "111781675": "cSetInfoOmElfSW",
-    "477216": "stLayoutID",
-    "44017": "MtAllocator",
-    "78818": "MtStream",
-    "16675": "u32",
-    "111778153": "cSetInfoNpc",
-    "111782087": "cSetInfoOmGather",
-    "483775": "SetInfo",
-    "111782351": "cSetInfoOmTreasureBox",
-    "2866": "unsigned int",
-    "477492": "stSplitID",
-    "111784905": "cSetInfoOmBadStatus",
-    "111784293": "cSetInfoOmWarp",
-    "111782542": "cSetInfoOmHakuryuu",
-    "111783152": "cSetInfoOmLever",
-    "77375": "cResource",
-    "34029": "MtObject",
-    "51612": "MtTime",
-    "8408": "MtVector3",
-    "111782748": "cSetInfoOmHeal",
-    "13368": "MtMatrix",
-    "76092": "MtPropertyList",
-    "7748": "MtFloat4",
-    "16196": "MtFloat3x3",
-    "498332": "cResPath<rAIFSM>",
-    "42847": "MtString",
-    "12900": "MtHalf4",
-    "42868": "STRING",
-    "346": "tm",
-    "10130": "MtVector2",
-    "11924": "MtFloat2",
-    "12693": "MtFloat2A",
-    "8096": "MtFloat3",
-    "16554": "MtFloat4x4",
-    "161546": "cUnit",
-    "12467": "MtFloat3A",
-    "12222": "MtFloat4A",
-    "16322": "MtFloat4x3",
-    "35269": "MtUI",
-    "163783": "cDraw",
-    "136391": "OBJECT",
-    "133319": "BlendState",
-    "131534": "Material",
-    "133584": "BLEND_DESC",
-    "115409": "AlphaToMaskControl",
-    "36306": "MtProperty",
-    "72918": "MtVariable",
-    "166114": "BRANCH_STATE",
-    "45289": "MtColor",
-    "139509": "ConstantTable",
-    "71413": "MtRangeU16",
-    "4345": "MtVector4",
-    "71929": "MT_ENUM",
-    "74498": "MtRect3D",
-    "47882": "MtPointF",
-    "68875": "MtTriangle",
-    "75537": "MtRayY",
-    "70419": "MtRange",
-    "70933": "MtRangeF",
-    "48406": "MtRect",
-    "110930": "Texture",
-    "71972": "MtOscillator",
-    "166188": "CMD_BRANCH",
-    "164146": "TAG",
-    "73523": "MtRect3D_XZ",
-    "164662": "CONTEXT",
-    "46903": "MtColorF",
-    "13113": "MtHalf2",
-    "133435": "BLEND_STATES",
-    "134232": "SHADER_STATE",
-    "137023": "OBJECT_INFO",
-    "47457": "MtPoint",
-    "63847": "MtRect3DC",
-    "136556": "VARIABLE",
-    "55669": "MtPlane",
-    "75130": "MtPlaneXZ",
-    "57216": "MtLineSegment4",
-    "137098": "IndexBuffer",
-    "166283": "STATE_CUE",
-    "164250": "CMD",
-    "485278": "cSetInfo",
-    "165294": "TARGET_STATE",
-    "51122": "MtEaseCurve",
-    "70079": "MtCone",
-    "168385": "SORT_WORK",
-    "138179": "Scene",
-    "35787": "MtSizeF",
-    "52684": "MtLineSegment",
-    "132045": "STATE",
-    "102348": "MtDataWriter",
-    "54739": "MtSphere",
-    "76247": "poolChain",
-    "67547": "MtAABB4",
-    "35292": "MtSize",
-    "135134": "CBufferSystem",
-    "68072": "MtCylinder",
-    "111780848": "cLinkParam",
-    "49648": "MtRectF",
-    "56333": "MtOBB",
-    "131075": "VertexBuffer",
-    "6164": "MtQuaternion",
-    "130580": "RasterizerState",
-    "15386": "MtMatrix33",
-    "165918": "MISC_STATE",
-    "52263": "MtLine",
-    "45099": "MtCriticalSection",
-    "37428": "Custom",
-    "16438": "MtFloat3x4",
-    "70205": "MtTorus",
-    "130112": "DepthStencilView",
-    "132162": "ANIMATION_STATE",
-    "111779397": "cFSMRelate",
-    "129617": "RenderTargetView",
-    "102492": "Frame",
-    "133734": "DepthStencilState",
-    "112230": "SizeAlign",
-    "66664": "MtCapsule",
-    "165490": "VIEWPORT",
-    "137333": "SHADER",
-    "51337": "MtHermiteCurve",
-    "161930": "cHardwareDispCtrl",
-    "132234": "PROCEDURAL_TEXTURE",
-    "66186": "MtRay",
-    "130696": "RASTERIZER_STATES",
-    "169121": "GeometryShaderObject",
-    "37538": "PARAM",
-    "165542": "DRAW_STATE",
-    "134314": "Animation",
-    "164524": "GEOM_STATE",
-    "53428": "MtAABB",
-    "102582": "Label",
-    "115387": "BlendControl",
-    "70331": "MtEllipsoid",
-    "137918": "SHADER_PARAMINFO",
-    "135363": "CBuffer",
-    "117444": "InputResourceOffsets",
-    "114891": "PrimitiveSetup",
-    "133850": "DEPTHSTENCIL_STATES",
-    "168672": "VertexShaderObject",
-    "115433": "DepthStencilControl",
-    "57578": "MtSoaVector3",
-    "112374": "RenderTarget",
-    "110335": "DataFormat",
-    "115457": "StencilControl",
-    "134417": "ANIMATION_LIST",
-    "134940": "KEY_INT",
-    "134465": "ANIMATION",
-    "115538": "StencilOpControl",
-    "138075": "InputLayouts",
-    "130915": "RASTERIZER_DESC",
-    "118119": "GsShader",
-    "133999": "DEPTHSTENCIL_DESC",
-    "135033": "KEY_FLOAT",
-    "137595": "SHADER_DESC",
-    "138113": "Layout",
-    "101762": "MtDataReader",
-    "116619": "GsStageRegisters",
-    "117137": "EsShader",
-    "61337": "MtVectorU4",
-    "113575": "DepthRenderTarget",
-    "135104": "KEY_VECTOR",
-    "116166": "EsStageRegisters",
-    "63431": "MtVectorU43",
-    "137697": "SHADER_PARAM",
-    "116803": "VsShader",
-    "169039": "PixelShaderObject",
-    "59554": "MtSoaVector1",
-    "117963": "PsShader",
-    "115917": "InputUsageSlot",
-    "116514": "PixelInputSemantic",
-    "117054": "ShaderCommonData",
-    "116070": "VertexInputSemantic",
-    "116131": "VertexExportSemantic",
-    "115756": "VsStageRegisters",
-    "116292": "PsStageRegisters",
-    "111783836": "cSetInfoOmText",
-    "111780171": "cSetInfoOmBoard",
-    "156520147": "cSetInfoEnemy",
-    "111779671": "cSetInfoOm",
-    "78480": "CONVERT_TYPE",
-    "79441": "SEEK_ORIGIN",
-    "3606": "f32",
-    "42724": "u16",
-    "52221": "SceFiosDate",
-    "52068": "t64",
-    "35155": "MT_CHAR",
-    "45247": "MT_STR",
-    "13080": "s16",
-    "42757": "s8",
-    "45077": "uintptr",
-    "135965": "PRIMITIVE_TOPOLOGY",
-    "131310": "PASS_TYPE",
-    "135791": "DRAW_MODE",
-    "135889": "DRAW_VIEW",
-    "136071": "EARLY_STENCIL_CULLING",
-    "152066": "SO_HANDLE",
-    "131476": "COMPARISON_FUNC",
-    "132802": "SLOT_TYPE",
-    "2844": "uint32_t",
-    "42531": "MT_MFUNC",
-    "42558": "MT_MFUNC32",
-    "42790": "s64",
-    "42824": "f64",
-    "42590": "MT_MFUNC64",
-    "71993": "Type",
-    "169771": "SS_HANDLE",
-    "169750": "SV_HANDLE",
-    "110047": "TextureType",
-    "2800": "uint8_t",
-    "109781": "TileMode",
-    "109707": "NumSamples",
-    "109149": "TextureChannelType",
-    "2855": "__uint32_t",
-    "110105": "SamplerModulationFactor",
-    "109747": "NumFragments",
-    "109237": "TextureChannel",
-    "72230": "UpdateFunc",
-    "127659": "MAP_TYPE",
-    "137321": "HIndexBuffer",
-    "135602": "HDR_TYPE",
-    "135704": "DEFERRED_LIGHTING_LIGHT_TYPE",
-    "135764": "DEFERRED_LIGHTING_TRANSPARENT_TYPE",
-    "135635": "ANTIALIAS_TYPE",
-    "135731": "DEFERRED_LIGHTING_HDR_TYPE",
-    "131298": "HVertexBuffer",
-    "110291": "ScanModeControlViewportScissor",
-    "110313": "ScanModeControlAa",
-    "45195": "ScePthreadMutex",
-    "129593": "GPUFORMAT_TYPE",
-    "130568": "HDepthStencil",
-    "130100": "HRenderTarget",
-    "112303": "AlignmentType",
-    "138063": "HInputLayout",
-    "138027": "HHullShader",
-    "137991": "HVertexShader",
-    "138015": "HGeometryShader",
-    "138039": "HDomainShader",
-    "138003": "HPixelShader",
-    "138051": "HComputeShader",
-    "162342": "UNIT_HDC_KIND_BIT",
-    "2822": "uint16_t",
-    "2833": "__uint16_t",
-    "109657": "ZFormat",
-    "109599": "BufferChannelType",
-    "109419": "RenderTargetChannelType",
-    "108857": "SurfaceFormat",
-    "109283": "RenderTargetFormat",
-    "109465": "RenderTargetChannelOrder",
-    "109499": "BufferFormat",
-    "115722": "GsMaxOutputVertexCount",
-    "115688": "GsMaxOutputPrimitiveDwordSize",
-    "109685": "StencilFormat",
-    "109959": "ZCompareBase",
-    "2811": "__uint8_t",
-    "489661": "InputLot",
-    "477842": "cGroupParam",
-    "487069": "MtTypedArray<cAreaHit>",
-    "478899": "cLifeArea",
-    "478134": "stLoadCondition",
-    "478419": "GuardData",
-    "482571": "DropItemInfo",
-    "478505": "stSetCondition",
-    "485742": "MtTypedArray<AreaHitShape>",
-    "488843": "cOmControl",
-    "497567": "stInsValue",
-    "489395": "CommunicateData",
-    "497590": "Data",
-    "487913": "MtTypedArray<cGroupParam::cID>",
-    "491496": "uOmSimple",
-    "485879": "AreaHitShape",
-    "486945": "MtTypedArray<cGroupParam::cLifeArea>",
-    "19489": "cArray<CNamedEnemyParamClient, 5>",
-    "478764": "stDeleteCondition",
-    "505468": "cZoneIndoorHandle",
-    "488092": "CDataNamedEnemyParamClient",
-    "309410": "ShapeInfoOBB",
-    "306373": "ShapeInfoArea",
-    "308434": "ShapeInfoAABB",
-    "307945": "ShapeInfoCone",
-    "505070": "cZoneUnitCtrl",
-    "4651538": "uSoundGenerator",
-    "479476": "cID",
-    "307450": "ShapeInfoCylinder",
-    "491785": "res_ptr<rCollision>",
-    "169797": "uBaseModel",
-    "173897": "rModel",
-    "491851": "cOmParam",
-    "4661080": "cSoundGeneratorListener",
-    "170842": "CACHE_ID",
-    "174954": "MODEL_INFO",
-    "495991": "cResPath<rCollision>",
-    "307072": "ShapeInfoSphere",
-    "492929": "cResPath<rModel>",
-    "496016": "cResPath<rCaughtInfoParam>",
-    "493972": "cResPath<rSoundRequest>",
-    "492954": "cResPath<rObjCollision>",
-    "493997": "cResPath<rEffectProvider>",
-    "492979": "cResPath<rMotionList>",
-    "494022": "cResPath<rSwingModel>",
-    "493004": "cResPath<rSoundMotionSe>",
-    "174034": "JOINT_INFO",
-    "303093": "ShapeInfoBase",
-    "174606": "BOUNDARY_INFO",
-    "175118": "MATERIAL_NAME",
-    "175157": "RECALCNORMAL_INFO",
-    "19533": "cArray<cZoneUnitCtrl::unZoneGroup, 8>",
-    "259157": "rCollision",
-    "19576": "cArray<u32, 5>",
-    "174202": "PRIMITIVE_INFO",
-    "1613773": "cSoundZoneListener",
-    "496773": "cResPath<rZone>",
-    "260234": "Leaf",
-    "259720": "PartsInfo",
-    "267415": "cGridCollision",
-    "260765": "Vertex",
-    "496798": "cResPath<rJointInfo>",
-    "174806": "PARTS_INFO",
-    "170730": "CACHE",
-    "140534": "CommandCache",
-    "494854": "cResPath<rDeformWeightMap>",
-    "259351": "Header",
-    "494879": "cResPath<rRigidBody>",
-    "31468293": "rMaterial",
-    "150808": "rTexture",
-    "141134": "LIST_STACK",
-    "262995": "cBVHCollision",
-    "505191": "unZoneGroup",
-    "260469": "Triangle",
-    "224641": "HEADER",
-    "150939": "SHFACTOR",
-    "268190": "StaticGridInfo",
-    "269215": "cCellRegisterArray<u16, 2>",
-    "205733": "MtGeomConvex",
-    "263624": "NodeBinaryBasic",
-    "140744": "PATCH_INFO",
-    "260052": "MaterialInfo",
-    "202719": "MtContact",
-    "267764": "cCellRegisterArrayBase",
-    "31468539": "TEXTURE_INFO",
-    "263191": "TraverseStack",
-    "270912": "cGridCollisionRegistInfo",
-    "269388": "cCellRegisterArray<u32, 2>",
-    "31468640": "LUT_INFO",
-    "226414": "ScrMaterialInfo",
-    "266460": "cWorkBuildOnlineFast",
-    "31468779": "MATERIAL_INFO",
-    "266010": "NodeBinaryOptimize",
-    "270649": "TraverseSystemParam",
-    "479258": "KILL_AREA_TYPE",
-    "497555": "InsValue",
-    "226390": "SBC_HANDLE",
-    "486893": "ZShape",
-    "303328": "SHAPE_TYPE",
-    "505179": "cOmContentsArray",
-    "172056": "CACHE_MODE",
-    "171434": "VFCULL_LEVEL",
-    "171741": "SHADER_QUALITY",
-    "171659": "LOD_TYPE",
-    "319": "unsigned short",
-    "269204": "cU16Array",
-    "269377": "cU32Array",
-    "269787": "INSIDE_TRAVERSE_CALLBACK",
-    "264893": "NodeQuad",
-    "264519": "NodeBinaryCommon",
-    "267340": "JOBHANDLE",
-    "200461": "MtGeometry",
-    "266819": "JobParamOfLine",
+    "263560682": "MtPropertyList",
+    "483635": "rLayout",
+    "283374984": "cResource",
+    "599865512": "MtObject",
+    "599864480": "MtDTI",
+    "603539045": "MtAllocator",
+    "599865560": "MyDTI",
+    "600705472": "MtString",
+    "380440649": "stLayoutID",
+    "658506415": "MtCriticalSection",
+    "600704704": "MtTime",
+    "380440903": "stSplitID",
+    "263524020": "MtProperty",
+    "263510597": "MtUI",
+    "603560885": "MtPlane",
+    "263559755": "MtPlaneXZ",
+    "263543381": "MtLineSegment4",
+    "263550811": "MtRay",
+    "600616505": "MtSize",
+    "600835621": "MtVector4",
+    "600616989": "MtSizeF",
+    "600603222": "MtPoint",
+    "600845936": "MtFloat4x4",
+    "600841427": "MtVector2",
+    "600843990": "MtFloat2A",
+    "600844403": "MtHalf2",
+    "600837468": "MtQuaternion",
+    "600843221": "MtFloat2",
+    "600844668": "MtMatrix33",
+    "600843764": "MtFloat3A",
+    "263560837": "poolChain",
+    "603562714": "MtAABB",
+    "600574795": "MtHermiteCurve",
+    "600845820": "MtFloat3x4",
+    "263554956": "MtEllipsoid",
+    "600839052": "MtFloat4",
+    "263554704": "MtCone",
+    "603564950": "MtLineSegment",
+    "600839705": "MtVector3",
+    "600844197": "MtHalf4",
+    "600845478": "MtFloat3x3",
+    "263557543": "MtVariable",
+    "603564020": "MtSphere",
+    "263552172": "MtAABB4",
+    "600562191": "MtEaseCurve",
+    "263552697": "MtCylinder",
+    "79963730": "MtArray",
+    "263543743": "MtSoaVector3",
+    "600621271": "MtRangeU16",
+    "263556554": "MT_ENUM",
+    "600620791": "MtRangeF",
+    "602829332": "MtStream",
+    "263559123": "MtRect3D",
+    "600705493": "STRING",
+    "603561559": "MtTriangle",
+    "600839393": "MtFloat3",
+    "603565704": "MtOBB",
+    "263560162": "MtRayY",
+    "600620277": "MtRange",
+    "600833769": "MtMatrix",
+    "600554476": "MtColor",
+    "600189066": "tm",
+    "600618789": "MtRectF",
+    "263556597": "MtOscillator",
+    "600843519": "MtFloat4A",
+    "263558148": "MtRect3D_XZ",
+    "600603694": "MtPointF",
+    "263554830": "MtTorus",
+    "263525142": "Custom",
+    "600617518": "MtRect",
+    "600845704": "MtFloat4x3",
+    "263538428": "MtLine",
+    "263551289": "MtCapsule",
+    "603547903": "MtRect3DC",
+    "600556108": "MtColorF",
+    "603517356": "MtVectorU4",
+    "603519450": "MtSoaVector1",
+    "263525252": "PARAM",
+    "263549596": "MtVectorU43",
+    "247906036": "cSetInfo",
+    "659930153": "cUnit",
+    "602586440": "MtDataReader",
+    "602613960": "MtDataWriter",
+    "659930537": "cHardwareDispCtrl",
+    "602614194": "Label",
+    "602614104": "Frame",
+    "600191051": "MT_CTSTR",
+    "293594665": "cSetInfoOmLadder",
+    "293520621": "SetInfo",
+    "293593060": "cSetInfoOmElfSW",
+    "293584016": "cSetInfoOmBowlOfLife",
+    "668257676": "unsigned int",
+    "293583253": "cSetInfoOm",
+    "293582186": "cSetInfoNpc",
+    "293597007": "cSetInfoOmBadStatus",
+    "600825410": "u8",
+    "293592712": "cSetInfoOmDoor",
+    "293596071": "cSetInfoOmWall",
+    "293593324": "cSetInfoOmFall",
+    "293594412": "cSetInfoOmHeal",
+    "668257500": "unsigned char",
+    "293593898": "cSetInfoOmTreasureBox",
+    "293595779": "cSetInfoOmText",
+    "637951408": "u32",
+    "293581104": "cSetInfoEnemy",
+    "293596349": "cSetInfoOmWarp",
+    "293595473": "cSetInfoOmRange",
+    "293595221": "cSetInfoOmNav",
+    "293584392": "cSetInfoOmCtrl",
     "248989287": "cSetInfoGeneralPoint",
-    "248989840": "cSetInfoCoord",
-    "248010069": "cSetInfoCharacter",
-    "635067383": "Resource",
-    "634679965": "Buffer",
-    "665835991": "ShaderObject",
-    "665836011": "BufferObject",
-    "643498871": "KEY",
-    "298702565": "cResPathBase",
-    "218744627": "uDDOModel",
-    "70081962": "CPacketDataBase",
-    "596650960": "uSoundZoneBase",
-    "290458225": "cResPtrBase",
-    "611968780": "uCoord",
-    "627231297": "cZoneListener",
-    "647509963": "uModel",
-    "634681137": "USAGE_TYPE",
-    "130588986": "cpTalk",
-    "233191797": "cpRotateCtrl",
-    "229520744": "cpPartsCtrl",
-    "183417353": "cpActionRequest",
-    "289709168": "cpEquip",
-    "97036468": "cpDDMrlMgr",
-    "115543040": "uControl",
-    "218415743": "cpMotionHistory",
-    "289934979": "cpSoftBody",
-    "87944942": "cpShlShotCtrl",
-    "218784935": "cArray<uDDOModel::stTouchReleaseInfo, 8>",
-    "218751090": "cDelegate_6<void, u32, u32, f32, f32, f32, u32>",
-    "96860594": "cpSequenceCtrl",
-    "194248923": "cpEffectProvider",
-    "69856627": "cpOcdCtrl",
-    "183124490": "cpStateManager",
-    "51000521": "cHitGeom",
-    "100861569": "cpWallExitCtrl",
-    "218784145": "cpCheckWallCliff",
-    "218745596": "GuardComponent",
-    "12872516": "uCharacter",
-    "233172581": "cDelegate_0<void>",
-    "297289485": "cAttackParam",
-    "231989401": "cpRegionStatusCtrl",
-    "231745382": "cpPivotCtrl",
-    "183198811": "cpActionSelect",
-    "251634423": "uShlBase",
-    "86407848": "uHuman",
-    "178385849": "cHitInfoAfter",
-    "261053147": "cUnitDieInfo",
-    "65771228": "uPlayer",
-    "183118655": "cpActionManager",
-    "194802875": "cpEffectStatusManager",
-    "304512009": "rShlParamList",
-    "87468132": "cpObjCollisionBase",
-    "240754105": "cpInput",
-    "233119831": "cpComponent",
-    "115528174": "cContextInstance",
-    "213495171": "cpKeepAtkAdjust",
-    "235715419": "cpScrCollision",
-    "87550431": "cHitInfo",
-    "218852675": "MtTypedArray<cAsyncArc>",
-    "99510676": "uHumanEnemy",
-    "92096268": "cpPathFinding",
-    "71244954": "uEnemy",
-    "96702680": "cpModelConst",
-    "183419768": "cpPawnThink",
-    "380443438": "cpLayout",
-    "180907295": "cpInvincibleCtrl",
-    "22762975": "cComponentManager",
-    "647523980": "MOT_TYPE",
-    "251378814": "cShlNotifyInfo",
-    "183418800": "cpSlave",
-    "87819844": "cContextCharacter",
-    "242404963": "cpWorkRate",
-    "203527328": "cpChargeCtrl",
-    "217251837": "cpLockOnTargetManager",
-    "182773187": "cpCatchCtrl",
-    "218746195": "cOutLineController",
-    "183445010": "cpAISensor",
-    "218777403": "MtTypedArray<cDamageMsg>",
-    "362312219": "uNpc",
-    "218852479": "MtTypedStorageArray<uDDOModel, 8>",
-    "297287429": "cCollNode",
-    "365685387": "uAimCheck",
-    "216999388": "cpLockOn",
-    "218852432": "TOUCH_RELEASE_TYPE",
-    "218852326": "TOUCH_TYPE",
-    "138334755": "cpHpDamageCtrl",
-    "304380242": "HP_DATATYPE",
-    "138339935": "cDamageSeInfo",
-    "218751802": "cContextInterface",
-    "219689198": "cpNpc",
-    "180690191": "cOcdInfo",
-    "647511713": "Motion",
-    "647513934": "InterpolationJoint",
-    "634485120": "MPARAM_WORK",
-    "642919168": "rMotionList",
-    "286878832": "Joint",
-    "626989975": "cZoneLayout",
-    "627031768": "cLayoutElement",
-    "626991973": "cGroupManager",
-    "280648819": "cSoundLayoutInfo",
-    "626991634": "rZone",
-    "626990268": "cInGameGroupManager"
+    "293594148": "cSetInfoOmHakuryuu",
+    "293583752": "cSetInfoOmBoard",
+    "293593588": "cSetInfoOmGather",
+    "600829621": "s32",
+    "600703422": "u64",
+    "603539410": "TYPE",
+    "293594929": "cSetInfoOmLever",
+    "283376061": "CONVERT_TYPE",
+    "600190688": "size_t",
+    "637951438": "uintptr",
+    "600829385": "u16",
+    "600191073": "MT_CHAR",
+    "600826433": "MT_STR",
+    "658506511": "ScePthreadMutex",
+    "600705232": "t64",
+    "600705399": "SceFiosDate",
+    "263528791": "MT_MFUNC32",
+    "600851753": "f64",
+    "263528823": "MT_MFUNC64",
+    "602590529": "s8",
+    "638973651": "f32",
+    "263528764": "MT_MFUNC",
+    "602832588": "s16",
+    "264697663": "s64",
+    "263556618": "Type",
+    "602829955": "SEEK_ORIGIN",
+    "263556855": "UpdateFunc",
+    "663911540": "cDraw",
+    "602615260": "intptr",
+    "659930949": "UNIT_HDC_KIND_BIT"
   },
   "symbol_to_cu_offset": {
-    "rLayout": 293519243,
-    "u8": 3229,
-    "MT_CTSTR": 3229,
-    "MtArray": 3229,
-    "unsigned char": 0,
-    "cSetInfoOmLadder": 110737552,
-    "TYPE": 3229,
-    "cSetInfoOmBowlOfLife": 110737552,
-    "u64": 3229,
-    "s32": 3229,
-    "cSetInfoOmWall": 110737552,
-    "cSetInfoOmNav": 110737552,
-    "cSetInfoOmFall": 110737552,
-    "size_t": 0,
-    "cSetInfoOmRange": 110737552,
-    "MyDTI": 3229,
-    "cSetInfoOmCtrl": 110737552,
-    "cSetInfoOmDoor": 110737552,
-    "MtDTI": 3229,
-    "cSetInfoOmElfSW": 110737552,
-    "stLayoutID": 3229,
-    "MtAllocator": 3229,
-    "MtStream": 3229,
-    "u32": 3229,
-    "cSetInfoNpc": 110737552,
-    "cSetInfoOmGather": 110737552,
-    "SetInfo": 3229,
-    "cSetInfoOmTreasureBox": 110737552,
-    "unsigned int": 0,
-    "stSplitID": 3229,
-    "cSetInfoOmBadStatus": 110737552,
-    "cSetInfoOmWarp": 110737552,
-    "cSetInfoOmHakuryuu": 110737552,
-    "cSetInfoOmLever": 110737552,
-    "cResource": 3229,
-    "MtObject": 3229,
-    "MtTime": 3229,
-    "MtVector3": 3229,
-    "cSetInfoOmHeal": 110737552,
-    "MtMatrix": 3229,
-    "MtPropertyList": 3229,
-    "MtFloat4": 3229,
-    "MtFloat3x3": 3229,
-    "cResPath<rAIFSM>": 3229,
-    "MtString": 3229,
-    "MtHalf4": 3229,
-    "STRING": 3229,
-    "tm": 0,
-    "MtVector2": 3229,
-    "MtFloat2": 3229,
-    "MtFloat2A": 3229,
-    "MtFloat3": 3229,
-    "MtFloat4x4": 3229,
-    "cUnit": 3229,
-    "MtFloat3A": 3229,
-    "MtFloat4A": 3229,
-    "MtFloat4x3": 3229,
-    "MtUI": 3229,
-    "cDraw": 3229,
-    "OBJECT": 3229,
-    "BlendState": 3229,
-    "Material": 3229,
-    "BLEND_DESC": 3229,
-    "AlphaToMaskControl": 3229,
-    "MtProperty": 3229,
-    "MtVariable": 3229,
-    "BRANCH_STATE": 3229,
-    "MtColor": 3229,
-    "ConstantTable": 3229,
-    "MtRangeU16": 3229,
-    "MtVector4": 3229,
-    "MT_ENUM": 3229,
-    "MtRect3D": 3229,
-    "MtPointF": 3229,
-    "MtTriangle": 3229,
-    "MtRayY": 3229,
-    "MtRange": 3229,
-    "MtRangeF": 3229,
-    "MtRect": 3229,
-    "Texture": 3229,
-    "MtOscillator": 3229,
-    "CMD_BRANCH": 3229,
-    "TAG": 3229,
-    "MtRect3D_XZ": 3229,
-    "CONTEXT": 3229,
-    "MtColorF": 3229,
-    "MtHalf2": 3229,
-    "BLEND_STATES": 3229,
-    "SHADER_STATE": 3229,
-    "OBJECT_INFO": 3229,
-    "MtPoint": 3229,
-    "MtRect3DC": 3229,
-    "VARIABLE": 3229,
-    "MtPlane": 3229,
-    "MtPlaneXZ": 3229,
-    "MtLineSegment4": 3229,
-    "IndexBuffer": 3229,
-    "STATE_CUE": 3229,
-    "CMD": 3229,
-    "cSetInfo": 3229,
-    "TARGET_STATE": 3229,
-    "MtEaseCurve": 3229,
-    "MtCone": 3229,
-    "SORT_WORK": 3229,
-    "Scene": 3229,
-    "MtSizeF": 3229,
-    "MtLineSegment": 3229,
-    "STATE": 3229,
-    "MtDataWriter": 3229,
-    "MtSphere": 3229,
-    "poolChain": 3229,
-    "MtAABB4": 3229,
-    "MtSize": 3229,
-    "CBufferSystem": 3229,
-    "MtCylinder": 3229,
-    "cLinkParam": 110737552,
-    "MtRectF": 3229,
-    "MtOBB": 3229,
-    "VertexBuffer": 3229,
-    "MtQuaternion": 3229,
-    "RasterizerState": 3229,
-    "MtMatrix33": 3229,
-    "MISC_STATE": 3229,
-    "MtLine": 3229,
-    "MtCriticalSection": 3229,
-    "Custom": 3229,
-    "MtFloat3x4": 3229,
-    "MtTorus": 3229,
-    "DepthStencilView": 3229,
-    "ANIMATION_STATE": 3229,
-    "cFSMRelate": 110737552,
-    "RenderTargetView": 3229,
-    "Frame": 3229,
-    "DepthStencilState": 3229,
-    "SizeAlign": 3229,
-    "MtCapsule": 3229,
-    "VIEWPORT": 3229,
-    "SHADER": 3229,
-    "MtHermiteCurve": 3229,
-    "cHardwareDispCtrl": 3229,
-    "PROCEDURAL_TEXTURE": 3229,
-    "MtRay": 3229,
-    "RASTERIZER_STATES": 3229,
-    "GeometryShaderObject": 3229,
-    "PARAM": 3229,
-    "DRAW_STATE": 3229,
-    "Animation": 3229,
-    "GEOM_STATE": 3229,
-    "MtAABB": 3229,
-    "Label": 3229,
-    "BlendControl": 3229,
-    "MtEllipsoid": 3229,
-    "SHADER_PARAMINFO": 3229,
-    "CBuffer": 3229,
-    "InputResourceOffsets": 3229,
-    "PrimitiveSetup": 3229,
-    "DEPTHSTENCIL_STATES": 3229,
-    "VertexShaderObject": 3229,
-    "DepthStencilControl": 3229,
-    "MtSoaVector3": 3229,
-    "RenderTarget": 3229,
-    "DataFormat": 3229,
-    "StencilControl": 3229,
-    "ANIMATION_LIST": 3229,
-    "KEY_INT": 3229,
-    "ANIMATION": 3229,
-    "StencilOpControl": 3229,
-    "InputLayouts": 3229,
-    "RASTERIZER_DESC": 3229,
-    "GsShader": 3229,
-    "DEPTHSTENCIL_DESC": 3229,
-    "KEY_FLOAT": 3229,
-    "SHADER_DESC": 3229,
-    "Layout": 3229,
-    "MtDataReader": 3229,
-    "GsStageRegisters": 3229,
-    "EsShader": 3229,
-    "MtVectorU4": 3229,
-    "DepthRenderTarget": 3229,
-    "KEY_VECTOR": 3229,
-    "EsStageRegisters": 3229,
-    "MtVectorU43": 3229,
-    "SHADER_PARAM": 3229,
-    "VsShader": 3229,
-    "PixelShaderObject": 3229,
-    "MtSoaVector1": 3229,
-    "PsShader": 3229,
-    "InputUsageSlot": 3229,
-    "PixelInputSemantic": 3229,
-    "ShaderCommonData": 3229,
-    "VertexInputSemantic": 3229,
-    "VertexExportSemantic": 3229,
-    "VsStageRegisters": 3229,
-    "PsStageRegisters": 3229,
-    "cSetInfoOmText": 110737552,
-    "cSetInfoOmBoard": 110737552,
-    "cSetInfoEnemy": 155989476,
-    "cSetInfoOm": 110737552,
-    "CONVERT_TYPE": 3229,
-    "SEEK_ORIGIN": 3229,
-    "f32": 3229,
-    "u16": 3229,
-    "SceFiosDate": 3229,
-    "t64": 3229,
-    "MT_CHAR": 3229,
-    "MT_STR": 3229,
-    "s16": 3229,
-    "s8": 3229,
-    "uintptr": 3229,
-    "PRIMITIVE_TOPOLOGY": 3229,
-    "PASS_TYPE": 3229,
-    "DRAW_MODE": 3229,
-    "DRAW_VIEW": 3229,
-    "EARLY_STENCIL_CULLING": 3229,
-    "SO_HANDLE": 3229,
-    "COMPARISON_FUNC": 3229,
-    "SLOT_TYPE": 3229,
-    "uint32_t": 0,
-    "MT_MFUNC": 3229,
-    "MT_MFUNC32": 3229,
-    "s64": 3229,
-    "f64": 3229,
-    "MT_MFUNC64": 3229,
-    "Type": 3229,
-    "SS_HANDLE": 3229,
-    "SV_HANDLE": 3229,
-    "TextureType": 3229,
-    "uint8_t": 0,
-    "TileMode": 3229,
-    "NumSamples": 3229,
-    "TextureChannelType": 3229,
-    "__uint32_t": 0,
-    "SamplerModulationFactor": 3229,
-    "NumFragments": 3229,
-    "TextureChannel": 3229,
-    "UpdateFunc": 3229,
-    "MAP_TYPE": 3229,
-    "HIndexBuffer": 3229,
-    "HDR_TYPE": 3229,
-    "DEFERRED_LIGHTING_LIGHT_TYPE": 3229,
-    "DEFERRED_LIGHTING_TRANSPARENT_TYPE": 3229,
-    "ANTIALIAS_TYPE": 3229,
-    "DEFERRED_LIGHTING_HDR_TYPE": 3229,
-    "HVertexBuffer": 3229,
-    "ScanModeControlViewportScissor": 3229,
-    "ScanModeControlAa": 3229,
-    "ScePthreadMutex": 3229,
-    "GPUFORMAT_TYPE": 3229,
-    "HDepthStencil": 3229,
-    "HRenderTarget": 3229,
-    "AlignmentType": 3229,
-    "HInputLayout": 3229,
-    "HHullShader": 3229,
-    "HVertexShader": 3229,
-    "HGeometryShader": 3229,
-    "HDomainShader": 3229,
-    "HPixelShader": 3229,
-    "HComputeShader": 3229,
-    "UNIT_HDC_KIND_BIT": 3229,
-    "uint16_t": 0,
-    "__uint16_t": 0,
-    "ZFormat": 3229,
-    "BufferChannelType": 3229,
-    "RenderTargetChannelType": 3229,
-    "SurfaceFormat": 3229,
-    "RenderTargetFormat": 3229,
-    "RenderTargetChannelOrder": 3229,
-    "BufferFormat": 3229,
-    "GsMaxOutputVertexCount": 3229,
-    "GsMaxOutputPrimitiveDwordSize": 3229,
-    "StencilFormat": 3229,
-    "ZCompareBase": 3229,
-    "__uint8_t": 0,
-    "InputLot": 3229,
-    "cGroupParam": 3229,
-    "MtTypedArray<cAreaHit>": 3229,
-    "cLifeArea": 3229,
-    "stLoadCondition": 3229,
-    "GuardData": 3229,
-    "DropItemInfo": 3229,
-    "stSetCondition": 3229,
-    "MtTypedArray<AreaHitShape>": 3229,
-    "cOmControl": 3229,
-    "stInsValue": 3229,
-    "CommunicateData": 3229,
-    "Data": 3229,
-    "MtTypedArray<cGroupParam::cID>": 3229,
-    "uOmSimple": 3229,
-    "AreaHitShape": 3229,
-    "MtTypedArray<cGroupParam::cLifeArea>": 3229,
-    "cArray<CNamedEnemyParamClient, 5>": 3229,
-    "stDeleteCondition": 3229,
-    "cZoneIndoorHandle": 3229,
-    "CDataNamedEnemyParamClient": 3229,
-    "ShapeInfoOBB": 3229,
-    "ShapeInfoArea": 3229,
-    "ShapeInfoAABB": 3229,
-    "ShapeInfoCone": 3229,
-    "cZoneUnitCtrl": 3229,
-    "uSoundGenerator": 4270159,
-    "cID": 3229,
-    "ShapeInfoCylinder": 3229,
-    "res_ptr<rCollision>": 3229,
-    "uBaseModel": 3229,
-    "rModel": 3229,
-    "cOmParam": 3229,
-    "cSoundGeneratorListener": 4270159,
-    "CACHE_ID": 3229,
-    "MODEL_INFO": 3229,
-    "cResPath<rCollision>": 3229,
-    "ShapeInfoSphere": 3229,
-    "cResPath<rModel>": 3229,
-    "cResPath<rCaughtInfoParam>": 3229,
-    "cResPath<rSoundRequest>": 3229,
-    "cResPath<rObjCollision>": 3229,
-    "cResPath<rEffectProvider>": 3229,
-    "cResPath<rMotionList>": 3229,
-    "cResPath<rSwingModel>": 3229,
-    "cResPath<rSoundMotionSe>": 3229,
-    "JOINT_INFO": 3229,
-    "ShapeInfoBase": 3229,
-    "BOUNDARY_INFO": 3229,
-    "MATERIAL_NAME": 3229,
-    "RECALCNORMAL_INFO": 3229,
-    "cArray<cZoneUnitCtrl::unZoneGroup, 8>": 3229,
-    "rCollision": 3229,
-    "cArray<u32, 5>": 3229,
-    "PRIMITIVE_INFO": 3229,
-    "cSoundZoneListener": 1166123,
-    "cResPath<rZone>": 3229,
-    "Leaf": 3229,
-    "PartsInfo": 3229,
-    "cGridCollision": 3229,
-    "Vertex": 3229,
-    "cResPath<rJointInfo>": 3229,
-    "PARTS_INFO": 3229,
-    "CACHE": 3229,
-    "CommandCache": 3229,
-    "cResPath<rDeformWeightMap>": 3229,
-    "Header": 3229,
-    "cResPath<rRigidBody>": 3229,
-    "rMaterial": 31325439,
-    "rTexture": 3229,
-    "LIST_STACK": 3229,
-    "cBVHCollision": 3229,
-    "unZoneGroup": 3229,
-    "Triangle": 3229,
-    "HEADER": 3229,
-    "SHFACTOR": 3229,
-    "StaticGridInfo": 3229,
-    "cCellRegisterArray<u16, 2>": 3229,
-    "MtGeomConvex": 3229,
-    "NodeBinaryBasic": 3229,
-    "PATCH_INFO": 3229,
-    "MaterialInfo": 3229,
-    "MtContact": 3229,
-    "cCellRegisterArrayBase": 3229,
-    "TEXTURE_INFO": 31325439,
-    "TraverseStack": 3229,
-    "cGridCollisionRegistInfo": 3229,
-    "cCellRegisterArray<u32, 2>": 3229,
-    "LUT_INFO": 31325439,
-    "ScrMaterialInfo": 3229,
-    "cWorkBuildOnlineFast": 3229,
-    "MATERIAL_INFO": 31325439,
-    "NodeBinaryOptimize": 3229,
-    "TraverseSystemParam": 3229,
-    "KILL_AREA_TYPE": 3229,
-    "InsValue": 3229,
-    "SBC_HANDLE": 3229,
-    "ZShape": 3229,
-    "SHAPE_TYPE": 3229,
-    "cOmContentsArray": 3229,
-    "CACHE_MODE": 3229,
-    "VFCULL_LEVEL": 3229,
-    "SHADER_QUALITY": 3229,
-    "LOD_TYPE": 3229,
-    "unsigned short": 0,
-    "cU16Array": 3229,
-    "cU32Array": 3229,
-    "INSIDE_TRAVERSE_CALLBACK": 3229,
-    "NodeQuad": 3229,
-    "NodeBinaryCommon": 3229,
-    "JOBHANDLE": 3229,
-    "MtGeometry": 3229,
-    "JobParamOfLine": 3229,
+    "MtPropertyList": 263508890,
+    "rLayout": 3229,
+    "cResource": 283374241,
+    "MtObject": 599864438,
+    "MtDTI": 599864438,
+    "MtAllocator": 603537252,
+    "MyDTI": 599864438,
+    "MtString": 600704662,
+    "stLayoutID": 380344988,
+    "MtCriticalSection": 658505574,
+    "MtTime": 600704662,
+    "stSplitID": 380344988,
+    "MtProperty": 263508890,
+    "MtUI": 263508890,
+    "MtPlane": 603543491,
+    "MtPlaneXZ": 263508890,
+    "MtLineSegment4": 263508890,
+    "MtRay": 263508890,
+    "MtSize": 600603180,
+    "MtVector4": 600831860,
+    "MtSizeF": 600603180,
+    "MtPoint": 600603180,
+    "MtFloat4x4": 600831860,
+    "MtVector2": 600831860,
+    "MtFloat2A": 600831860,
+    "MtHalf2": 600831860,
+    "MtQuaternion": 600831860,
+    "MtFloat2": 600831860,
+    "MtMatrix33": 600831860,
+    "MtFloat3A": 600831860,
+    "poolChain": 263508890,
+    "MtAABB": 603543491,
+    "MtHermiteCurve": 600562149,
+    "MtFloat3x4": 600831860,
+    "MtEllipsoid": 263508890,
+    "MtFloat4": 600831860,
+    "MtCone": 263508890,
+    "MtLineSegment": 603543491,
+    "MtVector3": 600831860,
+    "MtHalf4": 600831860,
+    "MtFloat3x3": 600831860,
+    "MtVariable": 263508890,
+    "MtSphere": 603543491,
+    "MtAABB4": 263508890,
+    "MtEaseCurve": 600562149,
+    "MtCylinder": 263508890,
+    "MtArray": 79910917,
+    "MtSoaVector3": 263508890,
+    "MtRangeU16": 600603180,
+    "MT_ENUM": 263508890,
+    "MtRangeF": 600603180,
+    "MtStream": 602828525,
+    "MtRect3D": 263508890,
+    "STRING": 600704662,
+    "MtTriangle": 603543491,
+    "MtFloat3": 600831860,
+    "MtOBB": 603543491,
+    "MtRayY": 263508890,
+    "MtRange": 600603180,
+    "MtMatrix": 600831860,
+    "MtColor": 600554434,
+    "tm": 600188760,
+    "MtRectF": 600603180,
+    "MtOscillator": 263508890,
+    "MtFloat4A": 600831860,
+    "MtRect3D_XZ": 263508890,
+    "MtPointF": 600603180,
+    "MtTorus": 263508890,
+    "Custom": 263508890,
+    "MtRect": 600603180,
+    "MtFloat4x3": 600831860,
+    "MtLine": 263508890,
+    "MtCapsule": 263508890,
+    "MtRect3DC": 603543491,
+    "MtColorF": 600554434,
+    "MtVectorU4": 603517318,
+    "MtSoaVector1": 603517318,
+    "PARAM": 263508890,
+    "MtVectorU43": 263508890,
+    "cSetInfo": 247905927,
+    "cUnit": 659929728,
+    "MtDataReader": 602586398,
+    "MtDataWriter": 602608730,
+    "cHardwareDispCtrl": 659929728,
+    "Label": 602608730,
+    "Frame": 602608730,
+    "MT_CTSTR": 600188760,
+    "cSetInfoOmLadder": 293519243,
+    "SetInfo": 293519243,
+    "cSetInfoOmElfSW": 293519243,
+    "cSetInfoOmBowlOfLife": 293519243,
+    "unsigned int": 668257545,
+    "cSetInfoOm": 293519243,
+    "cSetInfoNpc": 293519243,
+    "cSetInfoOmBadStatus": 293519243,
+    "u8": 600822074,
+    "cSetInfoOmDoor": 293519243,
+    "cSetInfoOmWall": 293519243,
+    "cSetInfoOmFall": 293519243,
+    "cSetInfoOmHeal": 293519243,
+    "unsigned char": 668257015,
+    "cSetInfoOmTreasureBox": 293519243,
+    "cSetInfoOmText": 293519243,
+    "u32": 637951258,
+    "cSetInfoEnemy": 293519243,
+    "cSetInfoOmWarp": 293519243,
+    "cSetInfoOmRange": 293519243,
+    "cSetInfoOmNav": 293519243,
+    "cSetInfoOmCtrl": 293519243,
     "cSetInfoGeneralPoint": 248989178,
-    "cSetInfoCoord": 248989178,
-    "cSetInfoCharacter": 247996981,
-    "Resource": 635066766,
-    "Buffer": 634679916,
-    "ShaderObject": 665763114,
-    "BufferObject": 665763114,
-    "KEY": 643498199,
-    "cResPathBase": 298650033,
-    "uDDOModel": 218641216,
-    "CPacketDataBase": 70017833,
-    "uSoundZoneBase": 596574570,
-    "cResPtrBase": 290401882,
-    "uCoord": 611968738,
-    "cZoneListener": 627231255,
-    "uModel": 647422192,
-    "USAGE_TYPE": 634679916,
-    "cpTalk": 130425184,
-    "cpRotateCtrl": 233178426,
-    "cpPartsCtrl": 229520458,
-    "cpActionRequest": 183198525,
-    "cpEquip": 289651422,
-    "cpDDMrlMgr": 96881084,
-    "uControl": 115230445,
-    "cpMotionHistory": 218415457,
-    "cpSoftBody": 289651422,
-    "cpShlShotCtrl": 87673805,
-    "cArray<uDDOModel::stTouchReleaseInfo, 8>": 218641216,
-    "cDelegate_6<void, u32, u32, f32, f32, f32, u32>": 218641216,
-    "cpSequenceCtrl": 96648008,
-    "cpEffectProvider": 194248637,
-    "cpOcdCtrl": 69642870,
-    "cpStateManager": 182863830,
-    "cHitGeom": 50785382,
-    "cpWallExitCtrl": 100846543,
-    "cpCheckWallCliff": 218641216,
-    "GuardComponent": 218641216,
-    "uCharacter": 12620150,
-    "cDelegate_0<void>": 233119205,
-    "cAttackParam": 297229973,
-    "cpRegionStatusCtrl": 231974332,
-    "cpPivotCtrl": 231745096,
-    "cpActionSelect": 183198525,
-    "uShlBase": 251365087,
-    "uHuman": 86080331,
-    "cHitInfoAfter": 178130408,
-    "cUnitDieInfo": 261053038,
-    "uPlayer": 65346644,
-    "cpActionManager": 182863830,
-    "cpEffectStatusManager": 194494413,
-    "rShlParamList": 304454815,
-    "cpObjCollisionBase": 87412309,
-    "cpInput": 240542607,
-    "cpComponent": 233119205,
-    "cContextInstance": 115230445,
-    "cpKeepAtkAdjust": 213494885,
-    "cpScrCollision": 235715133,
-    "cHitInfo": 87412309,
-    "MtTypedArray<cAsyncArc>": 218641216,
-    "uHumanEnemy": 99131605,
-    "cpPathFinding": 91880398,
-    "uEnemy": 70941961,
-    "cpModelConst": 96648008,
-    "cpPawnThink": 183198525,
-    "cpLayout": 380344988,
-    "cpInvincibleCtrl": 180689905,
-    "cComponentManager": 22762866,
-    "MOT_TYPE": 647422192,
-    "cShlNotifyInfo": 251365087,
-    "cpSlave": 183198525,
-    "cContextCharacter": 87673805,
-    "cpWorkRate": 242404677,
-    "cpChargeCtrl": 203511372,
-    "cpLockOnTargetManager": 217238100,
-    "cpCatchCtrl": 182501144,
-    "cOutLineController": 218641216,
-    "cpAISensor": 183198525,
-    "MtTypedArray<cDamageMsg>": 218641216,
-    "uNpc": 361986961,
-    "MtTypedStorageArray<uDDOModel, 8>": 218641216,
-    "cCollNode": 297229973,
-    "uAimCheck": 365668729,
-    "cpLockOn": 216999102,
-    "TOUCH_RELEASE_TYPE": 218641216,
-    "TOUCH_TYPE": 218641216,
-    "cpHpDamageCtrl": 138029966,
-    "HP_DATATYPE": 304326803,
-    "cDamageSeInfo": 138029966,
-    "cContextInterface": 218641216,
-    "cpNpc": 219673245,
-    "cOcdInfo": 180689905,
-    "Motion": 647422192,
-    "InterpolationJoint": 647422192,
-    "MPARAM_WORK": 634483919,
-    "rMotionList": 642919126,
-    "Joint": 286878123,
-    "cZoneLayout": 626932757,
-    "cLayoutElement": 627031016,
-    "cGroupManager": 626932757,
-    "cSoundLayoutInfo": 280577336,
-    "rZone": 626932757,
-    "cInGameGroupManager": 626932757
+    "cSetInfoOmHakuryuu": 293519243,
+    "cSetInfoOmBoard": 293519243,
+    "cSetInfoOmGather": 293519243,
+    "s32": 600829408,
+    "u64": 600696762,
+    "TYPE": 603537252,
+    "cSetInfoOmLever": 293519243,
+    "CONVERT_TYPE": 283374241,
+    "size_t": 600188760,
+    "uintptr": 637951258,
+    "u16": 600825884,
+    "MT_CHAR": 600188760,
+    "MT_STR": 600825884,
+    "ScePthreadMutex": 658505574,
+    "t64": 600704662,
+    "SceFiosDate": 600704662,
+    "MT_MFUNC32": 263508890,
+    "f64": 600847501,
+    "MT_MFUNC64": 263508890,
+    "s8": 602586398,
+    "f32": 638973508,
+    "MT_MFUNC": 263508890,
+    "s16": 602828525,
+    "s64": 264695112,
+    "Type": 263508890,
+    "SEEK_ORIGIN": 602828525,
+    "UpdateFunc": 263508890,
+    "cDraw": 663834694,
+    "intptr": 602608730,
+    "UNIT_HDC_KIND_BIT": 659929728
   },
   "symbol_definitions": {
+    "MtPropertyList": [
+      {
+        "cu_offset": 263508890,
+        "die_offset": 263560682,
+        "score": 0,
+        "complete": true
+      }
+    ],
     "rLayout": [
       {
-        "cu_offset": 293519243,
-        "die_offset": 293520466,
-        "score": 3028,
-        "complete": true
-      }
-    ],
-    "u8": [
-      {
         "cu_offset": 3229,
-        "die_offset": 42701,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MT_CTSTR": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 35133,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtArray": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 99004,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "unsigned char": [
-      {
-        "cu_offset": 0,
-        "die_offset": 1949,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSetInfoOmLadder": [
-      {
-        "cu_offset": 110737552,
-        "die_offset": 111782946,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "TYPE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 36327,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSetInfoOmBowlOfLife": [
-      {
-        "cu_offset": 110737552,
-        "die_offset": 111780377,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "u64": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 16723,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "s32": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 35756,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSetInfoOmWall": [
-      {
-        "cu_offset": 110737552,
-        "die_offset": 111784072,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSetInfoOmNav": [
-      {
-        "cu_offset": 110737552,
-        "die_offset": 111783388,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSetInfoOmFall": [
-      {
-        "cu_offset": 110737552,
-        "die_offset": 111781881,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "size_t": [
-      {
-        "cu_offset": 0,
-        "die_offset": 2360,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSetInfoOmRange": [
-      {
-        "cu_offset": 110737552,
-        "die_offset": 111783585,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MyDTI": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 32859,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSetInfoOmCtrl": [
-      {
-        "cu_offset": 110737552,
-        "die_offset": 111780703,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSetInfoOmDoor": [
-      {
-        "cu_offset": 110737552,
-        "die_offset": 111781379,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtDTI": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 34433,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSetInfoOmElfSW": [
-      {
-        "cu_offset": 110737552,
-        "die_offset": 111781675,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "stLayoutID": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 477216,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtAllocator": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 44017,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtStream": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 78818,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "u32": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 16675,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSetInfoNpc": [
-      {
-        "cu_offset": 110737552,
-        "die_offset": 111778153,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSetInfoOmGather": [
-      {
-        "cu_offset": 110737552,
-        "die_offset": 111782087,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "SetInfo": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 483775,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSetInfoOmTreasureBox": [
-      {
-        "cu_offset": 110737552,
-        "die_offset": 111782351,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "unsigned int": [
-      {
-        "cu_offset": 0,
-        "die_offset": 2866,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "stSplitID": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 477492,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSetInfoOmBadStatus": [
-      {
-        "cu_offset": 110737552,
-        "die_offset": 111784905,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSetInfoOmWarp": [
-      {
-        "cu_offset": 110737552,
-        "die_offset": 111784293,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSetInfoOmHakuryuu": [
-      {
-        "cu_offset": 110737552,
-        "die_offset": 111782542,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSetInfoOmLever": [
-      {
-        "cu_offset": 110737552,
-        "die_offset": 111783152,
-        "score": 0,
+        "die_offset": 483635,
+        "score": 2028,
         "complete": true
       }
     ],
     "cResource": [
       {
-        "cu_offset": 3229,
-        "die_offset": 77375,
+        "cu_offset": 283374241,
+        "die_offset": 283374984,
         "score": 0,
         "complete": true
       }
     ],
     "MtObject": [
       {
-        "cu_offset": 3229,
-        "die_offset": 34029,
+        "cu_offset": 599864438,
+        "die_offset": 599865512,
         "score": 0,
         "complete": true
       }
     ],
-    "MtTime": [
+    "MtDTI": [
       {
-        "cu_offset": 3229,
-        "die_offset": 51612,
+        "cu_offset": 599864438,
+        "die_offset": 599864480,
         "score": 0,
         "complete": true
       }
     ],
-    "MtVector3": [
+    "MtAllocator": [
       {
-        "cu_offset": 3229,
-        "die_offset": 8408,
+        "cu_offset": 603537252,
+        "die_offset": 603539045,
         "score": 0,
         "complete": true
       }
     ],
-    "cSetInfoOmHeal": [
+    "MyDTI": [
       {
-        "cu_offset": 110737552,
-        "die_offset": 111782748,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtMatrix": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 13368,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtPropertyList": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 76092,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtFloat4": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 7748,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtFloat3x3": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 16196,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cResPath<rAIFSM>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 498332,
+        "cu_offset": 599864438,
+        "die_offset": 599865560,
         "score": 0,
         "complete": true
       }
     ],
     "MtString": [
       {
-        "cu_offset": 3229,
-        "die_offset": 42847,
+        "cu_offset": 600704662,
+        "die_offset": 600705472,
         "score": 0,
         "complete": true
       }
     ],
-    "MtHalf4": [
+    "stLayoutID": [
       {
-        "cu_offset": 3229,
-        "die_offset": 12900,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "STRING": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 42868,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "tm": [
-      {
-        "cu_offset": 0,
-        "die_offset": 346,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtVector2": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 10130,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtFloat2": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 11924,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtFloat2A": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 12693,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtFloat3": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 8096,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtFloat4x4": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 16554,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cUnit": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 161546,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtFloat3A": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 12467,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtFloat4A": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 12222,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtFloat4x3": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 16322,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtUI": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 35269,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cDraw": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 163783,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "OBJECT": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 136391,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "BlendState": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 133319,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "Material": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 131534,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "BLEND_DESC": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 133584,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "AlphaToMaskControl": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 115409,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtProperty": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 36306,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtVariable": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 72918,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "BRANCH_STATE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 166114,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtColor": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 45289,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "ConstantTable": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 139509,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtRangeU16": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 71413,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtVector4": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 4345,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MT_ENUM": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 71929,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtRect3D": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 74498,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtPointF": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 47882,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtTriangle": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 68875,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtRayY": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 75537,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtRange": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 70419,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtRangeF": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 70933,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtRect": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 48406,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "Texture": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 110930,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtOscillator": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 71972,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "CMD_BRANCH": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 166188,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "TAG": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 164146,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtRect3D_XZ": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 73523,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "CONTEXT": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 164662,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtColorF": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 46903,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtHalf2": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 13113,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "BLEND_STATES": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 133435,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "SHADER_STATE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 134232,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "OBJECT_INFO": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 137023,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtPoint": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 47457,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtRect3DC": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 63847,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "VARIABLE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 136556,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtPlane": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 55669,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtPlaneXZ": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 75130,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtLineSegment4": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 57216,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "IndexBuffer": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 137098,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "STATE_CUE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 166283,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "CMD": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 164250,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSetInfo": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 485278,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "TARGET_STATE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 165294,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtEaseCurve": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 51122,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtCone": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 70079,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "SORT_WORK": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 168385,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "Scene": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 138179,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtSizeF": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 35787,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtLineSegment": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 52684,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "STATE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 132045,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtDataWriter": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 102348,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtSphere": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 54739,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "poolChain": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 76247,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtAABB4": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 67547,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtSize": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 35292,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "CBufferSystem": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 135134,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtCylinder": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 68072,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cLinkParam": [
-      {
-        "cu_offset": 110737552,
-        "die_offset": 111780848,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtRectF": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 49648,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtOBB": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 56333,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "VertexBuffer": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 131075,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtQuaternion": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 6164,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "RasterizerState": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 130580,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtMatrix33": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 15386,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MISC_STATE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 165918,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtLine": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 52263,
+        "cu_offset": 380344988,
+        "die_offset": 380440649,
         "score": 0,
         "complete": true
       }
     ],
     "MtCriticalSection": [
       {
-        "cu_offset": 3229,
-        "die_offset": 45099,
+        "cu_offset": 658505574,
+        "die_offset": 658506415,
         "score": 0,
         "complete": true
       }
     ],
-    "Custom": [
+    "MtTime": [
       {
-        "cu_offset": 3229,
-        "die_offset": 37428,
+        "cu_offset": 600704662,
+        "die_offset": 600704704,
         "score": 0,
         "complete": true
       }
     ],
-    "MtFloat3x4": [
+    "stSplitID": [
       {
-        "cu_offset": 3229,
-        "die_offset": 16438,
+        "cu_offset": 380344988,
+        "die_offset": 380440903,
         "score": 0,
         "complete": true
       }
     ],
-    "MtTorus": [
+    "MtProperty": [
       {
-        "cu_offset": 3229,
-        "die_offset": 70205,
+        "cu_offset": 263508890,
+        "die_offset": 263524020,
         "score": 0,
         "complete": true
       }
     ],
-    "DepthStencilView": [
+    "MtUI": [
       {
-        "cu_offset": 3229,
-        "die_offset": 130112,
+        "cu_offset": 263508890,
+        "die_offset": 263510597,
         "score": 0,
         "complete": true
       }
     ],
-    "ANIMATION_STATE": [
+    "MtPlane": [
       {
-        "cu_offset": 3229,
-        "die_offset": 132162,
+        "cu_offset": 603543491,
+        "die_offset": 603560885,
         "score": 0,
         "complete": true
       }
     ],
-    "cFSMRelate": [
+    "MtPlaneXZ": [
       {
-        "cu_offset": 110737552,
-        "die_offset": 111779397,
+        "cu_offset": 263508890,
+        "die_offset": 263559755,
         "score": 0,
         "complete": true
       }
     ],
-    "RenderTargetView": [
+    "MtLineSegment4": [
       {
-        "cu_offset": 3229,
-        "die_offset": 129617,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "Frame": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 102492,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "DepthStencilState": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 133734,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "SizeAlign": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 112230,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtCapsule": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 66664,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "VIEWPORT": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 165490,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "SHADER": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 137333,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtHermiteCurve": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 51337,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cHardwareDispCtrl": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 161930,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "PROCEDURAL_TEXTURE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 132234,
+        "cu_offset": 263508890,
+        "die_offset": 263543381,
         "score": 0,
         "complete": true
       }
     ],
     "MtRay": [
       {
-        "cu_offset": 3229,
-        "die_offset": 66186,
+        "cu_offset": 263508890,
+        "die_offset": 263550811,
         "score": 0,
         "complete": true
       }
     ],
-    "RASTERIZER_STATES": [
+    "MtSize": [
       {
-        "cu_offset": 3229,
-        "die_offset": 130696,
+        "cu_offset": 600603180,
+        "die_offset": 600616505,
         "score": 0,
         "complete": true
       }
     ],
-    "GeometryShaderObject": [
+    "MtVector4": [
       {
-        "cu_offset": 3229,
-        "die_offset": 169121,
+        "cu_offset": 600831860,
+        "die_offset": 600835621,
         "score": 0,
         "complete": true
       }
     ],
-    "PARAM": [
+    "MtSizeF": [
       {
-        "cu_offset": 3229,
-        "die_offset": 37538,
+        "cu_offset": 600603180,
+        "die_offset": 600616989,
         "score": 0,
         "complete": true
       }
     ],
-    "DRAW_STATE": [
+    "MtPoint": [
       {
-        "cu_offset": 3229,
-        "die_offset": 165542,
+        "cu_offset": 600603180,
+        "die_offset": 600603222,
         "score": 0,
         "complete": true
       }
     ],
-    "Animation": [
+    "MtFloat4x4": [
       {
-        "cu_offset": 3229,
-        "die_offset": 134314,
+        "cu_offset": 600831860,
+        "die_offset": 600845936,
         "score": 0,
         "complete": true
       }
     ],
-    "GEOM_STATE": [
+    "MtVector2": [
       {
-        "cu_offset": 3229,
-        "die_offset": 164524,
+        "cu_offset": 600831860,
+        "die_offset": 600841427,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtFloat2A": [
+      {
+        "cu_offset": 600831860,
+        "die_offset": 600843990,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtHalf2": [
+      {
+        "cu_offset": 600831860,
+        "die_offset": 600844403,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtQuaternion": [
+      {
+        "cu_offset": 600831860,
+        "die_offset": 600837468,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtFloat2": [
+      {
+        "cu_offset": 600831860,
+        "die_offset": 600843221,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtMatrix33": [
+      {
+        "cu_offset": 600831860,
+        "die_offset": 600844668,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtFloat3A": [
+      {
+        "cu_offset": 600831860,
+        "die_offset": 600843764,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "poolChain": [
+      {
+        "cu_offset": 263508890,
+        "die_offset": 263560837,
         "score": 0,
         "complete": true
       }
     ],
     "MtAABB": [
       {
-        "cu_offset": 3229,
-        "die_offset": 53428,
+        "cu_offset": 603543491,
+        "die_offset": 603562714,
         "score": 0,
         "complete": true
       }
     ],
-    "Label": [
+    "MtHermiteCurve": [
       {
-        "cu_offset": 3229,
-        "die_offset": 102582,
+        "cu_offset": 600562149,
+        "die_offset": 600574795,
         "score": 0,
         "complete": true
       }
     ],
-    "BlendControl": [
+    "MtFloat3x4": [
       {
-        "cu_offset": 3229,
-        "die_offset": 115387,
+        "cu_offset": 600831860,
+        "die_offset": 600845820,
         "score": 0,
         "complete": true
       }
     ],
     "MtEllipsoid": [
       {
-        "cu_offset": 3229,
-        "die_offset": 70331,
+        "cu_offset": 263508890,
+        "die_offset": 263554956,
         "score": 0,
         "complete": true
       }
     ],
-    "SHADER_PARAMINFO": [
+    "MtFloat4": [
       {
-        "cu_offset": 3229,
-        "die_offset": 137918,
+        "cu_offset": 600831860,
+        "die_offset": 600839052,
         "score": 0,
         "complete": true
       }
     ],
-    "CBuffer": [
+    "MtCone": [
       {
-        "cu_offset": 3229,
-        "die_offset": 135363,
+        "cu_offset": 263508890,
+        "die_offset": 263554704,
         "score": 0,
         "complete": true
       }
     ],
-    "InputResourceOffsets": [
+    "MtLineSegment": [
       {
-        "cu_offset": 3229,
-        "die_offset": 117444,
+        "cu_offset": 603543491,
+        "die_offset": 603564950,
         "score": 0,
         "complete": true
       }
     ],
-    "PrimitiveSetup": [
+    "MtVector3": [
       {
-        "cu_offset": 3229,
-        "die_offset": 114891,
+        "cu_offset": 600831860,
+        "die_offset": 600839705,
         "score": 0,
         "complete": true
       }
     ],
-    "DEPTHSTENCIL_STATES": [
+    "MtHalf4": [
       {
-        "cu_offset": 3229,
-        "die_offset": 133850,
+        "cu_offset": 600831860,
+        "die_offset": 600844197,
         "score": 0,
         "complete": true
       }
     ],
-    "VertexShaderObject": [
+    "MtFloat3x3": [
       {
-        "cu_offset": 3229,
-        "die_offset": 168672,
+        "cu_offset": 600831860,
+        "die_offset": 600845478,
         "score": 0,
         "complete": true
       }
     ],
-    "DepthStencilControl": [
+    "MtVariable": [
       {
-        "cu_offset": 3229,
-        "die_offset": 115433,
+        "cu_offset": 263508890,
+        "die_offset": 263557543,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtSphere": [
+      {
+        "cu_offset": 603543491,
+        "die_offset": 603564020,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtAABB4": [
+      {
+        "cu_offset": 263508890,
+        "die_offset": 263552172,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtEaseCurve": [
+      {
+        "cu_offset": 600562149,
+        "die_offset": 600562191,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtCylinder": [
+      {
+        "cu_offset": 263508890,
+        "die_offset": 263552697,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtArray": [
+      {
+        "cu_offset": 79910917,
+        "die_offset": 79963730,
         "score": 0,
         "complete": true
       }
     ],
     "MtSoaVector3": [
       {
-        "cu_offset": 3229,
-        "die_offset": 57578,
+        "cu_offset": 263508890,
+        "die_offset": 263543743,
         "score": 0,
         "complete": true
       }
     ],
-    "RenderTarget": [
+    "MtRangeU16": [
       {
-        "cu_offset": 3229,
-        "die_offset": 112374,
+        "cu_offset": 600603180,
+        "die_offset": 600621271,
         "score": 0,
         "complete": true
       }
     ],
-    "DataFormat": [
+    "MT_ENUM": [
       {
-        "cu_offset": 3229,
-        "die_offset": 110335,
+        "cu_offset": 263508890,
+        "die_offset": 263556554,
         "score": 0,
         "complete": true
       }
     ],
-    "StencilControl": [
+    "MtRangeF": [
       {
-        "cu_offset": 3229,
-        "die_offset": 115457,
+        "cu_offset": 600603180,
+        "die_offset": 600620791,
         "score": 0,
         "complete": true
       }
     ],
-    "ANIMATION_LIST": [
+    "MtStream": [
       {
-        "cu_offset": 3229,
-        "die_offset": 134417,
+        "cu_offset": 602828525,
+        "die_offset": 602829332,
         "score": 0,
         "complete": true
       }
     ],
-    "KEY_INT": [
+    "MtRect3D": [
       {
-        "cu_offset": 3229,
-        "die_offset": 134940,
+        "cu_offset": 263508890,
+        "die_offset": 263559123,
         "score": 0,
         "complete": true
       }
     ],
-    "ANIMATION": [
+    "STRING": [
       {
-        "cu_offset": 3229,
-        "die_offset": 134465,
+        "cu_offset": 600704662,
+        "die_offset": 600705493,
         "score": 0,
         "complete": true
       }
     ],
-    "StencilOpControl": [
+    "MtTriangle": [
       {
-        "cu_offset": 3229,
-        "die_offset": 115538,
+        "cu_offset": 603543491,
+        "die_offset": 603561559,
         "score": 0,
         "complete": true
       }
     ],
-    "InputLayouts": [
+    "MtFloat3": [
       {
-        "cu_offset": 3229,
-        "die_offset": 138075,
+        "cu_offset": 600831860,
+        "die_offset": 600839393,
         "score": 0,
         "complete": true
       }
     ],
-    "RASTERIZER_DESC": [
+    "MtOBB": [
       {
-        "cu_offset": 3229,
-        "die_offset": 130915,
+        "cu_offset": 603543491,
+        "die_offset": 603565704,
         "score": 0,
         "complete": true
       }
     ],
-    "GsShader": [
+    "MtRayY": [
       {
-        "cu_offset": 3229,
-        "die_offset": 118119,
+        "cu_offset": 263508890,
+        "die_offset": 263560162,
         "score": 0,
         "complete": true
       }
     ],
-    "DEPTHSTENCIL_DESC": [
+    "MtRange": [
       {
-        "cu_offset": 3229,
-        "die_offset": 133999,
+        "cu_offset": 600603180,
+        "die_offset": 600620277,
         "score": 0,
         "complete": true
       }
     ],
-    "KEY_FLOAT": [
+    "MtMatrix": [
       {
-        "cu_offset": 3229,
-        "die_offset": 135033,
+        "cu_offset": 600831860,
+        "die_offset": 600833769,
         "score": 0,
         "complete": true
       }
     ],
-    "SHADER_DESC": [
+    "MtColor": [
       {
-        "cu_offset": 3229,
-        "die_offset": 137595,
+        "cu_offset": 600554434,
+        "die_offset": 600554476,
         "score": 0,
         "complete": true
       }
     ],
-    "Layout": [
+    "tm": [
       {
-        "cu_offset": 3229,
-        "die_offset": 138113,
+        "cu_offset": 600188760,
+        "die_offset": 600189066,
         "score": 0,
         "complete": true
       }
     ],
-    "MtDataReader": [
+    "MtRectF": [
       {
-        "cu_offset": 3229,
-        "die_offset": 101762,
+        "cu_offset": 600603180,
+        "die_offset": 600618789,
         "score": 0,
         "complete": true
       }
     ],
-    "GsStageRegisters": [
+    "MtOscillator": [
       {
-        "cu_offset": 3229,
-        "die_offset": 116619,
+        "cu_offset": 263508890,
+        "die_offset": 263556597,
         "score": 0,
         "complete": true
       }
     ],
-    "EsShader": [
+    "MtFloat4A": [
       {
-        "cu_offset": 3229,
-        "die_offset": 117137,
+        "cu_offset": 600831860,
+        "die_offset": 600843519,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtRect3D_XZ": [
+      {
+        "cu_offset": 263508890,
+        "die_offset": 263558148,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtPointF": [
+      {
+        "cu_offset": 600603180,
+        "die_offset": 600603694,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtTorus": [
+      {
+        "cu_offset": 263508890,
+        "die_offset": 263554830,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "Custom": [
+      {
+        "cu_offset": 263508890,
+        "die_offset": 263525142,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtRect": [
+      {
+        "cu_offset": 600603180,
+        "die_offset": 600617518,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtFloat4x3": [
+      {
+        "cu_offset": 600831860,
+        "die_offset": 600845704,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtLine": [
+      {
+        "cu_offset": 263508890,
+        "die_offset": 263538428,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtCapsule": [
+      {
+        "cu_offset": 263508890,
+        "die_offset": 263551289,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtRect3DC": [
+      {
+        "cu_offset": 603543491,
+        "die_offset": 603547903,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "MtColorF": [
+      {
+        "cu_offset": 600554434,
+        "die_offset": 600556108,
         "score": 0,
         "complete": true
       }
     ],
     "MtVectorU4": [
       {
-        "cu_offset": 3229,
-        "die_offset": 61337,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "DepthRenderTarget": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 113575,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "KEY_VECTOR": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 135104,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "EsStageRegisters": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 116166,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtVectorU43": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 63431,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "SHADER_PARAM": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 137697,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "VsShader": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 116803,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "PixelShaderObject": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 169039,
+        "cu_offset": 603517318,
+        "die_offset": 603517356,
         "score": 0,
         "complete": true
       }
     ],
     "MtSoaVector1": [
       {
-        "cu_offset": 3229,
-        "die_offset": 59554,
+        "cu_offset": 603517318,
+        "die_offset": 603519450,
         "score": 0,
         "complete": true
       }
     ],
-    "PsShader": [
+    "PARAM": [
       {
-        "cu_offset": 3229,
-        "die_offset": 117963,
+        "cu_offset": 263508890,
+        "die_offset": 263525252,
         "score": 0,
         "complete": true
       }
     ],
-    "InputUsageSlot": [
+    "MtVectorU43": [
       {
-        "cu_offset": 3229,
-        "die_offset": 115917,
+        "cu_offset": 263508890,
+        "die_offset": 263549596,
         "score": 0,
         "complete": true
       }
     ],
-    "PixelInputSemantic": [
+    "cSetInfo": [
       {
-        "cu_offset": 3229,
-        "die_offset": 116514,
+        "cu_offset": 247905927,
+        "die_offset": 247906036,
         "score": 0,
         "complete": true
       }
     ],
-    "ShaderCommonData": [
+    "cUnit": [
       {
-        "cu_offset": 3229,
-        "die_offset": 117054,
+        "cu_offset": 659929728,
+        "die_offset": 659930153,
         "score": 0,
         "complete": true
       }
     ],
-    "VertexInputSemantic": [
+    "MtDataReader": [
       {
-        "cu_offset": 3229,
-        "die_offset": 116070,
+        "cu_offset": 602586398,
+        "die_offset": 602586440,
         "score": 0,
         "complete": true
       }
     ],
-    "VertexExportSemantic": [
+    "MtDataWriter": [
       {
-        "cu_offset": 3229,
-        "die_offset": 116131,
+        "cu_offset": 602608730,
+        "die_offset": 602613960,
         "score": 0,
         "complete": true
       }
     ],
-    "VsStageRegisters": [
+    "cHardwareDispCtrl": [
       {
-        "cu_offset": 3229,
-        "die_offset": 115756,
+        "cu_offset": 659929728,
+        "die_offset": 659930537,
         "score": 0,
         "complete": true
       }
     ],
-    "PsStageRegisters": [
+    "Label": [
       {
-        "cu_offset": 3229,
-        "die_offset": 116292,
+        "cu_offset": 602608730,
+        "die_offset": 602614194,
         "score": 0,
         "complete": true
       }
     ],
-    "cSetInfoOmText": [
+    "Frame": [
       {
-        "cu_offset": 110737552,
-        "die_offset": 111783836,
+        "cu_offset": 602608730,
+        "die_offset": 602614104,
         "score": 0,
         "complete": true
       }
     ],
-    "cSetInfoOmBoard": [
+    "MT_CTSTR": [
       {
-        "cu_offset": 110737552,
-        "die_offset": 111780171,
+        "cu_offset": 600188760,
+        "die_offset": 600191051,
         "score": 0,
         "complete": true
       }
     ],
-    "cSetInfoEnemy": [
+    "cSetInfoOmLadder": [
       {
-        "cu_offset": 155989476,
-        "die_offset": 156520147,
+        "cu_offset": 293519243,
+        "die_offset": 293594665,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "SetInfo": [
+      {
+        "cu_offset": 293519243,
+        "die_offset": 293520621,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cSetInfoOmElfSW": [
+      {
+        "cu_offset": 293519243,
+        "die_offset": 293593060,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "cSetInfoOmBowlOfLife": [
+      {
+        "cu_offset": 293519243,
+        "die_offset": 293584016,
+        "score": 0,
+        "complete": true
+      }
+    ],
+    "unsigned int": [
+      {
+        "cu_offset": 668257545,
+        "die_offset": 668257676,
         "score": 0,
         "complete": true
       }
     ],
     "cSetInfoOm": [
       {
-        "cu_offset": 110737552,
-        "die_offset": 111779671,
+        "cu_offset": 293519243,
+        "die_offset": 293583253,
         "score": 0,
         "complete": true
       }
     ],
-    "CONVERT_TYPE": [
+    "cSetInfoNpc": [
       {
-        "cu_offset": 3229,
-        "die_offset": 78480,
+        "cu_offset": 293519243,
+        "die_offset": 293582186,
         "score": 0,
         "complete": true
       }
     ],
-    "SEEK_ORIGIN": [
+    "cSetInfoOmBadStatus": [
       {
-        "cu_offset": 3229,
-        "die_offset": 79441,
+        "cu_offset": 293519243,
+        "die_offset": 293597007,
         "score": 0,
         "complete": true
       }
     ],
-    "f32": [
+    "u8": [
       {
-        "cu_offset": 3229,
-        "die_offset": 3606,
+        "cu_offset": 600822074,
+        "die_offset": 600825410,
         "score": 0,
         "complete": true
       }
     ],
-    "u16": [
+    "cSetInfoOmDoor": [
       {
-        "cu_offset": 3229,
-        "die_offset": 42724,
+        "cu_offset": 293519243,
+        "die_offset": 293592712,
         "score": 0,
         "complete": true
       }
     ],
-    "SceFiosDate": [
+    "cSetInfoOmWall": [
       {
-        "cu_offset": 3229,
-        "die_offset": 52221,
+        "cu_offset": 293519243,
+        "die_offset": 293596071,
         "score": 0,
         "complete": true
       }
     ],
-    "t64": [
+    "cSetInfoOmFall": [
       {
-        "cu_offset": 3229,
-        "die_offset": 52068,
+        "cu_offset": 293519243,
+        "die_offset": 293593324,
         "score": 0,
         "complete": true
       }
     ],
-    "MT_CHAR": [
+    "cSetInfoOmHeal": [
       {
-        "cu_offset": 3229,
-        "die_offset": 35155,
+        "cu_offset": 293519243,
+        "die_offset": 293594412,
         "score": 0,
         "complete": true
       }
     ],
-    "MT_STR": [
+    "unsigned char": [
       {
-        "cu_offset": 3229,
-        "die_offset": 45247,
+        "cu_offset": 668257015,
+        "die_offset": 668257500,
         "score": 0,
         "complete": true
       }
     ],
-    "s16": [
+    "cSetInfoOmTreasureBox": [
       {
-        "cu_offset": 3229,
-        "die_offset": 13080,
+        "cu_offset": 293519243,
+        "die_offset": 293593898,
         "score": 0,
         "complete": true
       }
     ],
-    "s8": [
+    "cSetInfoOmText": [
       {
-        "cu_offset": 3229,
-        "die_offset": 42757,
+        "cu_offset": 293519243,
+        "die_offset": 293595779,
         "score": 0,
         "complete": true
       }
     ],
-    "uintptr": [
+    "u32": [
       {
-        "cu_offset": 3229,
-        "die_offset": 45077,
+        "cu_offset": 637951258,
+        "die_offset": 637951408,
         "score": 0,
         "complete": true
       }
     ],
-    "PRIMITIVE_TOPOLOGY": [
+    "cSetInfoEnemy": [
       {
-        "cu_offset": 3229,
-        "die_offset": 135965,
+        "cu_offset": 293519243,
+        "die_offset": 293581104,
         "score": 0,
         "complete": true
       }
     ],
-    "PASS_TYPE": [
+    "cSetInfoOmWarp": [
       {
-        "cu_offset": 3229,
-        "die_offset": 131310,
+        "cu_offset": 293519243,
+        "die_offset": 293596349,
         "score": 0,
         "complete": true
       }
     ],
-    "DRAW_MODE": [
+    "cSetInfoOmRange": [
       {
-        "cu_offset": 3229,
-        "die_offset": 135791,
+        "cu_offset": 293519243,
+        "die_offset": 293595473,
         "score": 0,
         "complete": true
       }
     ],
-    "DRAW_VIEW": [
+    "cSetInfoOmNav": [
       {
-        "cu_offset": 3229,
-        "die_offset": 135889,
+        "cu_offset": 293519243,
+        "die_offset": 293595221,
         "score": 0,
         "complete": true
       }
     ],
-    "EARLY_STENCIL_CULLING": [
+    "cSetInfoOmCtrl": [
       {
-        "cu_offset": 3229,
-        "die_offset": 136071,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "SO_HANDLE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 152066,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "COMPARISON_FUNC": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 131476,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "SLOT_TYPE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 132802,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "uint32_t": [
-      {
-        "cu_offset": 0,
-        "die_offset": 2844,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MT_MFUNC": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 42531,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MT_MFUNC32": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 42558,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "s64": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 42790,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "f64": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 42824,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MT_MFUNC64": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 42590,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "Type": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 71993,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "SS_HANDLE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 169771,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "SV_HANDLE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 169750,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "TextureType": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 110047,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "uint8_t": [
-      {
-        "cu_offset": 0,
-        "die_offset": 2800,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "TileMode": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 109781,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "NumSamples": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 109707,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "TextureChannelType": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 109149,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "__uint32_t": [
-      {
-        "cu_offset": 0,
-        "die_offset": 2855,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "SamplerModulationFactor": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 110105,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "NumFragments": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 109747,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "TextureChannel": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 109237,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "UpdateFunc": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 72230,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MAP_TYPE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 127659,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "HIndexBuffer": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 137321,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "HDR_TYPE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 135602,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "DEFERRED_LIGHTING_LIGHT_TYPE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 135704,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "DEFERRED_LIGHTING_TRANSPARENT_TYPE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 135764,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "ANTIALIAS_TYPE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 135635,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "DEFERRED_LIGHTING_HDR_TYPE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 135731,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "HVertexBuffer": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 131298,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "ScanModeControlViewportScissor": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 110291,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "ScanModeControlAa": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 110313,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "ScePthreadMutex": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 45195,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "GPUFORMAT_TYPE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 129593,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "HDepthStencil": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 130568,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "HRenderTarget": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 130100,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "AlignmentType": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 112303,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "HInputLayout": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 138063,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "HHullShader": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 138027,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "HVertexShader": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 137991,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "HGeometryShader": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 138015,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "HDomainShader": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 138039,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "HPixelShader": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 138003,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "HComputeShader": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 138051,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "UNIT_HDC_KIND_BIT": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 162342,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "uint16_t": [
-      {
-        "cu_offset": 0,
-        "die_offset": 2822,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "__uint16_t": [
-      {
-        "cu_offset": 0,
-        "die_offset": 2833,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "ZFormat": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 109657,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "BufferChannelType": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 109599,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "RenderTargetChannelType": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 109419,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "SurfaceFormat": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 108857,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "RenderTargetFormat": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 109283,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "RenderTargetChannelOrder": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 109465,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "BufferFormat": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 109499,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "GsMaxOutputVertexCount": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 115722,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "GsMaxOutputPrimitiveDwordSize": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 115688,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "StencilFormat": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 109685,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "ZCompareBase": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 109959,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "__uint8_t": [
-      {
-        "cu_offset": 0,
-        "die_offset": 2811,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "InputLot": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 489661,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cGroupParam": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 477842,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtTypedArray<cAreaHit>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 487069,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cLifeArea": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 478899,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "stLoadCondition": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 478134,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "GuardData": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 478419,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "DropItemInfo": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 482571,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "stSetCondition": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 478505,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtTypedArray<AreaHitShape>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 485742,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cOmControl": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 488843,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "stInsValue": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 497567,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "CommunicateData": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 489395,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "Data": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 497590,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtTypedArray<cGroupParam::cID>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 487913,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "uOmSimple": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 491496,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "AreaHitShape": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 485879,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtTypedArray<cGroupParam::cLifeArea>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 486945,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cArray<CNamedEnemyParamClient, 5>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 19489,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "stDeleteCondition": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 478764,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cZoneIndoorHandle": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 505468,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "CDataNamedEnemyParamClient": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 488092,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "ShapeInfoOBB": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 309410,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "ShapeInfoArea": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 306373,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "ShapeInfoAABB": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 308434,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "ShapeInfoCone": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 307945,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cZoneUnitCtrl": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 505070,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "uSoundGenerator": [
-      {
-        "cu_offset": 4270159,
-        "die_offset": 4651538,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cID": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 479476,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "ShapeInfoCylinder": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 307450,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "res_ptr<rCollision>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 491785,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "uBaseModel": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 169797,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "rModel": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 173897,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cOmParam": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 491851,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSoundGeneratorListener": [
-      {
-        "cu_offset": 4270159,
-        "die_offset": 4661080,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "CACHE_ID": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 170842,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MODEL_INFO": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 174954,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cResPath<rCollision>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 495991,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "ShapeInfoSphere": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 307072,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cResPath<rModel>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 492929,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cResPath<rCaughtInfoParam>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 496016,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cResPath<rSoundRequest>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 493972,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cResPath<rObjCollision>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 492954,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cResPath<rEffectProvider>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 493997,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cResPath<rMotionList>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 492979,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cResPath<rSwingModel>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 494022,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cResPath<rSoundMotionSe>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 493004,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "JOINT_INFO": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 174034,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "ShapeInfoBase": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 303093,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "BOUNDARY_INFO": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 174606,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MATERIAL_NAME": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 175118,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "RECALCNORMAL_INFO": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 175157,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cArray<cZoneUnitCtrl::unZoneGroup, 8>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 19533,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "rCollision": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 259157,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cArray<u32, 5>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 19576,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "PRIMITIVE_INFO": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 174202,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSoundZoneListener": [
-      {
-        "cu_offset": 1166123,
-        "die_offset": 1613773,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cResPath<rZone>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 496773,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "Leaf": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 260234,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "PartsInfo": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 259720,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cGridCollision": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 267415,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "Vertex": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 260765,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cResPath<rJointInfo>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 496798,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "PARTS_INFO": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 174806,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "CACHE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 170730,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "CommandCache": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 140534,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cResPath<rDeformWeightMap>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 494854,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "Header": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 259351,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cResPath<rRigidBody>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 494879,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "rMaterial": [
-      {
-        "cu_offset": 31325439,
-        "die_offset": 31468293,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "rTexture": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 150808,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "LIST_STACK": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 141134,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cBVHCollision": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 262995,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "unZoneGroup": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 505191,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "Triangle": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 260469,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "HEADER": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 224641,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "SHFACTOR": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 150939,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "StaticGridInfo": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 268190,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cCellRegisterArray<u16, 2>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 269215,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtGeomConvex": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 205733,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "NodeBinaryBasic": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 263624,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "PATCH_INFO": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 140744,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MaterialInfo": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 260052,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtContact": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 202719,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cCellRegisterArrayBase": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 267764,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "TEXTURE_INFO": [
-      {
-        "cu_offset": 31325439,
-        "die_offset": 31468539,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "TraverseStack": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 263191,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cGridCollisionRegistInfo": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 270912,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cCellRegisterArray<u32, 2>": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 269388,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "LUT_INFO": [
-      {
-        "cu_offset": 31325439,
-        "die_offset": 31468640,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "ScrMaterialInfo": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 226414,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cWorkBuildOnlineFast": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 266460,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MATERIAL_INFO": [
-      {
-        "cu_offset": 31325439,
-        "die_offset": 31468779,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "NodeBinaryOptimize": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 266010,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "TraverseSystemParam": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 270649,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "KILL_AREA_TYPE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 479258,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "InsValue": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 497555,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "SBC_HANDLE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 226390,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "ZShape": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 486893,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "SHAPE_TYPE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 303328,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cOmContentsArray": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 505179,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "CACHE_MODE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 172056,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "VFCULL_LEVEL": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 171434,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "SHADER_QUALITY": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 171741,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "LOD_TYPE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 171659,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "unsigned short": [
-      {
-        "cu_offset": 0,
-        "die_offset": 319,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cU16Array": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 269204,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cU32Array": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 269377,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "INSIDE_TRAVERSE_CALLBACK": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 269787,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "NodeQuad": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 264893,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "NodeBinaryCommon": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 264519,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "JOBHANDLE": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 267340,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtGeometry": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 200461,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "JobParamOfLine": [
-      {
-        "cu_offset": 3229,
-        "die_offset": 266819,
+        "cu_offset": 293519243,
+        "die_offset": 293584392,
         "score": 0,
         "complete": true
       }
@@ -4567,1455 +1307,457 @@
         "complete": true
       }
     ],
-    "cSetInfoCoord": [
+    "cSetInfoOmHakuryuu": [
       {
-        "cu_offset": 248989178,
-        "die_offset": 248989840,
+        "cu_offset": 293519243,
+        "die_offset": 293594148,
         "score": 0,
         "complete": true
       }
     ],
-    "cSetInfoCharacter": [
+    "cSetInfoOmBoard": [
       {
-        "cu_offset": 247996981,
-        "die_offset": 248010069,
+        "cu_offset": 293519243,
+        "die_offset": 293583752,
         "score": 0,
         "complete": true
       }
     ],
-    "Resource": [
+    "cSetInfoOmGather": [
       {
-        "cu_offset": 635066766,
-        "die_offset": 635067383,
+        "cu_offset": 293519243,
+        "die_offset": 293593588,
         "score": 0,
         "complete": true
       }
     ],
-    "Buffer": [
+    "s32": [
       {
-        "cu_offset": 634679916,
-        "die_offset": 634679965,
+        "cu_offset": 600829408,
+        "die_offset": 600829621,
         "score": 0,
         "complete": true
       }
     ],
-    "ShaderObject": [
+    "u64": [
       {
-        "cu_offset": 665763114,
-        "die_offset": 665835991,
+        "cu_offset": 600696762,
+        "die_offset": 600703422,
         "score": 0,
         "complete": true
       }
     ],
-    "BufferObject": [
+    "TYPE": [
       {
-        "cu_offset": 665763114,
-        "die_offset": 665836011,
+        "cu_offset": 603537252,
+        "die_offset": 603539410,
         "score": 0,
         "complete": true
       }
     ],
-    "KEY": [
+    "cSetInfoOmLever": [
       {
-        "cu_offset": 643498199,
-        "die_offset": 643498871,
+        "cu_offset": 293519243,
+        "die_offset": 293594929,
         "score": 0,
         "complete": true
       }
     ],
-    "cResPathBase": [
+    "CONVERT_TYPE": [
       {
-        "cu_offset": 298650033,
-        "die_offset": 298702565,
+        "cu_offset": 283374241,
+        "die_offset": 283376061,
         "score": 0,
         "complete": true
       }
     ],
-    "uDDOModel": [
+    "size_t": [
       {
-        "cu_offset": 218641216,
-        "die_offset": 218744627,
+        "cu_offset": 600188760,
+        "die_offset": 600190688,
         "score": 0,
         "complete": true
       }
     ],
-    "CPacketDataBase": [
+    "uintptr": [
       {
-        "cu_offset": 70017833,
-        "die_offset": 70081962,
+        "cu_offset": 637951258,
+        "die_offset": 637951438,
         "score": 0,
         "complete": true
       }
     ],
-    "uSoundZoneBase": [
+    "u16": [
       {
-        "cu_offset": 596574570,
-        "die_offset": 596650960,
+        "cu_offset": 600825884,
+        "die_offset": 600829385,
         "score": 0,
         "complete": true
       }
     ],
-    "cResPtrBase": [
+    "MT_CHAR": [
       {
-        "cu_offset": 290401882,
-        "die_offset": 290458225,
+        "cu_offset": 600188760,
+        "die_offset": 600191073,
         "score": 0,
         "complete": true
       }
     ],
-    "uCoord": [
+    "MT_STR": [
       {
-        "cu_offset": 611968738,
-        "die_offset": 611968780,
+        "cu_offset": 600825884,
+        "die_offset": 600826433,
         "score": 0,
         "complete": true
       }
     ],
-    "cZoneListener": [
+    "ScePthreadMutex": [
       {
-        "cu_offset": 627231255,
-        "die_offset": 627231297,
+        "cu_offset": 658505574,
+        "die_offset": 658506511,
         "score": 0,
         "complete": true
       }
     ],
-    "uModel": [
+    "t64": [
       {
-        "cu_offset": 647422192,
-        "die_offset": 647509963,
+        "cu_offset": 600704662,
+        "die_offset": 600705232,
         "score": 0,
         "complete": true
       }
     ],
-    "USAGE_TYPE": [
+    "SceFiosDate": [
       {
-        "cu_offset": 634679916,
-        "die_offset": 634681137,
+        "cu_offset": 600704662,
+        "die_offset": 600705399,
         "score": 0,
         "complete": true
       }
     ],
-    "cpTalk": [
+    "MT_MFUNC32": [
       {
-        "cu_offset": 130425184,
-        "die_offset": 130588986,
+        "cu_offset": 263508890,
+        "die_offset": 263528791,
         "score": 0,
         "complete": true
       }
     ],
-    "cpRotateCtrl": [
+    "f64": [
       {
-        "cu_offset": 233178426,
-        "die_offset": 233191797,
+        "cu_offset": 600847501,
+        "die_offset": 600851753,
         "score": 0,
         "complete": true
       }
     ],
-    "cpPartsCtrl": [
+    "MT_MFUNC64": [
       {
-        "cu_offset": 229520458,
-        "die_offset": 229520744,
+        "cu_offset": 263508890,
+        "die_offset": 263528823,
         "score": 0,
         "complete": true
       }
     ],
-    "cpActionRequest": [
+    "s8": [
       {
-        "cu_offset": 183198525,
-        "die_offset": 183417353,
+        "cu_offset": 602586398,
+        "die_offset": 602590529,
         "score": 0,
         "complete": true
       }
     ],
-    "cpEquip": [
+    "f32": [
       {
-        "cu_offset": 289651422,
-        "die_offset": 289709168,
+        "cu_offset": 638973508,
+        "die_offset": 638973651,
         "score": 0,
         "complete": true
       }
     ],
-    "cpDDMrlMgr": [
+    "MT_MFUNC": [
       {
-        "cu_offset": 96881084,
-        "die_offset": 97036468,
+        "cu_offset": 263508890,
+        "die_offset": 263528764,
         "score": 0,
         "complete": true
       }
     ],
-    "uControl": [
+    "s16": [
       {
-        "cu_offset": 115230445,
-        "die_offset": 115543040,
+        "cu_offset": 602828525,
+        "die_offset": 602832588,
         "score": 0,
         "complete": true
       }
     ],
-    "cpMotionHistory": [
+    "s64": [
       {
-        "cu_offset": 218415457,
-        "die_offset": 218415743,
+        "cu_offset": 264695112,
+        "die_offset": 264697663,
         "score": 0,
         "complete": true
       }
     ],
-    "cpSoftBody": [
+    "Type": [
       {
-        "cu_offset": 289651422,
-        "die_offset": 289934979,
+        "cu_offset": 263508890,
+        "die_offset": 263556618,
         "score": 0,
         "complete": true
       }
     ],
-    "cpShlShotCtrl": [
+    "SEEK_ORIGIN": [
       {
-        "cu_offset": 87673805,
-        "die_offset": 87944942,
+        "cu_offset": 602828525,
+        "die_offset": 602829955,
         "score": 0,
         "complete": true
       }
     ],
-    "cArray<uDDOModel::stTouchReleaseInfo, 8>": [
+    "UpdateFunc": [
       {
-        "cu_offset": 218641216,
-        "die_offset": 218784935,
+        "cu_offset": 263508890,
+        "die_offset": 263556855,
         "score": 0,
         "complete": true
       }
     ],
-    "cDelegate_6<void, u32, u32, f32, f32, f32, u32>": [
+    "cDraw": [
       {
-        "cu_offset": 218641216,
-        "die_offset": 218751090,
+        "cu_offset": 663834694,
+        "die_offset": 663911540,
         "score": 0,
         "complete": true
       }
     ],
-    "cpSequenceCtrl": [
+    "intptr": [
       {
-        "cu_offset": 96648008,
-        "die_offset": 96860594,
+        "cu_offset": 602608730,
+        "die_offset": 602615260,
         "score": 0,
         "complete": true
       }
     ],
-    "cpEffectProvider": [
+    "UNIT_HDC_KIND_BIT": [
       {
-        "cu_offset": 194248637,
-        "die_offset": 194248923,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpOcdCtrl": [
-      {
-        "cu_offset": 69642870,
-        "die_offset": 69856627,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpStateManager": [
-      {
-        "cu_offset": 182863830,
-        "die_offset": 183124490,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cHitGeom": [
-      {
-        "cu_offset": 50785382,
-        "die_offset": 51000521,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpWallExitCtrl": [
-      {
-        "cu_offset": 100846543,
-        "die_offset": 100861569,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpCheckWallCliff": [
-      {
-        "cu_offset": 218641216,
-        "die_offset": 218784145,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "GuardComponent": [
-      {
-        "cu_offset": 218641216,
-        "die_offset": 218745596,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "uCharacter": [
-      {
-        "cu_offset": 12620150,
-        "die_offset": 12872516,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cDelegate_0<void>": [
-      {
-        "cu_offset": 233119205,
-        "die_offset": 233172581,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cAttackParam": [
-      {
-        "cu_offset": 297229973,
-        "die_offset": 297289485,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpRegionStatusCtrl": [
-      {
-        "cu_offset": 231974332,
-        "die_offset": 231989401,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpPivotCtrl": [
-      {
-        "cu_offset": 231745096,
-        "die_offset": 231745382,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpActionSelect": [
-      {
-        "cu_offset": 183198525,
-        "die_offset": 183198811,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "uShlBase": [
-      {
-        "cu_offset": 251365087,
-        "die_offset": 251634423,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "uHuman": [
-      {
-        "cu_offset": 86080331,
-        "die_offset": 86407848,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cHitInfoAfter": [
-      {
-        "cu_offset": 178130408,
-        "die_offset": 178385849,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cUnitDieInfo": [
-      {
-        "cu_offset": 261053038,
-        "die_offset": 261053147,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "uPlayer": [
-      {
-        "cu_offset": 65346644,
-        "die_offset": 65771228,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpActionManager": [
-      {
-        "cu_offset": 182863830,
-        "die_offset": 183118655,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpEffectStatusManager": [
-      {
-        "cu_offset": 194494413,
-        "die_offset": 194802875,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "rShlParamList": [
-      {
-        "cu_offset": 304454815,
-        "die_offset": 304512009,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpObjCollisionBase": [
-      {
-        "cu_offset": 87412309,
-        "die_offset": 87468132,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpInput": [
-      {
-        "cu_offset": 240542607,
-        "die_offset": 240754105,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpComponent": [
-      {
-        "cu_offset": 233119205,
-        "die_offset": 233119831,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cContextInstance": [
-      {
-        "cu_offset": 115230445,
-        "die_offset": 115528174,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpKeepAtkAdjust": [
-      {
-        "cu_offset": 213494885,
-        "die_offset": 213495171,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpScrCollision": [
-      {
-        "cu_offset": 235715133,
-        "die_offset": 235715419,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cHitInfo": [
-      {
-        "cu_offset": 87412309,
-        "die_offset": 87550431,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtTypedArray<cAsyncArc>": [
-      {
-        "cu_offset": 218641216,
-        "die_offset": 218852675,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "uHumanEnemy": [
-      {
-        "cu_offset": 99131605,
-        "die_offset": 99510676,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpPathFinding": [
-      {
-        "cu_offset": 91880398,
-        "die_offset": 92096268,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "uEnemy": [
-      {
-        "cu_offset": 70941961,
-        "die_offset": 71244954,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpModelConst": [
-      {
-        "cu_offset": 96648008,
-        "die_offset": 96702680,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpPawnThink": [
-      {
-        "cu_offset": 183198525,
-        "die_offset": 183419768,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpLayout": [
-      {
-        "cu_offset": 380344988,
-        "die_offset": 380443438,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpInvincibleCtrl": [
-      {
-        "cu_offset": 180689905,
-        "die_offset": 180907295,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cComponentManager": [
-      {
-        "cu_offset": 22762866,
-        "die_offset": 22762975,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MOT_TYPE": [
-      {
-        "cu_offset": 647422192,
-        "die_offset": 647523980,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cShlNotifyInfo": [
-      {
-        "cu_offset": 251365087,
-        "die_offset": 251378814,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpSlave": [
-      {
-        "cu_offset": 183198525,
-        "die_offset": 183418800,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cContextCharacter": [
-      {
-        "cu_offset": 87673805,
-        "die_offset": 87819844,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpWorkRate": [
-      {
-        "cu_offset": 242404677,
-        "die_offset": 242404963,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpChargeCtrl": [
-      {
-        "cu_offset": 203511372,
-        "die_offset": 203527328,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpLockOnTargetManager": [
-      {
-        "cu_offset": 217238100,
-        "die_offset": 217251837,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpCatchCtrl": [
-      {
-        "cu_offset": 182501144,
-        "die_offset": 182773187,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cOutLineController": [
-      {
-        "cu_offset": 218641216,
-        "die_offset": 218746195,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpAISensor": [
-      {
-        "cu_offset": 183198525,
-        "die_offset": 183445010,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtTypedArray<cDamageMsg>": [
-      {
-        "cu_offset": 218641216,
-        "die_offset": 218777403,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "uNpc": [
-      {
-        "cu_offset": 361986961,
-        "die_offset": 362312219,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MtTypedStorageArray<uDDOModel, 8>": [
-      {
-        "cu_offset": 218641216,
-        "die_offset": 218852479,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cCollNode": [
-      {
-        "cu_offset": 297229973,
-        "die_offset": 297287429,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "uAimCheck": [
-      {
-        "cu_offset": 365668729,
-        "die_offset": 365685387,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpLockOn": [
-      {
-        "cu_offset": 216999102,
-        "die_offset": 216999388,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "TOUCH_RELEASE_TYPE": [
-      {
-        "cu_offset": 218641216,
-        "die_offset": 218852432,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "TOUCH_TYPE": [
-      {
-        "cu_offset": 218641216,
-        "die_offset": 218852326,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpHpDamageCtrl": [
-      {
-        "cu_offset": 138029966,
-        "die_offset": 138334755,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "HP_DATATYPE": [
-      {
-        "cu_offset": 304326803,
-        "die_offset": 304380242,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cDamageSeInfo": [
-      {
-        "cu_offset": 138029966,
-        "die_offset": 138339935,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cContextInterface": [
-      {
-        "cu_offset": 218641216,
-        "die_offset": 218751802,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cpNpc": [
-      {
-        "cu_offset": 219673245,
-        "die_offset": 219689198,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cOcdInfo": [
-      {
-        "cu_offset": 180689905,
-        "die_offset": 180690191,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "Motion": [
-      {
-        "cu_offset": 647422192,
-        "die_offset": 647511713,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "InterpolationJoint": [
-      {
-        "cu_offset": 647422192,
-        "die_offset": 647513934,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "MPARAM_WORK": [
-      {
-        "cu_offset": 634483919,
-        "die_offset": 634485120,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "rMotionList": [
-      {
-        "cu_offset": 642919126,
-        "die_offset": 642919168,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "Joint": [
-      {
-        "cu_offset": 286878123,
-        "die_offset": 286878832,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cZoneLayout": [
-      {
-        "cu_offset": 626932757,
-        "die_offset": 626989975,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cLayoutElement": [
-      {
-        "cu_offset": 627031016,
-        "die_offset": 627031768,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cGroupManager": [
-      {
-        "cu_offset": 626932757,
-        "die_offset": 626991973,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cSoundLayoutInfo": [
-      {
-        "cu_offset": 280577336,
-        "die_offset": 280648819,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "rZone": [
-      {
-        "cu_offset": 626932757,
-        "die_offset": 626991634,
-        "score": 0,
-        "complete": true
-      }
-    ],
-    "cInGameGroupManager": [
-      {
-        "cu_offset": 626932757,
-        "die_offset": 626990268,
+        "cu_offset": 659929728,
+        "die_offset": 659930949,
         "score": 0,
         "complete": true
       }
     ]
   },
   "cu_offset_to_symbols": {
-    "293519243": [
-      "rLayout"
-    ],
-    "3229": [
-      "u8",
-      "MT_CTSTR",
-      "MtArray",
-      "TYPE",
-      "u64",
-      "s32",
-      "MyDTI",
-      "MtDTI",
-      "stLayoutID",
-      "MtAllocator",
-      "MtStream",
-      "u32",
-      "SetInfo",
-      "stSplitID",
-      "cResource",
-      "MtObject",
-      "MtTime",
-      "MtVector3",
-      "MtMatrix",
+    "263508890": [
       "MtPropertyList",
-      "MtFloat4",
-      "MtFloat3x3",
-      "cResPath<rAIFSM>",
-      "MtString",
-      "MtHalf4",
-      "STRING",
-      "MtVector2",
-      "MtFloat2",
-      "MtFloat2A",
-      "MtFloat3",
-      "MtFloat4x4",
-      "cUnit",
-      "MtFloat3A",
-      "MtFloat4A",
-      "MtFloat4x3",
-      "MtUI",
-      "cDraw",
-      "OBJECT",
-      "BlendState",
-      "Material",
-      "BLEND_DESC",
-      "AlphaToMaskControl",
       "MtProperty",
-      "MtVariable",
-      "BRANCH_STATE",
-      "MtColor",
-      "ConstantTable",
-      "MtRangeU16",
-      "MtVector4",
-      "MT_ENUM",
-      "MtRect3D",
-      "MtPointF",
-      "MtTriangle",
-      "MtRayY",
-      "MtRange",
-      "MtRangeF",
-      "MtRect",
-      "Texture",
-      "MtOscillator",
-      "CMD_BRANCH",
-      "TAG",
-      "MtRect3D_XZ",
-      "CONTEXT",
-      "MtColorF",
-      "MtHalf2",
-      "BLEND_STATES",
-      "SHADER_STATE",
-      "OBJECT_INFO",
-      "MtPoint",
-      "MtRect3DC",
-      "VARIABLE",
-      "MtPlane",
+      "MtUI",
       "MtPlaneXZ",
       "MtLineSegment4",
-      "IndexBuffer",
-      "STATE_CUE",
-      "CMD",
-      "cSetInfo",
-      "TARGET_STATE",
-      "MtEaseCurve",
-      "MtCone",
-      "SORT_WORK",
-      "Scene",
-      "MtSizeF",
-      "MtLineSegment",
-      "STATE",
-      "MtDataWriter",
-      "MtSphere",
-      "poolChain",
-      "MtAABB4",
-      "MtSize",
-      "CBufferSystem",
-      "MtCylinder",
-      "MtRectF",
-      "MtOBB",
-      "VertexBuffer",
-      "MtQuaternion",
-      "RasterizerState",
-      "MtMatrix33",
-      "MISC_STATE",
-      "MtLine",
-      "MtCriticalSection",
-      "Custom",
-      "MtFloat3x4",
-      "MtTorus",
-      "DepthStencilView",
-      "ANIMATION_STATE",
-      "RenderTargetView",
-      "Frame",
-      "DepthStencilState",
-      "SizeAlign",
-      "MtCapsule",
-      "VIEWPORT",
-      "SHADER",
-      "MtHermiteCurve",
-      "cHardwareDispCtrl",
-      "PROCEDURAL_TEXTURE",
       "MtRay",
-      "RASTERIZER_STATES",
-      "GeometryShaderObject",
-      "PARAM",
-      "DRAW_STATE",
-      "Animation",
-      "GEOM_STATE",
-      "MtAABB",
-      "Label",
-      "BlendControl",
+      "poolChain",
       "MtEllipsoid",
-      "SHADER_PARAMINFO",
-      "CBuffer",
-      "InputResourceOffsets",
-      "PrimitiveSetup",
-      "DEPTHSTENCIL_STATES",
-      "VertexShaderObject",
-      "DepthStencilControl",
+      "MtCone",
+      "MtVariable",
+      "MtAABB4",
+      "MtCylinder",
       "MtSoaVector3",
-      "RenderTarget",
-      "DataFormat",
-      "StencilControl",
-      "ANIMATION_LIST",
-      "KEY_INT",
-      "ANIMATION",
-      "StencilOpControl",
-      "InputLayouts",
-      "RASTERIZER_DESC",
-      "GsShader",
-      "DEPTHSTENCIL_DESC",
-      "KEY_FLOAT",
-      "SHADER_DESC",
-      "Layout",
-      "MtDataReader",
-      "GsStageRegisters",
-      "EsShader",
-      "MtVectorU4",
-      "DepthRenderTarget",
-      "KEY_VECTOR",
-      "EsStageRegisters",
+      "MT_ENUM",
+      "MtRect3D",
+      "MtRayY",
+      "MtOscillator",
+      "MtRect3D_XZ",
+      "MtTorus",
+      "Custom",
+      "MtLine",
+      "MtCapsule",
+      "PARAM",
       "MtVectorU43",
-      "SHADER_PARAM",
-      "VsShader",
-      "PixelShaderObject",
-      "MtSoaVector1",
-      "PsShader",
-      "InputUsageSlot",
-      "PixelInputSemantic",
-      "ShaderCommonData",
-      "VertexInputSemantic",
-      "VertexExportSemantic",
-      "VsStageRegisters",
-      "PsStageRegisters",
-      "CONVERT_TYPE",
-      "SEEK_ORIGIN",
-      "f32",
-      "u16",
-      "SceFiosDate",
-      "t64",
-      "MT_CHAR",
-      "MT_STR",
-      "s16",
-      "s8",
-      "uintptr",
-      "PRIMITIVE_TOPOLOGY",
-      "PASS_TYPE",
-      "DRAW_MODE",
-      "DRAW_VIEW",
-      "EARLY_STENCIL_CULLING",
-      "SO_HANDLE",
-      "COMPARISON_FUNC",
-      "SLOT_TYPE",
-      "MT_MFUNC",
       "MT_MFUNC32",
-      "s64",
-      "f64",
       "MT_MFUNC64",
+      "MT_MFUNC",
       "Type",
-      "SS_HANDLE",
-      "SV_HANDLE",
-      "TextureType",
-      "TileMode",
-      "NumSamples",
-      "TextureChannelType",
-      "SamplerModulationFactor",
-      "NumFragments",
-      "TextureChannel",
-      "UpdateFunc",
-      "MAP_TYPE",
-      "HIndexBuffer",
-      "HDR_TYPE",
-      "DEFERRED_LIGHTING_LIGHT_TYPE",
-      "DEFERRED_LIGHTING_TRANSPARENT_TYPE",
-      "ANTIALIAS_TYPE",
-      "DEFERRED_LIGHTING_HDR_TYPE",
-      "HVertexBuffer",
-      "ScanModeControlViewportScissor",
-      "ScanModeControlAa",
-      "ScePthreadMutex",
-      "GPUFORMAT_TYPE",
-      "HDepthStencil",
-      "HRenderTarget",
-      "AlignmentType",
-      "HInputLayout",
-      "HHullShader",
-      "HVertexShader",
-      "HGeometryShader",
-      "HDomainShader",
-      "HPixelShader",
-      "HComputeShader",
-      "UNIT_HDC_KIND_BIT",
-      "ZFormat",
-      "BufferChannelType",
-      "RenderTargetChannelType",
-      "SurfaceFormat",
-      "RenderTargetFormat",
-      "RenderTargetChannelOrder",
-      "BufferFormat",
-      "GsMaxOutputVertexCount",
-      "GsMaxOutputPrimitiveDwordSize",
-      "StencilFormat",
-      "ZCompareBase",
-      "InputLot",
-      "cGroupParam",
-      "MtTypedArray<cAreaHit>",
-      "cLifeArea",
-      "stLoadCondition",
-      "GuardData",
-      "DropItemInfo",
-      "stSetCondition",
-      "MtTypedArray<AreaHitShape>",
-      "cOmControl",
-      "stInsValue",
-      "CommunicateData",
-      "Data",
-      "MtTypedArray<cGroupParam::cID>",
-      "uOmSimple",
-      "AreaHitShape",
-      "MtTypedArray<cGroupParam::cLifeArea>",
-      "cArray<CNamedEnemyParamClient, 5>",
-      "stDeleteCondition",
-      "cZoneIndoorHandle",
-      "CDataNamedEnemyParamClient",
-      "ShapeInfoOBB",
-      "ShapeInfoArea",
-      "ShapeInfoAABB",
-      "ShapeInfoCone",
-      "cZoneUnitCtrl",
-      "cID",
-      "ShapeInfoCylinder",
-      "res_ptr<rCollision>",
-      "uBaseModel",
-      "rModel",
-      "cOmParam",
-      "CACHE_ID",
-      "MODEL_INFO",
-      "cResPath<rCollision>",
-      "ShapeInfoSphere",
-      "cResPath<rModel>",
-      "cResPath<rCaughtInfoParam>",
-      "cResPath<rSoundRequest>",
-      "cResPath<rObjCollision>",
-      "cResPath<rEffectProvider>",
-      "cResPath<rMotionList>",
-      "cResPath<rSwingModel>",
-      "cResPath<rSoundMotionSe>",
-      "JOINT_INFO",
-      "ShapeInfoBase",
-      "BOUNDARY_INFO",
-      "MATERIAL_NAME",
-      "RECALCNORMAL_INFO",
-      "cArray<cZoneUnitCtrl::unZoneGroup, 8>",
-      "rCollision",
-      "cArray<u32, 5>",
-      "PRIMITIVE_INFO",
-      "cResPath<rZone>",
-      "Leaf",
-      "PartsInfo",
-      "cGridCollision",
-      "Vertex",
-      "cResPath<rJointInfo>",
-      "PARTS_INFO",
-      "CACHE",
-      "CommandCache",
-      "cResPath<rDeformWeightMap>",
-      "Header",
-      "cResPath<rRigidBody>",
-      "rTexture",
-      "LIST_STACK",
-      "cBVHCollision",
-      "unZoneGroup",
-      "Triangle",
-      "HEADER",
-      "SHFACTOR",
-      "StaticGridInfo",
-      "cCellRegisterArray<u16, 2>",
-      "MtGeomConvex",
-      "NodeBinaryBasic",
-      "PATCH_INFO",
-      "MaterialInfo",
-      "MtContact",
-      "cCellRegisterArrayBase",
-      "TraverseStack",
-      "cGridCollisionRegistInfo",
-      "cCellRegisterArray<u32, 2>",
-      "ScrMaterialInfo",
-      "cWorkBuildOnlineFast",
-      "NodeBinaryOptimize",
-      "TraverseSystemParam",
-      "KILL_AREA_TYPE",
-      "InsValue",
-      "SBC_HANDLE",
-      "ZShape",
-      "SHAPE_TYPE",
-      "cOmContentsArray",
-      "CACHE_MODE",
-      "VFCULL_LEVEL",
-      "SHADER_QUALITY",
-      "LOD_TYPE",
-      "cU16Array",
-      "cU32Array",
-      "INSIDE_TRAVERSE_CALLBACK",
-      "NodeQuad",
-      "NodeBinaryCommon",
-      "JOBHANDLE",
-      "MtGeometry",
-      "JobParamOfLine"
+      "UpdateFunc"
     ],
-    "0": [
-      "unsigned char",
-      "size_t",
-      "unsigned int",
-      "tm",
-      "uint32_t",
-      "uint8_t",
-      "__uint32_t",
-      "uint16_t",
-      "__uint16_t",
-      "__uint8_t",
-      "unsigned short"
+    "3229": [
+      "rLayout"
     ],
-    "110737552": [
-      "cSetInfoOmLadder",
-      "cSetInfoOmBowlOfLife",
-      "cSetInfoOmWall",
-      "cSetInfoOmNav",
-      "cSetInfoOmFall",
-      "cSetInfoOmRange",
-      "cSetInfoOmCtrl",
-      "cSetInfoOmDoor",
-      "cSetInfoOmElfSW",
-      "cSetInfoNpc",
-      "cSetInfoOmGather",
-      "cSetInfoOmTreasureBox",
-      "cSetInfoOmBadStatus",
-      "cSetInfoOmWarp",
-      "cSetInfoOmHakuryuu",
-      "cSetInfoOmLever",
-      "cSetInfoOmHeal",
-      "cLinkParam",
-      "cFSMRelate",
-      "cSetInfoOmText",
-      "cSetInfoOmBoard",
-      "cSetInfoOm"
+    "283374241": [
+      "cResource",
+      "CONVERT_TYPE"
     ],
-    "155989476": [
-      "cSetInfoEnemy"
+    "599864438": [
+      "MtObject",
+      "MtDTI",
+      "MyDTI"
     ],
-    "4270159": [
-      "uSoundGenerator",
-      "cSoundGeneratorListener"
+    "603537252": [
+      "MtAllocator",
+      "TYPE"
     ],
-    "1166123": [
-      "cSoundZoneListener"
-    ],
-    "31325439": [
-      "rMaterial",
-      "TEXTURE_INFO",
-      "LUT_INFO",
-      "MATERIAL_INFO"
-    ],
-    "248989178": [
-      "cSetInfoGeneralPoint",
-      "cSetInfoCoord"
-    ],
-    "247996981": [
-      "cSetInfoCharacter"
-    ],
-    "635066766": [
-      "Resource"
-    ],
-    "634679916": [
-      "Buffer",
-      "USAGE_TYPE"
-    ],
-    "665763114": [
-      "ShaderObject",
-      "BufferObject"
-    ],
-    "643498199": [
-      "KEY"
-    ],
-    "298650033": [
-      "cResPathBase"
-    ],
-    "218641216": [
-      "uDDOModel",
-      "cArray<uDDOModel::stTouchReleaseInfo, 8>",
-      "cDelegate_6<void, u32, u32, f32, f32, f32, u32>",
-      "cpCheckWallCliff",
-      "GuardComponent",
-      "MtTypedArray<cAsyncArc>",
-      "cOutLineController",
-      "MtTypedArray<cDamageMsg>",
-      "MtTypedStorageArray<uDDOModel, 8>",
-      "TOUCH_RELEASE_TYPE",
-      "TOUCH_TYPE",
-      "cContextInterface"
-    ],
-    "70017833": [
-      "CPacketDataBase"
-    ],
-    "596574570": [
-      "uSoundZoneBase"
-    ],
-    "290401882": [
-      "cResPtrBase"
-    ],
-    "611968738": [
-      "uCoord"
-    ],
-    "627231255": [
-      "cZoneListener"
-    ],
-    "647422192": [
-      "uModel",
-      "MOT_TYPE",
-      "Motion",
-      "InterpolationJoint"
-    ],
-    "130425184": [
-      "cpTalk"
-    ],
-    "233178426": [
-      "cpRotateCtrl"
-    ],
-    "229520458": [
-      "cpPartsCtrl"
-    ],
-    "183198525": [
-      "cpActionRequest",
-      "cpActionSelect",
-      "cpPawnThink",
-      "cpSlave",
-      "cpAISensor"
-    ],
-    "289651422": [
-      "cpEquip",
-      "cpSoftBody"
-    ],
-    "96881084": [
-      "cpDDMrlMgr"
-    ],
-    "115230445": [
-      "uControl",
-      "cContextInstance"
-    ],
-    "218415457": [
-      "cpMotionHistory"
-    ],
-    "87673805": [
-      "cpShlShotCtrl",
-      "cContextCharacter"
-    ],
-    "96648008": [
-      "cpSequenceCtrl",
-      "cpModelConst"
-    ],
-    "194248637": [
-      "cpEffectProvider"
-    ],
-    "69642870": [
-      "cpOcdCtrl"
-    ],
-    "182863830": [
-      "cpStateManager",
-      "cpActionManager"
-    ],
-    "50785382": [
-      "cHitGeom"
-    ],
-    "100846543": [
-      "cpWallExitCtrl"
-    ],
-    "12620150": [
-      "uCharacter"
-    ],
-    "233119205": [
-      "cDelegate_0<void>",
-      "cpComponent"
-    ],
-    "297229973": [
-      "cAttackParam",
-      "cCollNode"
-    ],
-    "231974332": [
-      "cpRegionStatusCtrl"
-    ],
-    "231745096": [
-      "cpPivotCtrl"
-    ],
-    "251365087": [
-      "uShlBase",
-      "cShlNotifyInfo"
-    ],
-    "86080331": [
-      "uHuman"
-    ],
-    "178130408": [
-      "cHitInfoAfter"
-    ],
-    "261053038": [
-      "cUnitDieInfo"
-    ],
-    "65346644": [
-      "uPlayer"
-    ],
-    "194494413": [
-      "cpEffectStatusManager"
-    ],
-    "304454815": [
-      "rShlParamList"
-    ],
-    "87412309": [
-      "cpObjCollisionBase",
-      "cHitInfo"
-    ],
-    "240542607": [
-      "cpInput"
-    ],
-    "213494885": [
-      "cpKeepAtkAdjust"
-    ],
-    "235715133": [
-      "cpScrCollision"
-    ],
-    "99131605": [
-      "uHumanEnemy"
-    ],
-    "91880398": [
-      "cpPathFinding"
-    ],
-    "70941961": [
-      "uEnemy"
+    "600704662": [
+      "MtString",
+      "MtTime",
+      "STRING",
+      "t64",
+      "SceFiosDate"
     ],
     "380344988": [
-      "cpLayout"
+      "stLayoutID",
+      "stSplitID"
     ],
-    "180689905": [
-      "cpInvincibleCtrl",
-      "cOcdInfo"
+    "658505574": [
+      "MtCriticalSection",
+      "ScePthreadMutex"
     ],
-    "22762866": [
-      "cComponentManager"
+    "603543491": [
+      "MtPlane",
+      "MtAABB",
+      "MtLineSegment",
+      "MtSphere",
+      "MtTriangle",
+      "MtOBB",
+      "MtRect3DC"
     ],
-    "242404677": [
-      "cpWorkRate"
+    "600603180": [
+      "MtSize",
+      "MtSizeF",
+      "MtPoint",
+      "MtRangeU16",
+      "MtRangeF",
+      "MtRange",
+      "MtRectF",
+      "MtPointF",
+      "MtRect"
     ],
-    "203511372": [
-      "cpChargeCtrl"
+    "600831860": [
+      "MtVector4",
+      "MtFloat4x4",
+      "MtVector2",
+      "MtFloat2A",
+      "MtHalf2",
+      "MtQuaternion",
+      "MtFloat2",
+      "MtMatrix33",
+      "MtFloat3A",
+      "MtFloat3x4",
+      "MtFloat4",
+      "MtVector3",
+      "MtHalf4",
+      "MtFloat3x3",
+      "MtFloat3",
+      "MtMatrix",
+      "MtFloat4A",
+      "MtFloat4x3"
     ],
-    "217238100": [
-      "cpLockOnTargetManager"
+    "600562149": [
+      "MtHermiteCurve",
+      "MtEaseCurve"
     ],
-    "182501144": [
-      "cpCatchCtrl"
+    "79910917": [
+      "MtArray"
     ],
-    "361986961": [
-      "uNpc"
+    "602828525": [
+      "MtStream",
+      "s16",
+      "SEEK_ORIGIN"
     ],
-    "365668729": [
-      "uAimCheck"
+    "600554434": [
+      "MtColor",
+      "MtColorF"
     ],
-    "216999102": [
-      "cpLockOn"
+    "600188760": [
+      "tm",
+      "MT_CTSTR",
+      "size_t",
+      "MT_CHAR"
     ],
-    "138029966": [
-      "cpHpDamageCtrl",
-      "cDamageSeInfo"
+    "603517318": [
+      "MtVectorU4",
+      "MtSoaVector1"
     ],
-    "304326803": [
-      "HP_DATATYPE"
+    "247905927": [
+      "cSetInfo"
     ],
-    "219673245": [
-      "cpNpc"
+    "659929728": [
+      "cUnit",
+      "cHardwareDispCtrl",
+      "UNIT_HDC_KIND_BIT"
     ],
-    "634483919": [
-      "MPARAM_WORK"
+    "602586398": [
+      "MtDataReader",
+      "s8"
     ],
-    "642919126": [
-      "rMotionList"
+    "602608730": [
+      "MtDataWriter",
+      "Label",
+      "Frame",
+      "intptr"
     ],
-    "286878123": [
-      "Joint"
+    "293519243": [
+      "cSetInfoOmLadder",
+      "SetInfo",
+      "cSetInfoOmElfSW",
+      "cSetInfoOmBowlOfLife",
+      "cSetInfoOm",
+      "cSetInfoNpc",
+      "cSetInfoOmBadStatus",
+      "cSetInfoOmDoor",
+      "cSetInfoOmWall",
+      "cSetInfoOmFall",
+      "cSetInfoOmHeal",
+      "cSetInfoOmTreasureBox",
+      "cSetInfoOmText",
+      "cSetInfoEnemy",
+      "cSetInfoOmWarp",
+      "cSetInfoOmRange",
+      "cSetInfoOmNav",
+      "cSetInfoOmCtrl",
+      "cSetInfoOmHakuryuu",
+      "cSetInfoOmBoard",
+      "cSetInfoOmGather",
+      "cSetInfoOmLever"
     ],
-    "626932757": [
-      "cZoneLayout",
-      "cGroupManager",
-      "rZone",
-      "cInGameGroupManager"
+    "668257545": [
+      "unsigned int"
     ],
-    "627031016": [
-      "cLayoutElement"
+    "600822074": [
+      "u8"
     ],
-    "280577336": [
-      "cSoundLayoutInfo"
+    "668257015": [
+      "unsigned char"
+    ],
+    "637951258": [
+      "u32",
+      "uintptr"
+    ],
+    "248989178": [
+      "cSetInfoGeneralPoint"
+    ],
+    "600829408": [
+      "s32"
+    ],
+    "600696762": [
+      "u64"
+    ],
+    "600825884": [
+      "u16",
+      "MT_STR"
+    ],
+    "600847501": [
+      "f64"
+    ],
+    "638973508": [
+      "f32"
+    ],
+    "264695112": [
+      "s64"
+    ],
+    "663834694": [
+      "cDraw"
     ]
   },
-  "created": 1763245346.611231,
-  "last_updated": 1763300183.222193
+  "created": 1785012796.6988614,
+  "last_updated": 1785018195.5528092
 }

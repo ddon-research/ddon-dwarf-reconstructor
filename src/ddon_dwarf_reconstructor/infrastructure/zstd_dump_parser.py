@@ -1,251 +1,218 @@
 #!/usr/bin/env python3
 
-"""Parser for compressed llvm-dwarfdump .zst files.
+"""Durable, streaming index façade for compressed LLVM DWARF dumps."""
 
-This module provides fast lookup of DWARF definition locations using
-pre-generated llvm-dwarfdump output. Requires Python 3.14+ for native
-compression.zstd support.
+from __future__ import annotations
 
-Example llvm-dwarfdump output format:
-    0x117ec452:   DW_TAG_class_type [8]  (0x117ebf8b)
-                    DW_AT_name [DW_FORM_strp]     ("rLayout")
-                    DW_AT_byte_size [DW_FORM_data1]       (0x00000210)
-                    ...
-                  0x117ecd22: DW_TAG_enumeration_type [17] * (0x117ec452)
-                                DW_AT_name [DW_FORM_strp]   ("SET_INFO_ALLOC")
-
-The "* (0xOFFSET)" marker indicates parent DIE relationship.
-"""
-
-import re
-import sys
-from dataclasses import dataclass
+import hashlib
+import os
+import sqlite3
+import tempfile
+from collections.abc import Generator
+from contextlib import closing, contextmanager, suppress
 from pathlib import Path
+from time import monotonic, sleep, time
 
+from ..infrastructure.artifacts import SourceIdentityCatalog
 from ..infrastructure.logging import get_logger
+from .zstd_dump_query import DefinitionLocation as DefinitionLocation
+from .zstd_dump_query import ZstdDumpQueryMixin
+from .zstd_dump_scan import ZstdDumpScanMixin
 
 logger = get_logger(__name__)
 
-
-@dataclass
-class DefinitionLocation:
-    """DWARF definition location with completeness metrics.
-    
-    Attributes:
-        cu_offset: Compilation unit offset (hex string)
-        die_offset: DIE offset within the dump (hex string)
-        nested_enum_count: Number of nested enums found
-        nested_struct_count: Number of nested structs found
-        nested_union_count: Number of nested unions found
-        byte_size: Class size in bytes (0 if unknown)
-        completeness_score: Calculated score for ranking definitions
-    """
-    cu_offset: str
-    die_offset: str
-    nested_enum_count: int
-    nested_struct_count: int
-    nested_union_count: int
-    byte_size: int
-    completeness_score: int
+INDEX_SCHEMA_VERSION = "1.2"
+INDEX_PRODUCER = "ddon-dwarf-zstd-index"
+INDEX_PRODUCER_VERSION = "1"
+INDEX_CONFIG_SHA256 = hashlib.sha256(
+    b"class-definition-v1|method-implementation-v1|llvm-dwarfdump-text"
+).hexdigest()
+LOCK_TIMEOUT_SECONDS = 30.0
+STALE_LOCK_SECONDS = 300.0
 
 
-class ZstdDumpParser:
-    """Parser for compressed llvm-dwarfdump files.
-    
-    Uses Python 3.14+ native compression.zstd module for streaming
-    decompression and regex-based extraction of DWARF structures.
-    """
+class ZstdDumpParser(ZstdDumpQueryMixin, ZstdDumpScanMixin):
+    """Manage a source-bound SQLite sidecar built by one streaming pass."""
 
-    def __init__(self, dump_path: Path):
-        """Initialize parser with path to .zst dump file.
-        
-        Args:
-            dump_path: Path to compressed llvm-dwarfdump .zst file
-            
-        Raises:
-            ImportError: If Python 3.14+ compression.zstd not available
-            FileNotFoundError: If dump file doesn't exist
-        """
-        self.dump_path = dump_path
-        self._check_python_version()
-        
-        if not dump_path.exists():
-            raise FileNotFoundError(f"DWARF dump not found: {dump_path}")
-    
-    def _check_python_version(self) -> None:
-        """Verify Python 3.14+ and compression.zstd availability."""
-        if sys.version_info < (3, 14):
-            raise ImportError(
-                f"Python 3.14+ required for compression.zstd (current: {sys.version_info})"
-            )
-        
+    INDEX_SCHEMA_VERSION = INDEX_SCHEMA_VERSION
+    INDEX_PRODUCER = INDEX_PRODUCER
+    INDEX_PRODUCER_VERSION = INDEX_PRODUCER_VERSION
+    INDEX_CONFIG_SHA256 = INDEX_CONFIG_SHA256
+
+    def __init__(self, dump_path: Path, index_path: Path | None = None):
+        self.dump_path = Path(dump_path)
+        if not self.dump_path.exists():
+            raise FileNotFoundError(f"DWARF dump not found: {self.dump_path}")
+        self.index_path = (
+            Path(index_path)
+            if index_path
+            else self.dump_path.with_name(f"{self.dump_path.name}.index.sqlite3")
+        )
+
+    def _ensure_index(self, *, force: bool = False) -> None:
+        source_metadata = self._source_metadata()
+        if not force and self._index_matches_source(source_metadata):
+            self._enrich_metadata(source_metadata)
+            return
+        with self._exclusive_lock():
+            if not force and self._index_matches_source(source_metadata):
+                self._enrich_metadata(source_metadata)
+                return
+            self._build_index(source_metadata)
+
+    def _build_index(self, source_metadata: dict[str, str]) -> None:
+        """Build a temporary sidecar and publish it atomically."""
+        self.index_path.parent.mkdir(parents=True, exist_ok=True)
+        descriptor, temporary_name = tempfile.mkstemp(
+            prefix=f".{self.index_path.name}.", suffix=".tmp", dir=self.index_path.parent
+        )
+        os.close(descriptor)
+        temporary_path = Path(temporary_name)
+        connection: sqlite3.Connection | None = None
         try:
-            import compression.zstd  # noqa: F401
-        except ImportError as e:
-            raise ImportError(
-                "compression.zstd module not available. Ensure Python 3.14+ is installed."
-            ) from e
-    
-    def find_class_definitions(self, class_name: str) -> list[DefinitionLocation]:
-        """Find all DWARF definitions for a class across all CUs.
-        
-        Searches compressed dump for DW_TAG_class_type with matching name,
-        extracts CU/DIE offsets, counts nested types, and calculates scores.
-        
-        Args:
-            class_name: Exact class name to search for
-            
-        Returns:
-            List of DefinitionLocation sorted by completeness_score (descending)
-            
-        Example:
-            >>> parser = ZstdDumpParser(Path("dump.zst"))
-            >>> locations = parser.find_class_definitions("rLayout")
-            >>> best = locations[0]
-            >>> print(f"Best at {best.die_offset}: {best.nested_enum_count} enums")
-        """
-        import compression.zstd as zstd
-        
-        logger.info(f"Searching compressed dump for class: {class_name}")
-        
-        # Regex patterns
-        cu_pattern = re.compile(r"^(0x[0-9a-f]+):\s+Compile Unit:", re.IGNORECASE)
-        class_pattern = re.compile(
-            r"^(0x[0-9a-f]+):\s+DW_TAG_class_type.*\*?\s*\(0x([0-9a-f]+)\)",
-            re.IGNORECASE
-        )
-        name_pattern = re.compile(
-            rf'DW_AT_name.*["\']({re.escape(class_name)})["\']',
-            re.IGNORECASE
-        )
-        size_pattern = re.compile(r"DW_AT_byte_size.*\(0x([0-9a-f]+)\)", re.IGNORECASE)
-        enum_pattern = re.compile(r"DW_TAG_enumeration_type.*\*\s*\(0x([0-9a-f]+)\)")
-        struct_pattern = re.compile(r"DW_TAG_structure_type.*\*\s*\(0x([0-9a-f]+)\)")
-        union_pattern = re.compile(r"DW_TAG_union_type.*\*\s*\(0x([0-9a-f]+)\)")
-        
-        # Track ALL matching classes by their DIE offset for parent matching
-        class_definitions: dict[str, dict] = {}  # DIE offset (without 0x) -> class data
-        current_cu_offset: str | None = None
-        current_class_die: str | None = None
+            connection = sqlite3.connect(temporary_path)
+            self._create_schema(connection)
+            self._scan_dump(connection)
+            self._write_metadata(connection, source_metadata)
+            connection.commit()
+            connection.close()
+            connection = None
+            temporary_path.replace(self.index_path)
+        finally:
+            if connection is not None:
+                connection.close()
+            if temporary_path.exists():
+                temporary_path.unlink()
 
-        # Parse dump file once
-        with zstd.open(self.dump_path, 'rt', encoding='utf-8', errors='replace') as f:
-            for _, line in enumerate(f, 1):
-                line = line.rstrip()
-                
-                # Track CU headers
-                cu_match = cu_pattern.match(line)
-                if cu_match:
-                    current_cu_offset = cu_match.group(1)
+    @staticmethod
+    def _create_schema(connection: sqlite3.Connection) -> None:
+        connection.executescript(
+            """
+            CREATE TABLE metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+            CREATE TABLE class_definitions (
+                name TEXT NOT NULL, cu_offset TEXT NOT NULL, die_offset TEXT NOT NULL,
+                nested_enum_count INTEGER NOT NULL, nested_struct_count INTEGER NOT NULL,
+                nested_union_count INTEGER NOT NULL, byte_size INTEGER NOT NULL,
+                completeness_score INTEGER NOT NULL,
+                PRIMARY KEY (name, die_offset)
+            );
+            CREATE INDEX class_definitions_name_idx ON class_definitions(name);
+            CREATE TABLE method_implementations (
+                declaration_offset INTEGER PRIMARY KEY,
+                implementation_offset INTEGER NOT NULL
+            );
+            """
+        )
+
+    def _source_metadata(self) -> dict[str, str]:
+        identity = SourceIdentityCatalog().identify(self.dump_path)
+        return {
+            "source_sha256": identity.sha256,
+            "source_size": str(identity.size),
+            "source_boundary_sha256": identity.boundary_sha256,
+        }
+
+    def _index_matches_source(self, source_metadata: dict[str, str]) -> bool:
+        if not self.index_path.exists():
+            return False
+        metadata = self._read_metadata()
+        if metadata is None or metadata.get("schema_version") not in {"1.1", INDEX_SCHEMA_VERSION}:
+            return False
+        return self._has_required_tables() and self._metadata_matches_source(
+            metadata, source_metadata
+        )
+
+    @staticmethod
+    def _metadata_matches_source(metadata: dict[str, str], source_metadata: dict[str, str]) -> bool:
+        for key in ("source_size", "source_boundary_sha256", "source_sha256"):
+            stored = metadata.get(key)
+            if stored is not None and stored != source_metadata[key]:
+                return False
+        return True
+
+    def _enrich_metadata(self, source_metadata: dict[str, str]) -> None:
+        if not self.index_path.exists() or not self._has_required_tables():
+            return
+        with closing(self._connect_index()) as connection:
+            self._write_metadata(connection, source_metadata)
+            connection.commit()
+
+    def _write_metadata(
+        self, connection: sqlite3.Connection, source_metadata: dict[str, str]
+    ) -> None:
+        metadata = {
+            "schema_version": INDEX_SCHEMA_VERSION,
+            "producer": INDEX_PRODUCER,
+            "producer_version": INDEX_PRODUCER_VERSION,
+            "config_sha256": INDEX_CONFIG_SHA256,
+            **source_metadata,
+        }
+        connection.executemany(
+            "INSERT OR REPLACE INTO metadata(key, value) VALUES (?, ?)", metadata.items()
+        )
+
+    def _read_metadata(self) -> dict[str, str] | None:
+        try:
+            with closing(self._connect_index()) as connection:
+                rows = connection.execute("SELECT key, value FROM metadata").fetchall()
+            return {str(key): str(value) for key, value in rows}
+        except sqlite3.DatabaseError:
+            return None
+
+    def _has_required_tables(self) -> bool:
+        try:
+            with closing(self._connect_index()) as connection:
+                tables = {
+                    str(row[0])
+                    for row in connection.execute(
+                        "SELECT name FROM sqlite_master WHERE type = 'table'"
+                    )
+                }
+            return {"metadata", "class_definitions", "method_implementations"}.issubset(tables)
+        except sqlite3.DatabaseError:
+            return False
+
+    def _connect_index(self) -> sqlite3.Connection:
+        connection = sqlite3.connect(self.index_path)
+        connection.execute("PRAGMA foreign_keys = ON")
+        return connection
+
+    @contextmanager
+    def _exclusive_lock(self) -> Generator[None]:
+        """Serialize sidecar publication and recover abandoned locks."""
+        lock_path = self.index_path.with_suffix(f"{self.index_path.suffix}.lock")
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        deadline = monotonic() + LOCK_TIMEOUT_SECONDS
+        self._acquire_lock(lock_path, deadline)
+        try:
+            yield
+        finally:
+            with suppress(FileNotFoundError):
+                lock_path.unlink()
+
+    @staticmethod
+    def _acquire_lock(lock_path: Path, deadline: float) -> None:
+        while True:
+            try:
+                descriptor = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                with os.fdopen(descriptor, "w", encoding="utf-8") as lock_file:
+                    lock_file.write(f"{os.getpid()} {time()}\n")
+                return
+            except FileExistsError:
+                if ZstdDumpParser._remove_stale_lock(lock_path):
                     continue
-                
-                # Check for class_type tag
-                class_match = class_pattern.match(line)
-                if class_match:
-                    die_offset = class_match.group(1)  # With 0x prefix
-                    die_offset_raw = die_offset[2:] if die_offset.startswith('0x') else die_offset
-                    parent_marker = class_match.group(2)  # Parent DIE from * (0xOFFSET)
-                    
-                    # Use tracked CU offset if available, otherwise extract from parent marker
-                    cu_offset = current_cu_offset
-                    if not cu_offset and parent_marker:
-                        cu_offset = parent_marker  # Already captured with 0x prefix
-                    
-                    # Create entry for this class
-                    class_definitions[die_offset_raw] = {
-                        "die_offset": die_offset,
-                        "die_offset_raw": die_offset_raw,
-                        "cu_offset": cu_offset,
-                        "byte_size": 0,
-                        "nested_enums": 0,
-                        "nested_structs": 0,
-                        "nested_unions": 0,
-                        "matches_name": False,
-                    }
-                    current_class_die = die_offset_raw
-                    continue
-                
-                # Check for name match (track which class this belongs to)
-                if current_class_die and current_class_die in class_definitions:
-                    name_match = name_pattern.search(line)
-                    if name_match:
-                        class_definitions[current_class_die]["matches_name"] = True
+                if monotonic() >= deadline:
+                    raise TimeoutError(
+                        f"Timed out waiting for dump index lock: {lock_path}"
+                    ) from None
+                sleep(0.05)
 
-                    # Extract byte size
-                    size_match = size_pattern.search(line)
-                    if size_match:
-                        class_definitions[current_class_die]["byte_size"] = int(size_match.group(1), 16)
-                
-                # Count nested enums/structs/unions by checking parent against ALL classes
-                enum_match = enum_pattern.search(line)
-                if enum_match:
-                    parent_raw = enum_match.group(1)
-                    parent_raw = parent_raw[2:] if parent_raw.startswith('0x') else parent_raw
-                    if parent_raw in class_definitions:
-                        class_definitions[parent_raw]["nested_enums"] += 1
-
-                struct_match = struct_pattern.search(line)
-                if struct_match:
-                    parent_raw = struct_match.group(1)
-                    parent_raw = parent_raw[2:] if parent_raw.startswith('0x') else parent_raw
-                    if parent_raw in class_definitions:
-                        class_definitions[parent_raw]["nested_structs"] += 1
-
-                union_match = union_pattern.search(line)
-                if union_match:
-                    parent_raw = union_match.group(1)
-                    parent_raw = parent_raw[2:] if parent_raw.startswith('0x') else parent_raw
-                    if parent_raw in class_definitions:
-                        class_definitions[parent_raw]["nested_unions"] += 1
-        
-        # Convert to definitions list (only classes that match name)
-        definitions: list[DefinitionLocation] = []
-        for class_data in class_definitions.values():
-            if class_data.get("matches_name"):
-                definitions.append(self._create_location(class_data))
-        
-        # Sort by completeness score (descending)
-        definitions.sort(key=lambda d: d.completeness_score, reverse=True)
-        
-        logger.info(
-            f"Found {len(definitions)} definition(s) for {class_name} "
-            f"(best score: {definitions[0].completeness_score if definitions else 0})"
-        )
-        
-        return definitions
-    
-    def _create_location(self, class_data: dict) -> DefinitionLocation:
-        """Create DefinitionLocation from parsed class data.
-        
-        Scoring algorithm matches class_parser.py:
-        - byte_size: +1 per byte
-        - nested_enums: +1000 each
-        - nested_structs: +500 each
-        - nested_unions: +300 each
-        """
-        byte_size = class_data["byte_size"]
-        nested_enums = class_data["nested_enums"]
-        nested_structs = class_data["nested_structs"]
-        nested_unions = class_data["nested_unions"]
-        cu_offset = class_data["cu_offset"]
-        
-        # Strip 0x prefix from cu_offset if present
-        if cu_offset and cu_offset.startswith("0x"):
-            cu_offset = cu_offset[2:]
-        
-        score = (
-            byte_size +
-            (nested_enums * 1000) +
-            (nested_structs * 500) +
-            (nested_unions * 300)
-        )
-        
-        return DefinitionLocation(
-            cu_offset=cu_offset,
-            die_offset=class_data["die_offset"],
-            nested_enum_count=nested_enums,
-            nested_struct_count=nested_structs,
-            nested_union_count=nested_unions,
-            byte_size=byte_size,
-            completeness_score=score,
-        )
+    @staticmethod
+    def _remove_stale_lock(lock_path: Path) -> bool:
+        try:
+            if time() - lock_path.stat().st_mtime > STALE_LOCK_SECONDS:
+                lock_path.unlink()
+                return True
+        except FileNotFoundError:
+            return True
+        return False

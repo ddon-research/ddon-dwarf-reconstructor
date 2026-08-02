@@ -3,8 +3,14 @@
 """Configuration for DWARF-specific lazy loading components."""
 
 import contextlib
+import hashlib
 import os
+import shutil
+import tempfile
 from pathlib import Path
+from typing import Any
+
+from ..artifacts import get_artifact_cache_dir
 
 # Default configuration values
 DEFAULT_CONFIG = {
@@ -24,7 +30,7 @@ DEFAULT_CONFIG = {
 }
 
 
-def get_config() -> dict:
+def get_config() -> dict[str, Any]:
     """Get configuration with environment variable overrides.
 
     Returns:
@@ -60,14 +66,23 @@ def get_cache_file_path(elf_file_path: str) -> Path:
     Returns:
         Path to cache file
     """
-    config = get_config()
     elf_path = Path(elf_file_path)
 
-    # Create cache directory next to ELF file
-    cache_dir = elf_path.parent / config["CACHE_DIR"]
-    cache_dir.mkdir(exist_ok=True)
+    cache_dir = get_artifact_cache_dir()
 
-    # Cache file name based on ELF file name
-    cache_file = cache_dir / f"{elf_path.stem}_dwarf_cache.json"
+    path_digest = hashlib.sha256(str(elf_path.resolve()).encode()).hexdigest()[:12]
+    cache_file = cache_dir / f"{elf_path.stem}-{path_digest}-dwarf-cache.json"
+
+    legacy_cache = elf_path.parent / ".cache" / f"{elf_path.stem}_dwarf_cache.json"
+    if not cache_file.exists() and legacy_cache.exists():
+        descriptor, temporary_name = tempfile.mkstemp(prefix=f".{cache_file.name}.", dir=cache_dir)
+        os.close(descriptor)
+        temporary_path = Path(temporary_name)
+        try:
+            shutil.copyfile(legacy_cache, temporary_path)
+            temporary_path.replace(cache_file)
+        finally:
+            if temporary_path.exists():
+                temporary_path.unlink()
 
     return cache_file

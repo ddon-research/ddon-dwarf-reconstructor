@@ -15,6 +15,7 @@ from .tag_constants import (
     TYPE_QUALIFIER_TAGS,
 )
 from .template_param_info import TemplateTypeParam, TemplateValueParam
+from .type_reference import TypeDeclarator, TypeReference
 from .union_info import UnionInfo
 
 __all__ = [
@@ -30,6 +31,8 @@ __all__ = [
     "StructInfo",
     "TemplateTypeParam",
     "TemplateValueParam",
+    "TypeDeclarator",
+    "TypeReference",
     "TYPE_QUALIFIER_TAGS",
     "UnionInfo",
 ]

@@ -1,0 +1,10 @@
+{
+  "generation_mode": "full-hierarchy-single-file",
+  "search_mode": "exhaustive",
+  "parameter_name_resolution": false,
+  "symbols": [
+    "rLayout"
+  ],
+  "dwarf_dump": "D:/research/DDON-binaries/IDA9.3/PS4_DDON_02020005_2016_12_21/DDOORBIS.elf.llvmdwarfdump.zst",
+  "dwarf_index": "D:/ddon-dwarf-reconstructor/output/msvc-header-validation-20260801/DDOORBIS.elf.llvmdwarfdump.index.sqlite3"
+}

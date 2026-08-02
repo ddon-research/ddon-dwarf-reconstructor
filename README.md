@@ -14,18 +14,18 @@ Reconstructs C++ class definitions from DWARF debug information in ELF files. De
 - **Platform support:** PS4 (x86-64, DWARF3/4) and PS3 (PowerPC64, DWARF2) with automatic detection
 - **Output organization:** Platform-specific output folders (output/ps4/, output/ps3/)
 - **PS4 ELF support:** Automatic section patching for PS4 binaries
-- **High performance:** Persistent caching, offset-based resolution, CU size-sorted scanning, timeout protection (600s default)
-- **Robust architecture:** Domain-driven design, 216 unit tests, type-safe
+- **High performance:** Persistent caching, offset-based resolution, streaming dump indexing, and bounded search
+- **Robust architecture:** Domain-driven design, source-bound artifacts, deterministic outputs, and focused validation tiers
 
 ## Requirements
 
-- Python 3.13+
+- Python 3.14+
 - ELF file with DWARF debug information
 
 ## Installation
 
 ```bash
-uv sync
+uv sync --extra dev
 uv run pytest -m unit  # verify
 ```
 
@@ -33,7 +33,6 @@ uv run pytest -m unit  # verify
 
 ### Python Script
 
-```bash
 ```bash
 # Single class (PS4)
 uv run python main.py resources/DDOORBIS.elf --generate MtObject
@@ -69,6 +68,17 @@ uv run python main.py resources/DDOORBIS.elf --generate rLayout --exhaustive
 uv run python main.py resources/DDOORBIS.elf --generate rLayout --exhaustive \
   --dwarf-dump path/to/DDOORBIS.elf.llvmdwarfdump.zst
 
+# Exhaustive search using an environment-provided dump path
+DDON_DWARF_DUMP_PATH=/path/to/DDOORBIS.elf.llvmdwarfdump.zst \
+uv run python main.py resources/DDOORBIS.elf --generate rLayout --exhaustive
+
+# Knowledge export with optional pinned Orbis validation
+uv run ddon-dwarf-reconstructor resources/DDOORBIS.elf --generate rLayout \
+  --dwarf-dump path/to/DDOORBIS.elf.llvmdwarfdump.zst \
+  --dwarf-index output/real-dump-index/DDOORBIS.elf.llvmdwarfdump.index.sqlite3 \
+  --export-knowledge output/rLayout --build-id ps4-02020005 \
+  --orbis-objdump 'D:/SCE/ORBIS SDKs/8.000/host_tools/bin/orbis-objdump.exe'
+
 # With options
 uv run python main.py resources/DDOORBIS.elf --generate ClassName --output dir/ --verbose
 ```
@@ -84,9 +94,16 @@ uv run python main.py resources/DDOORBIS.elf --generate ClassName --output dir/ 
 - **Nested unions:** +300 each
 
 **Performance:**
-- Default mode (cache hit): <1 second
-- Exhaustive mode (full scan): ~60 minutes (all CUs)
-- **Exhaustive with dump:** ~10 minutes (precomputed index)
+- Compressed-dump index build (one-time, real 30+ GB dump): 295.6 seconds
+- Fresh-process indexed class + method lookup pair: 1.52 ms
+- Warm real `rLayout` knowledge export: about 2.4 seconds
+- Direct full-CU scan remains a slow fallback when no dump/index is available
+
+**Behavior note:**
+- Exhaustive matching is intended for the explicitly requested root symbol.
+- Follow-up base-class and dependency resolution should stay on the fast path so
+  the exporter does not cascade into exhaustive scans for common types such as
+  `cResource` after the root symbol has already been selected.
 
 **Usage:**
 ```bash
@@ -96,13 +113,26 @@ uv run python main.py resources/DDOORBIS.elf --generate rLayout --exhaustive
 # Fast exhaustive with compressed dump file
 uv run python main.py resources/DDOORBIS.elf --generate rLayout --exhaustive \
   --dwarf-dump /path/to/llvm-dwarfdump-output.zst
+
+# Environment variable discovery
+DDON_DWARF_DUMP_PATH=/path/to/llvm-dwarfdump-output.zst \
+uv run python main.py resources/DDOORBIS.elf --generate rLayout --exhaustive
 ```
 
+If `--dwarf-dump` is omitted, exhaustive root lookup now tries these sources in
+order:
+
+1. `--dwarf-dump`
+2. `DDON_DWARF_DUMP_PATH`
+3. a sibling file named `DDOORBIS.elf.llvmdwarfdump.zst` next to the ELF
+
 **Cache Behavior:**
-- Exhaustive search **populates the cache** with the best definition found
-- Subsequent runs use cached offset for instant lookups (<1s)
-- Cache asymptotically covers all regular use cases
-- Cache file: `resources/.cache/{elf_name}_dwarf_cache.json`
+- The first dump-assisted search atomically builds
+  `<dump>.index.sqlite3`; keep this 164 MiB deterministic sidecar
+- Exhaustive search populates the symbol cache with the best definition found
+- Subsequent fresh-process runs reuse both durable artifacts
+- Symbol caches are stored in the OS-local cache directory (or
+  `DWARF_CACHE_DIR`) and are isolated by a digest of the resolved ELF path
 
 **DWARF Dump Creation:**
 ```bash
@@ -166,8 +196,28 @@ VERBOSE=false
 --generate SYMBOL     # generate for single or multiple symbols (comma-separated)
 --symbols-file FILE   # read symbols from file (one per line, alternative to --generate)
 --exhaustive          # scan all CUs for most complete definition (slow but thorough)
---dwarf-dump PATH     # path to compressed llvm-dwarfdump output (.zst) for fast exhaustive search
+--dwarf-dump PATH     # compressed llvm-dwarfdump output used for indexed lookups
+--dwarf-index PATH    # explicit durable SQLite sidecar for --dwarf-dump
+--export-knowledge DIR # deterministic JSONL graph bundle output
+--build-id ID         # stable build identifier used by knowledge export
+--orbis-objdump PATH  # pinned PS4 SDK disassembler used with knowledge export
 ```
+
+### Agent Tracing
+
+Run the local Langfuse stack for GitHub Copilot and OpenAI Codex:
+
+```powershell
+Copy-Item ops/langfuse/.env.example ops/langfuse/.env
+# Replace the REPLACE_WITH values in ops/langfuse/.env.
+docker compose --project-name ddon-langfuse --file ops/langfuse/compose.yaml --env-file ops/langfuse/.env config --quiet
+docker compose --project-name ddon-langfuse --file ops/langfuse/compose.yaml --env-file ops/langfuse/.env up -d
+docker compose --project-name ddon-langfuse --file ops/langfuse/compose.yaml --env-file ops/langfuse/.env logs --tail 200 langfuse-web
+```
+
+Configure Docker Desktop auto-start, VS Code Copilot, and Codex using
+[docs/LANGFUSE_TRACING.md](docs/LANGFUSE_TRACING.md). Full-content capture stores prompts,
+responses, reasoning summaries, and tool arguments in the local Langfuse volumes.
 
 ### Caching System
 
@@ -175,11 +225,13 @@ The project uses two caching mechanisms for optimal performance:
 
 #### 1. Symbol Cache (DWARF Offset Cache)
 
-**Location:** `resources/.cache/{elf_name}_dwarf_cache.json`
+**Location:** `%LOCALAPPDATA%\ddon-dwarf-reconstructor` on Windows,
+`$XDG_CACHE_HOME/ddon-dwarf-reconstructor` when configured, otherwise
+`~/.cache/ddon-dwarf-reconstructor`. Set `DWARF_CACHE_DIR` to override it.
 
 **Purpose:** Caches symbol→CU/DIE offset mappings with multi-definition support
 
-**Cache Format:** v3.0 (auto-migrates from v1.0/v2.0)
+**Cache Format:** v4.0 (migrates validated older formats)
 
 **How It Works:**
 1. First search (any mode) stores symbol location (CU offset + DIE offset + score + completeness)
@@ -197,30 +249,73 @@ The project uses two caching mechanisms for optimal performance:
   2. Score (nested types: enums×1000 + structs×500 + unions×300 + byte_size)
 
 **Performance:**
-- Cache hit: <1 second (instant DIE retrieval)
-- Cache miss + exhaustive: ~10 minutes (with dump), then cached
-- Cache miss + default: ~1-5 seconds (targeted search), then cached
+- Warm real `rLayout` knowledge export: 1.57-1.59 seconds
+- Fresh-process compressed-index lookup pair: 1.52 ms
+- Cold compressed-index construction: 295.6 seconds on the reference dump
 
-**Cache Repair (No Need to Regenerate!):**
-```bash
-# If cache corruption detected, automatic repair attempts:
-# 1. Fix missing fields (migrates v1.0/v2.0 → v3.0)
-# 2. Remove duplicate definitions
-# 3. Fix inconsistent mappings
-# 4. Remove orphaned entries
+**Artifact inspection and recovery:**
+```powershell
+uv run ddon-dwarf-artifacts inspect --elf resources/DDOORBIS.elf `
+  --dwarf-dump D:/research/.../DDOORBIS.elf.llvmdwarfdump.zst `
+  --dump-index output/real-dump-index/DDOORBIS.elf.llvmdwarfdump.index.sqlite3
 
-# Manual validation/repair (coming soon):
-# uv run python main.py --validate-cache resources/DDOORBIS.elf
+# Force a full content verification instead of the immutable-input fast path.
+uv run ddon-dwarf-artifacts verify-source resources/DDOORBIS.elf
+
+# Upgrade/repair a compatible legacy sidecar without rescanning the dump.
+uv run ddon-dwarf-artifacts repair-dump-index D:/research/.../dump.zst `
+  --index-path output/real-dump-index/dump.index.sqlite3
+
+# Deliberate recovery operations.
+uv run ddon-dwarf-artifacts rebuild-dump-index D:/research/.../dump.zst `
+  --index-path output/real-dump-index/dump.index.sqlite3
+uv run ddon-dwarf-artifacts repair-symbol-cache --elf resources/DDOORBIS.elf `
+  --from-cache resources/.cache/DDOORBIS_dwarf_cache.json
+uv run ddon-dwarf-artifacts repair-catalog
 ```
+
+`purge-dump-index` additionally requires `--confirm-index-path` with the exact
+resolved target. Prefer repair or rebuild; purge is intentionally targeted.
 
 **Example:**
 ```bash
-# First run (exhaustive): ~10 minutes, populates cache with ALL definitions
-uv run python main.py --generate rLayout --exhaustive --dwarf-dump dump.zst resources/DDOORBIS.elf
+# First run builds/reuses the dump index and populates symbol definitions
+uv run ddon-dwarf-reconstructor resources/DDOORBIS.elf --generate rLayout `
+  --dwarf-dump dump.zst --dwarf-index dump.index.sqlite3 `
+  --export-knowledge output/rLayout `
+  --orbis-objdump 'D:/SCE/ORBIS SDKs/8.000/host_tools/bin/orbis-objdump.exe'
 
-# Second run (any mode): <1 second via cache (uses best definition)
-uv run python main.py --generate rLayout resources/DDOORBIS.elf
+# Later fresh processes reuse the same artifacts and reproduce the bundle.
+uv run ddon-dwarf-reconstructor resources/DDOORBIS.elf --generate rLayout `
+  --dwarf-dump dump.zst --dwarf-index dump.index.sqlite3 `
+  --export-knowledge output/rLayout-rerun `
+  --orbis-objdump 'D:/SCE/ORBIS SDKs/8.000/host_tools/bin/orbis-objdump.exe'
 ```
+
+The Orbis option is intentionally explicit. Generic GNU/LLVM objdump is not a
+compatible substitute for the proprietary PS4 ELF. The pilot baseline is SDK
+8.000's `orbis-objdump`, target `elf64-x86-64-freebsd`. Its bounded report is
+cached under the durable artifact directory using the ELF hash, executable
+hash/version, target, parser version, flags, and root symbol. A knowledge export
+then adds `instructions.jsonl`, producer-scoped function/evidence nodes, direct
+`CALLS` edges, and a declarations-only `reconstructed.hpp`. Indirect calls are
+retained as instructions but are not promoted to invented graph targets.
+
+On the reference PS4 `02020005` inputs, `rLayout::load(MtStream&)` occupies the
+half-open range `[0x693e60, 0x694ae5)`. The current report contains 747 decoded
+instructions and 58 call instructions (56 direct and two indirect). Warm runs
+reuse the validated report and reproduce the graph, instruction, and header
+files byte-for-byte. The manifest remains `partial` when a concrete DWARF field
+type cannot be placed in the structural closure; the unresolved type is kept as
+a logical reference with a diagnostic instead of being silently dropped.
+
+For knowledge export of `ps4-02020005/rLayout`, the producer applies a golden
+root-authority contract before consulting ambiguous symbol-cache candidates. It
+resolves DIE `0x117ec452` directly, validates the recovered layout and nearby
+`MyDTI` evidence, and records both the selection basis and rejected duplicate
+`0x76133` in `manifest.root_authority`. `--exhaustive` is no longer required to
+obtain the approved root for this build/symbol pair; it remains useful for
+auditing unpinned symbols.
 
 #### 2. Header Cache (SHA256 Cache)
 
@@ -250,7 +345,26 @@ Multi-file hierarchy generation uses SHA256-based caching for performance:
 }
 ```
 
-To clear cache: `rm .cache/*.json`
+Do not clear caches as routine troubleshooting. Header hashes, symbol mappings,
+and the dump SQLite index are deterministic local build products intended to
+survive across runs. Remove only a specifically invalid artifact after its
+source/schema mismatch or corruption has been identified.
+
+### Immutable Inputs and Durable Derived Artifacts
+
+DDON is a dead game, so the ELF and decompilation dump for build `02020005` are
+immutable inputs. The common workflow is a warm fresh-process rerun, not a cold
+rebuild. It is acceptable for the initial bootstrap to use substantial CPU,
+memory, and disk on the reference 64 GB / Ryzen 7 7800X3D workstation when that
+work produces a validated durable artifact.
+
+Retain the compressed-dump SQLite sidecar, OS-local source-identity catalog,
+symbol cache, header cache, and deterministic exports. They remain untracked
+and rebuildable, but are not operationally temporary. Reuse is bound to source
+SHA-256 plus producer, schema, and output-affecting configuration identities;
+publication is atomic. Warm identity checks use size plus first/last 64 KiB
+digests under the immutable-input contract, while `verify-source` recomputes the
+full SHA-256 on demand.
 
 
 ## Architecture
@@ -364,8 +478,19 @@ make type-check        # Run mypy type checking
 **Cleanup:**
 
 ```bash
-make clean             # Remove test artifacts and cache
-make clean-all         # Remove all generated files
+make clean             # Remove transient test artifacts; preserve durable caches
+make clean-all         # Remove repository build/output artifacts (not normal rerun cleanup)
+```
+
+**Agent tracing:**
+
+```bash
+make langfuse-config   # Validate the Compose configuration
+make langfuse-up       # Run docker compose up -d
+make langfuse-status   # Show service health and container status
+make langfuse-logs     # Show recent service logs
+make langfuse-stop     # Stop containers without deleting trace data
+make langfuse-down     # Remove containers and network while preserving volumes
 ```
 
 **Run:**
@@ -401,8 +526,8 @@ uv run pytest --cov=src            # with coverage
 
 # Quality
 uv run mypy src/                   # type checking
-uv run ruff check src/             # linting
-uv run ruff format src/            # formatting
+uvx ruff check src/         # linting
+uvx ruff format src/        # formatting
 ```
 
 ### Conventions
@@ -418,6 +543,8 @@ Follow conventions in .github/copilot-instructions.md:
 
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md) - System design
 - [TESTING.md](docs/TESTING.md) - Testing guide
+- [SONARQUBE.md](docs/SONARQUBE.md) - Local SonarQube C/C++ analysis with MSVC
+- [LANGFUSE_TRACING.md](docs/LANGFUSE_TRACING.md) - Local Langfuse and agent tracing setup
 
 ## Performance
 
@@ -430,7 +557,7 @@ Follow conventions in .github/copilot-instructions.md:
 | **Batch processing** | 4-5 symbols/min | 289 symbols in ~60 minutes |
 | **Cache hit rate** | 85%+ | Typedef resolution |
 | **Output size** | 130-170 KB | Complete headers with all dependencies |
-| **Test suite** | 0.24s | 196 unit tests |
+| **Test suite** | ~9s | 408 non-performance tests; 394 unit tests |
 
 ### Multi-File Generation Performance (MtObject Hierarchy - PS4)
 
@@ -491,3 +618,47 @@ Forward declarations:    0 (all fully resolved)
 ## License
 
 GPLv3 - See LICENSE file.
+
+## Maintainability and regression gates
+
+The refactored runtime keeps the public generator façades while composing
+domain services through typed ports. `main.py` is a compatibility wrapper;
+`ddon-dwarf-reconstructor` is the canonical entrypoint. The domain owns parsing,
+definition selection, type/declarator models, hierarchy planning, and rendering
+policies. Infrastructure owns pyelftools/SQLite/zstd/process adapters, and the
+composition root injects those adapters.
+
+All non-generated Python under `src/` and `tests/` is checked for modules no
+larger than 400 lines, classes no larger than 250 lines, functions/methods no
+larger than 75 lines, and McCabe complexity no greater than 10:
+
+```powershell
+uvx ruff check --no-fix src tests
+uvx ruff format --check src tests
+uv run mypy src
+python scripts/quality/check_structure.py
+python scripts/quality/check_boundaries.py
+uv run prospector --profile .prospector.yml --tool pylint --tool pyflakes --tool mccabe src
+```
+
+The required test tiers are:
+
+```powershell
+uv run pytest -m unit -o addopts='-q --strict-markers'
+uv run pytest -m "not performance" --cov=src/ddon_dwarf_reconstructor --cov-branch --cov-report=json
+python scripts/quality/check_coverage.py coverage.json
+```
+
+The coverage gate is 80% total and 80% line/70% branch for parsing,
+generation, orchestration, and artifact groups. Header regression manifests
+record source identity, producer, configuration, cache state, file sizes, and
+SHA-256 digests. The fixture baseline and real PS4 warm baseline are kept in
+the external acceptance directory; generated headers, ELF files, dumps, and
+caches are never committed. Use `scripts/regression/output_manifest.py` to
+create or compare them.
+
+For the documented real PS4 input, preserve the compressed dump's SQLite
+sidecar between fresh processes. Use `ddon-dwarf-artifacts inspect` before
+repair/rebuild and `verify-source` for an explicit full SHA-256 audit. A warm
+`rLayout` run is the normal regression tier; the explicit cold sidecar rebuild
+was also verified in 295.6 seconds.

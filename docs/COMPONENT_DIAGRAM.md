@@ -152,7 +152,7 @@ classDiagram
         -_normalize_path(path) str
     }
 
-    %% Core Layer
+    %% Parsing Domain
     class LazyTypeResolver {
         -DWARFInfo dwarf_info
         -LazyDwarfIndexService dwarf_index
@@ -276,7 +276,7 @@ classDiagram
     note for ClassParser "Domain Layer\nParses DWARF DIEs into ClassInfo"
     note for HeaderGenerator "Domain Layer\nGenerates C++ headers for single and multi-file modes"
     note for HierarchyBuilder "Domain Layer\nBuilds inheritance chains and resolves dependencies recursively"
-    note for LazyTypeResolver "Core Layer\nOn-demand type resolution with caching"
+    note for LazyTypeResolver "Parsing Domain\nOn-demand type resolution with caching"
     note for LazyDwarfIndexService "Core Layer\nEfficient DIE offset lookup (O(1) after index)"
 ```
 
@@ -301,9 +301,9 @@ classDiagram
 - **DependencyExtractor**: Offset-based dependency extraction without string parsing
 - **FileRegistry**: Organizes classes by original source files using DW_AT_decl_file
 
-### Core Layer
-- **LazyTypeResolver**: On-demand type resolution with LRU caching, typedef collection
-- **LazyDwarfIndexService**: O(1) DIE offset lookup with lazy index building, persistent caching
+### Parsing and Index Services
+- **LazyTypeResolver**: Parsing-domain type resolution with LRU caching and typedef collection
+- **LazyDwarfIndexService**: O(1) DIE offset lookup with lazy index building and persistent caching
 
 ### Infrastructure Layer
 - **PersistentSymbolCache**: Disk-based symbol caching with LRU memory cache
@@ -316,3 +316,23 @@ classDiagram
 - [ARCHITECTURE.md](ARCHITECTURE.md) - Detailed architecture documentation
 - [GENERATION_FLOWS.md](GENERATION_FLOWS.md) - Generation workflow diagrams
 - [README.md](../README.md) - Project overview and usage
+
+## Hexagonal composition
+
+The diagram's domain services communicate through narrow ports. The runtime
+composition is:
+
+```mermaid
+flowchart LR
+    CLI["main.py / artifact_cli.py"] --> APP["DwarfGenerator\nGenerationRequest -> HeaderBundle"]
+    APP --> PORTS["ClassParserPort\nDwarfIndexPort\nDumpLookupPort\nDisassemblyProducerPort"]
+    PORTS --> DOMAIN["Domain parsing, hierarchy,\nselection, and rendering"]
+    ROOT["infrastructure.composition\ncomposition root"] --> ADAPTERS["pyelftools / SQLite / zstd / Orbis\nadapters"]
+    ADAPTERS --> PORTS
+    DOMAIN --> MODELS["ClassInfo / TypeDeclarator /\nevidence models"]
+```
+
+Only the composition root constructs concrete adapters. This keeps source
+identity, candidate scoring, method evidence, type classification, and header
+rendering testable without process, filesystem, SQLite, zstd, or proprietary
+SDK dependencies.

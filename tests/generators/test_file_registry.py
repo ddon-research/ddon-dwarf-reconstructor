@@ -83,7 +83,7 @@ class TestFileRegistry:
         self.registry.register_class("UnknownClass2", 0x2000, None)
 
         classes_by_file = self.registry.get_classes_by_file()
-        
+
         assert "known.h" in classes_by_file
         assert "UncategorizedDefinitions" in classes_by_file
         assert len(classes_by_file["UncategorizedDefinitions"]) == 2
@@ -116,14 +116,14 @@ class TestFileRegistry:
     def test_summarize_output(self) -> None:
         """Test the summarize method generates proper output."""
         self.registry._file_lists[0x1000] = ["types.h", "utils.h"]
-        
+
         self.registry.register_class("Type1", 0x1000, 0)
         self.registry.register_class("Type2", 0x1000, 0)
         self.registry.register_class("Util1", 0x1000, 1)
         self.registry.register_class("Unknown1", 0x1000, None)
 
         summary = self.registry.summarize()
-        
+
         assert "File Registry Summary" in summary
         assert "4 classes" in summary
         assert "types.h" in summary
@@ -133,7 +133,7 @@ class TestFileRegistry:
     def test_get_class_file_nonexistent_class(self) -> None:
         """Test getting file for non-existent class."""
         result = self.registry.get_class_file("NonExistentClass")
-        
+
         assert result is None
 
     def test_register_class_caches_file_list(self) -> None:
@@ -198,9 +198,9 @@ class TestFileRegistry:
 
         # Register a mixed hierarchy
         self.registry.register_class("cResource", 0x1000, 0)  # base.h
-        self.registry.register_class("MtObject", 0x1000, 0)   # base.h
+        self.registry.register_class("MtObject", 0x1000, 0)  # base.h
         self.registry.register_class("MtVector4", 0x1000, 1)  # types.h
-        self.registry.register_class("SetInfo", 0x2000, 0)    # derived.h
+        self.registry.register_class("SetInfo", 0x2000, 0)  # derived.h
         self.registry.register_class("SystemType", 0x1000, None)  # uncategorized
         self.registry.register_class("UnknownDep", 0x2000, None)  # uncategorized
 

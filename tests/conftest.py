@@ -7,6 +7,11 @@ from pathlib import Path
 import pytest
 
 from ddon_dwarf_reconstructor.infrastructure.config import Config
+from tests.support.dwarf_builders import (
+    build_mock_compilation_unit,
+    build_mock_die,
+    build_mock_elf_file,
+)
 
 # Add src directory to path for imports
 src_path = Path(__file__).parent.parent / "src"
@@ -92,3 +97,21 @@ def known_symbol(request: pytest.FixtureRequest, sample_symbols: dict[str, str |
     if symbol not in sample_symbols:
         pytest.skip(f"Symbol {symbol} not in sample CSV")
     return symbol
+
+
+@pytest.fixture
+def mock_elf_file():
+    """Return a realistic ELF test double shared by generator tests."""
+    return build_mock_elf_file()
+
+
+@pytest.fixture
+def mock_die():
+    """Return the canonical MtObject DIE test double."""
+    return build_mock_die()
+
+
+@pytest.fixture
+def mock_compilation_unit(mock_die):
+    """Return a compilation unit containing the canonical MtObject DIE."""
+    return build_mock_compilation_unit(mock_die)

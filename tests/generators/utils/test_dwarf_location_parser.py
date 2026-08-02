@@ -124,14 +124,14 @@ class TestParseLocationOffsetRealWorldData:
         All members use [35, offset] format (DW_OP_plus_uconst).
         """
         members = [
-            ([35, 0], 0),      # _vptr$
-            ([35, 4], 4),      # mName
-            ([35, 8], 8),      # mpNext
-            ([35, 12], 12),    # mpChild
-            ([35, 16], 16),    # mpParent
-            ([35, 20], 20),    # mpLink
-            ([35, 24], 24),    # mSize
-            ([35, 28], 28),    # mID
+            ([35, 0], 0),  # _vptr$
+            ([35, 4], 4),  # mName
+            ([35, 8], 8),  # mpNext
+            ([35, 12], 12),  # mpChild
+            ([35, 16], 16),  # mpParent
+            ([35, 20], 20),  # mpLink
+            ([35, 24], 24),  # mSize
+            ([35, 28], 28),  # mID
         ]
 
         for expr, expected_offset in members:
@@ -157,10 +157,10 @@ class TestParseLocationOffsetRealWorldData:
         """Test that code handles both PS3 and PS4 formats in same call."""
         # Simulate processing members from both PS3 and PS4 files
         results = [
-            parse_location_offset(4),          # PS4 integer
-            parse_location_offset([35, 4]),    # PS3 location expression
-            parse_location_offset(8),          # PS4 integer
-            parse_location_offset([35, 8]),    # PS3 location expression
+            parse_location_offset(4),  # PS4 integer
+            parse_location_offset([35, 4]),  # PS3 location expression
+            parse_location_offset(8),  # PS4 integer
+            parse_location_offset([35, 8]),  # PS3 location expression
         ]
 
         assert results == [4, 4, 8, 8]
@@ -182,9 +182,7 @@ class TestParseLocationOffsetIntegration:
             "type_field": [35, 16],
         }
 
-        ps3_offsets = {
-            name: parse_location_offset(attr) for name, attr in ps3_members.items()
-        }
+        ps3_offsets = {name: parse_location_offset(attr) for name, attr in ps3_members.items()}
 
         assert ps3_offsets == {
             "_vptr$": 0,
@@ -201,9 +199,7 @@ class TestParseLocationOffsetIntegration:
             "field4": 24,
         }
 
-        ps4_offsets = {
-            name: parse_location_offset(attr) for name, attr in ps4_members.items()
-        }
+        ps4_offsets = {name: parse_location_offset(attr) for name, attr in ps4_members.items()}
 
         assert ps4_offsets == {
             "field1": 0,
@@ -216,13 +212,13 @@ class TestParseLocationOffsetIntegration:
     def test_offset_extraction_with_filter(self) -> None:
         """Test extracting offsets and filtering out None values."""
         mixed_attributes = [
-            4,              # Valid PS4
-            [35, 8],        # Valid PS3
-            None,           # Invalid - None
-            [99, 12],       # Invalid - unknown opcode
-            16,             # Valid PS4
-            [],             # Invalid - empty
-            [35, 20],       # Valid PS3
+            4,  # Valid PS4
+            [35, 8],  # Valid PS3
+            None,  # Invalid - None
+            [99, 12],  # Invalid - unknown opcode
+            16,  # Valid PS4
+            [],  # Invalid - empty
+            [35, 20],  # Valid PS3
         ]
 
         offsets = [

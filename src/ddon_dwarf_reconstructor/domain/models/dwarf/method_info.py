@@ -19,6 +19,16 @@ class MethodInfo:
     vtable_index: int | None = None
     is_constructor: bool = False
     is_destructor: bool = False
+    access: str = "public"
+    is_static: bool = False
+    is_const: bool = False
+    is_volatile: bool = False
+    ref_qualifier: str | None = None
+    is_noexcept: bool = False
+    is_pure_virtual: bool = False
+    is_deleted: bool = False
+    is_defaulted: bool = False
+    is_declaration: bool = False
 
     def __post_init__(self) -> None:
         if self.parameters is None:

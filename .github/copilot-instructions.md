@@ -5,14 +5,22 @@ applyTo: '**/*'
 
 # Project Development Guidelines
 
+> `AGENTS.md` is the canonical instruction source for Codex and project-wide performance, testing,
+> and safety conventions. This file remains a GitHub Copilot adapter.
+
 ## Project Context
 
 **Purpose:** Reconstructs C++ headers from DWARF debug info in ELF files for Dragon's Dogma Online modding.
 
 **Architecture:** Domain-driven design with application/domain/infrastructure separation.
 
+**Artifact lifecycle:** Inputs for a named DDON build are immutable. Preserve
+validated SQLite indexes and caches locally across runs; they are untracked and
+rebuildable, not routine cleanup targets. Follow `AGENTS.md` for source binding,
+atomic publication, and explicit targeted rebuild/purge rules.
+
 **Tech Stack:**
-- Python 3.13+
+- Python 3.14+
 - uv for dependency management
 - pytest for testing
 - pyelftools for DWARF parsing
@@ -53,13 +61,13 @@ build/main.exe --generate MtObject resources/DDOORBIS.elf
 
 ### Searching Full DWARF Dump
 
-Full DWARF dump (30GB+ uncompressed, zstd-compressed): `D:\research\DDON-binaries\IDA9.2\PS4_DDON_02020005_2016_12_21\DDOORBIS.elf.llvmdwarfdump.zst`
+Full DWARF dump (30GB+ uncompressed, zstd-compressed): `D:\research\DDON-binaries\IDA9.3\PS4_DDON_02020005_2016_12_21\DDOORBIS.elf.llvmdwarfdump.zst`
 
 **Search via Git Bash + ripgrep (rg available in Git Bash PATH):**
 
 ```bash
 # Basic search with context
-&"C:\Program Files\Git\bin\bash.exe" -c 'rg -z "PATTERN" "/d/research/DDON-binaries/IDA9.2/PS4_DDON_02020005_2016_12_21/DDOORBIS.elf.llvmdwarfdump.zst" -C 5 | head -100'
+&"C:\Program Files\Git\bin\bash.exe" -c 'rg -z "PATTERN" "/d/research/DDON-binaries/IDA9.3/PS4_DDON_02020005_2016_12_21/DDOORBIS.elf.llvmdwarfdump.zst" -C 5 | head -100'
 ```
 
 **Key patterns:**
@@ -69,6 +77,15 @@ Full DWARF dump (30GB+ uncompressed, zstd-compressed): `D:\research\DDON-binarie
 - Use `/d/...` Unix paths in Git Bash
 - `* (0xOFFSET)`: parent DIE marker in llvm-dwarfdump output
 - Pipe to `head`/`tail` to limit output
+
+**Lookup guidance:**
+- Long-running class resolution usually indicates the matcher is scanning too
+    many later compilation units after an early viable definition already exists.
+- Verify this assumption by checking the text dump first with `rg -z` before
+    widening the algorithm.
+- Reserve exhaustive matching for the explicitly requested root symbol only.
+    Follow-up base-class and dependency lookups should prefer the fast path unless
+    there is concrete evidence that they also require exhaustive comparison.
 
 ### Testing (CRITICAL)
 
@@ -104,10 +121,10 @@ make ci            # Full CI suite (lint + typecheck + test)
 
 ```bash
 # Linting
-uv run ruff check src/
+uvx ruff check src/
 
 # Formatting
-uv run ruff format src/
+uvx ruff format src/
 
 # Type checking
 uv run mypy src/
@@ -121,7 +138,7 @@ make ci
 ### Type Safety (REQUIRED)
 
 - **All functions** must have type hints for parameters and return values
-- Use | None instead of Optional (Python 3.13+)
+- Use | None instead of Optional (Python 3.14+)
 - Use NoReturn for functions that always exit
 - Full mypy compliance required
 
@@ -451,14 +468,14 @@ python -m pytest  # Wrong - use uv run
 ### When Making Changes
 
 - Run tests after each change: uv run pytest -m unit
-- Check for errors: uv run ruff check src/
+- Check for errors: uvx ruff check src/
 - Verify type hints: uv run mypy src/
 - Update docs if public API changed
 
 ## CI/CD Integration
 
 **GitHub Actions:**
-- Unit tests run on every push/PR (Python 3.13, ubuntu-latest)
+- Unit tests run on every push/PR (Python 3.14, ubuntu-latest)
 - Coverage minimum: 30% (enforced)
 - Quality gates: ruff, mypy, pytest
 

@@ -16,3 +16,7 @@ class MemberInfo:
     is_static: bool = False
     is_const: bool = False
     const_value: int | None = None
+    access: str = "public"
+    is_volatile: bool = False
+    bit_size: int | None = None
+    bit_offset: int | None = None

@@ -58,7 +58,7 @@ class PlatformDetector:
         """
         try:
             with open(elf_path, "rb") as f:
-                elf = ELFFile(f)  # type: ignore[no-untyped-call]
+                elf = ELFFile(f)
 
                 # Get machine type and endianness
                 # pyelftools returns machine as a string like "EM_X86_64"
@@ -86,8 +86,7 @@ class PlatformDetector:
                     return ELFPlatform.PS4
 
                 logger.warning(
-                    f"Unknown platform: machine={machine_str} "
-                    f"(little_endian={is_little_endian})"
+                    f"Unknown platform: machine={machine_str} (little_endian={is_little_endian})"
                 )
                 return ELFPlatform.UNKNOWN
 
@@ -106,10 +105,10 @@ class PlatformDetector:
             DWARF version (2, 3, 4, 5) or None if not found
         """
         try:
-            if not elf.has_dwarf_info():  # type: ignore
+            if not elf.has_dwarf_info():
                 return None
 
-            dwarf_info = elf.get_dwarf_info()  # type: ignore
+            dwarf_info = elf.get_dwarf_info()
             for cu in dwarf_info.iter_CUs():
                 # DWARF version is in the compilation unit header
                 version: int = cu.header["version"]

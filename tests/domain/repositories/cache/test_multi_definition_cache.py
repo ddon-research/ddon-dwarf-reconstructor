@@ -47,7 +47,7 @@ def test_update_existing_definition_with_higher_score(tmp_path: Path):
 
     # Update with higher score (same CU and DIE)
     cache.add_symbol_cu_mapping("MtObject", 3229, 34029, score=10000, complete=True)
-    
+
     # Should have only one definition with updated score
     definitions = cache.get_all_definitions("MtObject")
     assert len(definitions) == 1
@@ -62,7 +62,7 @@ def test_prefer_complete_definition_over_incomplete(tmp_path: Path):
 
     # Add incomplete definition with high score
     cache.add_symbol_cu_mapping("cSetInfo", 1000, 2000, score=5000, complete=False)
-    
+
     # Add complete definition with lower score
     cache.add_symbol_cu_mapping("cSetInfo", 3229, 4000, score=100, complete=True)
 
@@ -74,8 +74,8 @@ def test_prefer_complete_definition_over_incomplete(tmp_path: Path):
 
 
 @pytest.mark.unit
-def test_cache_migration_from_v2_to_v3(tmp_path: Path):
-    """Test migration from v2.0 (single definition) to v3.0 (multi-definition)."""
+def test_cache_migration_from_v2_to_v4(tmp_path: Path):
+    """Test migration from v2.0 into source-aware multi-definition format."""
     cache_file = tmp_path / "migration_cache.json"
 
     # Create v2.0 cache file
@@ -106,8 +106,7 @@ def test_cache_migration_from_v2_to_v3(tmp_path: Path):
     # Load cache - should auto-migrate
     cache = PersistentSymbolCache(cache_file)
 
-    # Verify migrated to v3.0
-    assert cache.data["version"] == "3.0"
+    assert cache.data["version"] == "4.0"
 
     # Verify symbol_definitions created from v2 data
     assert "symbol_definitions" in cache.data
@@ -143,7 +142,7 @@ def test_validate_and_repair_missing_fields(tmp_path: Path):
 
     # Migration should have added missing fields
     assert "symbol_definitions" in cache.data
-    assert cache.data["version"] == "3.0"
+    assert cache.data["version"] == "4.0"
 
 
 @pytest.mark.unit
@@ -184,15 +183,15 @@ def test_get_statistics_includes_multi_def_metrics(tmp_path: Path):
     assert stats["symbols"] == 2  # 2 unique symbols
     assert stats["multi_definition_symbols"] == 1  # Only rLayout has multiple defs
     assert stats["total_definitions"] == 3  # 3 total definitions
-    assert stats["version"] == "3.0"
+    assert stats["version"] == "4.0"
 
 
 @pytest.mark.unit
-def test_empty_cache_initializes_with_v3_structure(tmp_path: Path):
-    """Test that new empty cache uses v3.0 format."""
+def test_empty_cache_initializes_with_v4_structure(tmp_path: Path):
+    """Test that new empty cache uses source-aware v4.0 format."""
     cache_file = tmp_path / "new_cache.json"
     cache = PersistentSymbolCache(cache_file)
 
-    assert cache.data["version"] == "3.0"
+    assert cache.data["version"] == "4.0"
     assert "symbol_definitions" in cache.data
     assert isinstance(cache.data["symbol_definitions"], dict)

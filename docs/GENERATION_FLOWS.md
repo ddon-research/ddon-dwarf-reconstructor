@@ -231,3 +231,31 @@ Reduces complexity from O(2n) to O(n).
 - [COMPONENT_DIAGRAM.md](COMPONENT_DIAGRAM.md) - Class structure diagram
 - [TESTING.md](TESTING.md) - Testing strategy
 - [README.md](../README.md) - Usage examples
+
+## Typed workflow and regression sequence
+
+Both modes now enter through `GenerationRequest` and return a deterministic
+`HeaderBundle`. The shared workflow is:
+
+```mermaid
+flowchart TD
+    Request["GenerationRequest"] --> Lookup["candidate lookup\ncache -> dump -> bounded fallback"]
+    Lookup --> Parse["ClassParser + TypeDeclarator models"]
+    Parse --> Closure["hierarchy/dependency closure\nstructural, deterministic order"]
+    Closure --> Render["HeaderGenerator façade\nfocused renderers"]
+    Render --> Bundle["HeaderBundle"]
+    Bundle --> Output["atomic/output adapter"]
+    Bundle --> Manifest["sorted SHA-256 manifest"]
+```
+
+After source changes, run the unit/static tier, then the non-performance
+coverage tier and `check_coverage.py`. The fixture acceptance run compares the
+five retained legacy single-file headers byte-for-byte. The compatibility
+`python main.py` and canonical console entrypoints are compared with the same
+manifest. The explicit real PS4 run uses the external ELF, compressed dump, and
+validated SQLite sidecar; fresh-process warm reruns must reproduce the same
+header manifest.
+
+The sidecar is built by one bounded-memory zstd pass and published atomically.
+Its cold rebuild is opt-in and resource-heavy; normal generation must reuse the
+validated sidecar and source-bound symbol cache.

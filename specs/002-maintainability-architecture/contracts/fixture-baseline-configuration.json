@@ -1,0 +1,15 @@
+{
+  "generation_mode": "full-hierarchy-single-file",
+  "single_file": true,
+  "search_mode": "exhaustive",
+  "parameter_name_resolution": false,
+  "symbols": [
+    "cSetInfoOmBreakTarget",
+    "rLayout",
+    "rTexture",
+    "rTextureMemory",
+    "rTutorialDialogMessage"
+  ],
+  "dwarf_dump": "external-explicit-real-ps4-dump",
+  "dwarf_index": "external-acceptance-sidecar"
+}

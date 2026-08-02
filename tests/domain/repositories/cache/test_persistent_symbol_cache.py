@@ -141,8 +141,8 @@ def test_string_keys_consistency(tmp_path: Path):
 
 
 @pytest.mark.unit
-def test_corrupted_cache_raises_error(tmp_path: Path):
-    """Test that loading a corrupted cache file with duplicate keys raises an error."""
+def test_corrupted_cache_is_auto_repaired(tmp_path: Path):
+    """Test that loading a corrupted cache file repairs inconsistent CU mappings."""
     cache_file = tmp_path / "corrupted_cache.json"
 
     # Create a corrupted cache file with duplicate keys (simulating the bug)
@@ -182,7 +182,78 @@ def test_corrupted_cache_raises_error(tmp_path: Path):
     with open(cache_file, "w", encoding="utf-8") as f:
         json.dump(corrupted_data, f, indent=2)
 
-    # Load cache - should raise ValueError with helpful recovery message
-    with pytest.raises(ValueError, match="Cache file has inconsistent mappings"):
-        PersistentSymbolCache(cache_file)
+    cache = PersistentSymbolCache(cache_file)
 
+    assert set(cache.get_cu_symbols(3229)) == {"MtObject", "u32", "MtPropertyList"}
+    assert set(cache.get_cu_symbols(0)) == {"size_t", "bool"}
+
+
+@pytest.mark.unit
+def test_source_fingerprint_mismatch_invalidates_cache(tmp_path: Path) -> None:
+    """Offsets from one ELF cannot be reused for a different fingerprint."""
+    cache_file = tmp_path / "fingerprinted.json"
+    first = PersistentSymbolCache(cache_file, {"size": 10, "boundary_sha256": "a" * 64})
+    first.add_symbol("rLayout", 0x1234)
+    first.save()
+
+    second = PersistentSymbolCache(cache_file, {"size": 11, "boundary_sha256": "b" * 64})
+
+    assert second.get_symbol_offset("rLayout") is None
+    assert second.data["source_fingerprint"] == {
+        "size": 11,
+        "boundary_sha256": "b" * 64,
+    }
+
+
+@pytest.mark.unit
+def test_definition_only_change_is_persisted(tmp_path: Path) -> None:
+    """Completeness changes trigger publication even when primary offsets do not change."""
+    cache_file = tmp_path / "definitions.json"
+    cache = PersistentSymbolCache(cache_file)
+    cache.add_symbol_cu_mapping("rLayout", 0x100, 0x200, score=100, complete=True)
+    cache.save()
+
+    cache.add_symbol_cu_mapping("rLayout", 0x100, 0x200, score=200, complete=True)
+    cache.save()
+
+    reloaded = PersistentSymbolCache(cache_file)
+    assert reloaded.get_all_definitions("rLayout")[0]["score"] == 200
+
+
+@pytest.mark.unit
+def test_interrupted_atomic_write_preserves_previous_cache(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failed replacement cannot truncate the last valid cache document."""
+    cache_file = tmp_path / "atomic.json"
+    cache = PersistentSymbolCache(cache_file)
+    cache.add_symbol("first", 1)
+    cache.save()
+    original = cache_file.read_bytes()
+    cache.add_symbol("second", 2)
+
+    def fail_replace(self: Path, target: Path) -> Path:
+        raise OSError("stop")
+
+    monkeypatch.setattr(Path, "replace", fail_replace)
+    cache.save()
+
+    assert cache_file.read_bytes() == original
+    assert not list(tmp_path.glob(".atomic.json.*"))
+
+
+@pytest.mark.unit
+def test_serialized_writers_merge_compatible_updates(tmp_path: Path) -> None:
+    """A writer initialized before another save does not erase the newer symbols."""
+    cache_file = tmp_path / "concurrent.json"
+    first = PersistentSymbolCache(cache_file)
+    second = PersistentSymbolCache(cache_file)
+    first.add_symbol_cu_mapping("first", 1, 10, score=10)
+    second.add_symbol_cu_mapping("second", 2, 20, score=20)
+
+    first.save()
+    second.save()
+
+    reloaded = PersistentSymbolCache(cache_file)
+    assert reloaded.get_symbol_offset("first") == 10
+    assert reloaded.get_symbol_offset("second") == 20

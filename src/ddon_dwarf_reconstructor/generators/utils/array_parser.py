@@ -1,103 +1,23 @@
-#!/usr/bin/env python3
+"""Compatibility wrapper for the domain array parser."""
 
-"""Array type parsing utilities for DWARF.
-
-Handles parsing of DW_TAG_array_type with dimension calculation from subrange types.
-"""
+from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from elftools.dwarf.die import DIE
+from ...domain.services.parsing.array_parser import parse_array_type as _parse_array_type
 
 if TYPE_CHECKING:
-    from ...domain.services.parsing import TypeResolver
+    from elftools.dwarf.die import DIE
 
-from ...infrastructure.logging import get_logger
-
-logger = get_logger(__name__)
+    from ...domain.services.parsing.type_resolver import LazyTypeResolver
 
 
 def parse_array_type(
-    array_die: DIE, type_resolver: "TypeResolver"
+    array_die: DIE, type_resolver: LazyTypeResolver
 ) -> dict[str, str | list[int] | int] | None:
-    """Parse array type with size calculation from DW_TAG_subrange_type children.
+    """Return the legacy dictionary representation for callers being migrated."""
+    result = _parse_array_type(array_die, type_resolver)
+    return result.as_dict() if result is not None else None
 
-    Args:
-        array_die: DIE of type DW_TAG_array_type
-        type_resolver: TypeResolver instance for resolving element types
 
-    Returns:
-        Dictionary with keys: name, element_type, dimensions, total_elements, die_offset
-        Returns None if parsing fails
-    """
-    logger.debug(f"Parsing array type at DIE offset 0x{array_die.offset:x}")
-
-    # Get the element type by following DW_AT_type attribute
-    if "DW_AT_type" not in array_die.attributes:
-        logger.debug("Array has no DW_AT_type attribute")
-        return None
-
-    try:
-        element_die = array_die.get_DIE_from_attribute("DW_AT_type")  # type: ignore
-    except Exception as e:
-        logger.debug(f"Failed to get element DIE: {e}")
-        return None
-
-    try:
-        element_type = type_resolver.resolve_type_name(element_die)
-    except Exception as e:
-        logger.debug(f"Failed to resolve element type: {e}")
-        return None
-
-    logger.debug(f"Array element type: {element_type}")
-
-    # Calculate total array size from subrange children
-    dimensions = []
-    total_elements = 1
-
-    for child in array_die.iter_children():  # type: ignore
-        if child.tag == "DW_TAG_subrange_type":
-            logger.debug(f"Found subrange at offset 0x{child.offset:x}")
-
-            # Get bounds
-            upper_bound_attr = child.attributes.get("DW_AT_upper_bound")
-            lower_bound_attr = child.attributes.get("DW_AT_lower_bound")
-            count_attr = child.attributes.get("DW_AT_count")
-
-            if count_attr:
-                # Direct count attribute
-                dimension_size = count_attr.value
-                logger.debug(f"Subrange has count: {dimension_size}")
-            elif upper_bound_attr:
-                # Calculate from bounds: (upper - lower) + 1
-                upper_bound = upper_bound_attr.value
-                lower_bound = lower_bound_attr.value if lower_bound_attr else 0
-                dimension_size = (upper_bound - lower_bound) + 1
-                logger.debug(
-                    f"Subrange bounds: {lower_bound} to {upper_bound}, size: {dimension_size}",
-                )
-            else:
-                # Unknown size
-                dimension_size = 0
-                logger.debug("Subrange has unknown size")
-
-            dimensions.append(dimension_size)
-            if dimension_size > 0:
-                total_elements *= dimension_size
-
-    # Generate array name/type description
-    if dimensions:
-        dimension_str = "][".join(str(d) if d > 0 else "" for d in dimensions)
-        array_name = f"{element_type}[{dimension_str}]"
-    else:
-        array_name = f"{element_type}[]"
-
-    logger.debug(f"Parsed array: {array_name} (total elements: {total_elements})")
-
-    return {
-        "name": array_name,
-        "element_type": element_type,
-        "dimensions": dimensions,
-        "total_elements": total_elements,
-        "die_offset": array_die.offset,
-    }
+__all__ = ["parse_array_type"]

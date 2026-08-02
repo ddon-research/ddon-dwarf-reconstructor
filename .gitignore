@@ -51,19 +51,28 @@ htmlcov/
 .tox/
 test-results.xml
 coverage.xml
+coverage.json
+coverage-*.json
 .coverage.*
 
 # UV
 .uv/
-uv.lock
 
 # Output
 output/
 *.out
 logs/
+*.sqlite3
+*.sqlite3-*
+*.sqlite3.*
+*.sqlite3.lock
+main.build/
+main.dist/
+main.onefile-build/
 
 # Environment files
 .env
+ops/langfuse/.env
 
 # ELF files (large binary files)
 *.elf

@@ -30,7 +30,7 @@ class FileRegistry:
         _uncategorized: Set of classes with no file info
     """
 
-    def __init__(self, dwarf_info: "DWARFInfo"):
+    def __init__(self, dwarf_info: DWARFInfo):
         """Initialize file registry with DWARF information.
 
         Args:
@@ -147,21 +147,19 @@ class FileRegistry:
         """
         try:
             # Find the CU containing this offset
-            for cu in self.dwarf_info.iter_CUs():  # type: ignore
+            for cu in self.dwarf_info.iter_CUs():
                 if cu.cu_offset == cu_offset:
                     # Get the line program (stmt_list)
-                    line_program = self.dwarf_info.line_program_for_CU(cu)  # type: ignore
+                    line_program = self.dwarf_info.line_program_for_CU(cu)
                     if line_program:
                         # line_program.header.file_entry is the file list
-                        files = line_program.header.file_entry  # type: ignore
+                        files = line_program.header.file_entry
                         file_paths = []
                         for file_entry in files:
                             # file_entry has name, dir_index, timestamp, size
                             file_name = file_entry.name.decode("utf-8", errors="ignore")
                             file_paths.append(file_name)
-                        logger.debug(
-                            f"Extracted {len(file_paths)} files for CU 0x{cu_offset:x}"
-                        )
+                        logger.debug(f"Extracted {len(file_paths)} files for CU 0x{cu_offset:x}")
                         return file_paths
         except Exception as e:
             logger.debug(f"Failed to extract file list for CU 0x{cu_offset:x}: {e}")

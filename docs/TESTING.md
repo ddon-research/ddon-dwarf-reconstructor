@@ -2,6 +2,12 @@
 
 Professional testing infrastructure with xUnit reporting, code coverage, and CI/CD automation.
 
+Real DDON inputs are immutable and expensive derived artifacts are intentionally
+durable. Tests must distinguish cold construction from fresh-process warm reuse.
+Routine test cleanup must not delete the real dump SQLite sidecar or OS-local
+symbol cache. Tests that exercise invalidation should use isolated fixture
+copies or explicit temporary artifact paths.
+
 ## Quick Start
 
 ```bash
@@ -18,6 +24,14 @@ uv run pytest -m unit --cov-report=html
 # Integration tests
 uv run pytest -m integration
 
+# Opt-in real warm export, including the pinned Orbis producer
+$env:DDON_REAL_PERFORMANCE='1'
+$env:DDON_REAL_ELF='D:\research\DDON-binaries\IDA9.3\PS4_DDON_02020005_2016_12_21\DDOORBIS.elf'
+$env:DDON_REAL_DWARF_DUMP="$env:DDON_REAL_ELF.llvmdwarfdump.zst"
+$env:DDON_REAL_DWARF_INDEX='D:\ddon-dwarf-reconstructor\output\real-dump-index\DDOORBIS.elf.llvmdwarfdump.index.sqlite3'
+$env:DDON_ORBIS_OBJDUMP='D:\SCE\ORBIS SDKs\8.000\host_tools\bin\orbis-objdump.exe'
+uv run pytest tests/performance/test_real_rlayout_export_budget.py -q
+
 # Makefile shortcuts
 make test          # Unit tests only
 make coverage      # HTML coverage report
@@ -28,7 +42,7 @@ make ci            # Full CI suite (lint + typecheck + test)
 
 **Markers:**
 - @pytest.mark.unit - Fast mocked tests (<1s, preferred)
-- @pytest.mark.integration - Real ELF file tests (~3s)
+- @pytest.mark.integration - Integration tests, including opt-in real files
 - @pytest.mark.slow - Long-running tests
 - @pytest.mark.performance - Performance benchmarks
 
@@ -159,6 +173,7 @@ def test_mtpropertylist_full_hierarchy():
 - Real-world header generation
 - Regression testing
 - Batch processing validation
+- Pinned-tool parsing and real instruction-range validation
 
 **Example - Batch Processing:**
 
@@ -221,11 +236,11 @@ uv run pytest -m unit --cov-report=term-missing
 
 ```yaml
 Trigger: Push to main, Pull Requests
-Matrix: Python 3.13, ubuntu-latest
+Matrix: Python 3.14, ubuntu-latest
 Steps:
   1. Checkout code
   2. Setup Python and uv
-  3. Install dependencies (uv sync)
+  3. Install dependencies (`uv sync --extra dev --frozen`)
   4. Run unit tests (pytest -m unit --cov)
   5. Upload coverage to Codecov
   6. Upload test artifacts (30 days)
@@ -233,8 +248,8 @@ Steps:
 ```
 
 **Coverage Requirements:**
-- Minimum: 30% (enforced)
-- Target: 80%+
+- Minimum: 80% total line coverage (enforced)
+- High-risk groups: 80% line and 70% branch coverage (enforced)
 - Scope: src/ddon_dwarf_reconstructor/ only
 
 **2. Code Quality** (.github/workflows/quality.yml)
@@ -242,8 +257,8 @@ Steps:
 ```yaml
 Trigger: Push to main, Pull Requests
 Steps:
-  1. Ruff linter (uv run ruff check)
-  2. Ruff formatter (uv run ruff format --check)
+    1. Ruff linter (uvx ruff check)
+    2. Ruff formatter (uvx ruff format --check)
   3. MyPy type checker (uv run mypy src/)
 ```
 
@@ -285,14 +300,18 @@ make ci
 
 | Test Category | Count | Execution Time | Coverage |
 |---------------|-------|----------------|----------|
-| Unit tests | 92 | <1s | 48% |
-| Integration tests | 2 | ~3s | +40% |
-| Total | 94 | ~4s | 88% |
+| Fast/non-performance suite | 408 passed, 1 deselected | ~9s local | Default local gate |
+| Real warm `rLayout` budget | opt-in | ~3.5s measured | 15s regression budget |
+| Real cold dump-index build | opt-in | 295.6s measured | One-time bootstrap behavior |
 
 **Optimization:**
 - Unit tests use mocks (no file I/O)
-- Integration tests cached with pytest-cache
+- Fresh-process warm tests reuse validated durable artifacts
 - Parallel execution possible with pytest-xdist
+- The 2026-07-26 real acceptance run exported 116 types as 3,350 nodes and
+  3,735 relationships; two fresh processes produced byte-identical files.
+- Use `ddon-dwarf-artifacts verify-source` for an explicit full-hash audit and
+  `inspect` before any targeted repair or rebuild.
 
 ## Troubleshooting
 
@@ -313,13 +332,14 @@ make ci
 3. **Import errors:**
    ```bash
    # Install in editable mode
-   uv sync
+   uv sync --extra dev
    ```
 
 4. **CI failures:**
    ```bash
    # Run exactly what CI runs
-   uv run pytest -m unit --cov --cov-fail-under=30
+   uv run pytest -m "not performance" --cov=src/ddon_dwarf_reconstructor --cov-branch --cov-fail-under=80
+   python scripts/quality/check_coverage.py coverage.json
    ```
 
 **Debugging:**
@@ -355,14 +375,36 @@ uv run pytest -l
 
 **Installation:**
 ```bash
-uv sync  # Installs all dev dependencies
+uv sync --extra dev  # Installs all dev dependencies
 ```
+
+### Real rLayout performance budget
+
+The real-asset regression budget is opt-in because the PS4 ELF is not part of a
+normal checkout:
+
+```powershell
+$env:DDON_REAL_PERFORMANCE='1'
+uv run pytest tests/performance/test_real_rlayout_export_budget.py
+```
+
+The warm dependency-closure budget is 15 seconds. Current local measurements
+are approximately 2.4 seconds after indexed pyelftools reference lookup. The
+real compressed-dump index takes 295.6 seconds to build once and then serves a
+fresh-process class/method lookup pair in about 1.52 ms. Preserve that sidecar
+between runs.
+
+The T059 authority regression deliberately runs real `rLayout` knowledge export
+without `--exhaustive`. On 2026-07-29 it completed in 2.2 seconds, selected DIE
+`0x117ec452`, recorded rejected candidate `0x76133`, and produced graph-file
+hashes identical to the exhaustive authority probe. Unit tests separately
+reject the cached duplicate and verify the manifest authority projection.
 
 ## Quality Gates
 
 **Pre-commit checks:**
 - All unit tests pass
-- Coverage >30%
+- Coverage >=80% with high-risk group thresholds
 - Ruff linting passes
 - MyPy type checking passes
 - Ruff formatting correct
@@ -379,3 +421,39 @@ uv sync  # Installs all dev dependencies
 - [pytest documentation](https://docs.pytest.org/)
 - [pytest-cov documentation](https://pytest-cov.readthedocs.io/)
 - [GitHub Actions workflows](../.github/workflows/)
+
+## Maintainability and regression acceptance
+
+The authoritative local sequence is:
+
+```powershell
+uv run pytest -m unit -o addopts='-q --strict-markers'
+uvx ruff check --no-fix src tests
+uvx ruff format --check src tests
+uv run mypy src
+python scripts/quality/check_structure.py
+python scripts/quality/check_boundaries.py
+uv run pytest -m "not performance" --cov=src/ddon_dwarf_reconstructor --cov-branch --cov-report=json
+python scripts/quality/check_coverage.py coverage.json
+uv run prospector --profile .prospector.yml --tool pylint --tool pyflakes --tool mccabe src
+```
+
+The enforced thresholds are 80% total line coverage, 80% line coverage for
+parsing/generation/orchestration/artifact groups, and 70% branch coverage for
+those groups. High-risk tests explicitly cover incomplete, conflicting,
+duplicate, unavailable, cyclic, and timeout evidence. Hypothesis is used for
+pure declarator/array/type properties; `pytest-regressions` is reserved for
+small deterministic metadata and ordering records, never generated headers.
+
+Output acceptance is separate from coverage. Run
+`scripts/regression/output_manifest.py` against the external fixture and real
+baselines. It compares sorted relative paths, byte counts, and SHA-256 values;
+manifest metadata records source identity, producer, configuration, and cache
+state but is not substituted for byte comparison. Use a fresh output directory
+for every run and preserve durable source-bound caches.
+
+The cold real-dump index rebuild is an explicit bootstrap, not a normal CI
+step. The validated sidecar supports a warm `rLayout` run in roughly 3.5
+seconds and two fresh-process runs were byte-identical. The explicit cold
+rebuild completed in 295.6 seconds, published atomically, and its generated
+header matched the warm manifest.

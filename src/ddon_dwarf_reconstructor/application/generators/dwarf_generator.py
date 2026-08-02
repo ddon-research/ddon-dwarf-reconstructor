@@ -10,29 +10,49 @@ This is the main generator that orchestrates the modular components:
 - PackingAnalyzer: Struct packing analysis
 """
 
+from __future__ import annotations
+
+import os
 from pathlib import Path
 from time import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from elftools.dwarf.compileunit import CompileUnit
 from elftools.dwarf.die import DIE
 
-from ...domain.models.dwarf import ClassInfo
-from ...domain.repositories.cache import HeaderCache
-from ...domain.services.generation import FileRegistry, HeaderGenerator, HierarchyBuilder
-from ...domain.services.parsing import ClassParser
+from ...domain.ports.class_parser import ClassParserPort
+from ...domain.ports.disassembly import DisassemblyProducerFactory
+from ...domain.ports.dump_lookup import DumpLookupFactory
+from ...domain.ports.type_resolution import TypeResolverPort
+from ...domain.services.generation import (
+    HeaderGenerator,
+    HierarchyBuilder,
+    SpecialHeaderRenderer,
+)
 from ...generators.base_generator import BaseGenerator
-from ...generators.utils.packing_analyzer import calculate_packing_info
-from ...infrastructure.logging import get_logger, log_timing
+from ...infrastructure.logging import get_logger
+from ...utils.path_utils import create_header_filename
+from .dwarf_generator_context import DwarfGeneratorContext
+from .dwarf_header_generation import HeaderGenerationMixin
+from .dwarf_knowledge import KnowledgeExportMixin
+from .dwarf_lookup import GeneratorLookupMixin
+from .dwarf_multi_file import MultiFileGenerationMixin
+from .generation_contracts import GenerationRequest, HeaderBundle
 
 if TYPE_CHECKING:
-    from ...core.lazy_type_resolver import LazyTypeResolver
     from ...domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
 
 logger = get_logger(__name__)
 
 
-class DwarfGenerator(BaseGenerator):
+class DwarfGenerator(
+    GeneratorLookupMixin,
+    HeaderGenerationMixin,
+    MultiFileGenerationMixin,
+    KnowledgeExportMixin,
+    BaseGenerator,
+    DwarfGeneratorContext,
+):
     """DWARF-to-C++ header generator using modular architecture.
 
     This refactored implementation delegates responsibilities to specialized modules:
@@ -42,24 +62,70 @@ class DwarfGenerator(BaseGenerator):
     - Hierarchy management by HierarchyBuilder
     """
 
-    def __init__(self, elf_path: Path, exhaustive_search: bool = False, dwarf_dump_path: Path | None = None):
+    def __init__(
+        self,
+        elf_path: Path,
+        exhaustive_search: bool = False,
+        dwarf_dump_path: Path | None = None,
+        dwarf_index_path: Path | None = None,
+        resolve_param_names: bool = False,
+        dump_lookup_factory: DumpLookupFactory | None = None,
+        disassembly_factory: DisassemblyProducerFactory | None = None,
+    ):
         """Initialize generator with ELF file path using lazy loading.
 
         Args:
             elf_path: Path to ELF file containing DWARF information
             exhaustive_search: Enable exhaustive search mode (scan all CUs for best definition)
             dwarf_dump_path: Optional path to compressed llvm-dwarfdump .zst file for fast lookups
+            dwarf_index_path: Optional explicit SQLite sidecar path for the dump index
+            resolve_param_names: Enable method implementation search for parameter names (expensive)
         """
         super().__init__(elf_path)
         self.exhaustive_search = exhaustive_search
-        self.dwarf_dump_path = dwarf_dump_path
-        self.type_resolver: LazyTypeResolver | None = None
-        self.class_parser: ClassParser | None = None
+        self._configured_dwarf_dump_path = dwarf_dump_path
+        self.dwarf_dump_path = self._resolve_dwarf_dump_path()
+        self.dwarf_index_path = dwarf_index_path
+        self.resolve_param_names = resolve_param_names
+        self.dump_lookup_factory = dump_lookup_factory
+        self.disassembly_factory = disassembly_factory
+        self.type_resolver: TypeResolverPort | None = None
+        self.class_parser: ClassParserPort | None = None
         self.header_generator: HeaderGenerator | None = None
         self.lazy_index: LazyDwarfIndexService | None = None
         self.hierarchy_builder: HierarchyBuilder | None = None
 
-    def __enter__(self) -> "DwarfGenerator":
+    def _resolve_dwarf_dump_path(self, explicit_path: Path | None = None) -> Path | None:
+        """Resolve the compressed DWARF dump path using documented precedence.
+
+        Args:
+            explicit_path: Optional path supplied by the caller.
+
+        Returns:
+            The first existing candidate, or ``None`` when no dump is available.
+        """
+        if explicit_path is None:
+            explicit_path = self._configured_dwarf_dump_path
+
+        if explicit_path is not None:
+            return explicit_path
+
+        if not self.exhaustive_search:
+            return None
+
+        environment_path = os.getenv("DDON_DWARF_DUMP_PATH")
+        if environment_path:
+            candidate = Path(environment_path)
+            if candidate.exists():
+                return candidate
+
+        sibling_path = self.elf_path.with_name(f"{self.elf_path.name}.llvmdwarfdump.zst")
+        if sibling_path.exists():
+            return sibling_path
+
+        return None
+
+    def __enter__(self) -> DwarfGenerator:
         """Context manager entry - initializes all modules."""
         super().__enter__()
 
@@ -75,7 +141,10 @@ class DwarfGenerator(BaseGenerator):
         return self
 
     def __exit__(
-        self, exc_type: type | None, exc_val: Exception | None, exc_tb: object | None
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object | None,
     ) -> None:
         """Context manager exit - saves cache and closes resources."""
         # Save cache before parent cleanup
@@ -89,9 +158,9 @@ class DwarfGenerator(BaseGenerator):
 
     def _initialize_components(self) -> None:
         """Initialize components with lazy loading and memory monitoring."""
-        from ...core.lazy_type_resolver import LazyTypeResolver
         from ...domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
         from ...domain.services.parsing import ClassParser
+        from ...domain.services.parsing.type_resolver import LazyTypeResolver
         from ...infrastructure.config import get_cache_file_path, get_config
 
         assert self.dwarf_info is not None, "dwarf_info must be initialized"
@@ -101,7 +170,10 @@ class DwarfGenerator(BaseGenerator):
         # Initialize lazy index
         lazy_start = time()
         self.lazy_index = LazyDwarfIndexService(
-            self.dwarf_info, str(cache_file), die_cache_size=config["DIE_CACHE_SIZE"]
+            self.dwarf_info,
+            str(cache_file),
+            die_cache_size=config["DIE_CACHE_SIZE"],
+            source_file_path=self.elf_path,
         )
         lazy_elapsed = time() - lazy_start
         logger.debug(f"LazyDwarfIndex initialization: {lazy_elapsed:.3f}s")
@@ -114,25 +186,37 @@ class DwarfGenerator(BaseGenerator):
 
         # Initialize class parser with lazy index
         parser_start = time()
-        self.class_parser = ClassParser(
-            self.type_resolver,
-            self.dwarf_info,
-            self.lazy_index,
-            exhaustive_search=self.exhaustive_search,
-            dwarf_dump_path=self.dwarf_dump_path,
+        self.class_parser = cast(
+            ClassParserPort,
+            ClassParser(
+                self.type_resolver,
+                self.dwarf_info,
+                self.lazy_index,
+                exhaustive_search=self.exhaustive_search,
+                dwarf_dump_path=self.dwarf_dump_path,
+                dwarf_index_path=self.dwarf_index_path,
+                resolve_param_names=self.resolve_param_names,
+                dump_parser=(
+                    self.dump_lookup_factory(self.dwarf_dump_path, self.dwarf_index_path)
+                    if self.dump_lookup_factory is not None and self.dwarf_dump_path is not None
+                    else None
+                ),
+            ),
         )
         parser_elapsed = time() - parser_start
         logger.debug(f"ClassParser with lazy loading initialization: {parser_elapsed:.3f}s")
 
         # Initialize header generator with DWARF index
         header_start = time()
-        self.header_generator = HeaderGenerator(self.lazy_index, self.class_parser)
+        parser = self.class_parser
+        assert parser is not None
+        self.header_generator = HeaderGenerator(self.lazy_index, parser)
         header_elapsed = time() - header_start
         logger.debug(f"HeaderGenerator initialization: {header_elapsed:.3f}s")
 
         # Initialize hierarchy builder
         hierarchy_start = time()
-        self.hierarchy_builder = HierarchyBuilder(self.class_parser, self.lazy_index)
+        self.hierarchy_builder = HierarchyBuilder(parser, self.lazy_index)
         hierarchy_elapsed = time() - hierarchy_start
         logger.debug(f"HierarchyBuilder initialization: {hierarchy_elapsed:.3f}s")
 
@@ -148,515 +232,34 @@ class DwarfGenerator(BaseGenerator):
         Returns:
             Generated C++ header as string
         """
-        full_hierarchy = options.get("full_hierarchy", False)
-        no_metadata = options.get("no_metadata", False)
+        request = GenerationRequest(
+            symbol=symbol,
+            full_hierarchy=options.get("full_hierarchy", False),
+            single_file=True,
+            include_metadata=not options.get("no_metadata", False),
+        )
+        return self.generate_bundle(request).only()
 
-        if full_hierarchy:
-            return self.generate_complete_hierarchy_header(symbol, not no_metadata)
+    def generate_bundle(self, request: GenerationRequest) -> HeaderBundle:
+        """Run one typed workflow and adapt its result to a header bundle."""
+        if request.full_hierarchy and not request.single_file:
+            return HeaderBundle(
+                self.generate_multi_file_hierarchy(request.symbol, request.include_metadata)
+            )
+        if request.full_hierarchy:
+            content = self.generate_complete_hierarchy_header(
+                request.symbol, request.include_metadata
+            )
         else:
-            return self.generate_header(symbol, not no_metadata)
-
-    def find_class(self, class_name: str) -> tuple[CompileUnit, DIE] | None:
-        """Find a class/type DIE by name.
-
-        Delegates to ClassParser for the search.
-
-        Args:
-            class_name: Name of the class to find
-
-        Returns:
-            Tuple of (CompileUnit, DIE) if found, None otherwise
-        """
-        assert self.class_parser is not None
-        return self.class_parser.find_class(class_name)
-
-    def is_namespace(self, die: DIE) -> bool:
-        """Check if a DIE represents a namespace.
-
-        Args:
-            die: DIE to check
-
-        Returns:
-            True if DIE is a namespace, False otherwise
-        """
-        return die.tag == "DW_TAG_namespace"
-
-    def parse_class_info(self, cu: CompileUnit, class_die: DIE) -> ClassInfo:
-        """Parse class information from DIE.
-
-        Delegates to ClassParser and adds packing analysis.
-
-        Args:
-            cu: Compilation unit containing the class
-            class_die: DIE representing the class
-
-        Returns:
-            ClassInfo object with complete information including packing
-        """
-        assert self.class_parser is not None
-        class_info = self.class_parser.parse_class_info(cu, class_die)
-
-        # Add packing information
-        class_info.packing_info = calculate_packing_info(class_info)
-
-        return class_info
-
-    @log_timing
-    def generate_header(self, class_name: str, include_metadata: bool = True) -> str:
-        """Generate C++ header for a single class or namespace.
-
-        Args:
-            class_name: Name of the class/namespace to generate header for
-            include_metadata: Whether to include DWARF metadata comments
-
-        Returns:
-            Complete C++ header file as string
-        """
-        logger.info(f"Generating header for: {class_name}")
-
-        # Find class with timing
-        find_start = time()
-        result = self.find_class(class_name)
-        find_elapsed = time() - find_start
-        logger.debug(f"Class search completed in {find_elapsed:.3f}s")
-
-        if not result:
-            logger.warning(f"Class {class_name} not found")
-            return self._generate_not_found_header(class_name)
-
-        cu, class_die = result
-
-        # Check if this is a namespace
-        if self.is_namespace(class_die):
-            logger.info(f"{class_name} is a namespace, generating namespace header")
-            return self._generate_namespace_header(class_name, cu, class_die)
-
-        # Parse class with timing
-        parse_start = time()
-        class_info = self.parse_class_info(cu, class_die)
-        parse_elapsed = time() - parse_start
-        logger.debug(f"Class parsing completed in {parse_elapsed:.3f}s")
-
-        logger.info(
-            f"Parsed {class_name}: {class_info.byte_size} bytes, "
-            f"{len(class_info.members)} members, {len(class_info.methods)} methods",
-        )
-
-        # Collect used typedefs with timing
-        typedef_start = time()
-        assert self.type_resolver is not None
-        typedefs = self.type_resolver.collect_used_typedefs(
-            class_info.members,
-            class_info.methods,
-            class_info.unions,
-            class_info.nested_structs,
-        )
-        typedef_elapsed = time() - typedef_start
-        logger.debug(f"Collected {len(typedefs)} typedefs in {typedef_elapsed:.3f}s")
-
-        # Generate header with timing
-        header_start = time()
-        assert self.header_generator is not None
-        header = self.header_generator.generate_header(
-            class_info,
-            typedefs=typedefs,
-            cu_offset=cu.cu_offset,
-            include_metadata=include_metadata,
-        )
-        header_elapsed = time() - header_start
-        logger.debug(f"Header generation completed in {header_elapsed:.3f}s")
-
-        logger.info(f"Header generated successfully for {class_name}")
-        return header
-
-    def _expand_typedef_search(self, full_hierarchy: bool = True) -> None:
-        """Expand typedef search for hierarchy generation.
-
-        Args:
-            full_hierarchy: Enable full hierarchy mode
-        """
-        typedef_expand_start = time()
-        assert self.type_resolver is not None
-        self.type_resolver.expand_primitive_search(full_hierarchy=full_hierarchy)
-        typedef_expand_elapsed = time() - typedef_expand_start
-        logger.debug(f"Typedef search expansion completed in {typedef_expand_elapsed:.3f}s")
-
-    def _build_hierarchy_with_timing(
-        self, class_name: str, max_depth: int = 10
-    ) -> tuple[dict[str, ClassInfo], list[str]]:
-        """Build full hierarchy with dependencies and timing.
-
-        Args:
-            class_name: Target class name
-            max_depth: Maximum inheritance depth
-
-        Returns:
-            Tuple of (class_infos dict, hierarchy_order list)
-        """
-        hierarchy_start = time()
-        assert self.hierarchy_builder is not None
-        class_infos, hierarchy_order = self.hierarchy_builder.build_full_hierarchy_with_dependencies(
-            class_name, max_depth=max_depth
-        )
-        hierarchy_elapsed = time() - hierarchy_start
-        logger.debug(f"Hierarchy building completed in {hierarchy_elapsed:.3f}s")
-        return class_infos, hierarchy_order
-
-    def _validate_hierarchy(self, class_infos: dict[str, ClassInfo], class_name: str) -> bool:
-        """Validate hierarchy is not empty.
-
-        Args:
-            class_infos: Dictionary of class information
-            class_name: Target class name
-
-        Returns:
-            True if valid, False if empty
-        """
-        if not class_infos:
-            logger.warning(f"No classes found in hierarchy for {class_name}")
-            return False
-        return True
-
-    def _collect_typedefs_and_packing(
-        self, class_infos: dict[str, ClassInfo]
-    ) -> dict[str, str]:
-        """Add packing info and collect all typedefs from classes.
-
-        Args:
-            class_infos: Dictionary of class information
-
-        Returns:
-            Dictionary of collected typedefs
-        """
-        packing_start = time()
-        all_typedefs: dict[str, str] = {}
-
-        for _cls_name, class_info in class_infos.items():
-            if class_info.packing_info is None:
-                class_info.packing_info = calculate_packing_info(class_info)
-
-            # Collect typedefs for this class
-            class_typedefs = self.type_resolver.collect_used_typedefs(
-                class_info.members,
-                class_info.methods,
-                class_info.unions,
-                class_info.nested_structs,
-            )
-            all_typedefs.update(class_typedefs)
-
-        packing_elapsed = time() - packing_start
-        logger.debug(f"Packing analysis and typedef collection completed in {packing_elapsed:.3f}s")
-
-        return all_typedefs
-
-    @log_timing
-    def generate_complete_hierarchy_header(
-        self,
-        class_name: str,
-        include_metadata: bool = True,
-    ) -> str:
-        """Generate C++ header with complete inheritance hierarchy.
-
-        This method generates headers for the entire inheritance chain,
-        from base class to derived class, with proper ordering.
-
-        Args:
-            class_name: Name of the target class
-            include_metadata: Whether to include DWARF metadata comments
-
-        Returns:
-            Complete C++ header file with full hierarchy
-        """
-        logger.info(f"Generating complete hierarchy header for: {class_name}")
-
-        # Step 1: Expand typedef search
-        self._expand_typedef_search(full_hierarchy=True)
-
-        # Step 2: Build full hierarchy with dependencies
-        class_infos, hierarchy_order = self._build_hierarchy_with_timing(class_name, max_depth=10)
-
-        # Step 3: Validate hierarchy
-        if not self._validate_hierarchy(class_infos, class_name):
-            return self._generate_not_found_header(class_name)
-
-        # Step 4: Add packing info and collect typedefs
-        all_typedefs = self._collect_typedefs_and_packing(class_infos)
-
-        logger.info(
-            f"Hierarchy complete: {len(class_infos)} classes in order: "
-            f"{' -> '.join(hierarchy_order)}, collected {len(all_typedefs)} typedefs",
-        )
-
-        # Generate hierarchy header with timing
-        header_gen_start = time()
-        assert self.header_generator is not None
-        header = self.header_generator.generate_single_file_hierarchy_header(
-            class_infos,
-            hierarchy_order,
-            class_name,
-            typedefs=all_typedefs,
-            include_metadata=include_metadata,
-        )
-        header_gen_elapsed = time() - header_gen_start
-        logger.debug(f"Hierarchy header generation completed in {header_gen_elapsed:.3f}s")
-
-        logger.info(f"Hierarchy header generated successfully for {class_name}")
-        return header
-
-    @log_timing
-    def generate_multi_file_hierarchy(
-        self, class_name: str, include_metadata: bool = True
-    ) -> dict[str, str]:
-        """Generate multi-file hierarchy with classes organized by declared file.
-
-        This method generates separate header files for each class based on the
-        source file where it was declared (using DW_AT_decl_file). Enables
-        modular organization of generated headers.
-
-        Args:
-            class_name: Name of the target class
-            include_metadata: Whether to include DWARF metadata comments
-
-        Returns:
-            Dict mapping header filenames to content (e.g., {"MtObject.h": "..."})
-        """
-        logger.info(f"Generating multi-file hierarchy for: {class_name}")
-
-        # Step 1: Expand typedef search
-        self._expand_typedef_search(full_hierarchy=True)
-
-        # Step 2: Build full hierarchy with dependencies
-        class_infos, hierarchy_order = self._build_hierarchy_with_timing(class_name, max_depth=10)
-
-        # Step 3: Validate hierarchy
-        if not self._validate_hierarchy(class_infos, class_name):
-            not_found = self._generate_not_found_header(class_name)
-            return {"UncategorizedDefinitions.h": not_found}
-
-        # Initialize FileRegistry to map classes to their declared files
-        registry_start = time()
-        file_registry = FileRegistry(self.dwarf_info)
-        for _cls_name, class_info in class_infos.items():
-            if class_info.cu_offset is not None:
-                file_registry.register_class(
-                    _cls_name,
-                    class_info.cu_offset,
-                    class_info.declaration_file,
-                )
-        registry_elapsed = time() - registry_start
-        logger.debug(f"FileRegistry built in {registry_elapsed:.3f}s")
-
-        # Organize classes by file
-        classes_by_file = file_registry.get_classes_by_file()
-        uncategorized = file_registry.get_uncategorized_classes()
-
-        logger.info(
-            f"Classes organized by file: {len(classes_by_file)} files, "
-            f"{len(uncategorized)} uncategorized"
-        )
-
-        # Initialize header cache
-        cache = HeaderCache(str(self.elf_path))
-
-        # Step 4: Add packing info and collect typedefs
-        all_typedefs = self._collect_typedefs_and_packing(class_infos)
-
-        # Generate headers for each file
-        output_headers: dict[str, str] = {}
-
-        header_gen_start = time()
-        assert self.header_generator is not None
-
-        # Generate headers organized by file
-        for file_path, file_classes in sorted(classes_by_file.items()):
-            if not file_classes:
-                continue
-
-            # Extract filename for output header name
-            import os
-
-            filename = os.path.basename(file_path) if file_path else "Unknown.h"
-            # Change extension to .h if not already
-            if not filename.endswith(".h"):
-                filename = filename.rsplit(".", 1)[0] + ".h"
-
-            logger.debug(f"Generating header for file: {file_path} -> {filename}")
-
-            # Filter class_infos to only those in this file
-            file_class_infos = {
-                cls: info for cls, info in class_infos.items() if cls in file_classes
-            }
-            file_hierarchy_order = [
-                cls for cls in hierarchy_order if cls in file_classes
-            ]
-
-            # Generate header for this file
-            header = self.header_generator.generate_single_file_hierarchy_header(
-                file_class_infos,
-                file_hierarchy_order,
-                file_classes[0],  # Use first class in file as target
-                typedefs=all_typedefs,
-                include_metadata=include_metadata,
-            )
-
-            output_headers[filename] = header
-            cache.set_header(filename, header, file_path=filename)
-
-        # Handle uncategorized classes in separate file
-        if uncategorized:
-            logger.debug(f"Generating UncategorizedDefinitions.h for {len(uncategorized)} classes")
-
-            uncategorized_class_infos = {
-                cls: info for cls, info in class_infos.items() if cls in uncategorized
-            }
-            uncategorized_order = [
-                cls for cls in hierarchy_order if cls in uncategorized
-            ]
-
-            header = self.header_generator.generate_single_file_hierarchy_header(
-                uncategorized_class_infos,
-                uncategorized_order,
-                "UncategorizedDefinitions",
-                typedefs=all_typedefs,
-                include_metadata=include_metadata,
-            )
-
-            output_headers["UncategorizedDefinitions.h"] = header
-            cache.set_header("UncategorizedDefinitions.h", header, file_path="UncategorizedDefinitions.h")
-
-        header_gen_elapsed = time() - header_gen_start
-        logger.debug(f"Multi-file hierarchy generation completed in {header_gen_elapsed:.3f}s")
-
-        # Save cache
-        cache.save()
-
-        logger.info(
-            f"Multi-file hierarchy generated: {len(output_headers)} headers, "
-            f"{sum(len(h) for h in output_headers.values())} total bytes"
-        )
-
-        return output_headers
-
-    def build_inheritance_hierarchy(self, class_name: str) -> list[str]:
-        """Build inheritance chain for a class.
-
-        Args:
-            class_name: Name of the class
-
-        Returns:
-            List of base class names from root to derived
-        """
-        assert self.hierarchy_builder is not None
-        return self.hierarchy_builder.build_hierarchy_chain(class_name)
+            content = self.generate_header(request.symbol, request.include_metadata)
+        return HeaderBundle({create_header_filename(request.symbol): content})
 
     def _generate_not_found_header(self, class_name: str) -> str:
-        """Generate placeholder header when class is not found.
-
-        Args:
-            class_name: Name of the class that wasn't found
-
-        Returns:
-            Placeholder C++ header
-        """
-        return f"""#ifndef {class_name.upper()}_H
-#define {class_name.upper()}_H
-
-// Class '{class_name}' not found in DWARF information
-// Generated from DWARF debug information using pyelftools
-
-#endif // {class_name.upper()}_H
-"""
+        """Generate a deterministic placeholder for an unresolved symbol."""
+        return SpecialHeaderRenderer.render_not_found(class_name)
 
     def _generate_namespace_header(
         self, namespace_name: str, cu: CompileUnit, namespace_die: DIE
     ) -> str:
-        """Generate header for a namespace with proper C++ namespace syntax.
-
-        Args:
-            namespace_name: Name of the namespace
-            cu: Compilation unit containing the namespace
-            namespace_die: DIE representing the namespace
-
-        Returns:
-            C++ header documenting the namespace with forward declarations
-        """
-        from ...utils.path_utils import sanitize_for_filesystem
-
-        # Collect child classes and their types
-        child_items = []
-        try:
-            for child in namespace_die.iter_children():  # type: ignore
-                if child.tag in ("DW_TAG_class_type", "DW_TAG_structure_type"):
-                    name_attr = child.attributes.get("DW_AT_name")
-                    if name_attr:
-                        if isinstance(name_attr.value, bytes):
-                            class_name = name_attr.value.decode("utf-8")
-                        else:
-                            class_name = str(name_attr.value)
-
-                        # Determine if it's a class or struct
-                        item_type = "class" if child.tag == "DW_TAG_class_type" else "struct"
-                        child_items.append((item_type, class_name))
-        except Exception as e:
-            logger.warning(f"Error iterating namespace children: {e}")
-
-        child_items.sort(key=lambda x: x[1])  # Sort by name
-
-        # Generate header
-        sanitized_name = sanitize_for_filesystem(namespace_name).upper()
-        lines = [
-            f"#ifndef {sanitized_name}_NAMESPACE_H",
-            f"#define {sanitized_name}_NAMESPACE_H",
-            "",
-            "#include <cstdint>",
-            "",
-            "// Generated from DWARF debug information using pyelftools",
-            f"// Target namespace: {namespace_name}",
-            "",
-            "// DWARF Debug Information:",
-            f"// - DIE Offset: 0x{namespace_die.offset:08x}",
-            f"// - Source CU: 0x{cu.cu_offset:08x}",
-        ]
-
-        # Add source file info if available
-        decl_file = namespace_die.attributes.get("DW_AT_decl_file")
-        decl_line = namespace_die.attributes.get("DW_AT_decl_line")
-        if decl_file and decl_line:
-            lines.append(f"// - Declaration: {decl_file.value}")
-            lines.append(f"//   Line: {decl_line.value}")
-
-        lines.extend(
-            [
-                "",
-                f"// Namespace: {namespace_name}",
-                f"// Contains {len(child_items)} type(s)",
-                "",
-            ]
-        )
-
-        # Generate C++ namespace with forward declarations
-        lines.append(f"namespace {namespace_name} {{")
-        lines.append("")
-
-        if child_items:
-            lines.append("// Forward declarations")
-            for item_type, class_name in child_items:
-                lines.append(f"{item_type} {class_name};")
-            lines.append("")
-            lines.append("// To generate full headers for these classes, use:")
-            for _, class_name in child_items:
-                lines.append(f"//   --generate {namespace_name}::{class_name}")
-        else:
-            lines.append("// No classes found in this namespace")
-
-        lines.extend(
-            [
-                "",
-                f"}}  // namespace {namespace_name}",
-                "",
-                f"#endif // {sanitized_name}_NAMESPACE_H",
-                "",
-            ]
-        )
-
-        return "\n".join(lines)
+        """Generate a namespace header through the shared renderer."""
+        return SpecialHeaderRenderer.render_namespace(namespace_name, cu, namespace_die)

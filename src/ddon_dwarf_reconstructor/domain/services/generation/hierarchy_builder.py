@@ -6,18 +6,26 @@ This module handles building complete inheritance chains and collecting
 all classes in an inheritance hierarchy for full hierarchy header generation.
 """
 
-from elftools.dwarf.die import DIE
-
 from ....infrastructure.logging import get_logger, log_timing
 from ...models.dwarf import ClassInfo
-from ..lazy_dwarf_index_service import LazyDwarfIndexService
-from ..parsing.class_parser import ClassParser
+from ...ports.class_parser import ClassParserPort
+from ...ports.dwarf_index import DwarfIndexPort
 from .dependency_extractor import DependencyExtractor
+from .hierarchy_builder_context import HierarchyBuilderContext
+from .hierarchy_chain import HierarchyChainMixin
+from .hierarchy_dependencies import HierarchyDependencyMixin, HierarchyDependencyWorkMixin
+from .hierarchy_dependency_lookup import HierarchyDependencyLookupMixin
 
 logger = get_logger(__name__)
 
 
-class HierarchyBuilder:
+class HierarchyBuilder(
+    HierarchyDependencyMixin,
+    HierarchyDependencyWorkMixin,
+    HierarchyDependencyLookupMixin,
+    HierarchyChainMixin,
+    HierarchyBuilderContext,
+):
     """Builds complete inheritance hierarchies for classes.
 
     This class handles:
@@ -26,7 +34,7 @@ class HierarchyBuilder:
     - Ordering classes from base to derived for proper generation
     """
 
-    def __init__(self, class_parser: ClassParser, dwarf_index: LazyDwarfIndexService):
+    def __init__(self, class_parser: ClassParserPort, dwarf_index: DwarfIndexPort):
         """Initialize hierarchy builder with class parser and DWARF index.
 
         Args:
@@ -39,8 +47,9 @@ class HierarchyBuilder:
 
     @log_timing
     def build_full_hierarchy(
-        self,
+        self: HierarchyBuilderContext,
         class_name: str,
+        root_die_offset: int | None = None,
     ) -> tuple[dict[str, ClassInfo], list[str]]:
         """Build complete inheritance hierarchy for a class.
 
@@ -63,11 +72,22 @@ class HierarchyBuilder:
         current_class = class_name
         visited = set()
 
+        is_root_lookup = True
         while current_class and current_class not in visited:
             visited.add(current_class)
             logger.debug(f"Processing class in hierarchy: {current_class}")
 
-            result = self.class_parser.find_class(current_class)
+            if is_root_lookup and root_die_offset is not None:
+                result = self.class_parser._find_die_and_cu_by_offset(root_die_offset)
+                if result is None:
+                    raise ValueError(
+                        f"Approved root DIE 0x{root_die_offset:x} is unavailable for {class_name}"
+                    )
+            else:
+                result = self.class_parser.find_class(
+                    current_class,
+                    exhaustive_override=None if is_root_lookup else False,
+                )
             if not result:
                 logger.warning(f"Could not find class: {current_class}")
                 break
@@ -82,6 +102,7 @@ class HierarchyBuilder:
             if next_class and next_class != "unknown_type":
                 logger.debug(f"Found base class: {next_class}")
                 current_class = next_class
+                is_root_lookup = False
             else:
                 logger.debug(f"No base class found for: {current_class}")
                 break
@@ -95,9 +116,11 @@ class HierarchyBuilder:
 
     @log_timing
     def build_full_hierarchy_with_dependencies(
-        self,
+        self: HierarchyBuilderContext,
         class_name: str,
         max_depth: int = 10,
+        root_die_offset: int | None = None,
+        include_method_signatures: bool = True,
     ) -> tuple[dict[str, ClassInfo], list[str]]:
         """Build complete hierarchy with full recursive dependency resolution.
 
@@ -119,13 +142,20 @@ class HierarchyBuilder:
         logger.info(f"Building full hierarchy with dependencies for: {class_name}")
 
         # First, build the main inheritance hierarchy
-        hierarchy_classes, hierarchy_order = self.build_full_hierarchy(class_name)
+        hierarchy_classes, hierarchy_order = self.build_full_hierarchy(
+            class_name, root_die_offset=root_die_offset
+        )
 
         # Track all classes (hierarchy + dependencies)
         all_classes: dict[str, ClassInfo] = dict(hierarchy_classes)
 
         # Process dependencies using offset-based extraction
-        self._process_dependencies_offset_based(hierarchy_classes, all_classes, max_depth)
+        self._process_dependencies_offset_based(
+            hierarchy_classes,
+            all_classes,
+            max_depth,
+            include_method_signatures=include_method_signatures,
+        )
 
         logger.info(
             f"Resolved {len(all_classes)} total classes "
@@ -134,270 +164,3 @@ class HierarchyBuilder:
         )
 
         return all_classes, hierarchy_order
-
-    def _process_dependencies_offset_based(
-        self,
-        hierarchy_classes: dict[str, ClassInfo],
-        all_classes: dict[str, ClassInfo],
-        max_depth: int,
-    ) -> None:
-        """Process dependencies using offset-based extraction.
-
-        Args:
-            hierarchy_classes: Initial hierarchy classes
-            all_classes: Dictionary to populate with all resolved classes
-            max_depth: Maximum recursion depth
-        """
-        if not self.dependency_extractor or not self.dwarf_index:
-            return
-
-        import time
-        start_time = time.perf_counter()
-
-        # Track processing
-        to_process_offsets: set[int] = set()
-        processed_offsets: set[int] = set()
-        depth_map: dict[int, int] = {}
-
-        # Extract dependencies from hierarchy classes
-        logger.debug(f"Extracting dependencies from {len(hierarchy_classes)} hierarchy classes")
-        for class_info in hierarchy_classes.values():
-            offsets = self.dependency_extractor.extract_dependencies(class_info)
-            for offset in offsets:
-                if offset not in processed_offsets:
-                    to_process_offsets.add(offset)
-                    depth_map[offset] = 0
-        
-        logger.info(f"Found {len(to_process_offsets)} initial dependencies to resolve")
-
-        # Recursively process dependencies
-        resolved_count = 0
-        cache_hit_count = 0
-        cache_miss_count = 0
-        skipped_count = 0
-        
-        while to_process_offsets:
-            current_offset = to_process_offsets.pop()
-            if current_offset in processed_offsets:
-                continue
-
-            processed_offsets.add(current_offset)
-            current_depth = depth_map.get(current_offset, 0)
-
-            if current_depth >= max_depth:
-                logger.debug(f"Reached max depth for offset 0x{current_offset:x}")
-                skipped_count += 1
-                continue
-
-            # Filter to only resolvable types
-            if not self.dependency_extractor.filter_resolvable_types({current_offset}):
-                skipped_count += 1
-                continue
-
-            # Get type name and resolve
-            type_name = self.dependency_extractor.get_type_name(current_offset)
-            if not type_name:
-                logger.debug(f"No name for offset 0x{current_offset:x}")
-                skipped_count += 1
-                continue
-
-            # Filter out internal DWARF type names
-            internal_types = {
-                "class_type",
-                "structure_type",
-                "union_type",
-                "unknown_type",
-                "subroutine_type",
-            }
-            if type_name in internal_types:
-                logger.debug(f"Skipping internal type: {type_name}")
-                skipped_count += 1
-                continue
-
-            if type_name in all_classes:
-                # Already resolved
-                cache_hit_count += 1
-                class_info = all_classes[type_name]
-            else:
-                # Try to resolve
-                resolve_start = time.perf_counter()
-                class_info = self._try_resolve_type_by_offset(current_offset, type_name)
-                resolve_time = time.perf_counter() - resolve_start
-                
-                if not class_info:
-                    skipped_count += 1
-                    continue
-
-                all_classes[type_name] = class_info
-                resolved_count += 1
-                
-                if resolve_time > 0.1:  # Log slow resolutions
-                    logger.warning(f"Slow resolution: {type_name} took {resolve_time:.2f}s (depth {current_depth})")
-                else:
-                    logger.debug(f"Resolved dependency: {type_name} in {resolve_time:.3f}s (depth {current_depth})")
-                
-                # Check if this was a cache hit or miss inside find_class
-                cache_miss_count += 1
-
-            # Extract and queue new dependencies
-            new_offsets = self.dependency_extractor.extract_dependencies(class_info)
-            resolvable = self.dependency_extractor.filter_resolvable_types(new_offsets)
-
-            for dep_offset in resolvable:
-                if dep_offset not in processed_offsets:
-                    to_process_offsets.add(dep_offset)
-                    depth_map[dep_offset] = current_depth + 1
-            
-            # NEW: Also include base classes of this dependency
-            # This ensures intermediate base classes are not lost
-            base_classes = self._get_base_class_chain(type_name)
-            for base_name in base_classes:
-                if base_name not in all_classes:
-                    logger.debug(f"Adding base class of {type_name}: {base_name}")
-                    base_result = self.class_parser.find_class(base_name)
-                    if base_result:
-                        base_cu, base_die = base_result
-                        base_info = self.class_parser.parse_class_info(base_cu, base_die)
-                        all_classes[base_name] = base_info
-                        resolved_count += 1
-        
-        elapsed = time.perf_counter() - start_time
-        logger.info(
-            f"Dependency resolution complete in {elapsed:.2f}s: "
-            f"{resolved_count} newly resolved, {cache_hit_count} already in memory, "
-            f"{skipped_count} skipped, {cache_miss_count} required find_class lookup"
-        )
-
-    def _try_resolve_type_by_offset(
-        self, offset: int, type_name: str
-    ) -> ClassInfo | None:
-        """Try to resolve and parse a type by its DIE offset.
-
-        Args:
-            offset: DIE offset of the type
-            type_name: Name of type (for logging)
-
-        Returns:
-            ClassInfo if successfully parsed, None otherwise
-        """
-        import time
-        
-        # Use find_class which returns (CU, DIE) tuple
-        try:
-            find_start = time.perf_counter()
-            result = self.class_parser.find_class(type_name)
-            find_time = time.perf_counter() - find_start
-            
-            if not result:
-                logger.debug(f"Could not find class: {type_name}")
-                return None
-            
-            # Log if find_class took significant time (cache miss indicator)
-            if find_time > 0.5:
-                logger.warning(f"find_class({type_name}) took {find_time:.2f}s - likely cache miss")
-
-            cu, die = result
-
-            # Skip enums and typedefs - they don't need full resolution
-            if die.tag in ("DW_TAG_enumeration_type", "DW_TAG_typedef"):
-                logger.debug(
-                    f"Skipping {die.tag.replace('DW_TAG_', '')} type: {type_name}"
-                )
-                return None
-
-            # Parse the class
-            return self.class_parser.parse_class_info(cu, die)
-
-        except Exception as e:
-            logger.debug(f"Failed to resolve type {type_name} at 0x{offset:x}: {e}")
-            return None
-
-    @log_timing
-    def build_hierarchy_chain(self, class_name: str) -> list[str]:
-        """Build inheritance chain returning only class names.
-
-        Simpler version that just returns the list of base class names
-        without parsing full ClassInfo.
-
-        Args:
-            class_name: Name of the target class
-
-        Returns:
-            List of base class names from root to derived (excluding target class)
-        """
-        hierarchy = []
-        current_class = class_name
-        visited = set()
-
-        while current_class and current_class not in visited:
-            visited.add(current_class)
-
-            result = self.class_parser.find_class(current_class)
-            if not result:
-                break
-
-            cu, class_die = result
-
-            # Find base class
-            next_class = self._find_base_class(class_die)
-            if next_class and next_class != "unknown_type":
-                hierarchy.append(next_class)
-                current_class = next_class
-            else:
-                break
-
-        return list(reversed(hierarchy))  # Base to derived order
-
-    def _find_base_class(self, class_die: DIE) -> str | None:
-        """Find direct base class from a class DIE.
-
-        Args:
-            class_die: DIE representing a class
-
-        Returns:
-            Base class name if found, None otherwise
-        """
-        for child in class_die.iter_children():
-            if child.tag == "DW_TAG_inheritance":
-                base_type = self.class_parser.type_resolver.resolve_type_name(child)
-                if base_type != "unknown_type":
-                    return base_type
-        return None
-
-    def _get_base_class_chain(self, class_name: str) -> list[str]:
-        """Get complete base class chain for a class.
-
-        This method walks the inheritance hierarchy from the given class
-        to its root base class, collecting all intermediate base classes.
-        Used to ensure complete inheritance chains are included when
-        resolving dependencies.
-
-        Args:
-            class_name: Name of the class to get base classes for
-
-        Returns:
-            List of base class names from immediate parent to root (MtObject, etc.)
-            Empty list if class has no base classes or couldn't be found
-        """
-        base_classes: list[str] = []
-        current_class = class_name
-        visited = set()
-
-        while current_class and current_class not in visited:
-            visited.add(current_class)
-
-            result = self.class_parser.find_class(current_class)
-            if not result:
-                break
-
-            _cu, class_die = result
-
-            # Find base class
-            base_name = self._find_base_class(class_die)
-            if base_name and base_name != "unknown_type":
-                base_classes.append(base_name)
-                current_class = base_name
-            else:
-                break
-
-        return base_classes

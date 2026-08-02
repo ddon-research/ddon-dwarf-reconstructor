@@ -1,5 +1,7 @@
 """Application configuration management for the DWARF reconstructor."""
 
+from __future__ import annotations
+
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,7 +17,7 @@ class Config:
     log_dir: Path = Path("logs")
 
     @classmethod
-    def from_env(cls, env_path: Path | None = None) -> "Config":
+    def from_env(cls, env_path: Path | None = None) -> Config:
         """
         Load configuration from environment variables or .env file.
 
@@ -55,7 +57,7 @@ class Config:
         elf_file_path: Path | None = None,
         output_dir: Path | None = None,
         verbose: bool | None = None,
-    ) -> "Config":
+    ) -> Config:
         """
         Create configuration from explicit arguments, falling back to environment.
 

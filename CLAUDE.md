@@ -5,14 +5,22 @@ applyTo: '**/*'
 
 # Project Development Guidelines
 
+> `AGENTS.md` is the canonical repository instruction source. This compatibility file remains for
+> Claude-specific clients and must not override `AGENTS.md`.
+
 ## Project Context
 
 **Purpose:** Reconstructs C++ headers from DWARF debug info in ELF files for Dragon's Dogma Online modding.
 
 **Architecture:** Domain-driven design with application/domain/infrastructure separation.
 
+**Artifact lifecycle:** Inputs for a named DDON build are immutable. Preserve
+validated SQLite indexes and caches locally across runs; they are untracked and
+rebuildable, not routine cleanup targets. Follow `AGENTS.md` for source binding,
+atomic publication, and explicit targeted rebuild/purge rules.
+
 **Tech Stack:**
-- Python 3.13+
+- Python 3.14+
 - uv for dependency management
 - pytest for testing
 - pyelftools for DWARF parsing
@@ -85,10 +93,10 @@ make ci            # Full CI suite (lint + typecheck + test)
 
 ```bash
 # Linting
-uv run ruff check src/
+uvx ruff check src/
 
 # Formatting
-uv run ruff format src/
+uvx ruff format src/
 
 # Type checking
 uv run mypy src/
@@ -404,7 +412,7 @@ python -m pytest  # Wrong - use uv run
 ### When Making Changes
 
 - Run tests after each change: uv run pytest -m unit
-- Check for errors: uv run ruff check src/
+- Check for errors: uvx ruff check src/
 - Verify type hints: uv run mypy src/
 - Update docs if public API changed
 

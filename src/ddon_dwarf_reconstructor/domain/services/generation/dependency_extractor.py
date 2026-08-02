@@ -9,26 +9,16 @@ by parsing type strings with qualifiers (const, *, &, etc.).
 
 from ....infrastructure.logging import get_logger
 from ...models.dwarf import ClassInfo, MemberInfo, MethodInfo, StructInfo, UnionInfo
-from ..lazy_dwarf_index_service import LazyDwarfIndexService
+from ...ports.dwarf_index import DwarfIndexPort
 from ..parsing.die_type_classifier import DIETypeClassifier
 
 logger = get_logger(__name__)
 
 
 class DependencyExtractor:
-    """Extract type dependencies using offset-based traversal.
+    """Extract type dependencies using offset-based DWARF traversal."""
 
-    This service replaces string parsing with direct DIE offset lookups,
-    eliminating bugs caused by parsing qualified type names.
-
-    Key improvements:
-    - No string parsing of "const MtObject*" etc.
-    - Direct DIE traversal using stored type_offset fields
-    - Proper tag validation (class vs enum vs namespace)
-    - Forward declaration filtering (only class/struct/union)
-    """
-
-    def __init__(self, dwarf_index: LazyDwarfIndexService):
+    def __init__(self, dwarf_index: DwarfIndexPort):
         """Initialize dependency extractor.
 
         Args:
@@ -36,51 +26,33 @@ class DependencyExtractor:
         """
         self.dwarf_index = dwarf_index
 
-    def extract_dependencies(self, class_info: ClassInfo) -> set[int]:
+    def extract_dependencies(
+        self,
+        class_info: ClassInfo,
+        *,
+        include_method_signatures: bool = True,
+    ) -> set[int]:
         """Extract all type dependencies from a class.
 
-        Collects DIE offsets of all types referenced by:
+        Collects DIE offsets of concrete layout types referenced by:
         - Member variables
-        - Method return types
-        - Method parameters
         - Nested structs
         - Unions
+        - Nested classes
+
+        Method return and parameter types can be included for a complete
+        signature closure or excluded for a bounded structural closure.
 
         Args:
             class_info: ClassInfo to extract dependencies from
+            include_method_signatures: Include method return and parameter
+                types in the transitive dependency set.
 
         Returns:
             Set of DIE offsets for dependent types
         """
-        dependencies: set[int] = set()
-
-        # Extract from members
-        for member in class_info.members:
-            offset = self._get_member_type_offset(member)
-            if offset:
-                dependencies.add(offset)
-
-        # Extract from methods
-        for method in class_info.methods:
-            # Return type
-            offset = self._get_method_return_type_offset(method)
-            if offset:
-                dependencies.add(offset)
-
-            # Parameter types
-            if method.parameters:  # Check for None
-                for param in method.parameters:
-                    offset = self._get_parameter_type_offset(param)
-                    if offset:
-                        dependencies.add(offset)
-
-        # Extract from nested structs
-        for nested_struct in class_info.nested_structs:
-            self._extract_struct_dependencies(nested_struct, dependencies)
-
-        # Extract from unions
-        for union in class_info.unions:
-            self._extract_union_dependencies(union, dependencies)
+        dependencies = self._direct_dependencies(class_info, include_method_signatures)
+        self._nested_aggregate_dependencies(class_info, dependencies, include_method_signatures)
 
         logger.debug(
             f"Extracted {len(dependencies)} dependencies from {class_info.name}: "
@@ -88,6 +60,42 @@ class DependencyExtractor:
         )
 
         return dependencies
+
+    def _direct_dependencies(
+        self, class_info: ClassInfo, include_method_signatures: bool
+    ) -> set[int]:
+        dependencies: set[int] = set()
+        for member in class_info.members:
+            offset = self._get_member_type_offset(member)
+            if offset is not None:
+                dependencies.add(offset)
+        if include_method_signatures:
+            for method in class_info.methods:
+                offset = self._get_method_return_type_offset(method)
+                if offset is not None:
+                    dependencies.add(offset)
+                for parameter in method.parameters or []:
+                    offset = self._get_parameter_type_offset(parameter)
+                    if offset is not None:
+                        dependencies.add(offset)
+        return dependencies
+
+    def _nested_aggregate_dependencies(
+        self,
+        class_info: ClassInfo,
+        dependencies: set[int],
+        include_method_signatures: bool,
+    ) -> None:
+        for nested_struct in class_info.nested_structs:
+            self._extract_struct_dependencies(nested_struct, dependencies)
+        for union in class_info.unions:
+            self._extract_union_dependencies(union, dependencies)
+        for nested_class in class_info.nested_classes:
+            dependencies.update(
+                self.extract_dependencies(
+                    nested_class, include_method_signatures=include_method_signatures
+                )
+            )
 
     def filter_resolvable_types(self, offsets: set[int]) -> set[int]:
         """Filter offsets to only those that should be resolved as dependencies.
@@ -122,9 +130,7 @@ class DependencyExtractor:
             if DIETypeClassifier.requires_resolution(die):
                 resolvable.add(offset)
                 type_name = DIETypeClassifier.get_type_name(die)
-                logger.debug(
-                    f"Type at 0x{offset:x} ({type_name}, {die.tag}) requires resolution"
-                )
+                logger.debug(f"Type at 0x{offset:x} ({type_name}, {die.tag}) requires resolution")
             else:
                 type_name = DIETypeClassifier.get_type_name(die) or "<unnamed>"
                 logger.debug(
@@ -178,8 +184,7 @@ class DependencyExtractor:
         """
         if not hasattr(member, "type_offset") or member.type_offset is None:
             logger.debug(
-                f"Member '{member.name}' has no type_offset "
-                f"(type_name: {member.type_name})"
+                f"Member '{member.name}' has no type_offset (type_name: {member.type_name})"
             )
             return None
 
@@ -217,9 +222,7 @@ class DependencyExtractor:
         if not hasattr(param, "type_offset") or param.type_offset is None:
             param_name = getattr(param, "name", "<unknown>")
             param_type = getattr(param, "type_name", "<unknown>")
-            logger.debug(
-                f"Parameter '{param_name}' has no type_offset (type_name: {param_type})"
-            )
+            logger.debug(f"Parameter '{param_name}' has no type_offset (type_name: {param_type})")
             return None
 
         # Cast to int to satisfy type checker
@@ -236,7 +239,7 @@ class DependencyExtractor:
         """
         for member in nested_struct.members:
             offset = self._get_member_type_offset(member)
-            if offset:
+            if offset is not None:
                 dependencies.add(offset)
 
     def _extract_union_dependencies(self, union: UnionInfo, dependencies: set[int]) -> None:
@@ -249,7 +252,7 @@ class DependencyExtractor:
         # Extract from union members
         for member in union.members:
             offset = self._get_member_type_offset(member)
-            if offset:
+            if offset is not None:
                 dependencies.add(offset)
 
         # Extract from nested structs within union

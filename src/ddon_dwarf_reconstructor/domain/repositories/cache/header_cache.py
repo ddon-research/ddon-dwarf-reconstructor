@@ -13,14 +13,14 @@ Architecture:
 
 Usage:
     cache = HeaderCache(elf_path)
-    
+
     # Check if class header is cached
     if cache.is_valid("MtObject", header_content):
         print("Reuse cached header")
     else:
         print("Regenerate header")
         cache.set_header("MtObject", header_content, file_path="MtObject.h")
-    
+
     cache.save()
 """
 
@@ -121,9 +121,7 @@ class HeaderCache:
 
         return content_hash == cached_hash
 
-    def set_header(
-        self, class_name: str, header_content: str, file_path: str = ""
-    ) -> None:
+    def set_header(self, class_name: str, header_content: str, file_path: str = "") -> None:
         """
         Store header in cache with SHA256 hash of content.
 
@@ -195,11 +193,7 @@ class HeaderCache:
             return "Cache empty"
 
         total = len(self._cache)
-        recent = sum(
-            1
-            for m in self._cache.values()
-            if time.time() - m["generated_at"] < 3600
-        )
+        recent = sum(1 for m in self._cache.values() if time.time() - m["generated_at"] < 3600)
 
         lines = [
             f"Cache: {self.cache_file}",
@@ -210,9 +204,7 @@ class HeaderCache:
         if self._cache:
             lines.append("\nHeaders:")
             for name, metadata in sorted(self._cache.items()):
-                dt = datetime.fromtimestamp(metadata["generated_at"]).strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
+                dt = datetime.fromtimestamp(metadata["generated_at"]).strftime("%Y-%m-%d %H:%M:%S")
                 lines.append(f"  {name}: {metadata['file']} ({dt})")
 
         return "\n".join(lines)

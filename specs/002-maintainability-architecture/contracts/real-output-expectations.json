@@ -1,0 +1,10 @@
+{
+  "source_sha256": "4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0",
+  "headers": {
+    "ps4/rLayout.h": {
+      "bytes": 20039,
+      "sha256": "1957e8cf7e0894677a2741193390988cd1aced5299020e09e9af47f0c17ebb9e"
+    }
+  },
+  "validation": "warm sidecar, fresh-process rerun, and cold sidecar rebuild; all header manifests match"
+}

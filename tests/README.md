@@ -4,7 +4,7 @@
 
 ```bash
 # Install test dependencies
-uv sync
+uv sync --extra dev
 
 # Run all tests
 pytest
@@ -172,15 +172,18 @@ def test_multiple_symbols(elf_parser: DWARFParser, symbol: str, sample_symbols: 
 ```python
 import pytest
 
+
 @pytest.mark.unit
 def test_something_fast():
     """Fast unit test."""
     assert True
 
+
 @pytest.mark.integration
 def test_with_elf(elf_parser):
     """Integration test requiring ELF file."""
     pass
+
 
 @pytest.mark.slow
 @pytest.mark.performance
@@ -195,11 +198,10 @@ import pytest
 from pathlib import Path
 from ddon_dwarf_reconstructor.core import DWARFParser
 
+
 @pytest.mark.integration
 def test_with_fixtures(
-    elf_parser: DWARFParser,
-    fast_symbol: str,
-    sample_symbols: dict[str, str | None]
+    elf_parser: DWARFParser, fast_symbol: str, sample_symbols: dict[str, str | None]
 ) -> None:
     """Test using shared fixtures from conftest.py."""
     # elf_parser is ready to use
@@ -240,7 +242,7 @@ The test suite is designed for CI/CD pipelines:
 # Example GitHub Actions
 - name: Run tests
   run: |
-    uv sync
+    uv sync --extra dev --frozen
     pytest -v -m "not slow" --cov=src/ddon_dwarf_reconstructor --cov-report=xml
 ```
 
@@ -254,3 +256,19 @@ If you find old test code patterns:
 - `runner.run_test(test_func)` → Use `def test_func()` with markers
 - `handle_test_skip(reason)` → Use `pytest.skip(reason)`
 - `if __name__ == "__main__"` blocks → Remove (use pytest)
+
+## Ownership and quality gates
+
+New tests live beside the owning package under `tests/application`,
+`tests/domain`, `tests/infrastructure`, or `tests/quality`; `tests/support`
+contains shared typed DIE builders and fixtures. Legacy `tests/generators`
+modules remain only as compatibility coverage while behavior moves to the
+owning package.
+
+Every test change must preserve the structure limits (400-line modules,
+250-line classes, 75-line functions, McCabe 10) and the architecture boundary
+checker. The non-performance coverage command and `check_coverage.py` enforce
+80% total lines plus 80% line/70% branch coverage in the high-risk groups.
+Generated headers use exact external manifest comparisons rather than snapshot
+normalization. Deterministic JSONL and diagnostic metadata may use
+`pytest-regressions`.

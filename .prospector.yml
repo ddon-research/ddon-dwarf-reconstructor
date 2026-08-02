@@ -1,0 +1,24 @@
+strictness: low
+test-warnings: false
+doc-warnings: false
+member-warnings: false
+autodetect: false
+
+pylint:
+  disable:
+    - all
+  enable:
+    - duplicate-code
+    - unused-import
+    - unused-variable
+    - import-error
+    - cyclic-import
+    - too-many-arguments
+    - too-many-branches
+    - too-many-locals
+    - too-many-statements
+    - broad-exception-caught
+
+mccabe:
+  options:
+    max-complexity: 10

@@ -39,3 +39,9 @@ class ClassInfo:
     """Template type parameters (typename T, class U, etc.)"""
     template_value_params: list[TemplateValueParam] = field(default_factory=list)
     """Template value parameters (int N, size_t Size, etc.)"""
+    kind: str = "class"
+    qualified_name: str | None = None
+    is_declaration: bool = False
+    diagnostics: list[str] = field(default_factory=list)
+    nested_classes: list[ClassInfo] = field(default_factory=list)
+    containing_type: str | None = None

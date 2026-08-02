@@ -43,9 +43,12 @@ class TestPlatformDetector:
         mock_elf.little_endian = True
         mock_elf.has_dwarf_info.return_value = False
 
-        with patch("builtins.open", mock_open()), patch(
-            "ddon_dwarf_reconstructor.infrastructure.elf_platform.ELFFile",
-            return_value=mock_elf,
+        with (
+            patch("builtins.open", mock_open()),
+            patch(
+                "ddon_dwarf_reconstructor.infrastructure.elf_platform.ELFFile",
+                return_value=mock_elf,
+            ),
         ):
             result = PlatformDetector.detect("test.elf")
             assert result == ELFPlatform.PS4
@@ -58,9 +61,12 @@ class TestPlatformDetector:
         mock_elf.little_endian = False
         mock_elf.has_dwarf_info.return_value = False
 
-        with patch("builtins.open", mock_open()), patch(
-            "ddon_dwarf_reconstructor.infrastructure.elf_platform.ELFFile",
-            return_value=mock_elf,
+        with (
+            patch("builtins.open", mock_open()),
+            patch(
+                "ddon_dwarf_reconstructor.infrastructure.elf_platform.ELFFile",
+                return_value=mock_elf,
+            ),
         ):
             result = PlatformDetector.detect("test.elf")
             assert result == ELFPlatform.PS3
@@ -73,9 +79,12 @@ class TestPlatformDetector:
         mock_elf.little_endian = True
         mock_elf.has_dwarf_info.return_value = False
 
-        with patch("builtins.open", mock_open()), patch(
-            "ddon_dwarf_reconstructor.infrastructure.elf_platform.ELFFile",
-            return_value=mock_elf,
+        with (
+            patch("builtins.open", mock_open()),
+            patch(
+                "ddon_dwarf_reconstructor.infrastructure.elf_platform.ELFFile",
+                return_value=mock_elf,
+            ),
         ):
             result = PlatformDetector.detect("test.elf")
             assert result == ELFPlatform.UNKNOWN
@@ -88,9 +97,12 @@ class TestPlatformDetector:
         mock_elf.little_endian = False
         mock_elf.has_dwarf_info.return_value = False
 
-        with patch("builtins.open", mock_open()), patch(
-            "ddon_dwarf_reconstructor.infrastructure.elf_platform.ELFFile",
-            return_value=mock_elf,
+        with (
+            patch("builtins.open", mock_open()),
+            patch(
+                "ddon_dwarf_reconstructor.infrastructure.elf_platform.ELFFile",
+                return_value=mock_elf,
+            ),
         ):
             result = PlatformDetector.detect("test.elf")
             assert result == ELFPlatform.UNKNOWN
@@ -103,9 +115,12 @@ class TestPlatformDetector:
         mock_elf.little_endian = True
         mock_elf.has_dwarf_info.return_value = False
 
-        with patch("builtins.open", mock_open()), patch(
-            "ddon_dwarf_reconstructor.infrastructure.elf_platform.ELFFile",
-            return_value=mock_elf,
+        with (
+            patch("builtins.open", mock_open()),
+            patch(
+                "ddon_dwarf_reconstructor.infrastructure.elf_platform.ELFFile",
+                return_value=mock_elf,
+            ),
         ):
             result = PlatformDetector.detect("test.elf")
             assert result == ELFPlatform.UNKNOWN
@@ -120,9 +135,12 @@ class TestPlatformDetector:
     @pytest.mark.unit
     def test_detect_invalid_elf(self) -> None:
         """Test handling of invalid ELF file."""
-        with patch("builtins.open", mock_open()), patch(
-            "ddon_dwarf_reconstructor.infrastructure.elf_platform.ELFFile",
-            side_effect=Exception("Invalid ELF"),
+        with (
+            patch("builtins.open", mock_open()),
+            patch(
+                "ddon_dwarf_reconstructor.infrastructure.elf_platform.ELFFile",
+                side_effect=Exception("Invalid ELF"),
+            ),
         ):
             result = PlatformDetector.detect("invalid.elf")
             assert result == ELFPlatform.UNKNOWN
