@@ -340,9 +340,8 @@ class TestZstdDumpParser:
     @pytest.mark.unit
     def test_v11_sidecar_is_atomically_enriched_without_dump_scan(self, tmp_path):
         """Existing expensive indexes migrate to the durable identity contract."""
-        import sqlite3
-
         import compression.zstd as zstd
+        import sqlite3
 
         dump_file = tmp_path / "test.zst"
         with zstd.open(dump_file, "wt", encoding="utf-8") as output:

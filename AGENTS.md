@@ -6,7 +6,7 @@ unbounded in-memory intermediates. Preserve stable output ordering and source of
 
 ## Development
 
-- Install the complete development environment with `uv sync --extra dev`.
+- Use regular CPython 3.14.6 and install the complete development environment with `uv sync --python 3.14.6 --extra dev`.
 - Use package-relative imports; do not import the package through the repository's `src` directory.
 - Run fast tests with `uv run pytest -m unit -o addopts='-q --strict-markers'`.
 - Run read-only quality checks with `uvx ruff check --no-fix src tests`,

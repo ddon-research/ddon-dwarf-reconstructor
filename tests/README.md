@@ -4,7 +4,7 @@
 
 ```bash
 # Install test dependencies
-uv sync --extra dev
+uv sync --python 3.14.6 --extra dev
 
 # Run all tests
 pytest
@@ -242,7 +242,7 @@ The test suite is designed for CI/CD pipelines:
 # Example GitHub Actions
 - name: Run tests
   run: |
-    uv sync --extra dev --frozen
+    uv sync --python 3.14.6 --extra dev --frozen
     pytest -v -m "not slow" --cov=src/ddon_dwarf_reconstructor --cov-report=xml
 ```
 

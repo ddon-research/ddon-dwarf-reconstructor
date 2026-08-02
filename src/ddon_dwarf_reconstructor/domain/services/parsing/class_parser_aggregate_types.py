@@ -66,7 +66,7 @@ class ClassParserAggregateTypesMixin:
         elif not isinstance(value, int):
             try:
                 value = int(value)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 value = 0
 
         return EnumeratorInfo(name=enumerator_name, value=value)

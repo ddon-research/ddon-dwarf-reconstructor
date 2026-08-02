@@ -3,7 +3,7 @@ name = "ddon-dwarf-spec-pipeline"
 version = "0.1.0"
 description = "Convert DWARF 2, 3, and 4 specifications into deterministic JSON and Markdown"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = "==3.14.6"
 dependencies = [
     "beautifulsoup4>=4.13,<5",
     "jsonschema>=4.25,<5",
@@ -40,7 +40,7 @@ markers = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "B", "UP", "SIM"]

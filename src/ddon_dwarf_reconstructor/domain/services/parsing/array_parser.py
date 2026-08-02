@@ -111,5 +111,5 @@ def _array_name(element_type: str, dimensions: list[int]) -> str:
 def _as_dimension(value: Any) -> int:
     try:
         return int(value)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return 0

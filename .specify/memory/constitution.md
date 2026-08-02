@@ -76,7 +76,7 @@ committed.
 
 ## Evidence and Artifact Constraints
 
-- Python 3.14+ and `uv` are the supported runtime and dependency workflow.
+- Regular CPython 3.14.6 and `uv` are the supported runtime and dependency workflow.
 - `uv run ddon-dwarf-reconstructor` is the canonical executable entry point.
 - `AGENTS.md` is the operational repository contract; client-specific adapters
   MUST not duplicate or contradict it.

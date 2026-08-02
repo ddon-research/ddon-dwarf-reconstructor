@@ -58,7 +58,7 @@ def _array_size(type_name: str) -> int | None:
         return None
     try:
         return estimate_member_size(base_type) * int(dimension_text)
-    except (ValueError, IndexError):
+    except ValueError, IndexError:
         return None
 
 

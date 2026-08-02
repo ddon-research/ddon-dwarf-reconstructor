@@ -20,7 +20,7 @@ rebuildable, not routine cleanup targets. Follow `AGENTS.md` for source binding,
 atomic publication, and explicit targeted rebuild/purge rules.
 
 **Tech Stack:**
-- Python 3.14+
+- Regular CPython 3.14.6
 - uv for dependency management
 - pytest for testing
 - pyelftools for DWARF parsing
@@ -110,7 +110,7 @@ make ci
 ### Type Safety (REQUIRED)
 
 - **All functions** must have type hints for parameters and return values
-- Use | None instead of Optional (Python 3.13+)
+- Use | None instead of Optional (Python 3.14.6)
 - Use NoReturn for functions that always exit
 - Full mypy compliance required
 
@@ -419,7 +419,7 @@ python -m pytest  # Wrong - use uv run
 ## CI/CD Integration
 
 **GitHub Actions:**
-- Unit tests run on every push/PR (Python 3.13, ubuntu-latest)
+- Unit tests run on every push/PR (Python 3.14.6, ubuntu-latest)
 - Coverage minimum: 30% (enforced)
 - Quality gates: ruff, mypy, pytest
 

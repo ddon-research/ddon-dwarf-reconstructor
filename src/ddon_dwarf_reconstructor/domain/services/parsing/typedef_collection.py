@@ -47,7 +47,7 @@ class TypedefCollectionMixin:
             return False
         try:
             die = self.index.get_die_by_offset(type_offset)
-        except (AttributeError, OSError, ValueError):
+        except AttributeError, OSError, ValueError:
             return False
         if die is None:
             return False

@@ -53,7 +53,7 @@ class LazyIndexSourceMixin:
                 )
                 if die_name != str(symbol).rsplit("::", 1)[-1]:
                     return False
-        except (AttributeError, KeyError, TypeError, ValueError, RuntimeError):
+        except AttributeError, KeyError, TypeError, ValueError, RuntimeError:
             return False
         logger.info("Validated %s legacy cache offsets against the current ELF", len(mappings))
         return True

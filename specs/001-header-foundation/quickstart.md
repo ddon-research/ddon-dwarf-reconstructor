@@ -2,8 +2,8 @@
 
 ## Prerequisites
 
-- Python 3.14+.
-- `uv sync --extra dev` completed.
+- Regular CPython 3.14.6.
+- `uv sync --python 3.14.6 --extra dev` completed.
 - Repository root as the working directory.
 - For real validation only: explicit local paths to the PS4 ELF, compressed DWARF
   dump, SQLite sidecar, and optional Orbis objdump.

@@ -59,10 +59,10 @@ The specification tool has its own lockfile, test markers, and quality
 commands. Run these from the repository root:
 
 ```bash
-uv run --project tools/dwarf_spec_pipeline --extra dev pytest
-uv run --project tools/dwarf_spec_pipeline --extra dev ruff check tools/dwarf_spec_pipeline/src tools/dwarf_spec_pipeline/tests
-uv run --project tools/dwarf_spec_pipeline --extra dev ruff format --check tools/dwarf_spec_pipeline/src tools/dwarf_spec_pipeline/tests
-uv run --project tools/dwarf_spec_pipeline --extra dev mypy tools/dwarf_spec_pipeline/src
+uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev pytest
+uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev ruff check src tests
+uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev ruff format --check src tests
+uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev mypy src
 docker compose -f tools/dwarf_spec_pipeline/compose.yaml config
 ```
 
@@ -70,7 +70,7 @@ The official-source integration assertion is opt-in after a Docker build:
 
 ```powershell
 $env:DWARF_SPEC_OFFICIAL = '1'
-uv run --project tools/dwarf_spec_pipeline --extra dev pytest -m integration
+uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev pytest -m integration
 Remove-Item Env:DWARF_SPEC_OFFICIAL
 ```
 
@@ -263,11 +263,11 @@ uv run pytest -m unit --cov-report=term-missing
 
 ```yaml
 Trigger: Push to main, Pull Requests
-Matrix: Python 3.14, ubuntu-latest
+Matrix: Python 3.14.6, ubuntu-latest
 Steps:
   1. Checkout code
   2. Setup Python and uv
-  3. Install dependencies (`uv sync --extra dev --frozen`)
+  3. Install dependencies (`uv sync --python 3.14.6 --extra dev --frozen`)
   4. Run unit tests (pytest -m unit --cov)
   5. Upload coverage to Codecov
   6. Upload test artifacts (30 days)
@@ -359,7 +359,7 @@ make ci
 3. **Import errors:**
    ```bash
    # Install in editable mode
-   uv sync --extra dev
+   uv sync --python 3.14.6 --extra dev
    ```
 
 4. **CI failures:**
@@ -402,7 +402,7 @@ uv run pytest -l
 
 **Installation:**
 ```bash
-uv sync --extra dev  # Installs all dev dependencies
+uv sync --python 3.14.6 --extra dev  # Installs all dev dependencies
 ```
 
 ### Real rLayout performance budget

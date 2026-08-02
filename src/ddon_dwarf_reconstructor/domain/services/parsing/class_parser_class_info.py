@@ -90,7 +90,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
         while True:
             try:
                 parent_die = current_die.get_parent()
-            except (AttributeError, RuntimeError):
+            except AttributeError, RuntimeError:
                 break
             if parent_die is None or parent_die.tag not in {
                 "DW_TAG_namespace",
@@ -115,7 +115,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
         """Return the qualified aggregate containing ``die``, when present."""
         try:
             parent_die = die.get_parent()
-        except (AttributeError, RuntimeError):
+        except AttributeError, RuntimeError:
             return None
 
         if parent_die is None or parent_die.tag not in {

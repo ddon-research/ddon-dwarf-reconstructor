@@ -5,6 +5,8 @@ into deterministic, machine-readable JSON and clean Markdown. The source
 documents are retained only in a checksum-verified local cache; they are not
 repository artifacts.
 
+The supported runtime is regular CPython 3.14.6 managed by uv.
+
 ## Full build
 
 The full build uses Docker Compose so the legacy `.doc` and `.mm` converters are
@@ -21,10 +23,10 @@ publishes to `docs/knowledge-base/dwarf-specification/generated/`.
 ## Local development
 
 ```text
-uv sync --project tools/dwarf_spec_pipeline --extra dev
-uv run --project tools/dwarf_spec_pipeline pytest
-uv run --project tools/dwarf_spec_pipeline ruff check tools/dwarf_spec_pipeline/src tools/dwarf_spec_pipeline/tests
-uv run --project tools/dwarf_spec_pipeline mypy tools/dwarf_spec_pipeline/src
+uv sync --project tools/dwarf_spec_pipeline --python 3.14.6 --extra dev
+uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev pytest
+uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev ruff check src tests
+uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev mypy src
 ```
 
 The Python package can also parse pre-converted HTML and DOCX fixtures without

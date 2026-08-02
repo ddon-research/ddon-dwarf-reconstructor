@@ -23,7 +23,7 @@ method bodies.
   the iteration process.
 -->
 
-**Language/Version**: Python 3.14+
+**Language/Version**: CPython 3.14.6
 
 **Primary Dependencies**: pyelftools, native `compression.zstd`, SQLite from the
 standard library, pytest, and mypy. Ruff is invoked as a pinned UV tool. The pinned

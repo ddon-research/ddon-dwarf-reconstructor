@@ -201,7 +201,7 @@ class SourceIdentityCatalog:
             return {"schema_version": CATALOG_SCHEMA_VERSION, "sources": {}}
         try:
             data = json.loads(self.path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        except OSError, json.JSONDecodeError:
             return {"schema_version": CATALOG_SCHEMA_VERSION, "sources": {}}
         if data.get("schema_version") != CATALOG_SCHEMA_VERSION or not isinstance(
             data.get("sources"), dict

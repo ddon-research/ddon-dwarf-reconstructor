@@ -270,7 +270,7 @@ class OrbisObjdumpProducer:
             if report_value.get("artifact_key") != artifact_key:
                 return None
             return OrbisDisassemblyReport.from_dict(report_value)
-        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+        except OSError, KeyError, TypeError, ValueError, json.JSONDecodeError:
             return None
 
     @staticmethod

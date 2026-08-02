@@ -1,4 +1,4 @@
-FROM python:3.14-slim-bookworm
+FROM python:3.14.6-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -13,9 +13,9 @@ RUN apt-get update \
 
 WORKDIR /opt/dwarf-spec-pipeline
 
-COPY pyproject.toml uv.lock README.md ./
+COPY pyproject.toml uv.lock README.md .python-version ./
 COPY src ./src
 
-RUN uv sync --frozen --no-dev
+RUN uv sync --python 3.14.6 --frozen --no-dev
 
 ENTRYPOINT ["/opt/dwarf-spec-pipeline/.venv/bin/dwarf-spec-pipeline"]

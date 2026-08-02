@@ -62,15 +62,15 @@ help:
 # Development setup
 install:
 	@echo "Note: 'install' is deprecated, use 'make sync' instead"
-	uv sync --extra dev
+	uv sync --python 3.14.6 --extra dev
 
 sync:
-	uv sync --extra dev
+	uv sync --python 3.14.6 --extra dev
 
 # Native compilation
 build-setup:
 	uv add --dev nuitka
-	uv sync
+	uv sync --python 3.14.6
 
 build: build-setup
 	@echo "Building native executable with nuitka..."

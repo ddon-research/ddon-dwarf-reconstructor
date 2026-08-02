@@ -31,7 +31,7 @@ Examples:
   # Exhaustive search for most complete definition (slower first run)
   python main.py resources/DDOORBIS.elf --generate rLayout --exhaustive
 
-  # Exhaustive search with compressed DWARF dump (requires Python 3.14)
+  # Exhaustive search with compressed DWARF dump (requires Python 3.14.6)
   python main.py resources/DDOORBIS.elf --generate rLayout --exhaustive --dwarf-dump dump.zst
 
   # Using .env file for configuration

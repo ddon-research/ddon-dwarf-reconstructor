@@ -21,7 +21,7 @@
 
 ## Validation record
 
-- `uv run --project tools/dwarf_spec_pipeline --extra dev pytest`: passed.
+- `uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev pytest`: passed.
 - Standalone Ruff check/format and mypy: passed.
 - `docker compose ... config`: passed.
 - Official-source Compose build for DWARF 2/3/4: passed.

@@ -63,11 +63,11 @@ def _docx_cell_span(cell: object, row: int, column: int) -> RawSpan | None:
         return None
     try:
         column_count = int(str(grid_span))
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         column_count = 1
     try:
         row_count = int(str(row_span))
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         row_count = 1
     if column_count == 1 and row_count == 1:
         return None
@@ -148,7 +148,7 @@ def _html_span(cell: Tag, row: int, column: int) -> RawSpan | None:
 def _html_int_attribute(value: object, *, default: int) -> int:
     try:
         return int(str(value))
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return default
 
 

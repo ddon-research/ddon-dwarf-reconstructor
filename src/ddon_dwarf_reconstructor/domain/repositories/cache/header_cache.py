@@ -77,7 +77,7 @@ class HeaderCache:
                         )
                         for name, item in data.items()
                     }
-            except (json.JSONDecodeError, KeyError):
+            except json.JSONDecodeError, KeyError:
                 # Cache corrupted, start fresh
                 self._cache = {}
 

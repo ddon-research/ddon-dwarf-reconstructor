@@ -3,7 +3,7 @@ name = "ddon-dwarf-reconstructor"
 version = "0.1.0"
 description = "Reconstructs C/C++ header structures from DWARF debug symbols in PS4 ELF files"
 readme = {file = "README.md", content-type = "text/markdown"}
-requires-python = ">=3.14"
+requires-python = "==3.14.6"
 dependencies = [
     "pyelftools>=0.31",
     "python-dotenv>=1.0.0",
@@ -34,7 +34,7 @@ classifiers = [
     "Topic :: System :: Software Distribution",
     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
     "Environment :: Console",
 ]
@@ -123,7 +123,7 @@ log_cli_level = "INFO"
 log_cli_format = "%(levelname)s: %(message)s"
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.14"
 mypy_path = "src"
 explicit_package_bases = true
 strict = true
@@ -148,7 +148,7 @@ ignore_errors = true
 
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py314"
 fix = true
 exclude = [
     "build",

@@ -19,13 +19,13 @@ Reconstructs C++ class definitions from DWARF debug information in ELF files. De
 
 ## Requirements
 
-- Python 3.14+
+- Regular CPython 3.14.6
 - ELF file with DWARF debug information
 
 ## Installation
 
 ```bash
-uv sync --extra dev
+uv sync --python 3.14.6 --extra dev
 uv run pytest -m unit  # verify
 ```
 

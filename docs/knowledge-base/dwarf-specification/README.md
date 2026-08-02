@@ -42,10 +42,10 @@ conversion intermediates are stored in the ignored
 For local parser work on pre-converted fixtures:
 
 ```text
-uv sync --project tools/dwarf_spec_pipeline --extra dev
-uv run --project tools/dwarf_spec_pipeline pytest
-uv run --project tools/dwarf_spec_pipeline ruff check tools/dwarf_spec_pipeline/src tools/dwarf_spec_pipeline/tests
-uv run --project tools/dwarf_spec_pipeline mypy tools/dwarf_spec_pipeline/src
+uv sync --project tools/dwarf_spec_pipeline --python 3.14.6 --extra dev
+uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev pytest
+uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev ruff check src tests
+uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev mypy src
 ```
 
 `--offline` makes a build require an already cached, checksum-verified source.
