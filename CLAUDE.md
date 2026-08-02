@@ -18,7 +18,8 @@ uv sync --python 3.14.6
 uv run just test-unit
 uv run just check
 uv run just test
-uv run just coverage
+uv run just coverage-ci
+uv run just audit
 ```
 
 Use the unified root CLI:
@@ -49,3 +50,15 @@ uv run --directory tools/dwarf_spec_pipeline dwarf-spec-pipeline validate
   the manifest identity.
 - Update the README, architecture/testing docs, active contracts, and Spec Kit artifacts whenever
   public commands, configuration, or validation behavior changes.
+
+## Observability loop
+
+- Runtime modules use the standard-library facade in `core.observability`; `LoggerSetup` owns the
+  structlog processor/rendering adapter. Keep domain code independent of structlog, Rich, and
+  OpenTelemetry.
+- Emit bounded structured events at stage boundaries, use context fields (`run_id`, symbol, source
+  identity, and optional trace/span identifiers), and choose levels deliberately: info for progress,
+  debug for bounded detail, warning for partial/recoverable evidence, and error for failed work.
+- Use `exc_info` or `log_exception` and preserve chained causes with `raise ... from error`. Validate
+  JSONL event fields and nested traceback records in focused tests; keep artifact JSON on stdout and
+  diagnostics on stderr/log files.

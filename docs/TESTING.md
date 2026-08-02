@@ -42,6 +42,9 @@ uv run just package-smoke
 
 # Architecture policy (also part of `just check` and `test-unit`)
 uv run just architecture
+
+# Structured logging and exception-trace tests
+uv run pytest tests/infrastructure/test_logging.py -m unit -q
 ```
 
 The `packaging` marker installs the project into temporary uv tool directories and verifies the
@@ -159,6 +162,22 @@ markers = [
 ```
 
 ## Writing Tests
+
+### Observability tests
+
+Critical boundary changes should assert the diagnostic contract as well as the
+return value. Use `LoggerSetup.initialize(tmp_path)` with a fixture-local log
+directory, parse JSONL records with `json.loads`, and call
+`LoggerSetup.shutdown()` in teardown. Cover:
+
+- context fields are present inside a `bind_context` scope and reset afterward;
+- callsite `filename` and `lineno` identify the emitting source;
+- `exc_info` preserves chained exceptions as nested traceback records;
+- warning/error records distinguish partial, unavailable, and failed evidence;
+- file and stderr handlers do not capture artifact JSON on stdout.
+
+Do not assert full human-rendered Rich text. Assert stable event names and
+bounded structured fields instead.
 
 ### Unit Tests (Preferred)
 

@@ -47,9 +47,7 @@ def test_generation_records_per_symbol_failures_and_fatal_context_failures(
 
 
 @pytest.mark.unit
-def test_diagnostics_cover_unknown_platform_preview_and_failed_summary(
-    tmp_path: Path, capsys
-) -> None:
+def test_diagnostics_cover_unknown_platform_preview_and_failed_summary(tmp_path: Path) -> None:
     config = Mock(output_dir=tmp_path, verbose=False)
     generator = Mock(platform=None)
     logger = Mock()
@@ -72,8 +70,6 @@ def test_diagnostics_cover_unknown_platform_preview_and_failed_summary(
         logger,
     )
     cli_main._log_summary(["A"], 0, [("A", "failed")], logger)
-    cli_main._print_traceback(False)
-    assert capsys.readouterr().err == ""
 
 
 @pytest.mark.unit

@@ -72,7 +72,9 @@ class TypeResolutionMixin:
             return resolved_name
 
         except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
-            logger.warning("Failed to resolve type reference for %s: %s", die.tag, error)
+            logger.warning(
+                "Failed to resolve type reference for %s: %s", die.tag, error, exc_info=error
+            )
             return "unknown_type"
 
     def _resolve_die_type_name(self: TypeResolverContext, type_die: DwarfEntry) -> str:
@@ -119,7 +121,7 @@ class TypeResolutionMixin:
         try:
             array_info = parse_array_type(type_die, self)
         except (AttributeError, KeyError, TypeError, ValueError) as error:
-            logger.debug("Error in array parsing: %s", error)
+            logger.debug("Error in array parsing: %s", error, exc_info=error)
         else:
             if array_info:
                 return array_info.name
@@ -242,6 +244,6 @@ class TypeResolutionMixin:
                         logger.debug(f"Found used typedef: {member_type} -> {resolved_type}")
 
         except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
-            logger.warning("Error collecting typedefs from class: %s", error)
+            logger.warning("Error collecting typedefs from class: %s", error, exc_info=error)
 
         return used_typedefs

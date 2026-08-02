@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import sqlite3
 from dataclasses import dataclass
 from re import Pattern
+from time import perf_counter
 
-from .logging import get_logger
+from .logging import get_logger, log_event
 from .zstd_dump_context import ZstdDumpContext
 
 logger = get_logger(__name__)
@@ -59,11 +61,20 @@ class ZstdDumpScanMixin:
         """Stream the compressed dump once without materializing its text."""
         import compression.zstd as zstd
 
+        started_at = perf_counter()
         state = _DumpScanState(_DumpPatterns.create(), {})
         with zstd.open(str(self.dump_path), "rt", encoding="utf-8", errors="replace") as stream:
             for raw_line in stream:
                 self._scan_line(connection, state, raw_line.rstrip("\r\n"))
         self._insert_class_records(connection, state.class_records)
+        log_event(
+            logger,
+            logging.INFO,
+            "dwarf_dump_scan_completed",
+            dump_path=self.dump_path,
+            class_records=len(state.class_records),
+            duration_ms=round((perf_counter() - started_at) * 1000, 3),
+        )
 
     def _scan_line(
         self,

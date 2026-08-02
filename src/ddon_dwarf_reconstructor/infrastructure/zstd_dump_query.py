@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from contextlib import closing
 from dataclasses import dataclass
 from typing import cast
 
-from .logging import get_logger
+from .logging import get_logger, log_event
 from .zstd_dump_context import ZstdDumpContext
 
 logger = get_logger(__name__)
@@ -48,11 +49,13 @@ class ZstdDumpQueryMixin:
             ).fetchall()
         definitions = [cast(DefinitionLocation, self._definition_from_row(row)) for row in rows]
         best_score = definitions[0].completeness_score if definitions else 0
-        logger.info(
-            "Found %s definition(s) for %s (best score: %s)",
-            len(definitions),
-            class_name,
-            best_score,
+        log_event(
+            logger,
+            logging.DEBUG,
+            "dwarf_dump_definitions_found",
+            class_name=class_name,
+            definition_count=len(definitions),
+            best_score=best_score,
         )
         return definitions
 
@@ -102,6 +105,13 @@ class ZstdDumpQueryMixin:
                 "ready" if self._metadata_matches_source(metadata, source_metadata) else "stale"
             )
         except OSError as error:
+            log_event(
+                logger,
+                logging.WARNING,
+                "dwarf_dump_index_inspection_failed",
+                index_path=self.index_path,
+                exc_info=error,
+            )
             result["status"] = "unavailable"
             result["error"] = str(error)
         return result

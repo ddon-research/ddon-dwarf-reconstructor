@@ -49,5 +49,10 @@ class LazyIndexDiscoveryMixin:
                 if die.tag in target_types and self._process_die_symbol(die, cu.cu_offset):
                     discovered += 1
         except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
-            logger.error("Error discovering symbols in CU at 0x%x: %s", cu.cu_offset, error)
+            logger.error(
+                "Error discovering symbols in CU at 0x%x: %s",
+                cu.cu_offset,
+                error,
+                exc_info=error,
+            )
         return discovered

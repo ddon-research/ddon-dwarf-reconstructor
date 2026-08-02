@@ -23,12 +23,24 @@ class HierarchyDependencyLookupMixin:
             if direct is not None:
                 return direct
         except (AttributeError, KeyError, OSError, RuntimeError, TypeError, ValueError) as error:
-            logger.debug("Direct lookup failed for %s at 0x%x: %s", type_name, offset, error)
+            logger.debug(
+                "Direct lookup failed for %s at 0x%x: %s",
+                type_name,
+                offset,
+                error,
+                exc_info=error,
+            )
 
         try:
             return self._try_named_type_lookup(type_name)
         except (AttributeError, KeyError, OSError, RuntimeError, TypeError, ValueError) as error:
-            logger.debug("Failed to resolve type %s at 0x%x: %s", type_name, offset, error)
+            logger.debug(
+                "Failed to resolve type %s at 0x%x: %s",
+                type_name,
+                offset,
+                error,
+                exc_info=error,
+            )
             return None
 
     def _try_named_type_lookup(self: HierarchyBuilderContext, type_name: str) -> ClassInfo | None:

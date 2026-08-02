@@ -14,6 +14,7 @@ Complete documentation for the DWARF-to-C++ header reconstructor.
 - [ARCHITECTURE](ARCHITECTURE.md) - Complete architecture documentation with design rationale
 - [COMPONENT_DIAGRAM](COMPONENT_DIAGRAM.md) - Visual class diagram showing all components and relationships
 - [GENERATION_FLOWS](GENERATION_FLOWS.md) - Step-by-step flowcharts for single-file and multi-file generation modes
+- [OBSERVABILITY](OBSERVABILITY.md) - Structured logs, exception traces, event fields, and telemetry seam
 
 ### Technical Reference
 - [DWARF_TAG_ANALYSIS](DWARF_TAG_ANALYSIS.md) - DWARF tag analysis and classification
@@ -27,6 +28,7 @@ Complete documentation for the DWARF-to-C++ header reconstructor.
   - [pyelftools/](knowledge-base/pyelftools/) - pyelftools API reference and examples
   - [ps4-elf/](knowledge-base/ps4-elf/) - PS4 ELF format specifics
   - [tools/](knowledge-base/tools/) - Analysis of similar tools
+  - [observability/](knowledge-base/observability/) - Structured logs and exception tracing
 
 ### DWARF specification pipeline
 
@@ -79,6 +81,12 @@ provenance manifest are linked from the
 - Use case recommendations
 
 **When to read:** Understanding how header generation works end-to-end, comparing single-file vs multi-file modes, debugging generation issues.
+
+### OBSERVABILITY.md
+**Purpose:** Runtime event schema, severity policy, traceback handling, and the future telemetry seam.
+
+**When to read:** Diagnosing a failed symbol, investigating cache/index behavior, or adding a new
+critical-path event without creating log spam.
 
 ### TESTING.md
 **Purpose:** Testing strategy, guidelines, and how to run tests.
@@ -146,6 +154,11 @@ provenance manifest are linked from the
 1. [TESTING](TESTING.md) has all commands and guidelines
 2. [README](../README.md) has quick test commands
 3. [ARCHITECTURE](ARCHITECTURE.md) explains testing strategy rationale
+
+**...why a generation or cache operation failed**
+1. Start with [OBSERVABILITY](OBSERVABILITY.md) and filter the latest JSONL file by `run_id`
+2. Use the `symbol`, `stage`, status, offsets, and duration fields to isolate the failing boundary
+3. Inspect the nested exception records before changing parser or artifact policy
 
 **...why certain design decisions were made**
 1. [ARCHITECTURE](ARCHITECTURE.md) has extensive rationale sections

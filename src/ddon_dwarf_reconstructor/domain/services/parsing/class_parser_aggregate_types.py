@@ -176,7 +176,11 @@ class ClassParserAggregateTypesMixin:
                 file_entry = line_program.header.file_entry[decl_file_attr.value - 1]
                 return decode_dwarf_string(file_entry.name)
         except (AttributeError, IndexError, KeyError, RuntimeError, TypeError, ValueError) as error:
-            logger.debug("Unable to resolve declaration file for CU %s: %s", cu.cu_offset, error)
-            pass
+            logger.debug(
+                "Unable to resolve declaration file for CU %s: %s",
+                cu.cu_offset,
+                error,
+                exc_info=error,
+            )
 
         return None

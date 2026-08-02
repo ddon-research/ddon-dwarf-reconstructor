@@ -12,7 +12,10 @@ import typer
 from .domain.repositories.cache import PersistentSymbolCache
 from .infrastructure.artifacts import SourceIdentityCatalog
 from .infrastructure.config import get_cache_file_path
+from .infrastructure.logging import LoggerSetup, get_logger, log_exception
 from .infrastructure.zstd_dump_parser import ZstdDumpParser
+
+logger = get_logger(__name__)
 
 app = typer.Typer(
     name="artifacts",
@@ -56,8 +59,10 @@ def _write_result(result: dict[str, Any]) -> None:
 
 def _run_operation(operation: Callable[[], None]) -> None:
     try:
+        LoggerSetup.initialize(Path("logs"))
         operation()
-    except (OSError, ValueError) as error:
+    except Exception as error:
+        log_exception(logger, "artifact_operation_failed", error, operation=operation.__name__)
         typer.echo(f"Artifact operation failed: {error}", err=True)
         raise typer.Exit(code=1) from error
 

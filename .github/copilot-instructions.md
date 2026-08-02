@@ -40,6 +40,22 @@ Use the existing domain-driven and hexagonal structure:
   method evidence, special-header rendering, and array/declarator parsing. Do not add a second
   implementation in an alternate generator or adapter.
 
+## Observability and exception handling
+
+- Use `ddon_dwarf_reconstructor.core.observability` as the technology-neutral logging boundary.
+  Emit stable snake_case events with `log_event`; use `bind_context` for `run_id`, command, input
+  identity, symbol, stage, and future `trace_id`/`span_id` fields. Infrastructure configures
+  structlog, JSONL files, and Rich stderr rendering; domain code must not import those libraries.
+- Keep logs useful and bounded: info marks pipeline/stage progress, debug records cache/search
+  detail, warning marks partial/unavailable evidence or recovery, and error marks failed operations.
+  Never log every DIE, entire generated headers, binary contents, credentials, or unrestricted tool
+  output. Keep artifact JSON on stdout; runtime diagnostics go to stderr and the log file.
+- Catch the narrowest expected exception, attach `exc_info=error` or use `log_exception`, and keep
+  exception chaining with `raise ... from error`. A diagnostic that only logs `str(error)` is not
+  sufficient for debugging nested causes and source line references.
+- Add or update focused tests for JSON field shape, callsite information, nested tracebacks,
+  context reset, and failure-mode behavior whenever a critical path changes.
+
 ## Commands
 
 Always use `uv run` for project Python commands and the packaged entry point for generation:

@@ -4,13 +4,18 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import shutil
 import tempfile
 from collections.abc import Mapping
 from pathlib import Path
+from time import perf_counter
 
+from ..core.observability import get_logger, log_event
 from ..core.platform import ELFPlatform
+
+logger = get_logger(__name__)
 
 
 class AtomicHeaderPublisher:
@@ -29,6 +34,15 @@ class AtomicHeaderPublisher:
         targets: list[str] = []
         backups: dict[str, Path | None] = {}
         manifest_backup: Path | None = None
+        started_at = perf_counter()
+        log_event(
+            logger,
+            logging.DEBUG,
+            "header_bundle_publish_started",
+            output_dir=platform_dir,
+            platform=platform.value,
+            header_count=len(headers),
+        )
         try:
             new_filenames = self._stage_headers(staged_dir, headers)
             targets = sorted({*new_filenames, *self._previous_filenames(manifest_path)})
@@ -40,13 +54,37 @@ class AtomicHeaderPublisher:
                 if filename not in headers:
                     (platform_dir / filename).unlink(missing_ok=True)
             self._publish_manifest(staged_dir, manifest_path, headers)
+        except Exception as error:
+            log_event(
+                logger,
+                logging.ERROR,
+                "header_bundle_publish_failed",
+                output_dir=platform_dir,
+                platform=platform.value,
+                header_count=len(headers),
+                duration_ms=round((perf_counter() - started_at) * 1000, 3),
+                exc_info=error,
+            )
+            self._rollback(platform_dir, backups, manifest_path, manifest_backup)
+            raise
         except BaseException:
             self._rollback(platform_dir, backups, manifest_path, manifest_backup)
             raise
         finally:
             shutil.rmtree(staged_dir, ignore_errors=True)
             shutil.rmtree(backup_dir, ignore_errors=True)
-        return platform_dir, sum(len(content.encode("utf-8")) for content in headers.values())
+        total_bytes = sum(len(content.encode("utf-8")) for content in headers.values())
+        log_event(
+            logger,
+            logging.INFO,
+            "header_bundle_published",
+            output_dir=platform_dir,
+            platform=platform.value,
+            header_count=len(headers),
+            total_bytes=total_bytes,
+            duration_ms=round((perf_counter() - started_at) * 1000, 3),
+        )
+        return platform_dir, total_bytes
 
     @classmethod
     def _previous_filenames(cls, manifest_path: Path) -> list[str]:

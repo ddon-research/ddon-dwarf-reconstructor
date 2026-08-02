@@ -62,7 +62,7 @@ class ClassParserDumpDiscoveryMixin:
             ValueError,
         ) as error:
             self._dump_lookup_unavailable = True
-            logger.error("Error using DWARF dump: %s", error)
+            logger.error("Error using DWARF dump: %s", error, exc_info=error)
             logger.debug("Falling back to full scan")
             return None
 
@@ -78,7 +78,9 @@ class ClassParserDumpDiscoveryMixin:
             result = self._find_class_with_dump(class_name)
             return (not self._dump_lookup_unavailable), result
         except (ImportError, OSError, ValueError) as error:
-            logger.warning("DWARF dump lookup unavailable for %s: %s", class_name, error)
+            logger.warning(
+                "DWARF dump lookup unavailable for %s: %s", class_name, error, exc_info=error
+            )
             return False, None
 
     def _find_cu(self: ClassParserContext, cu_offset: int) -> DwarfCompilationUnit | None:

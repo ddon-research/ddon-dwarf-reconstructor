@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from ....core.observability import get_logger
+from ....core.observability import get_logger, log_event
 from ...models.dwarf import ClassInfo
 
 logger = get_logger(__name__)
@@ -55,13 +56,15 @@ class HierarchyDependencyMixin:
             else:
                 self._process_next_name(work, all_classes, max_depth, include_method_signatures)
         elapsed = time.perf_counter() - started_at
-        logger.info(
-            "Dependency resolution complete in %.2fs: %s newly resolved, %s cache hits, %s skipped, %s lookups",
-            elapsed,
-            work.resolved_count,
-            work.cache_hit_count,
-            work.skipped_count,
-            work.cache_miss_count,
+        log_event(
+            logger,
+            logging.DEBUG,
+            "dependency_resolution_completed",
+            duration_ms=round(elapsed * 1000, 3),
+            resolved=work.resolved_count,
+            cache_hits=work.cache_hit_count,
+            skipped=work.skipped_count,
+            lookups=work.cache_miss_count,
         )
 
 
@@ -178,7 +181,14 @@ class HierarchyDependencyWorkMixin:
         work.resolved_count += 1
         work.cache_miss_count += 1
         if elapsed > 0.1:
-            logger.warning("Slow resolution: %s took %.2fs", type_name, elapsed)
+            log_event(
+                logger,
+                logging.WARNING,
+                "slow_dependency_resolution",
+                type_name=type_name,
+                offset=offset,
+                duration_ms=round(elapsed * 1000, 3),
+            )
         return resolved
 
     def _process_next_name(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import tempfile
 from collections.abc import Generator
@@ -12,7 +13,7 @@ from pathlib import Path
 from time import monotonic, sleep, time
 from typing import Any
 
-from ....core.observability import get_logger
+from ....core.observability import get_logger, log_event
 from .cache_context import CacheContext
 
 logger = get_logger(__name__)
@@ -33,9 +34,12 @@ class CachePersistenceMixin:
 
         # Compare content (ignore timestamps)
         if self._cache_content_unchanged(disk_data):
-            logger.debug(
-                f"Cache content unchanged (only timestamps differ), "
-                f"skipping save to {self.cache_file}"
+            log_event(
+                logger,
+                logging.DEBUG,
+                "symbol_cache_save_skipped",
+                cache_path=self.cache_file,
+                reason="content_unchanged",
             )
             self._modified = False
             return
@@ -47,12 +51,22 @@ class CachePersistenceMixin:
                 latest_data = self._load_disk_cache_for_comparison()
                 self.data = self._merge_with_disk(latest_data)
                 self._atomic_write(self.data)
-            logger.info(
-                f"Saved cache to {self.cache_file} ({len(self.data['symbol_to_offset'])} symbols)"
+            log_event(
+                logger,
+                logging.DEBUG,
+                "symbol_cache_saved",
+                cache_path=self.cache_file,
+                symbol_count=len(self.data["symbol_to_offset"]),
             )
             self._modified = False
-        except OSError as e:
-            logger.error(f"Failed to save cache to {self.cache_file}: {e}")
+        except OSError as error:
+            log_event(
+                logger,
+                logging.ERROR,
+                "symbol_cache_save_failed",
+                cache_path=self.cache_file,
+                exc_info=error,
+            )
 
     def restore_from(self: CacheContext, source_cache_file: str | Path) -> dict[str, Any]:
         """Atomically replace this cache from an explicitly selected cache.
@@ -88,8 +102,14 @@ class CachePersistenceMixin:
                     loaded = json.load(f)
                     if isinstance(loaded, dict):
                         return {str(key): value for key, value in loaded.items()}
-        except (json.JSONDecodeError, OSError) as e:
-            logger.debug(f"Could not load disk cache for comparison: {e}")
+        except (json.JSONDecodeError, OSError) as error:
+            log_event(
+                logger,
+                logging.DEBUG,
+                "symbol_cache_comparison_unavailable",
+                cache_path=self.cache_file,
+                exc_info=error,
+            )
 
         return {}
 
@@ -131,8 +151,7 @@ class CachePersistenceMixin:
                 os.fsync(output.fileno())
             temporary_path.replace(self.cache_file)
         finally:
-            if temporary_path.exists():
-                temporary_path.unlink()
+            temporary_path.unlink(missing_ok=True)
 
     def _merge_with_disk(self: CacheContext, disk_data: dict[str, Any]) -> dict[str, Any]:
         """Preserve matching updates published by another process while waiting."""
@@ -229,8 +248,20 @@ class CachePersistenceMixin:
                     continue
                 if is_stale:
                     lock_path.unlink(missing_ok=True)
+                    log_event(
+                        logger,
+                        logging.WARNING,
+                        "symbol_cache_stale_lock_removed",
+                        lock_path=lock_path,
+                    )
                     continue
                 if monotonic() >= deadline:
+                    log_event(
+                        logger,
+                        logging.ERROR,
+                        "symbol_cache_lock_timeout",
+                        lock_path=lock_path,
+                    )
                     raise TimeoutError(f"Timed out waiting for cache lock: {lock_path}") from None
                 sleep(0.05)
         try:

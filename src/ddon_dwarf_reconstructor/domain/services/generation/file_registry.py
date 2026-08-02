@@ -163,7 +163,9 @@ class FileRegistry:
                         logger.debug(f"Extracted {len(file_paths)} files for CU 0x{cu_offset:x}")
                         return file_paths
         except (AttributeError, IndexError, KeyError, RuntimeError, TypeError, ValueError) as error:
-            logger.debug("Failed to extract file list for CU 0x%x: %s", cu_offset, error)
+            logger.debug(
+                "Failed to extract file list for CU 0x%x: %s", cu_offset, error, exc_info=error
+            )
 
         # Fallback: return empty list
         return []

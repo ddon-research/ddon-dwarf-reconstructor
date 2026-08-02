@@ -1,12 +1,14 @@
-#!/usr/bin/env python3
-
 """Progress tracking for DWARF parsing operations."""
+
+from __future__ import annotations
 
 import logging
 from collections.abc import Generator
 from contextlib import contextmanager
-from time import time
+from time import perf_counter
 from typing import TYPE_CHECKING, Any
+
+from ...core.observability import log_event
 
 if TYPE_CHECKING:
     try:
@@ -33,7 +35,7 @@ class ProgressTracker:
             logger: Logger instance for progress reporting
         """
         self.logger = logger
-        self.start_time = time()
+        self.start_time = perf_counter()
         self.cu_count = 0
         self.die_count = 0
         self.operation_stack: list[tuple[str, float]] = []
@@ -49,18 +51,32 @@ class ProgressTracker:
         Yields:
             None
         """
-        start_time = time()
+        start_time = perf_counter()
         self.operation_stack.append((operation_name, start_time))
-
-        self.logger.debug(f"Starting operation: {operation_name}")
+        log_event(
+            self.logger, logging.DEBUG, "progress_operation_started", operation=operation_name
+        )
 
         try:
             yield
-            elapsed = time() - start_time
-            self.logger.debug(f"Completed operation: {operation_name} in {elapsed:.3f}s")
-        except Exception as e:
-            elapsed = time() - start_time
-            self.logger.error(f"Failed operation: {operation_name} after {elapsed:.3f}s: {e}")
+            elapsed_ms = (perf_counter() - start_time) * 1000
+            log_event(
+                self.logger,
+                logging.DEBUG,
+                "progress_operation_completed",
+                operation=operation_name,
+                duration_ms=round(elapsed_ms, 3),
+            )
+        except Exception as error:
+            elapsed_ms = (perf_counter() - start_time) * 1000
+            log_event(
+                self.logger,
+                logging.ERROR,
+                "progress_operation_failed",
+                operation=operation_name,
+                duration_ms=round(elapsed_ms, 3),
+                exc_info=error,
+            )
             raise
         finally:
             self.operation_stack.pop()
@@ -77,14 +93,19 @@ class ProgressTracker:
             None
         """
         self.cu_count += 1
-        cu_start = time()
+        cu_start = perf_counter()
 
         # Extract CU information safely
         cu_offset = getattr(cu, "cu_offset", 0)
         cu_length = getattr(cu, "cu_length", 0)
 
-        self.logger.debug(
-            f"Processing CU #{self.cu_count} at 0x{cu_offset:x} (length: {cu_length} bytes)"
+        log_event(
+            self.logger,
+            logging.DEBUG,
+            "compile_unit_started",
+            compile_unit_index=self.cu_count,
+            cu_offset=cu_offset,
+            cu_length=cu_length,
         )
 
         initial_die_count = self.die_count
@@ -92,16 +113,29 @@ class ProgressTracker:
         try:
             yield
 
-            elapsed = time() - cu_start
+            elapsed_ms = (perf_counter() - cu_start) * 1000
             dies_processed = self.die_count - initial_die_count
-
-            self.logger.debug(
-                f"CU #{self.cu_count} completed in {elapsed:.3f}s ({dies_processed} DIEs processed)"
+            log_event(
+                self.logger,
+                logging.DEBUG,
+                "compile_unit_completed",
+                compile_unit_index=self.cu_count,
+                cu_offset=cu_offset,
+                dies_processed=dies_processed,
+                duration_ms=round(elapsed_ms, 3),
             )
 
-        except Exception as e:
-            elapsed = time() - cu_start
-            self.logger.error(f"CU #{self.cu_count} failed after {elapsed:.3f}s: {e}")
+        except Exception as error:
+            elapsed_ms = (perf_counter() - cu_start) * 1000
+            log_event(
+                self.logger,
+                logging.ERROR,
+                "compile_unit_failed",
+                compile_unit_index=self.cu_count,
+                cu_offset=cu_offset,
+                duration_ms=round(elapsed_ms, 3),
+                exc_info=error,
+            )
             raise
 
     def count_die(self) -> None:
@@ -110,15 +144,20 @@ class ProgressTracker:
 
     def report_summary(self) -> None:
         """Report final processing statistics."""
-        total_time = time() - self.start_time
+        total_time = perf_counter() - self.start_time
 
         avg_cu_time = total_time / self.cu_count if self.cu_count > 0 else 0
         avg_die_rate = self.die_count / total_time if total_time > 0 else 0
 
-        self.logger.info(
-            f"Processing complete: {self.cu_count} CUs, {self.die_count} DIEs "
-            f"in {total_time:.2f}s (avg: {avg_cu_time:.3f}s/CU, "
-            f"{avg_die_rate:.1f} DIEs/s)"
+        log_event(
+            self.logger,
+            logging.INFO,
+            "dwarf_processing_summary",
+            compile_units=self.cu_count,
+            dies=self.die_count,
+            duration_ms=round(total_time * 1000, 3),
+            average_compile_unit_ms=round(avg_cu_time * 1000, 3),
+            dies_per_second=round(avg_die_rate, 3),
         )
 
     def get_current_context(self) -> str:
@@ -138,19 +177,24 @@ class ProgressTracker:
         """Log current memory usage if psutil is available."""
         try:
             import psutil
-
-            process = psutil.Process()
-            memory_mb = process.memory_info().rss / 1024 / 1024
-            self.logger.debug(f"Memory usage: {memory_mb:.1f} MB")
         except ImportError:
-            # psutil not available, skip memory logging
-            pass
-        except Exception as e:
-            self.logger.debug(f"Could not get memory usage: {e}")
+            log_event(self.logger, logging.DEBUG, "memory_metrics_unavailable")
+            return
+        try:
+            memory_mb = psutil.Process().memory_info().rss / 1024 / 1024
+        except (OSError, psutil.Error) as error:
+            log_event(
+                self.logger,
+                logging.DEBUG,
+                "memory_metrics_failed",
+                exc_info=error,
+            )
+            return
+        log_event(self.logger, logging.DEBUG, "memory_usage", resident_mb=round(memory_mb, 3))
 
     def reset(self) -> None:
         """Reset all counters and timers."""
-        self.start_time = time()
+        self.start_time = perf_counter()
         self.cu_count = 0
         self.die_count = 0
         self.operation_stack.clear()

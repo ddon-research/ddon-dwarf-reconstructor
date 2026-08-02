@@ -70,7 +70,7 @@ class CacheSchemaMixin:
                     )
                     return data
         except (json.JSONDecodeError, OSError, ValueError) as e:
-            logger.warning(f"Failed to load cache from {self.cache_file}: {e}")
+            logger.warning(f"Failed to load cache from {self.cache_file}: {e}", exc_info=e)
 
         # Return empty cache structure
         return self._create_empty_cache()

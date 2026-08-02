@@ -9,10 +9,12 @@ Detects the target platform of an ELF file (PS3, PS4, PC, etc.) based on:
 - OS/ABI field
 """
 
+import logging
+
 from elftools.common.exceptions import ELFError
 from elftools.elf.elffile import ELFFile
 
-from ..core.observability import get_logger
+from ..core.observability import get_logger, log_event
 from ..core.platform import ELFPlatform
 
 logger = get_logger(__name__)
@@ -57,7 +59,13 @@ class PlatformDetector:
             TypeError,
             ValueError,
         ) as error:
-            logger.error("Failed to detect platform from %s: %s", elf_path, error)
+            log_event(
+                logger,
+                logging.ERROR,
+                "elf_platform_detection_failed",
+                elf_path=elf_path,
+                exc_info=error,
+            )
             return ELFPlatform.UNKNOWN
 
     @staticmethod
@@ -67,20 +75,32 @@ class PlatformDetector:
             machine_str = elf.header["e_machine"]
             is_little_endian: bool = elf.little_endian
             dwarf_version = PlatformDetector._get_dwarf_version(elf)
-            logger.debug(
-                "ELF characteristics: machine=%s, little_endian=%s, dwarf_version=%s",
-                machine_str,
-                is_little_endian,
-                dwarf_version,
+            log_event(
+                logger,
+                logging.DEBUG,
+                "elf_characteristics",
+                elf_path=elf_path,
+                machine=machine_str,
+                little_endian=is_little_endian,
+                dwarf_version=dwarf_version,
             )
             if machine_str == PlatformDetector.MACHINE_POWERPC64_STR and not is_little_endian:
-                logger.info("Detected PS3 ELF (PowerPC64 big-endian)")
+                log_event(
+                    logger, logging.INFO, "elf_platform_detected", elf_path=elf_path, platform="ps3"
+                )
                 return ELFPlatform.PS3
             if machine_str == PlatformDetector.MACHINE_X86_64_STR and is_little_endian:
-                logger.info("Detected PS4 ELF (x86-64 little-endian)")
+                log_event(
+                    logger, logging.INFO, "elf_platform_detected", elf_path=elf_path, platform="ps4"
+                )
                 return ELFPlatform.PS4
-            logger.warning(
-                "Unknown platform: machine=%s (little_endian=%s)", machine_str, is_little_endian
+            log_event(
+                logger,
+                logging.WARNING,
+                "elf_platform_unknown",
+                elf_path=elf_path,
+                machine=machine_str,
+                little_endian=is_little_endian,
             )
             return ELFPlatform.UNKNOWN
         except (
@@ -91,7 +111,13 @@ class PlatformDetector:
             TypeError,
             ValueError,
         ) as error:
-            logger.error("Failed to classify ELF %s: %s", elf_path, error)
+            log_event(
+                logger,
+                logging.ERROR,
+                "elf_platform_classification_failed",
+                elf_path=elf_path,
+                exc_info=error,
+            )
             return ELFPlatform.UNKNOWN
 
     @staticmethod
@@ -115,6 +141,11 @@ class PlatformDetector:
                 return version
 
         except (ELFError, AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
-            logger.debug("Unable to read DWARF version: %s", error)
+            log_event(
+                logger,
+                logging.DEBUG,
+                "dwarf_version_unavailable",
+                exc_info=error,
+            )
 
         return None

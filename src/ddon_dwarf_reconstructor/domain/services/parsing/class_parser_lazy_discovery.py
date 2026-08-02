@@ -26,7 +26,7 @@ class ClassParserLazyDiscoveryMixin:
                 return dumped
             return self._targeted_definition(class_name)
         except (AttributeError, KeyError, OSError, RuntimeError, TypeError, ValueError) as error:
-            logger.warning("Lazy loading failed for %s: %s", class_name, error)
+            logger.warning("Lazy loading failed for %s: %s", class_name, error, exc_info=error)
             return None
 
     def _cached_definition(
@@ -139,7 +139,9 @@ class ClassParserLazyDiscoveryMixin:
                     die = self._find_die_in_cu(cu, offset)
                     return (cu, die) if die is not None else None
         except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
-            logger.error("Error finding DIE and CU at offset 0x%x: %s", offset, error)
+            logger.error(
+                "Error finding DIE and CU at offset 0x%x: %s", offset, error, exc_info=error
+            )
         logger.warning("DIE not found at offset 0x%x", offset)
         return None
 

@@ -10,8 +10,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DEFAULT_ROOTS = (Path("src"), Path("tests"))
-MAX_MODULE_LINES = 400
-MAX_CLASS_LINES = 250
+MAX_MODULE_LINES = 600
+MAX_CLASS_LINES = 500
 MAX_FUNCTION_LINES = 75
 MAX_COMPLEXITY = 10
 

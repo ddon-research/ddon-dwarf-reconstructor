@@ -44,7 +44,7 @@ def parse_array_type(array_die: DwarfEntry, type_resolver: TypeNameResolver) -> 
             return None
         element_type = type_resolver.resolve_type_name(element_die)
     except (AttributeError, KeyError, TypeError, ValueError) as error:
-        logger.debug("Failed to resolve array element type: %s", error)
+        logger.debug("Failed to resolve array element type: %s", error, exc_info=error)
         return None
 
     dimensions = _collect_dimensions(array_die)

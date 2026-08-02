@@ -119,5 +119,5 @@ class ClassParserMethodLookupMixin:
             return None
 
         except (AttributeError, KeyError, OSError, TypeError, ValueError) as e:
-            logger.warning(f"Failed to search dump for {method_name}: {e}")
+            logger.warning(f"Failed to search dump for {method_name}: {e}", exc_info=e)
             return None

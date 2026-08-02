@@ -6,9 +6,11 @@ import sys
 from dataclasses import dataclass
 from logging import Logger
 from pathlib import Path
+from time import perf_counter
+from uuid import uuid4
 
 from .application.generators import DwarfGenerator, GenerationRequest
-from .core.observability import get_logger, log_timing
+from .core.observability import bind_context, get_logger, log_event, log_exception
 from .core.platform import ELFPlatform
 from .infrastructure.artifacts import SourceIdentityCatalog
 from .infrastructure.composition import (
@@ -73,7 +75,7 @@ def _read_symbol_file(path: Path, logger: Logger) -> list[str]:
                 for line in symbol_file
                 if line.strip() and not line.strip().startswith("#")
             ]
-        logger.info("Read %s symbols from %s", len(symbols), path)
+        log_event(logger, 20, "symbols_file_read", path=path, symbol_count=len(symbols))
         return symbols
     except FileNotFoundError as error:
         raise ValueError(f"Symbols file not found: {path}") from error
@@ -84,23 +86,22 @@ def _read_symbol_file(path: Path, logger: Logger) -> list[str]:
 def _log_options(
     options: GenerationOptions, config: Config, symbols: list[str], logger: Logger
 ) -> None:
-    logger.info("Generating headers for %s symbol(s)", len(symbols))
     generation_mode = _generation_mode(options)
     search_mode = "exhaustive" if options.exhaustive else "fast (early-exit)"
-    parameter_mode = (
-        "enabled (searching implementations)"
-        if options.resolve_param_names
-        else "disabled (auto-increment)"
+    log_event(
+        logger,
+        20,
+        "generation_options",
+        symbol_count=len(symbols),
+        input_path=config.elf_file_path,
+        output_path=config.output_dir,
+        generation_mode=generation_mode,
+        search_mode=search_mode,
+        parameter_name_resolution=options.resolve_param_names,
+        dwarf_dump=options.dwarf_dump,
+        dwarf_index=options.dwarf_index,
+        export_knowledge=options.export_knowledge,
     )
-    logger.debug("ELF file: %s", config.elf_file_path)
-    logger.debug("Output directory: %s", config.output_dir)
-    logger.debug("Generation mode: %s", generation_mode)
-    logger.debug("Search mode: %s", search_mode)
-    logger.debug("Parameter name resolution: %s", parameter_mode)
-    if options.dwarf_dump:
-        logger.debug("DWARF dump: %s", options.dwarf_dump)
-    if options.dwarf_index:
-        logger.debug("DWARF index: %s", options.dwarf_index)
 
 
 def _generation_mode(options: GenerationOptions) -> str:
@@ -112,30 +113,40 @@ def _generation_mode(options: GenerationOptions) -> str:
 def _run_generation(
     options: GenerationOptions, config: Config, symbols: list[str], logger: Logger
 ) -> tuple[int, list[tuple[str, str]]]:
+    try:
+        return _run_generation_impl(options, config, symbols, logger)
+    except Exception as error:
+        raise RuntimeError(f"Fatal error during generation: {error}") from error
+
+
+def _run_generation_impl(
+    options: GenerationOptions, config: Config, symbols: list[str], logger: Logger
+) -> tuple[int, list[tuple[str, str]]]:
     success_count = 0
     failed_symbols: list[tuple[str, str]] = []
     pending_headers: dict[str, str] = {}
-    try:
-        dwarf_config = DwarfRuntimeConfig.from_environment()
-        identity_catalog = SourceIdentityCatalog()
-        with DwarfGenerator(
-            config.elf_file_path,
-            session_factory=create_dwarf_session,
-            exhaustive_search=options.exhaustive,
-            dwarf_dump_path=options.dwarf_dump,
-            dwarf_index_path=options.dwarf_index,
-            resolve_param_names=options.resolve_param_names,
-            dump_lookup_factory=create_dump_lookup,
-            disassembly_factory=create_disassembly_producer,
-            cache_file=get_cache_file_path(str(config.elf_file_path)),
-            die_cache_size=dwarf_config.die_cache_size,
-            type_cache_size=dwarf_config.type_cache_size,
-            search_timeout=dwarf_config.search_timeout_seconds,
-            source_hash=identity_catalog.sha256,
-            source_identity=identity_catalog,
-        ) as generator:
-            for index, symbol_name in enumerate(symbols, 1):
-                logger.info("[%s/%s] Processing: %s", index, len(symbols), symbol_name)
+    dwarf_config = DwarfRuntimeConfig.from_environment()
+    identity_catalog = SourceIdentityCatalog()
+    with DwarfGenerator(
+        config.elf_file_path,
+        session_factory=create_dwarf_session,
+        exhaustive_search=options.exhaustive,
+        dwarf_dump_path=options.dwarf_dump,
+        dwarf_index_path=options.dwarf_index,
+        resolve_param_names=options.resolve_param_names,
+        dump_lookup_factory=create_dump_lookup,
+        disassembly_factory=create_disassembly_producer,
+        cache_file=get_cache_file_path(str(config.elf_file_path)),
+        die_cache_size=dwarf_config.die_cache_size,
+        type_cache_size=dwarf_config.type_cache_size,
+        search_timeout=dwarf_config.search_timeout_seconds,
+        source_hash=identity_catalog.sha256,
+        source_identity=identity_catalog,
+    ) as generator:
+        for index, symbol_name in enumerate(symbols, 1):
+            with bind_context(symbol=symbol_name, symbol_index=index, symbol_count=len(symbols)):
+                started_at = perf_counter()
+                log_event(logger, 20, "symbol_started", symbol=symbol_name)
                 try:
                     if options.export_knowledge:
                         _process_symbol(options, config, generator, symbol_name, symbols, logger)
@@ -144,17 +155,18 @@ def _run_generation(
                         if generator.lazy_index is not None:
                             generator.lazy_index.save_cache()
                     success_count += 1
+                    log_event(
+                        logger,
+                        20,
+                        "symbol_completed",
+                        symbol=symbol_name,
+                        duration_ms=round((perf_counter() - started_at) * 1000, 3),
+                    )
                 except (OSError, RuntimeError, ValueError) as error:
-                    _record_failure(symbol_name, error, failed_symbols, logger, config.verbose)
-            if pending_headers:
-                total_bytes = _write_headers(config, generator, pending_headers, logger)
-                _log_header_summary(
-                    options, generator, pending_headers, total_bytes, symbols, logger
-                )
-    except Exception as error:
-        logger.error("Fatal error during generation: %s", error)
-        _print_traceback(config.verbose)
-        raise RuntimeError(f"Fatal error during generation: {error}") from error
+                    _record_failure(symbol_name, error, failed_symbols, logger)
+        if pending_headers:
+            total_bytes = _write_headers(config, generator, pending_headers, logger)
+            _log_header_summary(options, generator, pending_headers, total_bytes, symbols, logger)
     return success_count, failed_symbols
 
 
@@ -201,10 +213,17 @@ def _write_headers(
     platform_dir, total_bytes = AtomicHeaderPublisher().publish(
         config.output_dir, output_platform, headers
     )
-    for filename, content in headers.items():
-        output_file = platform_dir / filename
-        logger.info("[SUCCESS] Generated: %s", output_file)
-        logger.info("Size: %s bytes", len(content.encode("utf-8")))
+    filenames = sorted(headers)
+    log_event(
+        logger,
+        20,
+        "headers_published",
+        output_dir=platform_dir,
+        header_count=len(headers),
+        total_bytes=total_bytes,
+        sample_files=filenames[:10],
+        sample_truncated=len(filenames) > 10,
+    )
     return total_bytes
 
 
@@ -217,20 +236,26 @@ def _log_header_summary(
     logger: Logger,
 ) -> None:
     if options.full_hierarchy and not options.single_file:
-        logger.debug("Generated %s headers, %s total bytes", len(headers), total_bytes)
-        if options.verbose:
-            for filename in sorted(headers):
-                logger.debug("  - %s", filename)
+        log_event(
+            logger,
+            10,
+            "header_bundle_summary",
+            header_count=len(headers),
+            total_bytes=total_bytes,
+            files=sorted(headers)[:20] if options.verbose else None,
+        )
         return
     filename = next(iter(headers), "")
     lines = headers[filename].split("\n") if filename else []
-    logger.debug("Generated header contains %s lines", len(lines))
-    if options.verbose and len(symbols) == 1:
-        logger.debug("\nPreview (first 30 lines):")
-        for line in lines[:30]:
-            logger.debug(line)
-        if len(lines) > 30:
-            logger.debug("... and %s more lines", len(lines) - 30)
+    log_event(
+        logger,
+        10,
+        "header_summary",
+        filename=filename,
+        line_count=len(lines),
+        preview=lines[:30] if options.verbose and len(symbols) == 1 else None,
+        preview_truncated=len(lines) > 30 if options.verbose and len(symbols) == 1 else False,
+    )
 
 
 def _record_failure(
@@ -238,20 +263,9 @@ def _record_failure(
     error: Exception,
     failed_symbols: list[tuple[str, str]],
     logger: Logger,
-    verbose: bool,
 ) -> None:
-    logger.error("[FAILED] %s: %s", symbol_name, error)
+    log_exception(logger, "symbol_failed", error, symbol=symbol_name)
     failed_symbols.append((symbol_name, str(error)))
-    if verbose:
-        _print_traceback(True)
-
-
-def _print_traceback(enabled: bool) -> None:
-    if not enabled:
-        return
-    import traceback
-
-    traceback.print_exc()
 
 
 def _log_summary(
@@ -260,33 +274,52 @@ def _log_summary(
     failed_symbols: list[tuple[str, str]],
     logger: Logger,
 ) -> None:
-    logger.info("=" * 70)
-    logger.info("GENERATION SUMMARY")
-    logger.info("=" * 70)
-    logger.info("Total symbols: %s", len(symbols))
-    logger.info("Successfully generated: %s", success_count)
-    logger.info("Failed: %s", len(failed_symbols))
-    if failed_symbols:
-        logger.info("\nFailed symbols:")
-        for symbol_name, error in failed_symbols:
-            logger.info("  - %s: %s", symbol_name, error)
+    log_event(
+        logger,
+        20 if not failed_symbols else 30,
+        "generation_summary",
+        total_symbols=len(symbols),
+        succeeded=success_count,
+        failed=len(failed_symbols),
+        failures=[{"symbol": symbol, "error": error} for symbol, error in failed_symbols[:20]],
+        failures_truncated=len(failed_symbols) > 20,
+    )
 
 
-@log_timing
 def run_generation(options: GenerationOptions) -> int:
     """Run one typed generation or knowledge-export request."""
     logger = get_logger(__name__)
+    run_id = uuid4().hex
+    command = "export-knowledge" if options.export_knowledge else "generate"
     try:
-        config = _load_config(options)
-        LoggerSetup.initialize(config.log_dir, verbose=config.verbose)
-        logger = get_logger(__name__)
-        config.ensure_output_dir()
-        symbols = _read_symbols(options, logger)
-        _log_options(options, config, symbols, logger)
-        success_count, failed_symbols = _run_generation(options, config, symbols, logger)
-        _log_summary(symbols, success_count, failed_symbols, logger)
-        return 0 if not failed_symbols else 1
-    except (OSError, RuntimeError, ValueError) as error:
+        LoggerSetup.initialize(Path("logs"), verbose=options.verbose)
+        with bind_context(
+            run_id=run_id,
+            command=command,
+            input_path=options.elf_file,
+            output_path=options.output,
+        ):
+            config = _load_config(options)
+            LoggerSetup.initialize(config.log_dir, verbose=config.verbose)
+            config.ensure_output_dir()
+            symbols = _read_symbols(options, logger)
+            _log_options(options, config, symbols, logger)
+            success_count, failed_symbols = _run_generation(options, config, symbols, logger)
+            _log_summary(symbols, success_count, failed_symbols, logger)
+            return 0 if not failed_symbols else 1
+    except Exception as error:
+        captured_stdout, captured_stderr = sys.stdout, sys.stderr
+        try:
+            log_exception(
+                logger,
+                "generation_failed",
+                error,
+                run_id=run_id,
+                command=command,
+                input_path=options.elf_file,
+            )
+        finally:
+            sys.stdout, sys.stderr = captured_stdout, captured_stderr
         print(f"Generation failed: {error}", file=sys.stderr)
         return 1
 

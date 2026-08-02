@@ -155,7 +155,7 @@ external resources into the ports those decisions consume.
 src/ddon_dwarf_reconstructor/
 ├── core/                              # Technology-neutral contracts and policies
 │   ├── dwarf.py                       # Structural DWARF contracts
-│   ├── observability.py               # Standard-library logging policy
+│   ├── observability.py               # Technology-neutral event/context facade
 │   ├── path_policy.py                 # Canonical output naming policy
 │   └── platform.py                    # Platform value used across ports
 │
@@ -204,7 +204,7 @@ src/ddon_dwarf_reconstructor/
     │   └── dwarf_config.py            # Validated runtime settings
     │
     ├── logging/                        # Observability
-    │   ├── logger_setup.py            # Structured logging
+    │   ├── logger_setup.py            # structlog JSONL + Rich stderr adapter
     │   └── progress_tracker.py        # Performance tracking
     │
     ├── elf_platform.py                 # Platform detection (PS3/PS4)
@@ -1059,22 +1059,36 @@ else:
 
 #### Logging and Observability
 
-**Design goal:** Provide detailed diagnostics without impacting performance.
+The runtime keeps the domain/application dependency direction stable by exposing
+only `logging.Logger`, `log_event`, `log_exception`, and `bind_context` from
+`core.observability`. `infrastructure.logging.LoggerSetup` installs structlog's
+`ProcessorFormatter` at the composition boundary. This gives the application
+structured JSONL records today while leaving a clean seam for OpenTelemetry
+trace/span context later.
 
 ```python
-@log_timing
-def generate_complete_hierarchy_header(self, class_name: str) -> str:
-    """Decorator automatically logs execution time.
-    
-    Output:
-    INFO: Generating complete hierarchy header for: rLayout
-    DEBUG: Typedef search expansion completed in 0.003s
-    DEBUG: Hierarchy building completed in 0.156s
-    DEBUG: Packing analysis completed in 0.042s
-    INFO: Hierarchy header generated successfully for rLayout
-    INFO: [timing] generate_complete_hierarchy_header: 0.234s
-    """
+with bind_context(run_id=run_id, symbol="rLayout"):
+    log_event(logger, logging.INFO, "symbol_started", stage="generation")
+    try:
+        header = generator.generate_complete_hierarchy_header("rLayout")
+    except Exception as error:
+        log_exception(logger, "symbol_failed", error, stage="generation")
+        raise
 ```
+
+Each command writes a timestamped `logs/ddon_reconstructor_<pid>_<utc>.jsonl`
+file at debug level and sends human-readable progress to stderr. Console output
+is INFO by default and includes DEBUG events with `--verbose`; artifact commands
+reserve stdout for their machine-readable JSON result. Chained exceptions are
+rendered as nested JSON traceback records in the file and as Rich tracebacks on
+interactive stderr.
+
+The stable event fields are `timestamp`, `level`, `logger`, `event`, callsite
+`filename`/`lineno`/`func_name`, and bounded operation fields such as `run_id`,
+`command`, `symbol`, source identity, stage, status, offsets, counts, and
+`duration_ms`. `trace_id`, `span_id`, and `trace_flags` are reserved context
+fields so a future OpenTelemetry bridge can be added without changing domain
+contracts.
 
 **Performance tracking:**
 
@@ -1088,9 +1102,13 @@ class ProgressTracker:
     - Average/min/max times
     - Total time per operation type
     
-    Why: Identify performance bottlenecks during development
+    Why: Identify performance bottlenecks during development without logging
+    every DIE or source line
     """
 ```
+
+See [OBSERVABILITY.md](OBSERVABILITY.md) for the event-level policy,
+troubleshooting workflow, exception rules, and OpenTelemetry extension path.
 
 ## Generation Workflows
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import tempfile
 from collections.abc import Generator
@@ -13,11 +14,13 @@ from pathlib import Path
 from time import monotonic, sleep, time, time_ns
 from typing import Any, cast
 
+from ..core.observability import get_logger, log_event
 from ..domain.ports.source_identity import SourceIdentity
 
 CATALOG_SCHEMA_VERSION = "1.0"
 LOCK_TIMEOUT_SECONDS = 30.0
 STALE_LOCK_SECONDS = 300.0
+logger = get_logger(__name__)
 
 
 def get_artifact_cache_dir() -> Path:
@@ -93,6 +96,15 @@ class SourceIdentityCatalog:
                     **asdict(metadata),
                 )
                 self._remember_path(catalog, lookup_key, record, resolved)
+                log_event(
+                    logger,
+                    logging.DEBUG,
+                    "source_identity_cache_hit",
+                    source_path=resolved,
+                    source_size=metadata.size,
+                    source_sha256=identity.sha256,
+                    verified=False,
+                )
                 return identity
 
             identity = SourceIdentity(
@@ -109,6 +121,15 @@ class SourceIdentityCatalog:
                 "verified_at_ns": time_ns(),
             }
             self._save(catalog)
+            log_event(
+                logger,
+                logging.INFO,
+                "source_identity_rehashed",
+                source_path=resolved,
+                source_size=metadata.size,
+                source_sha256=identity.sha256,
+                verified=verify,
+            )
             return identity
 
     def sha256(self, source_path: Path) -> str:
@@ -192,13 +213,26 @@ class SourceIdentityCatalog:
             return {"schema_version": CATALOG_SCHEMA_VERSION, "sources": {}}
         try:
             data = json.loads(self.path.read_text(encoding="utf-8"))
-        except OSError, json.JSONDecodeError:
+        except (OSError, json.JSONDecodeError) as error:
+            log_event(
+                logger,
+                logging.WARNING,
+                "source_identity_catalog_unreadable",
+                catalog_path=self.path,
+                exc_info=error,
+            )
             return {"schema_version": CATALOG_SCHEMA_VERSION, "sources": {}}
         if (
             not isinstance(data, dict)
             or data.get("schema_version") != CATALOG_SCHEMA_VERSION
             or not isinstance(data.get("sources"), dict)
         ):
+            log_event(
+                logger,
+                logging.WARNING,
+                "source_identity_catalog_invalid",
+                catalog_path=self.path,
+            )
             return {"schema_version": CATALOG_SCHEMA_VERSION, "sources": {}}
         return cast(dict[str, Any], data)
 
@@ -215,9 +249,15 @@ class SourceIdentityCatalog:
                 output.flush()
                 os.fsync(output.fileno())
             temporary_path.replace(self.path)
+            log_event(
+                logger,
+                logging.DEBUG,
+                "source_identity_catalog_published",
+                catalog_path=self.path,
+                source_count=len(catalog["sources"]),
+            )
         finally:
-            if temporary_path.exists():
-                temporary_path.unlink()
+            temporary_path.unlink(missing_ok=True)
 
     @contextmanager
     def _exclusive_lock(self) -> Generator[None]:
@@ -235,10 +275,22 @@ class SourceIdentityCatalog:
                 try:
                     if time() - lock_path.stat().st_mtime > STALE_LOCK_SECONDS:
                         lock_path.unlink()
+                        log_event(
+                            logger,
+                            logging.WARNING,
+                            "source_identity_stale_lock_removed",
+                            lock_path=lock_path,
+                        )
                         continue
                 except FileNotFoundError:
                     continue
                 if monotonic() >= deadline:
+                    log_event(
+                        logger,
+                        logging.ERROR,
+                        "source_identity_lock_timeout",
+                        lock_path=lock_path,
+                    )
                     raise TimeoutError(
                         f"Timed out waiting for source catalog lock: {lock_path}"
                     ) from None

@@ -5,16 +5,18 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import os
 import sqlite3
 import tempfile
 from collections.abc import Generator
 from contextlib import closing, contextmanager, suppress
 from pathlib import Path
-from time import monotonic, sleep, time
+from time import monotonic, perf_counter, sleep, time
 
-from ..core.observability import get_logger
+from ..core.observability import get_logger, log_event
 from ..infrastructure.artifacts import SourceIdentityCatalog
+from .zstd_dump_metadata import ZstdDumpMetadataMixin
 from .zstd_dump_query import DefinitionLocation as DefinitionLocation
 from .zstd_dump_query import ZstdDumpQueryMixin
 from .zstd_dump_scan import ZstdDumpScanMixin
@@ -31,7 +33,7 @@ LOCK_TIMEOUT_SECONDS = 30.0
 STALE_LOCK_SECONDS = 300.0
 
 
-class ZstdDumpParser(ZstdDumpQueryMixin, ZstdDumpScanMixin):
+class ZstdDumpParser(ZstdDumpQueryMixin, ZstdDumpScanMixin, ZstdDumpMetadataMixin):
     """Manage a source-bound SQLite sidecar built by one streaming pass."""
 
     INDEX_SCHEMA_VERSION = INDEX_SCHEMA_VERSION
@@ -53,14 +55,30 @@ class ZstdDumpParser(ZstdDumpQueryMixin, ZstdDumpScanMixin):
         source_metadata = self._source_metadata()
         if not force and self._index_matches_source(source_metadata):
             self._enrich_metadata(source_metadata)
+            log_event(
+                logger,
+                logging.DEBUG,
+                "dwarf_dump_index_reused",
+                dump_path=self.dump_path,
+                index_path=self.index_path,
+                source_size=source_metadata["source_size"],
+                source_sha256=source_metadata["source_sha256"],
+            )
             return
         with self._exclusive_lock():
             if not force and self._index_matches_source(source_metadata):
                 self._enrich_metadata(source_metadata)
+                log_event(
+                    logger,
+                    logging.DEBUG,
+                    "dwarf_dump_index_reused_after_lock",
+                    dump_path=self.dump_path,
+                    index_path=self.index_path,
+                )
                 return
-            self._build_index(source_metadata)
+            self._build_index(source_metadata, force=force)
 
-    def _build_index(self, source_metadata: dict[str, str]) -> None:
+    def _build_index(self, source_metadata: dict[str, str], *, force: bool) -> None:
         """Build a temporary sidecar and publish it atomically."""
         self.index_path.parent.mkdir(parents=True, exist_ok=True)
         descriptor, temporary_name = tempfile.mkstemp(
@@ -69,6 +87,17 @@ class ZstdDumpParser(ZstdDumpQueryMixin, ZstdDumpScanMixin):
         os.close(descriptor)
         temporary_path = Path(temporary_name)
         connection: sqlite3.Connection | None = None
+        started_at = perf_counter()
+        log_event(
+            logger,
+            logging.INFO,
+            "dwarf_dump_index_build_started",
+            dump_path=self.dump_path,
+            index_path=self.index_path,
+            force=force,
+            source_size=source_metadata["source_size"],
+            source_sha256=source_metadata["source_sha256"],
+        )
         try:
             connection = sqlite3.connect(temporary_path)
             self._create_schema(connection)
@@ -78,11 +107,29 @@ class ZstdDumpParser(ZstdDumpQueryMixin, ZstdDumpScanMixin):
             connection.close()
             connection = None
             temporary_path.replace(self.index_path)
+        except Exception as error:
+            log_event(
+                logger,
+                logging.ERROR,
+                "dwarf_dump_index_build_failed",
+                dump_path=self.dump_path,
+                index_path=self.index_path,
+                duration_ms=round((perf_counter() - started_at) * 1000, 3),
+                exc_info=error,
+            )
+            raise
         finally:
             if connection is not None:
                 connection.close()
-            if temporary_path.exists():
-                temporary_path.unlink()
+            temporary_path.unlink(missing_ok=True)
+        log_event(
+            logger,
+            logging.INFO,
+            "dwarf_dump_index_published",
+            dump_path=self.dump_path,
+            index_path=self.index_path,
+            duration_ms=round((perf_counter() - started_at) * 1000, 3),
+        )
 
     @staticmethod
     def _create_schema(connection: sqlite3.Connection) -> None:
@@ -121,14 +168,6 @@ class ZstdDumpParser(ZstdDumpQueryMixin, ZstdDumpScanMixin):
             metadata, source_metadata
         )
 
-    @staticmethod
-    def _metadata_matches_source(metadata: dict[str, str], source_metadata: dict[str, str]) -> bool:
-        for key in ("source_size", "source_sha256"):
-            stored = metadata.get(key)
-            if stored is not None and stored != source_metadata[key]:
-                return False
-        return True
-
     def _enrich_metadata(self, source_metadata: dict[str, str]) -> None:
         if not self.index_path.exists() or not self._has_required_tables():
             return
@@ -155,7 +194,14 @@ class ZstdDumpParser(ZstdDumpQueryMixin, ZstdDumpScanMixin):
             with closing(self._connect_index()) as connection:
                 rows = connection.execute("SELECT key, value FROM metadata").fetchall()
             return {str(key): str(value) for key, value in rows}
-        except sqlite3.DatabaseError:
+        except sqlite3.DatabaseError as error:
+            log_event(
+                logger,
+                logging.DEBUG,
+                "dwarf_dump_index_metadata_unreadable",
+                index_path=self.index_path,
+                exc_info=error,
+            )
             return None
 
     def _has_required_tables(self) -> bool:
@@ -168,7 +214,14 @@ class ZstdDumpParser(ZstdDumpQueryMixin, ZstdDumpScanMixin):
                     )
                 }
             return {"metadata", "class_definitions", "method_implementations"}.issubset(tables)
-        except sqlite3.DatabaseError:
+        except sqlite3.DatabaseError as error:
+            log_event(
+                logger,
+                logging.DEBUG,
+                "dwarf_dump_index_schema_unreadable",
+                index_path=self.index_path,
+                exc_info=error,
+            )
             return False
 
     def _connect_index(self) -> sqlite3.Connection:
@@ -201,6 +254,12 @@ class ZstdDumpParser(ZstdDumpQueryMixin, ZstdDumpScanMixin):
                 if ZstdDumpParser._remove_stale_lock(lock_path):
                     continue
                 if monotonic() >= deadline:
+                    log_event(
+                        logger,
+                        logging.ERROR,
+                        "dwarf_dump_index_lock_timeout",
+                        lock_path=lock_path,
+                    )
                     raise TimeoutError(
                         f"Timed out waiting for dump index lock: {lock_path}"
                     ) from None
@@ -211,6 +270,12 @@ class ZstdDumpParser(ZstdDumpQueryMixin, ZstdDumpScanMixin):
         try:
             if time() - lock_path.stat().st_mtime > STALE_LOCK_SECONDS:
                 lock_path.unlink()
+                log_event(
+                    logger,
+                    logging.WARNING,
+                    "dwarf_dump_index_stale_lock_removed",
+                    lock_path=lock_path,
+                )
                 return True
         except FileNotFoundError:
             return True

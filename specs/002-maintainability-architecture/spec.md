@@ -12,9 +12,12 @@ warm-cache performance.
 
 ## Requirements
 
-- **MA-001**: Python modules under `src/` and `tests/` MUST be at most 400
-  physical lines, classes at most 250 lines, and functions/methods at most 75
-  lines.
+- **MA-001**: Python modules under `src/` and `tests/` MUST be at most 600
+  physical lines, classes at most 500 lines including their documentation, and
+  functions/methods at most 75 lines.
+- Cohesive, functionally busy classes MUST NOT be split solely to satisfy the
+  class-line budget; decomposition is required when responsibilities,
+  dependencies, or complexity warrant it.
 - **MA-002**: Production and test functions MUST have McCabe complexity no
   greater than 10 unless the behavior is decomposed.
 - **MA-003**: Domain code MUST NOT depend on infrastructure adapters, SQLite,

@@ -12,6 +12,9 @@ sync:
 test-unit:
     uv run pytest -m unit -o addopts='-q --strict-markers'
 
+test-observability:
+    uv run pytest tests/infrastructure/test_logging.py -m unit -q
+
 test-integration:
     uv run pytest -m integration
 

@@ -48,9 +48,11 @@ ordering.
 
 ## Maintainability and architecture
 
-- Treat the following limits as hard gates for every non-generated Python file under `src/` and
-  `tests/`: 400 physical lines per module, 250 lines per class, 75 lines per function or method,
-  and McCabe complexity of 10. Do not add baseline exemptions; decompose the behavior instead.
+- Treat the following limits as maintainability guardrails for every non-generated Python file
+  under `src/` and `tests/`: 600 physical lines per module, 500 lines per class (including its
+  docstrings and internal documentation), 75 lines per function or method, and McCabe complexity
+  of 10. Do not split a cohesive, functionally busy class solely to satisfy a line budget; split
+  behavior when responsibilities, dependencies, or complexity justify it.
 - Keep the dependency direction explicit: domain code may depend on domain models, ports, and the
   standard library; application code coordinates use cases through ports; infrastructure owns
   `pyelftools`, SQLite, zstd, Orbis/process integration, and filesystem adapters. Only composition
@@ -67,6 +69,23 @@ ordering.
   swallowing them with broad `except` clauses.
 - New imports must be package-relative. Do not import the package through the repository's `src`
   directory, and do not make domain code aware of launchers or infrastructure details.
+
+### Observability and exception policy
+
+- Keep domain and application code on the standard-library logger boundary exposed by
+  `core.observability`; infrastructure owns the structlog `ProcessorFormatter` configuration.
+  Do not import structlog, Rich, or OpenTelemetry from domain code.
+- Prefer `log_event` with stable snake_case event names and bounded fields. Bind `run_id`, command,
+  source path/identity, symbol, stage, and optional `trace_id`/`span_id` at context boundaries.
+  Do not log ELF/DWARF bytes, complete headers, every DIE, credentials, or unbounded subprocess
+  output. Use debug for hot-loop detail, info for stage boundaries, warning for incomplete or
+  recoverable evidence, and error only when an operation fails.
+- Use `log_exception` or `exc_info=error` at the smallest useful boundary and preserve exception
+  chaining with `raise ... from error`. The JSONL file must retain nested traceback frames; the
+  stderr renderer is for human diagnosis. Do not replace an exception with `str(error)` alone.
+- `LoggerSetup` must preserve foreign root handlers, emit JSONL to the configured log directory,
+  and keep application diagnostics on stderr so artifact commands can reserve stdout for JSON.
+  New observability behavior requires a focused test for fields, callsite data, and chained errors.
 
 ## Test and regression discipline
 

@@ -80,6 +80,25 @@ Use `uv run ddon-dwarf-reconstructor --help` or a command’s `--help` for the c
 interface. `--output`, `--verbose`, `--full-hierarchy`, `--single-file`, `--exhaustive`,
 `--dwarf-dump`, `--dwarf-index`, and `--resolve-param-names` remain generation options.
 
+## Logging and diagnostics
+
+Each command writes structured JSON-lines diagnostics to `logs/` and human-readable progress to
+stderr. Use `--verbose` to include DEBUG events on stderr; artifact commands keep their result JSON
+on stdout. Records include the run ID, symbol/stage context, source identity when available,
+callsite filename/line, durations, bounded counts, and nested exception tracebacks.
+
+```powershell
+uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf --symbol rLayout --verbose
+
+$log = Get-ChildItem logs -Filter 'ddon_reconstructor_*.jsonl' |
+  Sort-Object LastWriteTime -Descending | Select-Object -First 1
+Get-Content $log.FullName | ConvertFrom-Json |
+  Where-Object event -in @('symbol_failed', 'generation_failed')
+```
+
+See [OBSERVABILITY.md](docs/OBSERVABILITY.md) for the event contract, low-noise severity policy,
+exception handling, and future OpenTelemetry seam.
+
 ## Durable artifact operations
 
 Artifact maintenance is grouped under the root command and is intentionally explicit:
@@ -136,9 +155,11 @@ uv run just                 # list recipes
 uv run just sync
 uv lock --check
 uv run just test-unit       # fast tests
+uv run just test-observability # focused JSONL/chained traceback tests
 uv run just test            # non-performance suite
 uv run just check           # Ruff, Pyrefly, deptry, structure, architecture
-uv run just coverage        # coverage thresholds and reports
+uv run just coverage-ci     # coverage thresholds and CI reports
+uv run just audit            # Prospector duplicate/dead-code audit
 uv run just package         # wheel and sdist
 uv run just package-smoke   # isolated uv tool install and CLI smoke test
 uv run just native-build    # optional Nuitka executable
@@ -153,6 +174,8 @@ The normal change loop is:
 uv run just test-unit
 uv run just check
 uv run just test
+uv run just coverage-ci
+uv run just audit
 ```
 
 The packaging smoke test is intentionally separate from the non-packaging test and coverage
@@ -167,6 +190,7 @@ validates dependency declarations, and focused Prospector diagnostics remain a n
 - [Architecture](docs/ARCHITECTURE.md)
 - [Component diagram](docs/COMPONENT_DIAGRAM.md)
 - [Generation flows](docs/GENERATION_FLOWS.md)
+- [Observability and diagnostics](docs/OBSERVABILITY.md)
 - [Testing and acceptance tiers](docs/TESTING.md)
 - [DWARF tag analysis](docs/DWARF_TAG_ANALYSIS.md)
 - [DWARF specification pipeline](tools/dwarf_spec_pipeline/README.md)

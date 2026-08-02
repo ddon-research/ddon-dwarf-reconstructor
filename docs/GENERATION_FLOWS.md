@@ -128,6 +128,30 @@ output/ps4/
 └── rLayout.h         (target class)
 ```
 
+## Observability checkpoints
+
+The same stages are visible in both generation modes. The CLI binds a `run_id`,
+command, input/output paths, and per-symbol context. The JSONL record sequence
+is intentionally sparse:
+
+```text
+logging_initialized
+generation_options
+symbol_started
+  -> dwarf_search_started / cache or dump events
+  -> hierarchy_build_completed / header_render_completed
+  -> headers_published
+symbol_completed | symbol_failed
+generation_summary
+```
+
+Search and artifact adapters add counts, offsets, cache state, source identity,
+and `duration_ms`; they do not emit one record per DIE or line. A warning means
+the operation returned an incomplete, unavailable, stale, or recovered result.
+An error includes the chained exception and should be investigated from the
+JSONL record before changing parser policy. See [OBSERVABILITY.md](OBSERVABILITY.md)
+for field and severity rules.
+
 ## Shared workflow services
 
 Both generation modes use the same operations through the composed `GeneratorWorkflow`:

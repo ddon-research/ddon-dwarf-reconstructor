@@ -12,13 +12,10 @@ This is the main generator that orchestrates the modular components:
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
-from time import time
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from ...core.dwarf import DwarfCompilationUnit, DwarfEntry
-from ...core.observability import get_logger
 from ...core.path_policy import create_header_filename
 from ...domain.models.dwarf import ClassInfo
 from ...domain.ports.class_parser import ClassParserPort
@@ -27,14 +24,13 @@ from ...domain.ports.dump_lookup import DumpLookupFactory
 from ...domain.ports.source_identity import SourceHashPort, SourceIdentityPort
 from ...domain.ports.type_resolution import TypeResolverPort
 from ...domain.services.generation import HeaderGenerator, HierarchyBuilder
+from .dwarf_generator_setup import DwarfGeneratorSetup
 from .generation_contracts import GenerationRequest, HeaderBundle
 from .generator_workflow import GeneratorWorkflow
 from .session import DwarfSessionFactory
 
 if TYPE_CHECKING:
     from ...domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
-
-logger = get_logger(__name__)
 
 
 class DwarfGenerator:
@@ -92,52 +88,10 @@ class DwarfGenerator:
         self.hierarchy_builder: HierarchyBuilder | None = None
 
     def _resolve_dwarf_dump_path(self, explicit_path: Path | None = None) -> Path | None:
-        """Resolve the compressed DWARF dump path using documented precedence.
-
-        Args:
-            explicit_path: Optional path supplied by the caller.
-
-        Returns:
-            The first existing candidate, or ``None`` when no dump is available.
-        """
-        if explicit_path is None:
-            explicit_path = self._configured_dwarf_dump_path
-
-        if explicit_path is not None:
-            return explicit_path
-
-        if not self.exhaustive_search:
-            return None
-
-        environment_path = os.getenv("DDON_DWARF_DUMP_PATH")
-        if environment_path:
-            candidate = Path(environment_path)
-            if candidate.exists():
-                return candidate
-
-        sibling_path = self.elf_path.with_name(f"{self.elf_path.name}.llvmdwarfdump.zst")
-        if sibling_path.exists():
-            return sibling_path
-
-        return None
+        return DwarfGeneratorSetup._resolve_dwarf_dump_path(self, explicit_path)
 
     def __enter__(self) -> DwarfGenerator:
-        """Context manager entry - initializes all modules."""
-        active_session = self.session.__enter__()
-        self.dwarf_info = active_session.dwarf_info
-        self.platform = active_session.platform
-        try:
-            initialization_start = time()
-            self._initialize_components()
-            total_elapsed = time() - initialization_start
-            logger.info(
-                "DwarfGenerator initialized with modular architecture in %.3fs", total_elapsed
-            )
-            return self
-        except BaseException:
-            self.session.close()
-            self.dwarf_info = None
-            raise
+        return DwarfGeneratorSetup.enter(self)
 
     def __exit__(
         self,
@@ -145,80 +99,10 @@ class DwarfGenerator:
         exc_val: BaseException | None,
         exc_tb: object | None,
     ) -> None:
-        """Context manager exit - saves cache and closes resources."""
-        try:
-            if self.lazy_index is not None:
-                logger.debug("Saving DWARF cache to disk")
-                self.lazy_index.save_cache()
-                logger.info("DWARF cache saved successfully")
-        finally:
-            self.session.__exit__(exc_type, exc_val, exc_tb)
-            self.dwarf_info = None
+        DwarfGeneratorSetup.exit(self, exc_type, exc_val, exc_tb)
 
     def _initialize_components(self) -> None:
-        """Initialize components with lazy loading and memory monitoring."""
-        from ...domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
-        from ...domain.services.parsing import ClassParser
-        from ...domain.services.parsing.type_resolver import LazyTypeResolver
-
-        assert self.dwarf_info is not None, "dwarf_info must be initialized"
-        cache_file = self.cache_file or Path(".dwarf_cache.json")
-
-        # Initialize lazy index
-        lazy_start = time()
-        self.lazy_index = LazyDwarfIndexService(
-            self.dwarf_info,
-            str(cache_file),
-            die_cache_size=self.die_cache_size,
-            type_cache_size=self.type_cache_size,
-            search_timeout=self.search_timeout,
-            source_file_path=self.elf_path,
-            source_identity=self.source_identity,
-        )
-        lazy_elapsed = time() - lazy_start
-        logger.debug(f"LazyDwarfIndex initialization: {lazy_elapsed:.3f}s")
-
-        # Initialize lazy type resolver (the only type resolver now)
-        resolver_start = time()
-        self.type_resolver = LazyTypeResolver(self.dwarf_info, self.lazy_index)
-        resolver_elapsed = time() - resolver_start
-        logger.debug(f"LazyTypeResolver initialization: {resolver_elapsed:.3f}s")
-
-        # Initialize class parser with lazy index
-        parser_start = time()
-        self.class_parser = cast(
-            ClassParserPort,
-            ClassParser(
-                self.type_resolver,
-                self.dwarf_info,
-                self.lazy_index,
-                exhaustive_search=self.exhaustive_search,
-                dwarf_dump_path=self.dwarf_dump_path,
-                dwarf_index_path=self.dwarf_index_path,
-                resolve_param_names=self.resolve_param_names,
-                dump_parser=(
-                    self.dump_lookup_factory(self.dwarf_dump_path, self.dwarf_index_path)
-                    if self.dump_lookup_factory is not None and self.dwarf_dump_path is not None
-                    else None
-                ),
-            ),
-        )
-        parser_elapsed = time() - parser_start
-        logger.debug(f"ClassParser with lazy loading initialization: {parser_elapsed:.3f}s")
-
-        # Initialize header generator with DWARF index
-        header_start = time()
-        parser = self.class_parser
-        assert parser is not None
-        self.header_generator = HeaderGenerator(self.lazy_index, parser)
-        header_elapsed = time() - header_start
-        logger.debug(f"HeaderGenerator initialization: {header_elapsed:.3f}s")
-
-        # Initialize hierarchy builder
-        hierarchy_start = time()
-        self.hierarchy_builder = HierarchyBuilder(parser, self.lazy_index)
-        hierarchy_elapsed = time() - hierarchy_start
-        logger.debug(f"HierarchyBuilder initialization: {hierarchy_elapsed:.3f}s")
+        DwarfGeneratorSetup.initialize_components(self)
 
     def generate(self, symbol: str, **options: bool) -> str:
         """Generate one header using a typed request."""

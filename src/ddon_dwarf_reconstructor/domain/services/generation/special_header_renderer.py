@@ -59,7 +59,7 @@ class SpecialHeaderRenderer:
                 item_type = "class" if child.tag == "DW_TAG_class_type" else "struct"
                 child_items.append((item_type, class_name))
         except (AttributeError, RuntimeError, TypeError) as error:
-            logger.warning(f"Error iterating namespace children: {error}")
+            logger.warning(f"Error iterating namespace children: {error}", exc_info=error)
         return sorted(child_items, key=lambda item: item[1])
 
     @staticmethod

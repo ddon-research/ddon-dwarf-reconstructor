@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import os
-from time import time
+from time import perf_counter
 
-from ...core.observability import get_logger, log_timing
+from ...core.observability import get_logger, log_event, log_timing
 from ...domain.models.dwarf import ClassInfo
 from ...domain.services.generation import FileRegistry, SpecialHeaderRenderer
 from .dwarf_generator_context import DwarfGeneratorContext
@@ -82,48 +83,49 @@ class MultiFileGenerationService:
         )
         return {"UncategorizedDefinitions.h": header}
 
-    @log_timing
-    def generate_multi_file_hierarchy(
-        self: DwarfGeneratorContext, class_name: str, include_metadata: bool = True
-    ) -> dict[str, str]:
-        """Generate deterministic headers grouped by declaration file."""
-        logger.info(f"Generating multi-file hierarchy for: {class_name}")
-
-        self.workflow.expand_typedef_search(full_hierarchy=True)
-
-        # Multi-file output is a structural closure.  Method signatures remain
-        # on the declarations, but their parameter/return types must not turn
-        # every method-only dependency into another full DWARF lookup.
-        class_infos, hierarchy_order = self.workflow.build_hierarchy_with_timing(
+    @staticmethod
+    def _prepare_hierarchy(
+        context: DwarfGeneratorContext, class_name: str
+    ) -> tuple[dict[str, ClassInfo], list[str]] | None:
+        context.workflow.expand_typedef_search(full_hierarchy=True)
+        class_infos, hierarchy_order = context.workflow.build_hierarchy_with_timing(
             class_name,
             max_depth=10,
             include_method_signatures=False,
         )
+        if not context.workflow.validate_hierarchy(class_infos, class_name):
+            return None
+        return class_infos, hierarchy_order
 
-        # Step 3: Validate hierarchy
-        if not self.workflow.validate_hierarchy(class_infos, class_name):
-            not_found = SpecialHeaderRenderer.render_not_found(class_name)
-            return {"UncategorizedDefinitions.h": not_found}
-
-        registry_start = time()
-        file_registry = self.workflow.build_file_registry(class_infos)
-        registry_elapsed = time() - registry_start
-        logger.debug(f"FileRegistry built in {registry_elapsed:.3f}s")
-
-        # Organize classes by file
+    @staticmethod
+    def _render_multi_file_outputs(
+        context: DwarfGeneratorContext,
+        class_name: str,
+        class_infos: dict[str, ClassInfo],
+        hierarchy_order: list[str],
+        include_metadata: bool,
+    ) -> dict[str, str]:
+        registry_start = perf_counter()
+        file_registry = context.workflow.build_file_registry(class_infos)
+        log_event(
+            logger,
+            logging.DEBUG,
+            "file_registry_built",
+            duration_ms=round((perf_counter() - registry_start) * 1000, 3),
+            class_count=len(class_infos),
+        )
         classes_by_file = file_registry.get_classes_by_file()
         uncategorized = file_registry.get_uncategorized_classes()
-
-        logger.info(
-            f"Classes organized by file: {len(classes_by_file)} files, "
-            f"{len(uncategorized)} uncategorized"
+        log_event(
+            logger,
+            logging.DEBUG,
+            "classes_organized_by_file",
+            file_count=len(classes_by_file),
+            uncategorized_count=len(uncategorized),
         )
-
-        # Step 4: Add packing info and collect typedefs
-        all_typedefs = self.workflow.collect_typedefs_and_packing(class_infos)
-
-        header_gen_start = time()
-        output_headers = self.workflow.render_file_headers(
+        all_typedefs = context.workflow.collect_typedefs_and_packing(class_infos)
+        header_start = perf_counter()
+        output_headers = context.workflow.render_file_headers(
             class_infos,
             hierarchy_order,
             classes_by_file,
@@ -131,7 +133,7 @@ class MultiFileGenerationService:
             include_metadata,
         )
         output_headers.update(
-            self.workflow.render_uncategorized_header(
+            context.workflow.render_uncategorized_header(
                 class_infos,
                 hierarchy_order,
                 uncategorized,
@@ -139,13 +141,45 @@ class MultiFileGenerationService:
                 include_metadata,
             )
         )
+        log_event(
+            logger,
+            logging.DEBUG,
+            "multi_file_headers_rendered",
+            symbol=class_name,
+            duration_ms=round((perf_counter() - header_start) * 1000, 3),
+            header_count=len(output_headers),
+            total_bytes=sum(len(header.encode("utf-8")) for header in output_headers.values()),
+        )
+        return output_headers
 
-        header_gen_elapsed = time() - header_gen_start
-        logger.debug(f"Multi-file hierarchy generation completed in {header_gen_elapsed:.3f}s")
+    @log_timing
+    def generate_multi_file_hierarchy(
+        self: DwarfGeneratorContext, class_name: str, include_metadata: bool = True
+    ) -> dict[str, str]:
+        """Generate deterministic headers grouped by declaration file."""
+        log_event(
+            logger,
+            logging.INFO,
+            "header_generation_started",
+            symbol=class_name,
+            mode="full-hierarchy-multi-file",
+            include_metadata=include_metadata,
+        )
 
-        logger.info(
-            f"Multi-file hierarchy generated: {len(output_headers)} headers, "
-            f"{sum(len(h) for h in output_headers.values())} total bytes"
+        prepared = MultiFileGenerationService._prepare_hierarchy(self, class_name)
+        if prepared is None:
+            not_found = SpecialHeaderRenderer.render_not_found(class_name)
+            return {"UncategorizedDefinitions.h": not_found}
+        class_infos, hierarchy_order = prepared
+        output_headers = MultiFileGenerationService._render_multi_file_outputs(
+            self, class_name, class_infos, hierarchy_order, include_metadata
+        )
+        log_event(
+            logger,
+            logging.INFO,
+            "header_generation_completed",
+            symbol=class_name,
+            header_count=len(output_headers),
         )
 
         return output_headers

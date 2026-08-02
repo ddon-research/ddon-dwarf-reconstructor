@@ -173,7 +173,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
                         )
                         return union_info
             except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
-                logger.debug("Failed to resolve anonymous member type: %s", error)
+                logger.debug("Failed to resolve anonymous member type: %s", error, exc_info=error)
 
         # Regular member
         return self.parse_member(member_die)

@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import BinaryIO
 
 from elftools.elf.elffile import ELFFile
 
 from ..core.dwarf import DwarfInfo
-from ..core.observability import get_logger
+from ..core.observability import get_logger, log_event
 from ..core.platform import ELFPlatform
 from ..utils.elf_patches import patch_pyelftools_for_ps4
 from .elf_platform import PlatformDetector
@@ -29,15 +30,31 @@ class ElfDwarfSession:
     def __enter__(self) -> ElfDwarfSession:
         patch_pyelftools_for_ps4()
         try:
-            logger.debug("Opening ELF file: %s", self.elf_path)
+            log_event(logger, logging.DEBUG, "elf_open_started", elf_path=self.elf_path)
             self.file_handle = open(self.elf_path, "rb")
             self.elf_file = ELFFile(self.file_handle)
             self.platform = PlatformDetector.detect_elf(self.elf_file, str(self.elf_path))
             if not self.elf_file.has_dwarf_info():
                 raise ValueError(f"No DWARF info found in {self.elf_path}")
             self.dwarf_info = self.elf_file.get_dwarf_info()
-            logger.info("DWARF info loaded from %s", self.elf_path)
+            log_event(
+                logger,
+                logging.INFO,
+                "elf_dwarf_loaded",
+                elf_path=self.elf_path,
+                platform=self.platform.value,
+            )
             return self
+        except Exception as error:
+            log_event(
+                logger,
+                logging.ERROR,
+                "elf_open_failed",
+                elf_path=self.elf_path,
+                exc_info=error,
+            )
+            self.close()
+            raise
         except BaseException:
             self.close()
             raise
@@ -56,6 +73,6 @@ class ElfDwarfSession:
         if self.file_handle is not None:
             self.file_handle.close()
             self.file_handle = None
-            logger.debug("ELF file closed")
+            log_event(logger, logging.DEBUG, "elf_closed", elf_path=self.elf_path)
         self.elf_file = None
         self.dwarf_info = None

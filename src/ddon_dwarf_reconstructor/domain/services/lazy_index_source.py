@@ -22,5 +22,7 @@ class LazyIndexSourceMixin:
         try:
             return source_identity.identify(path).as_fingerprint()
         except OSError as error:
-            logger.warning("Cannot identify DWARF source %s: %s", path.resolve(), error)
+            logger.warning(
+                "Cannot identify DWARF source %s: %s", path.resolve(), error, exc_info=error
+            )
             return None

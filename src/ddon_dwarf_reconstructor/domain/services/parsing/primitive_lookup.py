@@ -86,5 +86,7 @@ class PrimitiveLookupMixin:
             die = self.index.get_die_by_offset(offset)
             return self._get_primitive_base_type_name(die) if die else None
         except (AttributeError, KeyError, OSError, RuntimeError, TypeError, ValueError) as error:
-            logger.debug("Error in DWARF DIE traversal for %s: %s", type_name, error)
+            logger.debug(
+                "Error in DWARF DIE traversal for %s: %s", type_name, error, exc_info=error
+            )
             return None

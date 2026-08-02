@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tests.support.quality.check_structure import check, inspect_file
+from tests.support.quality.check_structure import MAX_CLASS_LINES, check, inspect_file
 
 
 def test_structure_checker_accepts_small_module(tmp_path: Path) -> None:
@@ -10,6 +10,13 @@ def test_structure_checker_accepts_small_module(tmp_path: Path) -> None:
     source.write_text(
         "def add(left: int, right: int) -> int:\n    return left + right\n", encoding="utf-8"
     )
+
+    assert inspect_file(source) == []
+
+
+def test_structure_checker_accepts_functionally_busy_class_budget(tmp_path: Path) -> None:
+    source = tmp_path / "busy_class.py"
+    source.write_text("class BusyClass:\n" + "    pass\n" * (MAX_CLASS_LINES - 1), encoding="utf-8")
 
     assert inspect_file(source) == []
 

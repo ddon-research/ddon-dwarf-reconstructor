@@ -10,14 +10,17 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import re
 import subprocess
 import tempfile
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
+from time import perf_counter
 from typing import Any, cast
 
+from ..core.observability import get_logger, log_event
 from ..domain.models.disassembly import (
     OrbisDisassemblyReport,
     OrbisFunctionDisassembly,
@@ -26,24 +29,31 @@ from ..domain.models.disassembly import (
     OrbisToolIdentity,
 )
 from .artifacts import SourceIdentityCatalog, get_artifact_cache_dir
+from .orbis_objdump_parsing import OrbisObjdumpParsingMixin
 
 REPORT_SCHEMA_VERSION = "1.0"
 PARSER_VERSION = "orbis-objdump-text-v1"
 DISASSEMBLY_FLAGS = ("-EL", "-l", "-C", "-w", "-d")
 SYMBOL_FLAGS = ("-t", "-C", "-w")
-MAX_GROUP_GAP = 64 * 1024
 DEFAULT_TIMEOUT_SECONDS = 120.0
+logger = get_logger(__name__)
 
-_INSTRUCTION_RE = re.compile(
-    r"^\s*(?P<address>[0-9a-fA-F]+):\s+"
-    r"(?P<bytes>(?:[0-9a-fA-F]{2}\s+)+)"
-    r"(?P<mnemonic>[^\s]+)?(?:\s+(?P<operands>.*))?$"
-)
-_SOURCE_RE = re.compile(r"^(?P<path>.+):(?P<line>[0-9]+)(?:\s+\(discriminator\s+[0-9]+\))?$")
-_DIRECT_TARGET_RE = re.compile(r"^(?:0x)?(?P<address>[0-9a-fA-F]+)\s+<(?P<name>[^>]+)>$")
+__all__ = ["OrbisFunctionSymbol", "OrbisObjdumpProducer"]
 
 
-class OrbisObjdumpProducer:
+@dataclass(frozen=True, slots=True)
+class _ProductionContext:
+    """Validated, source-bound inputs for one disassembly report."""
+
+    elf_path: Path
+    root_symbol: str
+    elf_sha256: str
+    tool: OrbisToolIdentity
+    artifact_key: str
+    cache_path: Path
+
+
+class OrbisObjdumpProducer(OrbisObjdumpParsingMixin):
     """Run and cache bounded disassembly from the PS4 SDK toolchain."""
 
     def __init__(
@@ -62,11 +72,36 @@ class OrbisObjdumpProducer:
 
     def produce(self, elf_path: Path, root_symbol: str) -> OrbisDisassemblyReport:
         """Return all bounded function ranges owned by ``root_symbol``."""
+        context = self._build_context(elf_path, root_symbol)
+        started_at = perf_counter()
+        log_event(
+            logger,
+            logging.INFO,
+            "orbis_disassembly_started",
+            elf_path=context.elf_path,
+            root_symbol=context.root_symbol,
+            executable=self.executable,
+            cache_path=context.cache_path,
+        )
+        cached = self._load_cached(context.cache_path, context.artifact_key)
+        if cached is not None:
+            self.last_cache_hit = True
+            log_event(
+                logger,
+                logging.DEBUG,
+                "orbis_disassembly_cache_hit",
+                root_symbol=context.root_symbol,
+                function_count=len(cached.functions),
+                cache_path=context.cache_path,
+            )
+            return cached
+        return self._produce_uncached(context, started_at)
+
+    def _build_context(self, elf_path: Path, root_symbol: str) -> _ProductionContext:
         if not self.executable.is_file():
             raise ValueError(f"Orbis objdump executable not found: {self.executable}")
         if not elf_path.is_file():
             raise ValueError(f"ELF file not found: {elf_path}")
-
         elf_identity = self.identity_catalog.identify(elf_path)
         executable_identity = self.identity_catalog.identify(self.executable)
         version = self._read_version()
@@ -74,24 +109,39 @@ class OrbisObjdumpProducer:
         tool = OrbisToolIdentity(executable_identity.sha256, version, target)
         artifact_key = self._artifact_key(elf_identity.sha256, tool, root_symbol)
         cache_path = self.cache_root / artifact_key / "report.json"
-        cached = self._load_cached(cache_path, artifact_key)
-        if cached is not None:
-            self.last_cache_hit = True
-            return cached
+        return _ProductionContext(
+            elf_path=elf_path,
+            root_symbol=root_symbol,
+            elf_sha256=elf_identity.sha256,
+            tool=tool,
+            artifact_key=artifact_key,
+            cache_path=cache_path,
+        )
 
-        symbols = self.parse_symbols(self._run([*SYMBOL_FLAGS, str(elf_path)]))
-        selected = self.select_root_symbols(symbols, root_symbol)
+    def _produce_uncached(
+        self, context: _ProductionContext, started_at: float
+    ) -> OrbisDisassemblyReport:
+        symbols = self.parse_symbols(self._run([*SYMBOL_FLAGS, str(context.elf_path)]))
+        selected = self.select_root_symbols(symbols, context.root_symbol)
         if not selected:
-            raise ValueError(f"No Orbis function symbols found for {root_symbol}")
-
+            raise ValueError(f"No Orbis function symbols found for {context.root_symbol}")
         instructions: dict[int, OrbisInstruction] = {}
-        for start_address, stop_address in self._group_ranges(selected):
+        ranges = self._group_ranges(selected)
+        log_event(
+            logger,
+            logging.DEBUG,
+            "orbis_disassembly_ranges_selected",
+            root_symbol=context.root_symbol,
+            symbol_count=len(selected),
+            range_count=len(ranges),
+        )
+        for start_address, stop_address in ranges:
             output = self._run(
                 [
                     *DISASSEMBLY_FLAGS,
                     f"--start-address=0x{start_address:x}",
                     f"--stop-address=0x{stop_address:x}",
-                    str(elf_path),
+                    str(context.elf_path),
                 ]
             )
             for instruction in self.parse_instructions(output):
@@ -109,91 +159,27 @@ class OrbisObjdumpProducer:
             for symbol in selected
         )
         report = OrbisDisassemblyReport(
-            artifact_key=artifact_key,
-            build_root=root_symbol,
-            elf_sha256=elf_identity.sha256,
-            tool=tool,
+            artifact_key=context.artifact_key,
+            build_root=context.root_symbol,
+            elf_sha256=context.elf_sha256,
+            tool=context.tool,
             flags=DISASSEMBLY_FLAGS,
             parser_version=PARSER_VERSION,
             functions=functions,
         )
-        self._write_cached(cache_path, report)
+        self._write_cached(context.cache_path, report)
         self.last_cache_hit = False
+        log_event(
+            logger,
+            logging.INFO,
+            "orbis_disassembly_completed",
+            root_symbol=context.root_symbol,
+            function_count=len(functions),
+            instruction_count=len(instructions),
+            cache_path=context.cache_path,
+            duration_ms=round((perf_counter() - started_at) * 1000, 3),
+        )
         return report
-
-    @staticmethod
-    def parse_symbols(output: str) -> tuple[OrbisFunctionSymbol, ...]:
-        """Parse demangled function symbols from ``orbis-objdump -t`` output."""
-        symbols: list[OrbisFunctionSymbol] = []
-        for line in output.splitlines():
-            parts = line.split(maxsplit=5)
-            if len(parts) != 6 or parts[2] != "F":
-                continue
-            try:
-                address = int(parts[0], 16)
-                size = int(parts[4], 16)
-            except ValueError:
-                continue
-            if size <= 0:
-                continue
-            symbols.append(OrbisFunctionSymbol(address, size, parts[3], parts[5].strip()))
-        return tuple(sorted(set(symbols), key=lambda symbol: (symbol.address, symbol.name)))
-
-    @staticmethod
-    def select_root_symbols(
-        symbols: tuple[OrbisFunctionSymbol, ...], root_symbol: str
-    ) -> tuple[OrbisFunctionSymbol, ...]:
-        """Select class and nested-class methods without fuzzy name matching."""
-        prefix = f"{root_symbol}::"
-        thunk_prefixes = ("non-virtual thunk to ", "virtual thunk to ")
-
-        def belongs(symbol: OrbisFunctionSymbol) -> bool:
-            candidate = symbol.name
-            for thunk_prefix in thunk_prefixes:
-                if candidate.startswith(thunk_prefix):
-                    candidate = candidate[len(thunk_prefix) :]
-                    break
-            return candidate.startswith(prefix)
-
-        return tuple(symbol for symbol in symbols if belongs(symbol))
-
-    @staticmethod
-    def parse_instructions(output: str) -> tuple[OrbisInstruction, ...]:
-        """Parse raw instructions and attach the active objdump source location."""
-        source_file: str | None = None
-        source_line: int | None = None
-        instructions: list[OrbisInstruction] = []
-        for line in output.splitlines():
-            source_match = _SOURCE_RE.fullmatch(line.strip())
-            if source_match is not None:
-                source_file = source_match.group("path")
-                source_line = int(source_match.group("line"))
-                continue
-            match = _INSTRUCTION_RE.match(line)
-            if match is None or not match.group("mnemonic"):
-                continue
-            mnemonic = match.group("mnemonic")
-            operands = (match.group("operands") or "").strip()
-            target_address: int | None = None
-            target_name: str | None = None
-            if mnemonic.startswith("call"):
-                target_match = _DIRECT_TARGET_RE.fullmatch(operands)
-                if target_match is not None:
-                    target_address = int(target_match.group("address"), 16)
-                    target_name = target_match.group("name")
-            instructions.append(
-                OrbisInstruction(
-                    address=int(match.group("address"), 16),
-                    raw_bytes="".join(match.group("bytes").split()).lower(),
-                    mnemonic=mnemonic,
-                    operands=operands,
-                    source_file=source_file,
-                    source_line=source_line,
-                    call_target_address=target_address,
-                    call_target_name=target_name,
-                )
-            )
-        return tuple(instructions)
 
     def _read_version(self) -> str:
         first_line = self._run(["--version"]).splitlines()
@@ -211,6 +197,14 @@ class OrbisObjdumpProducer:
 
     def _run(self, arguments: list[str]) -> str:
         command = [str(self.executable), *arguments]
+        log_event(
+            logger,
+            logging.DEBUG,
+            "orbis_objdump_invoked",
+            executable=self.executable,
+            argument_count=len(arguments),
+            operation=arguments[0] if arguments else "",
+        )
         try:
             result = subprocess.run(
                 command,
@@ -222,28 +216,29 @@ class OrbisObjdumpProducer:
                 timeout=self.timeout_seconds,
             )
         except subprocess.TimeoutExpired as error:
+            log_event(
+                logger,
+                logging.ERROR,
+                "orbis_objdump_timeout",
+                timeout_seconds=self.timeout_seconds,
+                operation=arguments[0] if arguments else "",
+                exc_info=error,
+            )
             raise TimeoutError(
                 f"Orbis objdump timed out after {self.timeout_seconds:g}s"
             ) from error
         if result.returncode != 0:
             detail = result.stderr.strip() or result.stdout.strip() or "no diagnostic"
+            log_event(
+                logger,
+                logging.ERROR,
+                "orbis_objdump_failed",
+                returncode=result.returncode,
+                operation=arguments[0] if arguments else "",
+                detail=detail[:500],
+            )
             raise RuntimeError(f"Orbis objdump failed ({result.returncode}): {detail}")
         return result.stdout
-
-    @staticmethod
-    def _group_ranges(symbols: tuple[OrbisFunctionSymbol, ...]) -> tuple[tuple[int, int], ...]:
-        groups: list[tuple[int, int]] = []
-        start = symbols[0].address
-        stop = symbols[0].end_address
-        for symbol in symbols[1:]:
-            if symbol.address > stop + MAX_GROUP_GAP:
-                groups.append((start, stop))
-                start = symbol.address
-                stop = symbol.end_address
-            else:
-                stop = max(stop, symbol.end_address)
-        groups.append((start, stop))
-        return tuple(groups)
 
     @staticmethod
     def _artifact_key(elf_sha256: str, tool: OrbisToolIdentity, root_symbol: str) -> str:
@@ -270,7 +265,14 @@ class OrbisObjdumpProducer:
             if report_value.get("artifact_key") != artifact_key:
                 return None
             return OrbisDisassemblyReport.from_dict(report_value)
-        except OSError, KeyError, TypeError, ValueError, json.JSONDecodeError:
+        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+            log_event(
+                logger,
+                logging.WARNING,
+                "orbis_disassembly_cache_invalid",
+                cache_path=path,
+                exc_info=error,
+            )
             return None
 
     @staticmethod
@@ -291,5 +293,4 @@ class OrbisObjdumpProducer:
                 os.fsync(output.fileno())
             temporary_path.replace(path)
         finally:
-            if temporary_path.exists():
-                temporary_path.unlink()
+            temporary_path.unlink(missing_ok=True)

@@ -45,7 +45,7 @@ class LazyIndexLookupMixin:
             )
             return self._scan_die_at_offset(offset)
         except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
-            logger.error("Error finding DIE at offset 0x%x: %s", offset, error)
+            logger.error("Error finding DIE at offset 0x%x: %s", offset, error, exc_info=error)
             return None
 
     def _scan_die_at_offset(self: LazyIndexContext, offset: int) -> DwarfEntry | None:
@@ -69,5 +69,5 @@ class LazyIndexLookupMixin:
                 if cu.cu_offset == cu_offset:
                     return cu
         except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
-            logger.error("Error finding CU at offset 0x%x: %s", cu_offset, error)
+            logger.error("Error finding CU at offset 0x%x: %s", cu_offset, error, exc_info=error)
         return None

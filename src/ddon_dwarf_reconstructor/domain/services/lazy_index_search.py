@@ -2,19 +2,16 @@
 
 from __future__ import annotations
 
-import time
+import logging
 from dataclasses import dataclass, replace
+from time import perf_counter
 
-from ...core.dwarf import DwarfCompilationUnit, DwarfEntry, compilation_unit_length
-from ...core.observability import get_logger
+from ...core.dwarf import DwarfCompilationUnit, compilation_unit_length
+from ...core.observability import get_logger, log_event
 from ..models.dwarf.tag_registry import DwarfTagRegistry
-from .definition_selection import (
-    DefinitionCandidate,
-    DefinitionSignals,
-    is_early_exit_candidate,
-    score_definition,
-)
+from .definition_selection import DefinitionCandidate
 from .lazy_index_context import LazyIndexContext
+from .lazy_index_search_candidates import LazyIndexSearchCandidatesMixin
 from .lazy_index_search_reporting import LazyIndexSearchReportingMixin
 from .search_result import SearchResult, SearchStatus
 
@@ -37,18 +34,25 @@ class _SearchState:
             self.best = candidate
 
 
-class LazyIndexSearchMixin(LazyIndexSearchReportingMixin):
+class LazyIndexSearchMixin(LazyIndexSearchCandidatesMixin, LazyIndexSearchReportingMixin):
     def targeted_symbol_search(
         self: LazyIndexContext, symbol_name: str, timeout: float | None = None
     ) -> SearchResult:
         """Find the strongest definition while keeping scans bounded."""
-        logger.info("Performing targeted search for %s", symbol_name)
         state = _SearchState()
-        started_at = time.time()
+        started_at = perf_counter()
         effective_timeout = self.search_timeout if timeout is None else timeout
         target_tags = set(DwarfTagRegistry.ALL_SEARCHABLE_TAGS)
         target_name = symbol_name.encode("utf-8")
         hint = self.persistent_cache.get_symbol_cu_offset(symbol_name)
+        log_event(
+            logger,
+            logging.DEBUG,
+            "dwarf_search_started",
+            symbol=symbol_name,
+            timeout_seconds=effective_timeout,
+            hinted_cu=hint,
+        )
         try:
             hinted = self._search_hinted_cu(symbol_name, target_tags, target_name, hint)
             if hinted is not None:
@@ -69,7 +73,14 @@ class LazyIndexSearchMixin(LazyIndexSearchReportingMixin):
                     return self._result(SearchStatus.COMPLETE, candidate, state, started_at)
             return self._finish_targeted_search(symbol_name, state, started_at)
         except (AttributeError, KeyError, OSError, RuntimeError, TypeError, ValueError) as error:
-            logger.error("Error in targeted search for %s: %s", symbol_name, error)
+            log_event(
+                logger,
+                logging.ERROR,
+                "dwarf_search_failed",
+                symbol=symbol_name,
+                cus_searched=state.cus_searched,
+                exc_info=error,
+            )
             return self._result(
                 SearchStatus.UNAVAILABLE,
                 None,
@@ -86,10 +97,30 @@ class LazyIndexSearchMixin(LazyIndexSearchReportingMixin):
         started_at: float,
         *diagnostics: str,
     ) -> SearchResult:
+        elapsed_seconds = max(0.0, perf_counter() - started_at)
+        level = (
+            logging.DEBUG
+            if status in {SearchStatus.COMPLETE, SearchStatus.NOT_FOUND}
+            else logging.WARNING
+        )
+        log_event(
+            logger,
+            level,
+            "dwarf_search_finished",
+            status=status.value,
+            candidate_die_offset=candidate.die_offset if candidate is not None else None,
+            candidate_cu_offset=candidate.cu_offset if candidate is not None else None,
+            candidate_score=candidate.score if candidate is not None else None,
+            complete=candidate.complete if candidate is not None else None,
+            cus_searched=state.cus_searched,
+            elapsed_seconds=round(elapsed_seconds, 6),
+            timed_out=state.timed_out,
+            diagnostics=diagnostics,
+        )
         return SearchResult(
             status=status,
             candidate=candidate,
-            elapsed_seconds=max(0.0, time.time() - started_at),
+            elapsed_seconds=elapsed_seconds,
             cus_searched=state.cus_searched,
             diagnostics=tuple(diagnostics),
         )
@@ -126,18 +157,19 @@ class LazyIndexSearchMixin(LazyIndexSearchReportingMixin):
         timeout: float,
         state: _SearchState,
     ) -> bool:
-        elapsed = time.time() - started_at
+        elapsed = perf_counter() - started_at
         if elapsed <= timeout:
             return False
         state.timed_out = True
         best_score = state.best.score if state.best is not None else -1
-        logger.error(
-            "Targeted search for '%s' timed out after %.1fs. Searched %s CUs. "
-            "Best score so far: %s.",
-            symbol_name,
-            elapsed,
-            state.cus_searched,
-            best_score,
+        log_event(
+            logger,
+            logging.WARNING,
+            "dwarf_search_timeout",
+            symbol=symbol_name,
+            elapsed_seconds=round(elapsed, 6),
+            cus_searched=state.cus_searched,
+            best_score=best_score,
         )
         return True
 
@@ -150,30 +182,12 @@ class LazyIndexSearchMixin(LazyIndexSearchReportingMixin):
                 return self._result(SearchStatus.UNAVAILABLE, None, state, started_at)
             partial = replace(candidate, complete=False)
             self._cache_candidate(partial)
-            logger.warning(
-                "Returning partial result for %s after timeout: offset=0x%x",
-                symbol_name,
-                partial.die_offset,
-            )
             return self._result(SearchStatus.PARTIAL, partial, state, started_at)
         if state.best is not None and state.best.score > 0:
             self._cache_candidate(state.best)
-            logger.info(
-                "Found %s at 0x%x in CU 0x%x (best score=%s)",
-                symbol_name,
-                state.best.die_offset,
-                state.best.cu_offset,
-                state.best.score,
-            )
             return self._result(SearchStatus.COMPLETE, state.best, state, started_at)
         if state.fallback is None:
             return self._result(SearchStatus.NOT_FOUND, None, state, started_at)
-        logger.warning(
-            "Found %s at 0x%x but only as forward declaration (score=%s)",
-            symbol_name,
-            state.fallback.die_offset,
-            state.best.score if state.best is not None else -1,
-        )
         self._cache_candidate(state.fallback)
         return self._result(SearchStatus.PARTIAL, state.fallback, state, started_at)
 
@@ -185,105 +199,3 @@ class LazyIndexSearchMixin(LazyIndexSearchReportingMixin):
             score=candidate.score,
             complete=candidate.complete,
         )
-
-    def _search_cu_candidate(
-        self: LazyIndexContext,
-        cu: DwarfCompilationUnit,
-        symbol_name: str,
-        target_tags: set[str],
-        target_name: bytes,
-    ) -> DefinitionCandidate | None:
-        offset, score = self._search_cu_for_symbol_with_score(
-            cu, symbol_name, target_tags, target_name
-        )
-        if offset is None:
-            return None
-        return DefinitionCandidate(symbol_name, cu.cu_offset, offset, score, score > 0)
-
-    def _search_cu_for_symbol_with_score(
-        self: LazyIndexContext,
-        cu: DwarfCompilationUnit,
-        symbol_name: str,
-        target_tags: set[str],
-        target_name: bytes,
-    ) -> tuple[int | None, int]:
-        """Search one CU and return the best or first matching definition."""
-        best: DefinitionCandidate | None = None
-        fallback: DefinitionCandidate | None = None
-        dies_scanned = 0
-        matches_found = 0
-        try:
-            for die in cu.iter_DIEs():
-                dies_scanned += 1
-                candidate = self._candidate_for_die(die, cu, symbol_name, target_tags, target_name)
-                if candidate is None:
-                    continue
-                matches_found += 1
-                fallback = fallback or candidate
-                if best is None or candidate.score > best.score:
-                    best = candidate
-                if self._accept_cu_candidate(die, candidate):
-                    self._cache_candidate(candidate)
-                    return candidate.die_offset, candidate.score
-        except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
-            logger.error(
-                "Error searching CU 0x%x for %s (scanned %s DIEs, found %s matches): %s",
-                cu.cu_offset,
-                symbol_name,
-                dies_scanned,
-                matches_found,
-                error,
-            )
-            return None, -1
-        return self._finish_cu_search(symbol_name, cu, best, fallback, dies_scanned, matches_found)
-
-    def _candidate_for_die(
-        self: LazyIndexContext,
-        die: DwarfEntry,
-        cu: DwarfCompilationUnit,
-        symbol_name: str,
-        target_tags: set[str],
-        target_name: bytes,
-    ) -> DefinitionCandidate | None:
-        if die.tag not in target_tags:
-            return None
-        name_attr = die.attributes.get("DW_AT_name")
-        if name_attr is None or name_attr.value != target_name:
-            return None
-        size_attr = die.attributes.get("DW_AT_byte_size")
-        raw_size = getattr(size_attr, "value", 0)
-        byte_size = raw_size if isinstance(raw_size, int) else 0
-        tag = str(die.tag)
-        signals = DefinitionSignals(
-            tag=tag,
-            byte_size=byte_size,
-            has_children=bool(die.has_children),
-            is_declaration="DW_AT_declaration" in die.attributes,
-            has_type_reference="DW_AT_type" in die.attributes,
-        )
-        score = score_definition(signals)
-        logger.debug(
-            "Found candidate %s at 0x%x: score=%s, tag=%s", symbol_name, die.offset, score, tag
-        )
-        return DefinitionCandidate(
-            symbol_name,
-            cu.cu_offset,
-            die.offset,
-            score,
-            score > 0,
-            byte_size,
-            signals.has_children,
-            signals.is_declaration,
-            signals.has_type_reference,
-        )
-
-    @staticmethod
-    def _accept_cu_candidate(die: DwarfEntry, candidate: DefinitionCandidate) -> bool:
-        signals = DefinitionSignals(
-            tag=str(die.tag),
-            byte_size=candidate.byte_size,
-            has_children=candidate.has_children,
-            is_declaration=candidate.is_declaration,
-            has_type_reference=candidate.has_type_reference,
-        )
-        return is_early_exit_candidate(signals, candidate.score)

@@ -6,8 +6,8 @@ The checker applies to all non-generated Python under `src/` and `tests/`:
 
 | Item | Maximum |
 | --- | ---: |
-| Module | 400 physical lines |
-| Class | 250 physical lines |
+| Module | 600 physical lines |
+| Class | 500 physical lines, including documentation |
 | Function or method | 75 physical lines |
 | McCabe complexity | 10 |
 

@@ -37,6 +37,21 @@ through the repository's `src` directory.
 - Catch specific expected exceptions, preserve useful context, and emit structured diagnostics.
   Do not use bare `except`, unexplained `Any`, or silent fallbacks.
 
+## Logging and exception diagnostics
+
+- Use `get_logger`, `log_event`, `log_exception`, and `bind_context` from
+  `core.observability`; keep the core/domain boundary on `logging.Logger` so the infrastructure
+  renderer can evolve toward OpenTelemetry without third-party imports in policy code.
+- Use stable snake_case event names and bounded JSON-compatible fields. Record stage boundaries and
+  durations at info/debug levels, preserve partial/unavailable evidence as warnings, and reserve
+  errors for failed operations. Do not emit per-DIE/per-line logs or full input/output objects.
+- Pass caught exceptions through `exc_info=error` or `log_exception` so chained exceptions retain
+  frames, line numbers, and causes. When translating errors, use `raise NewError(...) from error`;
+  do not swallow unexpected failures or replace tracebacks with an error string.
+- Context fields such as `run_id`, `symbol`, source identity, and future `trace_id`/`span_id` must
+  be scoped with `bind_context` and reset after the operation. Extend the focused logging tests when
+  event fields or exception behavior changes.
+
 ## CLI and dependency boundaries
 
 - Keep Typer handlers at the composition boundary. Convert CLI values into typed application
@@ -83,7 +98,8 @@ The normal loop is:
 uv run just test-unit
 uv run just check
 uv run just test
-uv run just coverage
+uv run just coverage-ci
+uv run just audit
 ```
 
 For real PS4 or performance validation, use explicit local input and index paths, retain cold and

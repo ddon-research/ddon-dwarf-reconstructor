@@ -21,8 +21,11 @@ knowledge-base/
 │   └── pyelftools-approach.md
 ├── tools/               # Related tools and their approaches
 │   └── dwarf2cpp-approach.md
-└── optimization/        # Performance optimization strategies
-    └── indexing-strategy.md
+├── optimization/        # Performance optimization strategies
+│   └── indexing-strategy.md
+└── observability/        # Structured logs, tracebacks, and telemetry seam
+    ├── README.md
+    └── structured-logging-and-exception-tracing.md
 ```
 
 ## Machine-readable DWARF specifications
@@ -165,6 +168,7 @@ contract, commands, source provenance, and schema link.
 - Review `tools/dwarf2cpp-approach.md` for header generation and LLVM integration
 - Check `pyelftools/pyelftools-approach.md` for API patterns
 - Review `optimization/indexing-strategy.md` for performance tuning
+- Review `observability/` for event fields, exception traces, and future telemetry integration
 
 ### For Debugging
 - Compare behavior with Ghidra/IDA implementations

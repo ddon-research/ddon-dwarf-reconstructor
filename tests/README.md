@@ -260,9 +260,9 @@ New tests live beside the owning package under `tests/application`,
 contains shared typed DIE builders and fixtures. Keep parser, rendering, and
 adapter tests in the package-shaped directory that owns the behavior.
 
-Every test change must preserve the structure limits (400-line modules,
-250-line classes, 75-line functions, McCabe 10) and the executable hexagonal
-architecture policy in `tests/quality/test_architecture.py`. The
+Every test change must preserve the structure limits (600-line modules,
+500-line classes including documentation, 75-line functions, McCabe 10) and
+the executable hexagonal architecture policy in `tests/quality/test_architecture.py`. The
 non-performance coverage command and
 `tests.support.quality.check_coverage` enforce
 80% total lines plus 80% line/70% branch coverage in the high-risk groups.

@@ -4,11 +4,12 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
 from ...core.dwarf import DwarfInfo
-from ...core.observability import get_logger
+from ...core.observability import get_logger, log_event
 from ..ports.cache import SymbolCachePort
 from ..ports.source_identity import SourceIdentityPort
 from ..repositories.cache import LRUCache, PersistentSymbolCache
@@ -56,10 +57,15 @@ class LazyDwarfIndexService(
         self.die_cache = LRUCache(die_cache_size)
         self.type_cache = LRUCache(type_cache_size)
         self._discovered_symbols: set[str] = set()
-        logger.info(
-            "Initialized LazyDwarfIndexService with die_cache=%s, type_cache=%s",
-            die_cache_size,
-            type_cache_size,
+        log_event(
+            logger,
+            logging.DEBUG,
+            "dwarf_index_service_initialized",
+            cache_file=cache_file,
+            die_cache_size=die_cache_size,
+            type_cache_size=type_cache_size,
+            search_timeout_seconds=search_timeout,
+            source_bound=source_fingerprint is not None,
         )
 
     def save_cache(self) -> None:
@@ -79,4 +85,4 @@ class LazyDwarfIndexService(
         """Clear bounded in-memory caches without touching durable indexes."""
         self.die_cache.clear()
         self.type_cache.clear()
-        logger.info("Runtime caches cleared")
+        log_event(logger, logging.DEBUG, "dwarf_runtime_caches_cleared")
