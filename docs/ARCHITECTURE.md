@@ -315,6 +315,7 @@ class ClassInfo:
     structs: list[StructInfo]
     unions: list[UnionInfo]
     base_classes: list[str]         # Inheritance hierarchy
+    base_class_offsets: list[int]    # Exact inheritance DIE targets
     vtable_ptr_offset: int | None   # Virtual table pointer location
     packing_info: PackingInfo | None
     cu_offset: int | None           # DWARF compilation unit offset
@@ -326,6 +327,7 @@ class MemberInfo:
     name: str
     type_name: str                  # Human-readable (e.g., "MtObject*")
     type_offset: int | None         # DWARF DIE offset for validation
+    declared_type_offset: int | None # Immediate typedef DIE, when present
     offset: int                     # Memory offset within class
     bit_size: int | None            # Bitfield width (if applicable)
     bit_offset: int | None          # Bitfield position
@@ -567,6 +569,14 @@ def get_terminal_type_offset(die: DIE, dwarf_info) -> int | None:
     Max depth: 20 (prevents infinite loops from malformed DWARF)
     """
 ```
+
+The parser retains both identities when an alias is present: the terminal DIE
+offset drives structural dependency resolution, while the first typedef DIE
+offset drives exact alias emission. Dependency closure always tries an exact
+offset before falling back to a name lookup, because repeated names across CUs
+are common. Anonymous class/struct members are represented as inline aggregates;
+when flattening would turn a distinct same-named by-value type into a recursive
+declaration, the renderer preserves its exact byte size as opaque byte storage.
 
 #### LazyTypeResolver
 

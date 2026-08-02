@@ -37,6 +37,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
             members=children.members,
             methods=children.methods,
             base_classes=children.base_classes,
+            base_class_offsets=children.base_class_offsets,
             enums=children.enums,
             nested_structs=children.nested_structs,
             unions=children.unions,
@@ -199,6 +200,11 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
 
         layout = self._member_layout(member_die)
         type_name = self._vtable_type(member_name, type_name)
+        type_die = self._member_type_die(member_die)
+        inline_struct = self._inline_struct_type(type_die)
+        opaque_storage_size = self._opaque_storage_size(member_die, type_die)
+        if inline_struct is not None:
+            type_name = "anonymous_struct"
 
         return MemberInfo(
             name=member_name,
@@ -212,6 +218,9 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
             is_volatile=type_name.startswith("volatile "),
             bit_size=layout[3],
             bit_offset=layout[4],
+            declared_type_offset=TypeChainTraverser.get_declared_type_offset(member_die),
+            inline_struct=inline_struct,
+            opaque_storage_size=opaque_storage_size,
         )
 
     @staticmethod

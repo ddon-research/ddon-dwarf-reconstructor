@@ -45,6 +45,16 @@ class TypeChainTraverser:
                 logger.warning("Circular type reference detected at offset 0x%x", current.offset)
                 return None
             visited.add(current.offset)
+            if (
+                current.tag
+                in {
+                    "DW_TAG_class_type",
+                    "DW_TAG_structure_type",
+                    "DW_TAG_union_type",
+                }
+                and "DW_AT_name" not in current.attributes
+            ):
+                return current
             if DIETypeClassifier.is_named_type(current):
                 return current
             next_die = TypeChainTraverser._next_type_die(current)
@@ -131,3 +141,28 @@ class TypeChainTraverser:
             return None
 
         return terminal_die.offset
+
+    @staticmethod
+    def get_declared_type_offset(member_die: DwarfEntry) -> int | None:
+        """Return the first typedef DIE in a member's declarator chain.
+
+        The terminal offset identifies the storage type, but it loses an alias
+        such as ``HTexture``. Follow transparent declarators until the first
+        typedef so declaration rendering can recover that exact alias without
+        a name-only DWARF search.
+        """
+        if "DW_AT_type" not in member_die.attributes:
+            return None
+        current = member_die.get_DIE_from_attribute("DW_AT_type")
+        visited: set[int] = set()
+        while current is not None and current.offset not in visited:
+            visited.add(current.offset)
+            if current.tag == "DW_TAG_typedef":
+                return current.offset
+            if (
+                not DIETypeClassifier.is_type_qualifier(current)
+                and current.tag != "DW_TAG_array_type"
+            ):
+                return None
+            current = TypeChainTraverser._follow_attribute(current, "declarator")
+        return None

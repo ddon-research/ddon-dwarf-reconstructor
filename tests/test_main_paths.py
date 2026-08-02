@@ -154,3 +154,37 @@ def test_process_symbol_saves_cache_after_header_output(tmp_path: Path) -> None:
 
     assert (tmp_path / "ps4" / "A.h").exists()
     generator.lazy_index.save_cache.assert_called_once_with()
+
+
+@pytest.mark.unit
+def test_run_generation_publishes_one_bundle_for_all_symbols(tmp_path: Path, mocker) -> None:
+    config = Mock(
+        output_dir=tmp_path,
+        elf_file_path=Path("input.elf"),
+        verbose=False,
+    )
+    generator = mocker.MagicMock(platform=ELFPlatform.PS4)
+    generator.__enter__.return_value = generator
+    generator.lazy_index = Mock()
+    mocker.patch.object(
+        cli_main.DwarfRuntimeConfig,
+        "from_environment",
+        return_value=Mock(die_cache_size=1, type_cache_size=1, search_timeout_seconds=1.0),
+    )
+    mocker.patch.object(cli_main, "SourceIdentityCatalog", return_value=Mock(sha256=Mock()))
+    mocker.patch.object(cli_main, "get_cache_file_path", return_value=tmp_path / "cache.json")
+    mocker.patch.object(cli_main, "DwarfGenerator", return_value=generator)
+    mocker.patch.object(
+        cli_main,
+        "_build_headers",
+        side_effect=[{"A.h": "a"}, {"B.h": "bb"}],
+    )
+    publisher = mocker.patch.object(cli_main, "_write_headers", return_value=3)
+
+    success, failures = cli_main._run_generation(
+        _options(symbols=("A", "B")), config, ["A", "B"], Mock()
+    )
+
+    assert success == 2
+    assert failures == []
+    publisher.assert_called_once_with(config, generator, {"A.h": "a", "B.h": "bb"}, mocker.ANY)

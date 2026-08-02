@@ -245,8 +245,9 @@ flowchart TD
     Parse --> Closure["hierarchy/dependency closure\nstructural, deterministic order"]
     Closure --> Render["HeaderGenerator\nfocused renderers"]
     Render --> Bundle["HeaderBundle"]
-    Bundle --> Output["atomic/output adapter"]
-    Bundle --> Manifest["sorted SHA-256 manifest"]
+    Bundle --> Output["accumulate requested bundles"]
+    Output --> Publish["one atomic/output publication"]
+    Publish --> Manifest["sorted SHA-256 manifest"]
 ```
 
 After source changes, run the unit/static tier, then the non-performance
@@ -256,6 +257,11 @@ is compared across the intentional output modes with the same manifest. The
 explicit real PS4 run uses the external ELF, compressed dump, and
 validated SQLite sidecar; fresh-process warm reruns must reproduce the same
 header manifest.
+
+For a repeated-symbol CLI invocation, the application accumulates successful
+header bundles and publishes them once. This is required because the atomic
+publisher removes files absent from the incoming manifest; publishing after
+each symbol would otherwise make the last symbol replace the earlier results.
 
 The sidecar is built by one bounded-memory zstd pass and published atomically.
 Its cold rebuild is opt-in and resource-heavy; normal generation must reuse the

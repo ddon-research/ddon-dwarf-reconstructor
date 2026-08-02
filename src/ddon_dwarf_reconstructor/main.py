@@ -114,6 +114,7 @@ def _run_generation(
 ) -> tuple[int, list[tuple[str, str]]]:
     success_count = 0
     failed_symbols: list[tuple[str, str]] = []
+    pending_headers: dict[str, str] = {}
     try:
         dwarf_config = DwarfRuntimeConfig.from_environment()
         identity_catalog = SourceIdentityCatalog()
@@ -136,10 +137,20 @@ def _run_generation(
             for index, symbol_name in enumerate(symbols, 1):
                 logger.info("[%s/%s] Processing: %s", index, len(symbols), symbol_name)
                 try:
-                    _process_symbol(options, config, generator, symbol_name, symbols, logger)
+                    if options.export_knowledge:
+                        _process_symbol(options, config, generator, symbol_name, symbols, logger)
+                    else:
+                        pending_headers.update(_build_headers(options, generator, symbol_name))
+                        if generator.lazy_index is not None:
+                            generator.lazy_index.save_cache()
                     success_count += 1
                 except (OSError, RuntimeError, ValueError) as error:
                     _record_failure(symbol_name, error, failed_symbols, logger, config.verbose)
+            if pending_headers:
+                total_bytes = _write_headers(config, generator, pending_headers, logger)
+                _log_header_summary(
+                    options, generator, pending_headers, total_bytes, symbols, logger
+                )
     except Exception as error:
         logger.error("Fatal error during generation: %s", error)
         _print_traceback(config.verbose)

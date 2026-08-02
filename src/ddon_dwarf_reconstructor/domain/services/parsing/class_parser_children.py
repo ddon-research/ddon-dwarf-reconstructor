@@ -18,6 +18,7 @@ from ...models.dwarf import (
     UnionInfo,
 )
 from .class_parser_context import ClassParserContext
+from .type_chain_traverser import TypeChainTraverser
 
 logger = get_logger(__name__)
 T = TypeVar("T")
@@ -30,6 +31,7 @@ class ParsedClassChildren:
     members: list[MemberInfo] = field(default_factory=list)
     methods: list[MethodInfo] = field(default_factory=list)
     base_classes: list[str] = field(default_factory=list)
+    base_class_offsets: list[int] = field(default_factory=list)
     enums: list[EnumInfo] = field(default_factory=list)
     nested_structs: list[StructInfo] = field(default_factory=list)
     unions: list[UnionInfo] = field(default_factory=list)
@@ -132,6 +134,9 @@ class ClassParserChildrenMixin:
         base_type = self.type_resolver.resolve_type_name(child)
         if base_type != "unknown_type":
             result.base_classes.append(base_type)
+            base_offset = TypeChainTraverser.get_terminal_type_offset(child)
+            if base_offset is not None:
+                result.base_class_offsets.append(base_offset)
 
     @staticmethod
     def _append_if_present(items: list[T], item: T | None) -> None:

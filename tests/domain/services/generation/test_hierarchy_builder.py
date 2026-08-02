@@ -85,25 +85,28 @@ def test_dependency_resolution_forces_fast_lookup() -> None:
 
 
 @pytest.mark.unit
-def test_dependency_resolution_uses_canonical_name_lookup() -> None:
-    """Dependency resolution must avoid pulling unrelated CU-local type closures."""
+def test_dependency_resolution_prefers_exact_offset_over_name_lookup() -> None:
+    """A referenced DIE must win over an unrelated same-name definition."""
     type_resolver = Mock()
     class_parser = Mock()
     class_parser.type_resolver = type_resolver
     dwarf_index = Mock()
     builder = HierarchyBuilder(class_parser, dwarf_index)
 
-    resolved_cu = Mock()
-    resolved_die = Mock()
-    resolved_die.tag = "DW_TAG_class_type"
-    class_parser.find_class.return_value = (resolved_cu, resolved_die)
-    class_parser.parse_class_info.return_value = ClassInfo("cResource", 112, [], [], [], [], [], [])
+    exact_cu = Mock()
+    exact_die = Mock(tag="DW_TAG_class_type", attributes={})
+    unrelated_cu = Mock()
+    unrelated_die = Mock(tag="DW_TAG_class_type", attributes={})
+    class_parser._find_die_and_cu_by_offset.return_value = (exact_cu, exact_die)
+    class_parser.find_class.return_value = (unrelated_cu, unrelated_die)
+    exact_info = ClassInfo("cResource", 112, [], [], [], [], [], [], die_offset=0x12E3F)
+    class_parser.parse_class_info.return_value = exact_info
 
     result = builder._try_resolve_type_by_offset(0x12E3F, "cResource")
 
-    assert result is not None
-    class_parser.find_class.assert_called_once_with("cResource", exhaustive_override=False)
-    class_parser._find_die_and_cu_by_offset.assert_not_called()
+    assert result is exact_info
+    class_parser._find_die_and_cu_by_offset.assert_called_once_with(0x12E3F)
+    class_parser.find_class.assert_not_called()
 
 
 @pytest.mark.unit
@@ -124,7 +127,7 @@ def test_dependency_resolution_uses_exact_offset_for_unindexed_nested_type() -> 
     result = builder._try_resolve_type_by_offset(0x117EC86E, "SetInfoBuffer")
 
     assert result is nested_info
-    class_parser.find_class.assert_called_once_with("SetInfoBuffer", exhaustive_override=False)
+    class_parser.find_class.assert_not_called()
     class_parser._find_die_and_cu_by_offset.assert_called_once_with(0x117EC86E)
 
 

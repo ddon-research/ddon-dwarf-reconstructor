@@ -182,6 +182,8 @@ class DependencyExtractor:
         Returns:
             Type offset if available, None otherwise
         """
+        if member.opaque_storage_size is not None:
+            return None
         if not hasattr(member, "type_offset") or member.type_offset is None:
             logger.debug(
                 f"Member '{member.name}' has no type_offset (type_name: {member.type_name})"

@@ -1,13 +1,21 @@
 {
-  "created": 1785702537.705079,
+  "created": 1785706545.9728687,
   "cu_offset_to_symbols": {
     "3229": [
       "MtObject"
+    ],
+    "600188760": [
+      "size_t"
+    ],
+    "637951258": [
+      "u32"
     ]
   },
-  "last_updated": 1785702537.705792,
+  "last_updated": 1785706548.5321481,
   "offset_to_symbol": {
-    "34029": "MtObject"
+    "34029": "MtObject",
+    "600190688": "size_t",
+    "637951408": "u32"
   },
   "source_fingerprint": null,
   "symbol_definitions": {
@@ -18,13 +26,33 @@
         "die_offset": 34029,
         "score": 10008
       }
+    ],
+    "size_t": [
+      {
+        "complete": true,
+        "cu_offset": 600188760,
+        "die_offset": 600190688,
+        "score": 5000
+      }
+    ],
+    "u32": [
+      {
+        "complete": true,
+        "cu_offset": 637951258,
+        "die_offset": 637951408,
+        "score": 5000
+      }
     ]
   },
   "symbol_to_cu_offset": {
-    "MtObject": 3229
+    "MtObject": 3229,
+    "size_t": 600188760,
+    "u32": 637951258
   },
   "symbol_to_offset": {
-    "MtObject": 34029
+    "MtObject": 34029,
+    "size_t": 600190688,
+    "u32": 637951408
   },
   "version": "5.0"
 }

@@ -49,6 +49,28 @@ class TypeResolverContext(Protocol):
 
     def _resolve_candidate_typedefs(self, type_names: set[str]) -> dict[str, str]: ...
 
+    def _resolve_declared_typedefs(
+        self,
+        members: list[MemberInfo],
+        methods: list[MethodInfo],
+        unions: list[UnionInfo] | None,
+        nested_structs: list[StructInfo] | None,
+    ) -> dict[str, str]: ...
+
+    def _declared_typedef_references(
+        self,
+        members: list[MemberInfo],
+        methods: list[MethodInfo],
+        unions: list[UnionInfo] | None,
+        nested_structs: list[StructInfo] | None,
+    ) -> Iterator[tuple[str, int]]: ...
+
+    def _member_typedef_references(
+        self, members: list[MemberInfo]
+    ) -> Iterator[tuple[str, int]]: ...
+
+    def _parameter_typedef_references(self, method: MethodInfo) -> Iterator[tuple[str, int]]: ...
+
     def _named_type_name(self, type_die: DwarfEntry) -> str: ...
 
     def _resolve_array_type(self, type_die: DwarfEntry) -> str: ...

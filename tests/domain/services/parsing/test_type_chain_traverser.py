@@ -64,3 +64,31 @@ def test_pointer_to_class_still_resolves_structural_terminal() -> None:
     field.get_DIE_from_attribute.return_value = pointer
 
     assert TypeChainTraverser.get_terminal_type_offset(field) == 0x2000
+
+
+@pytest.mark.unit
+def test_anonymous_aggregate_is_a_terminal_type() -> None:
+    anonymous = Mock()
+    anonymous.offset = 0x3000
+    anonymous.tag = "DW_TAG_class_type"
+    anonymous.attributes = {}
+
+    field = Mock()
+    field.attributes = {"DW_AT_type": Mock(value=0x3000)}
+    field.get_DIE_from_attribute.return_value = anonymous
+
+    assert TypeChainTraverser.get_terminal_type_offset(field) == 0x3000
+
+
+@pytest.mark.unit
+def test_declared_type_offset_preserves_typedef_before_terminal_type() -> None:
+    typedef = Mock()
+    typedef.offset = 0x4000
+    typedef.tag = "DW_TAG_typedef"
+    typedef.attributes = {"DW_AT_type": Mock(value=0x5000)}
+
+    field = Mock()
+    field.attributes = {"DW_AT_type": Mock(value=0x4000)}
+    field.get_DIE_from_attribute.return_value = typedef
+
+    assert TypeChainTraverser.get_declared_type_offset(field) == 0x4000

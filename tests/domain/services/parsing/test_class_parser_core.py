@@ -201,6 +201,32 @@ class TestClassParser:
         assert member.type_offset == 0x3333  # Verify offset captured
 
     @pytest.mark.unit
+    def test_parse_member_uses_opaque_storage_for_same_named_external_type(self, class_parser):
+        member = Mock()
+        member.tag = "DW_TAG_member"
+        member.attributes = {
+            "DW_AT_name": Mock(value=b"m_textureObject"),
+            "DW_AT_data_member_location": Mock(value=0x20),
+            "DW_AT_type": Mock(value=0x1111),
+        }
+        parent = Mock(tag="DW_TAG_class_type", offset=0x2000)
+        parent.attributes = {"DW_AT_name": Mock(value=b"Texture")}
+        member.get_parent.return_value = parent
+        target = Mock(tag="DW_TAG_class_type", offset=0x1111)
+        target.attributes = {
+            "DW_AT_name": Mock(value=b"Texture"),
+            "DW_AT_byte_size": Mock(value=32),
+        }
+        member.get_DIE_from_attribute.return_value = target
+        class_parser.type_resolver.resolve_type_name.return_value = "Texture"
+
+        result = class_parser.parse_member(member)
+
+        assert result is not None
+        assert result.type_name == "Texture"
+        assert result.opaque_storage_size == 32
+
+    @pytest.mark.unit
     def test_parse_method_basic_function(self, class_parser):
         """Test method parsing for basic member functions."""
         # Mock method DIE

@@ -13,3 +13,4 @@ class ParameterInfo:
     type_name: str
     type_offset: int | None = None  # DIE offset of parameter type (for resolution)
     default_value: str | None = None
+    declared_type_offset: int | None = None  # Immediate typedef DIE offset, when present

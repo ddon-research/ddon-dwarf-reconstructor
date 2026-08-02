@@ -30,6 +30,7 @@ class MethodInfo:
     is_deleted: bool = False
     is_defaulted: bool = False
     is_declaration: bool = False
+    declared_return_type_offset: int | None = None  # Immediate typedef DIE offset, when present
 
     def __post_init__(self) -> None:
         if self.parameters is None:

@@ -121,6 +121,36 @@ def test_parse_anonymous_aggregate_uses_empty_name_and_zero_size() -> None:
 
 
 @pytest.mark.unit
+def test_parse_member_preserves_anonymous_inline_class_members() -> None:
+    parser = _parser()
+    inline = StructInfo(
+        name=None,
+        byte_size=4,
+        members=[MemberInfo("flag", "uint32_t", offset=0, bit_size=1)],
+        die_offset=0x80,
+    )
+    parser.parse_nested_structure = Mock(return_value=inline)
+    member = _die(
+        "DW_TAG_member",
+        offset=0x70,
+        attributes={"DW_AT_name": _attr(b"m_bits"), "DW_AT_type": _attr(0x80)},
+    )
+    anonymous_class = _die(
+        "DW_TAG_class_type",
+        offset=0x80,
+        attributes={"DW_AT_byte_size": _attr(4)},
+    )
+    member.get_DIE_from_attribute.return_value = anonymous_class
+    parser.type_resolver.resolve_type_name.return_value = "class_type"
+
+    result = parser.parse_member(member)
+
+    assert result is not None
+    assert result.type_name == "anonymous_struct"
+    assert result.inline_struct is inline
+
+
+@pytest.mark.unit
 def test_declaration_file_handles_valid_missing_and_broken_line_programs() -> None:
     parser = _parser()
     cu = Mock()

@@ -32,7 +32,7 @@ def test_generation_records_per_symbol_failures_and_fatal_context_failures(
     generator = MagicMock()
     generator.__enter__.return_value = generator
     mocker.patch.object(cli_main, "DwarfGenerator", return_value=generator)
-    mocker.patch.object(cli_main, "_process_symbol", side_effect=ValueError("bad symbol"))
+    mocker.patch.object(cli_main, "_build_headers", side_effect=ValueError("bad symbol"))
 
     success, failures = cli_main._run_generation(_options(), config, ["A"], logger)
 

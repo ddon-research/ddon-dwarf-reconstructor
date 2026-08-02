@@ -26,6 +26,16 @@ class HeaderMemberRenderingMixin:
         Returns:
             Properly formatted C++ member declaration
         """
+        if member.inline_struct is not None:
+            lines = ["struct {"]
+            for nested_member in member.inline_struct.members:
+                declaration = self._format_member_declaration(nested_member)
+                lines.append(f"    {declaration};")
+            lines.append(f"}} {member.name}")
+            return "\n".join(lines)
+        if member.opaque_storage_size is not None:
+            declaration = f"std::uint8_t {member.name}[{member.opaque_storage_size}]"
+            return self._with_bitfield(declaration, member)
         array_declaration = self._format_array_member(member)
         if array_declaration is not None:
             return array_declaration

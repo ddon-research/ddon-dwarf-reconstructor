@@ -13,6 +13,7 @@ from ...ports.dump_lookup import DumpLookupPort
 from .class_parser_aggregate_types import ClassParserAggregateTypesMixin
 from .class_parser_class_info import ClassParserClassInfoMixin
 from .class_parser_discovery import ClassParserDiscoveryMixin
+from .class_parser_member_types import ClassParserMemberTypesMixin
 from .class_parser_method_lookup import ClassParserMethodLookupMixin
 from .class_parser_methods import ClassParserMethodsMixin
 from .class_parser_scan import ClassParserScanMixin
@@ -33,6 +34,7 @@ class ClassParser(
     ClassParserScanMixin,
     ClassParserDiscoveryMixin,
     ClassParserClassInfoMixin,
+    ClassParserMemberTypesMixin,
     ClassParserAggregateTypesMixin,
     ClassParserMethodsMixin,
     ClassParserMethodLookupMixin,

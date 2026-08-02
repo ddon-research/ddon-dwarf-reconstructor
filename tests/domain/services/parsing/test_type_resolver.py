@@ -184,3 +184,22 @@ def test_collect_used_typedefs_skips_known_aggregate_member_types(
 
     assert resolver.collect_used_typedefs([member], []) == {}
     index.targeted_symbol_search.assert_not_called()
+
+
+@pytest.mark.unit
+def test_collect_used_typedefs_resolves_alias_from_exact_declared_die() -> None:
+    index = Mock()
+    resolver = LazyTypeResolver(Mock(), index)
+    typedef = Mock(tag="DW_TAG_typedef")
+    index.get_die_by_offset.return_value = typedef
+    resolver._resolve_primitive_die = Mock(return_value="DataFormat")
+    member = MemberInfo(
+        "format",
+        "GPUFORMAT_TYPE",
+        type_offset=0x1AEFF,
+        declared_type_offset=0x1FA39,
+    )
+
+    assert resolver.collect_used_typedefs([member], []) == {"GPUFORMAT_TYPE": "DataFormat"}
+    resolver._resolve_primitive_die.assert_called_once_with("GPUFORMAT_TYPE", typedef)
+    index.targeted_symbol_search.assert_not_called()

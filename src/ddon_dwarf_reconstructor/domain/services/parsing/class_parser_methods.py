@@ -27,6 +27,7 @@ class ClassParserMethodsMixin:
         method_name = decode_dwarf_string(name_attr.value)
         return_type = self.type_resolver.resolve_type_name(method_die)
         return_type_offset = TypeChainTraverser.get_terminal_type_offset(method_die)
+        declared_return_type_offset = TypeChainTraverser.get_declared_type_offset(method_die)
         is_virtual, vtable_index = self._virtual_method_info(method_die)
         parent_name = self._parent_name(method_die)
         parameters = self._parse_method_parameters(method_die)
@@ -59,6 +60,7 @@ class ClassParserMethodsMixin:
             is_deleted="DW_AT_deleted" in method_die.attributes,
             is_defaulted="DW_AT_defaulted" in method_die.attributes,
             is_declaration=is_declaration,
+            declared_return_type_offset=declared_return_type_offset,
         )
 
     def _virtual_method_info(
@@ -168,6 +170,7 @@ class ClassParserMethodsMixin:
 
         # Capture terminal type offset for dependency resolution
         type_offset = TypeChainTraverser.get_terminal_type_offset(param_die)
+        declared_type_offset = TypeChainTraverser.get_declared_type_offset(param_die)
         if type_offset is not None:
             logger.debug(
                 f"Captured type offset 0x{type_offset:x} for parameter '{param_name}': "
@@ -189,6 +192,7 @@ class ClassParserMethodsMixin:
             type_name=param_type,
             type_offset=type_offset,  # Store terminal type offset
             default_value=default_value,
+            declared_type_offset=declared_type_offset,
         )
 
     def _resolve_parameter_names_from_implementation(

@@ -26,7 +26,19 @@ _EXCLUDED_TYPES = frozenset(
         "class_type",
         "structure_type",
         "union_type",
+        "anonymous_struct",
         "subroutine_type",
+        "unsigned char",
+        "signed char",
+        "unsigned short",
+        "signed short",
+        "unsigned int",
+        "signed int",
+        "unsigned long",
+        "signed long",
+        "long long",
+        "unsigned long long",
+        "signed long long",
     }
 )
 _INVALID_RESOLVED_TYPES = frozenset(
@@ -51,8 +63,63 @@ class UsedTypedefCollectionMixin:
         nested_structs: list[StructInfo] | None = None,
     ) -> dict[str, str]:
         """Collect and resolve typedef names referenced by declaration models."""
+        direct = self._resolve_declared_typedefs(members, methods, unions, nested_structs)
         type_names = self._candidate_type_names(members, methods, unions, nested_structs)
-        return self._resolve_candidate_typedefs(type_names)
+        type_names.difference_update(direct)
+        return {**self._resolve_candidate_typedefs(type_names), **direct}
+
+    def _resolve_declared_typedefs(
+        self: TypeResolverContext,
+        members: list[MemberInfo],
+        methods: list[MethodInfo],
+        unions: list[UnionInfo] | None,
+        nested_structs: list[StructInfo] | None,
+    ) -> dict[str, str]:
+        found: dict[str, str] = {}
+        for type_name, offset in self._declared_typedef_references(
+            members, methods, unions, nested_structs
+        ):
+            alias = self._extract_base_type(type_name)
+            if alias in self._primitive_typedefs or alias in _EXCLUDED_TYPES:
+                continue
+            die = self.index.get_die_by_offset(offset)
+            if die is None or die.tag != "DW_TAG_typedef":
+                continue
+            resolved_type = self._resolve_primitive_die(alias, die)
+            if resolved_type and resolved_type not in _INVALID_RESOLVED_TYPES:
+                found[alias] = resolved_type
+        return found
+
+    def _declared_typedef_references(
+        self: TypeResolverContext,
+        members: list[MemberInfo],
+        methods: list[MethodInfo],
+        unions: list[UnionInfo] | None,
+        nested_structs: list[StructInfo] | None,
+    ) -> Iterator[tuple[str, int]]:
+        yield from self._member_typedef_references(members)
+        for method in methods:
+            if method.declared_return_type_offset is not None:
+                yield method.return_type, method.declared_return_type_offset
+            yield from self._parameter_typedef_references(method)
+        for union in unions or []:
+            yield from self._member_typedef_references(union.members)
+            for struct in union.nested_structs:
+                yield from self._member_typedef_references(struct.members)
+        for struct in nested_structs or []:
+            yield from self._member_typedef_references(struct.members)
+
+    @staticmethod
+    def _member_typedef_references(members: list[MemberInfo]) -> Iterator[tuple[str, int]]:
+        for member in members:
+            if member.declared_type_offset is not None and member.type_name:
+                yield member.type_name, member.declared_type_offset
+
+    @staticmethod
+    def _parameter_typedef_references(method: MethodInfo) -> Iterator[tuple[str, int]]:
+        for parameter in method.parameters or []:
+            if parameter.declared_type_offset is not None and parameter.type_name:
+                yield parameter.type_name, parameter.declared_type_offset
 
     def _candidate_type_names(
         self: TypeResolverContext,

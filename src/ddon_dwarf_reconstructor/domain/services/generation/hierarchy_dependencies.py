@@ -78,6 +78,7 @@ class HierarchyDependencyWorkMixin:
             class_info,
             include_method_signatures=include_method_signatures,
         )
+        offsets.update(class_info.base_class_offsets)
         for offset in offsets:
             if offset in work.processed_offsets:
                 continue

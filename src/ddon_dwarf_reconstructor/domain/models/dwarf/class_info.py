@@ -45,3 +45,4 @@ class ClassInfo:
     diagnostics: list[str] = field(default_factory=list)
     nested_classes: list[ClassInfo] = field(default_factory=list)
     containing_type: str | None = None
+    base_class_offsets: list[int] = field(default_factory=list)

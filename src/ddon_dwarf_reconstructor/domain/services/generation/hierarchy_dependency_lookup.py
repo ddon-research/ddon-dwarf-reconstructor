@@ -19,16 +19,27 @@ class HierarchyDependencyLookupMixin:
     ) -> ClassInfo | None:
         """Resolve a referenced aggregate while rejecting incomplete artifacts."""
         try:
-            result = self.class_parser.find_class(type_name, exhaustive_override=False)
-            if result is None:
-                return self._try_direct_offset_lookup(offset, type_name)
-            cu, die = result
-            if self._is_non_aggregate_definition(die):
-                return None
-            return self.class_parser.parse_class_info(cu, die)
+            direct = self._try_direct_offset_lookup(offset, type_name)
+            if direct is not None:
+                return direct
+        except (AttributeError, KeyError, OSError, RuntimeError, TypeError, ValueError) as error:
+            logger.debug("Direct lookup failed for %s at 0x%x: %s", type_name, offset, error)
+
+        try:
+            return self._try_named_type_lookup(type_name)
         except (AttributeError, KeyError, OSError, RuntimeError, TypeError, ValueError) as error:
             logger.debug("Failed to resolve type %s at 0x%x: %s", type_name, offset, error)
             return None
+
+    def _try_named_type_lookup(self: HierarchyBuilderContext, type_name: str) -> ClassInfo | None:
+        result = self.class_parser.find_class(type_name, exhaustive_override=False)
+        if result is None:
+            logger.debug("Could not find class: %s", type_name)
+            return None
+        cu, die = result
+        if self._is_non_aggregate_definition(die):
+            return None
+        return self.class_parser.parse_class_info(cu, die)
 
     def _try_direct_offset_lookup(
         self: HierarchyBuilderContext, offset: int, type_name: str
