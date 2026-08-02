@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "sources": {
+    "07a6d9542cb7e29072453d996e3bc7f807d4c998e15d9b76b9adf1274fd3033f": {
+      "ctime_ns": 1759761643843885700,
+      "device": 18081464423511477017,
+      "inode": 18014398509654153,
+      "mtime_ns": 1759761644188151700,
+      "paths": [
+        "D:\\ddon-dwarf-reconstructor\\resources\\DDOORBIS.elf"
+      ],
+      "sha256": "4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0",
+      "size": 800622848,
+      "verified_at_ns": 1785707198347784900
+    },
+    "de33011cfe68fc4c924f9d6d17b3db12167457bb6c1b5ad47c33c7cc8c69f891": {
+      "ctime_ns": 1760077457739405300,
+      "device": 18081464423511477017,
+      "inode": 6192449487829892,
+      "mtime_ns": 1760077720786687200,
+      "paths": [
+        "D:\\research\\DDON-binaries\\IDA9.3\\PS4_DDON_02020005_2016_12_21\\DDOORBIS.elf.llvmdwarfdump.zst"
+      ],
+      "sha256": "21def1c1dac96f578826c489c40178865afbfdc5754e534035ef9a1097acd2e8",
+      "size": 1086393794,
+      "verified_at_ns": 1785707199006880600
+    }
+  }
+}

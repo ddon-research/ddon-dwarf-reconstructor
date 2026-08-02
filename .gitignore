@@ -84,3 +84,7 @@ ops/langfuse/.env
 
 # Rebuildable DWARF specification source downloads and converter intermediates
 /.cache/dwarf_spec_pipeline/
+
+# Checked-in source-bound acceptance index
+!resources/.cache/
+!resources/.cache/DDOORBIS.elf.llvmdwarfdump.index.sqlite3

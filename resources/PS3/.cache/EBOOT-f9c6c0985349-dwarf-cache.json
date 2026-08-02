@@ -1,0 +1,277 @@
+{
+  "created": 1785708022.657317,
+  "cu_offset_to_symbols": {
+    "23397215": [
+      "MtString",
+      "STRING"
+    ],
+    "272810260": [
+      "stLayoutID"
+    ],
+    "28048771": [
+      "u64"
+    ],
+    "281500129": [
+      "TYPE"
+    ],
+    "285363234": [
+      "cResource"
+    ],
+    "285398396": [
+      "MT_CTSTR",
+      "MT_MFUNC",
+      "MT_MFUNC32",
+      "MtDTI",
+      "MtObject",
+      "MtProperty",
+      "MtPropertyList",
+      "MtUI",
+      "s32",
+      "size_t",
+      "u32",
+      "u8",
+      "unsigned char"
+    ],
+    "54588675": [
+      "stSplitID"
+    ]
+  },
+  "last_updated": 1785708027.687746,
+  "offset_to_symbol": {
+    "23398727": "MtString",
+    "23398746": "STRING",
+    "272822353": "stLayoutID",
+    "28049572": "u64",
+    "281502362": "TYPE",
+    "285365799": "cResource",
+    "285398473": "unsigned char",
+    "285398670": "s32",
+    "285398700": "MT_CTSTR",
+    "285398715": "u32",
+    "285398730": "MtDTI",
+    "285399033": "MtUI",
+    "285399072": "MT_MFUNC",
+    "285399087": "MT_MFUNC32",
+    "285399102": "u8",
+    "285399885": "MtObject",
+    "285400492": "MtProperty",
+    "285400936": "MtPropertyList",
+    "285401230": "size_t",
+    "54622281": "stSplitID"
+  },
+  "source_fingerprint": {
+    "ctime_ns": 1760827850966573500,
+    "device": 18081464423511477017,
+    "inode": 8162774325271737,
+    "mtime_ns": 1760734174492666000,
+    "sha256": "8638cbbd1b6893ca05de1b48b8c7e3bb1fda115885ddaf0d402e9dd0c672aa12",
+    "size": 351400952
+  },
+  "symbol_definitions": {
+    "MT_CTSTR": [
+      {
+        "complete": true,
+        "cu_offset": 285398396,
+        "die_offset": 285398700,
+        "score": 5000
+      }
+    ],
+    "MT_MFUNC": [
+      {
+        "complete": true,
+        "cu_offset": 285398396,
+        "die_offset": 285399072,
+        "score": 5000
+      }
+    ],
+    "MT_MFUNC32": [
+      {
+        "complete": true,
+        "cu_offset": 285398396,
+        "die_offset": 285399087,
+        "score": 5000
+      }
+    ],
+    "MtDTI": [
+      {
+        "complete": true,
+        "cu_offset": 285398396,
+        "die_offset": 285398730,
+        "score": 10032
+      }
+    ],
+    "MtObject": [
+      {
+        "complete": true,
+        "cu_offset": 285398396,
+        "die_offset": 285399885,
+        "score": 10004
+      }
+    ],
+    "MtProperty": [
+      {
+        "complete": true,
+        "cu_offset": 285398396,
+        "die_offset": 285400492,
+        "score": 10056
+      }
+    ],
+    "MtPropertyList": [
+      {
+        "complete": true,
+        "cu_offset": 285398396,
+        "die_offset": 285400936,
+        "score": 10008
+      }
+    ],
+    "MtString": [
+      {
+        "complete": true,
+        "cu_offset": 23397215,
+        "die_offset": 23398727,
+        "score": 10036
+      }
+    ],
+    "MtUI": [
+      {
+        "complete": true,
+        "cu_offset": 285398396,
+        "die_offset": 285399033,
+        "score": 10001
+      }
+    ],
+    "STRING": [
+      {
+        "complete": true,
+        "cu_offset": 23397215,
+        "die_offset": 23398746,
+        "score": 10012
+      }
+    ],
+    "TYPE": [
+      {
+        "complete": true,
+        "cu_offset": 281500129,
+        "die_offset": 281502362,
+        "score": 6000
+      }
+    ],
+    "cResource": [
+      {
+        "complete": true,
+        "cu_offset": 285363234,
+        "die_offset": 285365799,
+        "score": 10096
+      }
+    ],
+    "s32": [
+      {
+        "complete": true,
+        "cu_offset": 285398396,
+        "die_offset": 285398670,
+        "score": 5000
+      }
+    ],
+    "size_t": [
+      {
+        "complete": true,
+        "cu_offset": 285398396,
+        "die_offset": 285401230,
+        "score": 5000
+      }
+    ],
+    "stLayoutID": [
+      {
+        "complete": true,
+        "cu_offset": 272810260,
+        "die_offset": 272822353,
+        "score": 10004
+      }
+    ],
+    "stSplitID": [
+      {
+        "complete": true,
+        "cu_offset": 54588675,
+        "die_offset": 54622281,
+        "score": 10004
+      }
+    ],
+    "u32": [
+      {
+        "complete": true,
+        "cu_offset": 285398396,
+        "die_offset": 285398715,
+        "score": 5000
+      }
+    ],
+    "u64": [
+      {
+        "complete": true,
+        "cu_offset": 28048771,
+        "die_offset": 28049572,
+        "score": 5000
+      }
+    ],
+    "u8": [
+      {
+        "complete": true,
+        "cu_offset": 285398396,
+        "die_offset": 285399102,
+        "score": 5000
+      }
+    ],
+    "unsigned char": [
+      {
+        "complete": true,
+        "cu_offset": 285398396,
+        "die_offset": 285398473,
+        "score": 8000
+      }
+    ]
+  },
+  "symbol_to_cu_offset": {
+    "MT_CTSTR": 285398396,
+    "MT_MFUNC": 285398396,
+    "MT_MFUNC32": 285398396,
+    "MtDTI": 285398396,
+    "MtObject": 285398396,
+    "MtProperty": 285398396,
+    "MtPropertyList": 285398396,
+    "MtString": 23397215,
+    "MtUI": 285398396,
+    "STRING": 23397215,
+    "TYPE": 281500129,
+    "cResource": 285363234,
+    "s32": 285398396,
+    "size_t": 285398396,
+    "stLayoutID": 272810260,
+    "stSplitID": 54588675,
+    "u32": 285398396,
+    "u64": 28048771,
+    "u8": 285398396,
+    "unsigned char": 285398396
+  },
+  "symbol_to_offset": {
+    "MT_CTSTR": 285398700,
+    "MT_MFUNC": 285399072,
+    "MT_MFUNC32": 285399087,
+    "MtDTI": 285398730,
+    "MtObject": 285399885,
+    "MtProperty": 285400492,
+    "MtPropertyList": 285400936,
+    "MtString": 23398727,
+    "MtUI": 285399033,
+    "STRING": 23398746,
+    "TYPE": 281502362,
+    "cResource": 285365799,
+    "s32": 285398670,
+    "size_t": 285401230,
+    "stLayoutID": 272822353,
+    "stSplitID": 54622281,
+    "u32": 285398715,
+    "u64": 28049572,
+    "u8": 285399102,
+    "unsigned char": 285398473
+  },
+  "version": "5.0"
+}

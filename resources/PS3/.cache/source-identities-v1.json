@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "sources": {
+    "e9ea578508564c7f335773122420d19e353f0e071f25ac42f2cbf227a342a1bf": {
+      "ctime_ns": 1760827850966573500,
+      "device": 18081464423511477017,
+      "inode": 8162774325271737,
+      "mtime_ns": 1760734174492666000,
+      "paths": [
+        "D:\\ddon-dwarf-reconstructor\\resources\\PS3\\EBOOT.ELF"
+      ],
+      "sha256": "8638cbbd1b6893ca05de1b48b8c7e3bb1fda115885ddaf0d402e9dd0c672aa12",
+      "size": 351400952,
+      "verified_at_ns": 1785708022652055700
+    }
+  }
+}

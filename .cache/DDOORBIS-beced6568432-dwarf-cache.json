@@ -1,0 +1,3385 @@
+{
+  "created": 1785708012.1471279,
+  "cu_offset_to_symbols": {
+    "100195734": [
+      "BlendState",
+      "Buffer",
+      "BufferObject",
+      "CBuffer",
+      "CBufferSystem",
+      "CPacketDataBase",
+      "CommandCache",
+      "DataFormat",
+      "DepthStencilControl",
+      "DepthStencilState",
+      "DepthStencilView",
+      "IndexBuffer",
+      "Leaf",
+      "Material",
+      "MtAABB",
+      "MtAABB4",
+      "MtAllocator",
+      "MtArray",
+      "MtCapsule",
+      "MtColor",
+      "MtColorF",
+      "MtCone",
+      "MtCylinder",
+      "MtDataReader",
+      "MtEaseCurve",
+      "MtEllipsoid",
+      "MtGeomConvex",
+      "MtGeometry",
+      "MtHermiteCurve",
+      "MtLine",
+      "MtLineSegment",
+      "MtLineSegment4",
+      "MtOBB",
+      "MtObject",
+      "MtOscillator",
+      "MtPlane",
+      "MtPlaneXZ",
+      "MtPoint",
+      "MtPointF",
+      "MtProperty",
+      "MtPropertyList",
+      "MtQuaternion",
+      "MtRange",
+      "MtRangeF",
+      "MtRangeU16",
+      "MtRay",
+      "MtRect",
+      "MtRect3D",
+      "MtRect3DC",
+      "MtRect3D_XZ",
+      "MtRectF",
+      "MtSize",
+      "MtSizeF",
+      "MtSoaVector1",
+      "MtSoaVector3",
+      "MtSphere",
+      "MtStream",
+      "MtString",
+      "MtTime",
+      "MtTorus",
+      "MtTriangle",
+      "MtUI",
+      "MtVariable",
+      "MtVector3",
+      "MtVectorU4",
+      "MtVectorU43",
+      "NodeBinaryBasic",
+      "NodeBinaryCommon",
+      "Param",
+      "Parts",
+      "PixelShaderObject",
+      "PrimitiveSetup",
+      "Query",
+      "RasterizerState",
+      "RenderTarget",
+      "RenderTargetView",
+      "Sbc",
+      "SbcInfo",
+      "SbcInfoBase",
+      "Scene",
+      "ScrCollisionInfo",
+      "ScrCollisionInfoBase",
+      "ShaderObject",
+      "StencilControl",
+      "StencilOpControl",
+      "Texture",
+      "VertexBuffer",
+      "VertexShaderObject",
+      "VsShader",
+      "cBVHCollision",
+      "cCellGroup",
+      "cDraw",
+      "cGridCollision",
+      "cGridCollisionRegistInfo",
+      "cHardwareDispCtrl",
+      "cResPathBase",
+      "cResource",
+      "cSbcMoveMatrix",
+      "cScrCollisionMoveMatrix",
+      "cScrCommonFilter",
+      "cUnit",
+      "cWorkBuildOnlineFast",
+      "cpComponent",
+      "rCollision",
+      "rCollisionHeightField",
+      "rModel",
+      "rTbl2Base",
+      "rTexture",
+      "uBaseModel",
+      "uCamera",
+      "uCoord",
+      "uDDOModel",
+      "uModel"
+    ],
+    "101230577": [
+      "CConsistentHash",
+      "CListener",
+      "CNode",
+      "CProtocol",
+      "CRecord",
+      "CSessionListener",
+      "InputLot",
+      "MtMap",
+      "MtNetContext",
+      "MtNetFriendList",
+      "MtNetObject",
+      "MtNetUniqueId",
+      "MtStlList<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> >",
+      "Object",
+      "SessionListener",
+      "Viewport",
+      "_List_alloc<false, std::_List_base_types<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> > >",
+      "_List_buy<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> >",
+      "_List_val<_Val_types>",
+      "cControl",
+      "cGatherItemList",
+      "cHorizontalList",
+      "cOmControl",
+      "cReferenceUIBase",
+      "cResPath<rAIFSM>",
+      "cScrollListItemBase",
+      "cSupportBase",
+      "cSupportInstAnim",
+      "cUIObject",
+      "cVerticalList",
+      "cpOmBase",
+      "cpOmGather",
+      "list<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> >",
+      "rGUI",
+      "uGUI",
+      "uGUIBase",
+      "uScrollCollisionGeometry"
+    ],
+    "102347023": [
+      "ConstantTable",
+      "SizeAlign"
+    ],
+    "102978982": [
+      "MtMatrix",
+      "MtVector4"
+    ],
+    "103162387": [
+      "Custom"
+    ],
+    "103400929": [
+      "AreaHitShape",
+      "CDataDropItemSetInfo",
+      "CDataLayoutEnemyData",
+      "CDataLayoutItemData",
+      "CDataNamedEnemyParamClient",
+      "CDataStageLayoutEnemyPresetEnemyInfoClient",
+      "DropItemInfo",
+      "EmSetInfo",
+      "MtTypedArray<AreaHitShape>",
+      "MtTypedArray<CDataDropItemSetInfo>",
+      "MtTypedArray<CDataLayoutEnemyData>",
+      "MtTypedArray<CDataLayoutItemData>",
+      "MtTypedArray<cAreaHit>",
+      "MtTypedArray<cGroupParam::cID>",
+      "OmSetInfo",
+      "SetInfo",
+      "ShapeInfoAABB",
+      "ShapeInfoArea",
+      "ShapeInfoCone",
+      "ShapeInfoCylinder",
+      "ShapeInfoOBB",
+      "ShapeInfoSphere",
+      "cArray<CNamedEnemyParamClient, 5>",
+      "cGroupParam",
+      "cID",
+      "cLifeArea",
+      "rLayout"
+    ],
+    "104519184": [
+      "MtTypedArray<rTutorialDialogMessage::cDialogPage>",
+      "cReferenceUICloseBtn",
+      "cReferenceUIVlCursor",
+      "rTutorialDialogMessage"
+    ],
+    "110737552": [
+      "cFSMRelate",
+      "cLinkParam",
+      "cSetInfoCharacter",
+      "cSetInfoCoord",
+      "cSetInfoNpc",
+      "cSetInfoOm",
+      "cSetInfoOmBadStatus",
+      "cSetInfoOmBoard",
+      "cSetInfoOmBowlOfLife",
+      "cSetInfoOmCtrl",
+      "cSetInfoOmDoor",
+      "cSetInfoOmElfSW",
+      "cSetInfoOmFall",
+      "cSetInfoOmGather",
+      "cSetInfoOmHakuryuu",
+      "cSetInfoOmHeal",
+      "cSetInfoOmLadder",
+      "cSetInfoOmLever",
+      "cSetInfoOmNav",
+      "cSetInfoOmRange",
+      "cSetInfoOmText",
+      "cSetInfoOmTreasureBox",
+      "cSetInfoOmWall",
+      "cSetInfoOmWarp"
+    ],
+    "11085790": [
+      "cUIResource"
+    ],
+    "124812593": [
+      "uGUIsMenuBase"
+    ],
+    "130101182": [
+      "cMatrix"
+    ],
+    "155989476": [
+      "cSetInfoEnemy"
+    ],
+    "157183273": [
+      "cSetInfoGeneralPoint"
+    ],
+    "163598324": [
+      "cWarpLocation",
+      "rTbl2<cWarpLocation>",
+      "rWarpLocation"
+    ],
+    "188001416": [
+      "cNode"
+    ],
+    "191107723": [
+      "Node"
+    ],
+    "222798787": [
+      "JOINT_INFO"
+    ],
+    "224645835": [
+      "cReferenceUIToggleBtn",
+      "uGUIPick01",
+      "uGUIUseItemBase"
+    ],
+    "244186960": [
+      "cSetInfo"
+    ],
+    "249684171": [
+      "cSetInfoOmBreakTarget"
+    ],
+    "264950457": [
+      "BlockList",
+      "MtNetString",
+      "ReqCtx",
+      "String"
+    ],
+    "279164655": [
+      "rMaterial"
+    ],
+    "291038660": [
+      "Data"
+    ],
+    "293776127": [
+      "MtTypedArray<cGroupParam::cLifeArea>"
+    ],
+    "297299874": [
+      "Area"
+    ],
+    "314212615": [
+      "GeometryShaderObject"
+    ],
+    "328666586": [
+      "PARAM"
+    ],
+    "356866765": [
+      "Resource"
+    ],
+    "434925629": [
+      "MyDTI"
+    ],
+    "46267689": [
+      "cItem"
+    ],
+    "600273066": [
+      "MtDataWriter"
+    ],
+    "600562149": [
+      "MtMatrix33"
+    ],
+    "600993139": [
+      "MtCriticalSection"
+    ],
+    "601330053": [
+      "MtVector2"
+    ],
+    "602076943": [
+      "MtNetBuffer"
+    ],
+    "602171675": [
+      "MtNetRequest"
+    ],
+    "611496777": [
+      "TraverseInfo"
+    ],
+    "613277258": [
+      "Base",
+      "Port"
+    ],
+    "613538845": [
+      "Cache"
+    ],
+    "619249470": [
+      "Animation"
+    ],
+    "625006627": [
+      "Link",
+      "PartsInfo",
+      "cRegistInfo",
+      "cRegistReserveInfo"
+    ],
+    "626813285": [
+      "cCellRegisterArrayBase"
+    ],
+    "639368226": [
+      "MtDTI"
+    ],
+    "653062199": [
+      "uDynamicSbc"
+    ],
+    "663544471": [
+      "Variable"
+    ],
+    "664633423": [
+      "MtRayY"
+    ],
+    "666920953": [
+      "DepthRenderTarget"
+    ],
+    "9210545": [
+      "CDataStageLayoutID",
+      "MtTypedArray<CDataGatheringItemElement>",
+      "rTextureMemory"
+    ],
+    "99694709": [
+      "Context",
+      "MtMemoryStream",
+      "ShapeInfoBase",
+      "cAIGraph",
+      "cAIObject",
+      "cAITask",
+      "cGeneralPoint",
+      "cGeneralPointPtr",
+      "cGridInfo"
+    ]
+  },
+  "last_updated": 1785708013.8899992,
+  "offset_to_symbol": {
+    "10284632103": "ReqCtx",
+    "10284635649": "MtNetString",
+    "10284636529": "BlockList",
+    "10284648343": "String",
+    "10624324930": "rMaterial",
+    "11022981526": "Data",
+    "11065062707": "MtTypedArray<cGroupParam::cLifeArea>",
+    "11126792288": "Area",
+    "1179131937": "cItem",
+    "13223986438": "GeometryShaderObject",
+    "13573247751": "PARAM",
+    "14362972804": "Resource",
+    "18073720980": "MyDTI",
+    "25773148023": "MtDataWriter",
+    "25775518498": "MtMatrix33",
+    "25786987378": "MtCriticalSection",
+    "25789962072": "MtVector2",
+    "25804638005": "MtNetBuffer",
+    "25804871447": "MtNetRequest",
+    "26061456277": "TraverseInfo",
+    "26092115489": "Base",
+    "26092119381": "Port",
+    "26094048291": "Cache",
+    "26191664257": "Animation",
+    "26390925408": "cRegistInfo",
+    "26390925864": "cRegistReserveInfo",
+    "26391110937": "PartsInfo",
+    "26392753799": "Link",
+    "26415806210": "cCellRegisterArrayBase",
+    "26729877907": "MtDTI",
+    "269575573": "CDataStageLayoutID",
+    "269576294": "MtTypedArray<CDataGatheringItemElement>",
+    "270604361": "rTextureMemory",
+    "27164444437": "uDynamicSbc",
+    "27436287592": "Variable",
+    "27454366737": "MtRayY",
+    "27490736149": "DepthRenderTarget",
+    "286552625": "cUIResource",
+    "4295230851": "cAIObject",
+    "4295242552": "cGridInfo",
+    "4295255058": "ShapeInfoBase",
+    "4295426963": "Context",
+    "4295583091": "cGeneralPointPtr",
+    "4295583779": "cGeneralPoint",
+    "4296370480": "MtMemoryStream",
+    "4296505145": "cAIGraph",
+    "4296512024": "cAITask",
+    "4296636707": "MtQuaternion",
+    "4297064807": "MtVector3",
+    "4297144693": "cpComponent",
+    "4297148019": "MtObject",
+    "4297152787": "MtUI",
+    "4297152822": "MtSize",
+    "4297155633": "MtSizeF",
+    "4297156944": "MtProperty",
+    "4297208977": "MtString",
+    "4297213537": "MtAllocator",
+    "4297218355": "MtColor",
+    "4297225543": "MtColorF",
+    "4297228545": "MtPoint",
+    "4297229606": "MtPointF",
+    "4297232464": "MtRect",
+    "4297261714": "MtRectF",
+    "4297267046": "MtEaseCurve",
+    "4297267585": "MtHermiteCurve",
+    "4297269846": "MtTime",
+    "4297271559": "MtLine",
+    "4297274152": "MtLineSegment",
+    "4297277554": "MtAABB",
+    "4297282435": "MtSphere",
+    "4297286419": "MtPlane",
+    "4297288055": "MtOBB",
+    "4297291872": "MtLineSegment4",
+    "4297294370": "MtSoaVector3",
+    "4297327000": "MtSoaVector1",
+    "4297333121": "MtVectorU4",
+    "4297343093": "MtVectorU43",
+    "4297344145": "MtRect3DC",
+    "4297353264": "MtRay",
+    "4297356040": "MtCapsule",
+    "4297359761": "MtAABB4",
+    "4297361174": "MtCylinder",
+    "4297364761": "MtTriangle",
+    "4297393955": "MtCone",
+    "4297394249": "MtTorus",
+    "4297394549": "MtEllipsoid",
+    "4297396323": "MtRange",
+    "4297397623": "MtRangeF",
+    "4297400407": "MtRangeU16",
+    "4297401878": "MtOscillator",
+    "4297405794": "MtVariable",
+    "4297408871": "MtRect3D_XZ",
+    "4297412930": "MtRect3D",
+    "4297414516": "MtPlaneXZ",
+    "4297418550": "MtPropertyList",
+    "4297421616": "uDDOModel",
+    "4297472067": "uModel",
+    "4297523720": "uBaseModel",
+    "4297536817": "uCoord",
+    "4297540169": "cUnit",
+    "4297541171": "cHardwareDispCtrl",
+    "4297548952": "cDraw",
+    "4297595206": "Material",
+    "4297605462": "BlendState",
+    "4297606513": "RasterizerState",
+    "4297609318": "DepthStencilState",
+    "4297610596": "Texture",
+    "4297614681": "Buffer",
+    "4297617472": "RenderTargetView",
+    "4297618741": "DepthStencilView",
+    "4297626161": "CBufferSystem",
+    "4297626720": "CBuffer",
+    "4297627939": "VertexBuffer",
+    "4297654679": "IndexBuffer",
+    "4297659000": "Scene",
+    "4297670966": "CommandCache",
+    "4297672737": "Query",
+    "4297679186": "PrimitiveSetup",
+    "4297679426": "DepthStencilControl",
+    "4297679462": "StencilControl",
+    "4297679687": "StencilOpControl",
+    "4297679729": "DataFormat",
+    "4297692678": "RenderTarget",
+    "4298129490": "VsShader",
+    "4298199607": "VertexShaderObject",
+    "4298200194": "ShaderObject",
+    "4298200322": "BufferObject",
+    "4298200580": "PixelShaderObject",
+    "4298204208": "rModel",
+    "4298212232": "cResource",
+    "4298217521": "MtStream",
+    "4298466918": "MtArray",
+    "4298731889": "rTbl2Base",
+    "4298732547": "MtDataReader",
+    "4298736404": "cResPathBase",
+    "4299229298": "rTexture",
+    "4299423844": "CPacketDataBase",
+    "4299445525": "Sbc",
+    "4299446337": "Parts",
+    "4299456837": "cSbcMoveMatrix",
+    "4299503875": "SbcInfo",
+    "4299512145": "SbcInfoBase",
+    "4299560706": "Param",
+    "4299567449": "ScrCollisionInfo",
+    "4299568277": "ScrCollisionInfoBase",
+    "4299621669": "cScrCommonFilter",
+    "4299625555": "cScrCollisionMoveMatrix",
+    "4299645779": "rCollision",
+    "4299650096": "Leaf",
+    "4299686289": "cBVHCollision",
+    "4299687968": "NodeBinaryBasic",
+    "4299691797": "NodeBinaryCommon",
+    "4299699798": "cWorkBuildOnlineFast",
+    "4299703364": "MtGeometry",
+    "4299714626": "cGridCollision",
+    "4299752761": "cGridCollisionRegistInfo",
+    "4299762072": "MtGeomConvex",
+    "4299765305": "rCollisionHeightField",
+    "4299765769": "cCellGroup",
+    "4303431441": "uCamera",
+    "4314900518": "list<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> >",
+    "4314900578": "_List_buy<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> >",
+    "4314900632": "_List_alloc<false, std::_List_base_types<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> > >",
+    "4314900789": "_List_val<_Val_types>",
+    "4317254488": "uScrollCollisionGeometry",
+    "4318200423": "cOmControl",
+    "4318203944": "InputLot",
+    "4318328727": "cResPath<rAIFSM>",
+    "4319543379": "MtNetObject",
+    "4319614336": "MtNetContext",
+    "4319619142": "MtNetFriendList",
+    "4319619399": "MtNetUniqueId",
+    "4319697285": "SessionListener",
+    "4320138537": "Object",
+    "4320141623": "CNode",
+    "4320142464": "CConsistentHash",
+    "4320143618": "CSessionListener",
+    "4320143703": "CProtocol",
+    "4320145970": "CListener",
+    "4320146193": "CRecord",
+    "4320171312": "MtMap",
+    "4320199443": "MtStlList<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> >",
+    "4329859365": "Viewport",
+    "4329870437": "uGUIBase",
+    "4329898297": "cReferenceUIBase",
+    "4329899840": "cSupportInstAnim",
+    "4329904179": "cSupportBase",
+    "4329963879": "cScrollListItemBase",
+    "4329968008": "cVerticalList",
+    "4329969416": "cHorizontalList",
+    "4329972055": "uGUI",
+    "4329986337": "rGUI",
+    "4330169907": "cControl",
+    "4331084052": "cGatherItemList",
+    "4331229273": "cpOmGather",
+    "4331230040": "cpOmBase",
+    "4331231555": "cUIObject",
+    "4337254550": "ConstantTable",
+    "4337276725": "SizeAlign",
+    "4338497556": "MtVector4",
+    "4338516790": "MtMatrix",
+    "4346886520": "Custom",
+    "4349589079": "cArray<CNamedEnemyParamClient, 5>",
+    "4352009013": "ShapeInfoArea",
+    "4352012340": "ShapeInfoSphere",
+    "4352013330": "ShapeInfoCylinder",
+    "4352014599": "ShapeInfoCone",
+    "4352017302": "ShapeInfoAABB",
+    "4352021362": "ShapeInfoOBB",
+    "4353975335": "cGroupParam",
+    "4353979523": "cLifeArea",
+    "4353982551": "cID",
+    "4354019664": "DropItemInfo",
+    "4354020752": "EmSetInfo",
+    "4354021737": "OmSetInfo",
+    "4354023956": "rLayout",
+    "4354024273": "SetInfo",
+    "4354032400": "MtTypedArray<AreaHitShape>",
+    "4354032711": "AreaHitShape",
+    "4354037303": "MtTypedArray<cAreaHit>",
+    "4354040952": "MtTypedArray<cGroupParam::cID>",
+    "4354041431": "CDataNamedEnemyParamClient",
+    "4366538562": "CDataStageLayoutEnemyPresetEnemyInfoClient",
+    "4366541668": "MtTypedArray<CDataLayoutEnemyData>",
+    "4366541958": "CDataLayoutEnemyData",
+    "4366542929": "MtTypedArray<CDataLayoutItemData>",
+    "4366543219": "CDataLayoutItemData",
+    "4366550536": "MtTypedArray<CDataDropItemSetInfo>",
+    "4366550832": "CDataDropItemSetInfo",
+    "4384301716": "cReferenceUICloseBtn",
+    "4384358774": "cReferenceUIVlCursor",
+    "4387530066": "rTutorialDialogMessage",
+    "4387532836": "MtTypedArray<rTutorialDialogMessage::cDialogPage>",
+    "4588011859": "cSetInfoNpc",
+    "4588013073": "cSetInfoCharacter",
+    "4588013428": "cSetInfoCoord",
+    "4588016535": "cFSMRelate",
+    "4588017265": "cSetInfoOm",
+    "4588044657": "cSetInfoOmBoard",
+    "4588045175": "cSetInfoOmBowlOfLife",
+    "4588046083": "cSetInfoOmCtrl",
+    "4588046408": "cLinkParam",
+    "4588049273": "cSetInfoOmDoor",
+    "4588050037": "cSetInfoOmElfSW",
+    "4588050561": "cSetInfoOmFall",
+    "4588052615": "cSetInfoOmGather",
+    "4588053329": "cSetInfoOmTreasureBox",
+    "4588053826": "cSetInfoOmHakuryuu",
+    "4588054344": "cSetInfoOmHeal",
+    "4588054854": "cSetInfoOmLadder",
+    "4588056914": "cSetInfoOmLever",
+    "4588057480": "cSetInfoOmNav",
+    "4588057989": "cSetInfoOmRange",
+    "4588058678": "cSetInfoOmText",
+    "4588060786": "cSetInfoOmWall",
+    "4588061331": "cSetInfoOmWarp",
+    "4588062981": "cSetInfoOmBadStatus",
+    "4907824740": "uGUIsMenuBase",
+    "5102839081": "cMatrix",
+    "5743182151": "cSetInfoEnemy",
+    "5759202312": "cSetInfoGeneralPoint",
+    "5990791287": "rWarpLocation",
+    "5990793367": "rTbl2<cWarpLocation>",
+    "5990794355": "cWarpLocation",
+    "6582135075": "cNode",
+    "6734189673": "Node",
+    "9194062457": "JOINT_INFO",
+    "9212278912": "cReferenceUIToggleBtn",
+    "9213060753": "uGUIPick01",
+    "9213068358": "uGUIUseItemBase",
+    "9732985382": "cSetInfo",
+    "9933160819": "cSetInfoOmBreakTarget"
+  },
+  "source_fingerprint": {
+    "ctime_ns": 1759761643843885700,
+    "device": 18081464423511477017,
+    "inode": 18014398509654153,
+    "mtime_ns": 1759761644188151700,
+    "sha256": "4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0",
+    "size": 800622848
+  },
+  "symbol_definitions": {
+    "Animation": [
+      {
+        "complete": true,
+        "cu_offset": 619249470,
+        "die_offset": 26191664257,
+        "score": 524
+      }
+    ],
+    "Area": [
+      {
+        "complete": true,
+        "cu_offset": 297299874,
+        "die_offset": 11126792288,
+        "score": 72
+      }
+    ],
+    "AreaHitShape": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4354032711,
+        "score": 80
+      }
+    ],
+    "Base": [
+      {
+        "complete": true,
+        "cu_offset": 613277258,
+        "die_offset": 26092115489,
+        "score": 64
+      }
+    ],
+    "BlendState": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297605462,
+        "score": 48
+      }
+    ],
+    "BlockList": [
+      {
+        "complete": true,
+        "cu_offset": 264950457,
+        "die_offset": 10284636529,
+        "score": 3640
+      }
+    ],
+    "Buffer": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297614681,
+        "score": 48
+      }
+    ],
+    "BufferObject": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4298200322,
+        "score": 24
+      }
+    ],
+    "CBuffer": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297626720,
+        "score": 56
+      }
+    ],
+    "CBufferSystem": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297626161,
+        "score": 40
+      }
+    ],
+    "CConsistentHash": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4320142464,
+        "score": 18472
+      }
+    ],
+    "CDataDropItemSetInfo": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4366550832,
+        "score": 40
+      }
+    ],
+    "CDataLayoutEnemyData": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4366541958,
+        "score": 56
+      }
+    ],
+    "CDataLayoutItemData": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4366543219,
+        "score": 16
+      }
+    ],
+    "CDataNamedEnemyParamClient": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4354041431,
+        "score": 64
+      }
+    ],
+    "CDataStageLayoutEnemyPresetEnemyInfoClient": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4366538562,
+        "score": 40
+      }
+    ],
+    "CDataStageLayoutID": [
+      {
+        "complete": true,
+        "cu_offset": 9210545,
+        "die_offset": 269575573,
+        "score": 24
+      }
+    ],
+    "CListener": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4320145970,
+        "score": 8
+      }
+    ],
+    "CNode": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4320141623,
+        "score": 16
+      }
+    ],
+    "CPacketDataBase": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299423844,
+        "score": 8
+      }
+    ],
+    "CProtocol": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4320143703,
+        "score": 24
+      }
+    ],
+    "CRecord": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4320146193,
+        "score": 32
+      }
+    ],
+    "CSessionListener": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4320143618,
+        "score": 16
+      }
+    ],
+    "Cache": [
+      {
+        "complete": true,
+        "cu_offset": 613538845,
+        "die_offset": 26094048291,
+        "score": 4
+      }
+    ],
+    "CommandCache": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297670966,
+        "score": 712
+      }
+    ],
+    "ConstantTable": [
+      {
+        "complete": true,
+        "cu_offset": 102347023,
+        "die_offset": 4337254550,
+        "score": 40
+      }
+    ],
+    "Context": [
+      {
+        "complete": true,
+        "cu_offset": 99694709,
+        "die_offset": 4295426963,
+        "score": 3004
+      }
+    ],
+    "Custom": [
+      {
+        "complete": true,
+        "cu_offset": 103162387,
+        "die_offset": 4346886520,
+        "score": 516
+      }
+    ],
+    "Data": [
+      {
+        "complete": true,
+        "cu_offset": 291038660,
+        "die_offset": 11022981526,
+        "score": 80
+      }
+    ],
+    "DataFormat": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297679729,
+        "score": 304
+      }
+    ],
+    "DepthRenderTarget": [
+      {
+        "complete": true,
+        "cu_offset": 666920953,
+        "die_offset": 27490736149,
+        "score": 1072
+      }
+    ],
+    "DepthStencilControl": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297679426,
+        "score": 4
+      }
+    ],
+    "DepthStencilState": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297609318,
+        "score": 40
+      }
+    ],
+    "DepthStencilView": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297618741,
+        "score": 136
+      }
+    ],
+    "DropItemInfo": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4354019664,
+        "score": 64
+      }
+    ],
+    "EmSetInfo": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4354020752,
+        "score": 88
+      }
+    ],
+    "GeometryShaderObject": [
+      {
+        "complete": true,
+        "cu_offset": 314212615,
+        "die_offset": 13223986438,
+        "score": 21712
+      }
+    ],
+    "IndexBuffer": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297654679,
+        "score": 56
+      }
+    ],
+    "InputLot": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4318203944,
+        "score": 656
+      }
+    ],
+    "JOINT_INFO": [
+      {
+        "complete": true,
+        "cu_offset": 222798787,
+        "die_offset": 9194062457,
+        "score": 56
+      }
+    ],
+    "Leaf": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299650096,
+        "score": 48
+      }
+    ],
+    "Link": [
+      {
+        "complete": true,
+        "cu_offset": 625006627,
+        "die_offset": 26392753799,
+        "score": 40
+      }
+    ],
+    "Material": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297595206,
+        "score": 208
+      }
+    ],
+    "MtAABB": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297277554,
+        "score": 32
+      }
+    ],
+    "MtAABB4": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297359761,
+        "score": 96
+      }
+    ],
+    "MtAllocator": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297213537,
+        "score": 104
+      }
+    ],
+    "MtArray": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4298466918,
+        "score": 32
+      }
+    ],
+    "MtCapsule": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297356040,
+        "score": 48
+      }
+    ],
+    "MtColor": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297218355,
+        "score": 304
+      }
+    ],
+    "MtColorF": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297225543,
+        "score": 16
+      }
+    ],
+    "MtCone": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297393955,
+        "score": 32
+      }
+    ],
+    "MtCriticalSection": [
+      {
+        "complete": true,
+        "cu_offset": 600993139,
+        "die_offset": 25786987378,
+        "score": 48
+      }
+    ],
+    "MtCylinder": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297361174,
+        "score": 48
+      }
+    ],
+    "MtDTI": [
+      {
+        "complete": true,
+        "cu_offset": 639368226,
+        "die_offset": 26729877907,
+        "score": 1004
+      }
+    ],
+    "MtDataReader": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4298732547,
+        "score": 4136
+      }
+    ],
+    "MtDataWriter": [
+      {
+        "complete": true,
+        "cu_offset": 600273066,
+        "die_offset": 25773148023,
+        "score": 1048
+      }
+    ],
+    "MtEaseCurve": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297267046,
+        "score": 8
+      }
+    ],
+    "MtEllipsoid": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297394549,
+        "score": 32
+      }
+    ],
+    "MtGeomConvex": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299762072,
+        "score": 16
+      }
+    ],
+    "MtGeometry": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299703364,
+        "score": 16
+      }
+    ],
+    "MtHermiteCurve": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297267585,
+        "score": 64
+      }
+    ],
+    "MtLine": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297271559,
+        "score": 32
+      }
+    ],
+    "MtLineSegment": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297274152,
+        "score": 32
+      }
+    ],
+    "MtLineSegment4": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297291872,
+        "score": 96
+      }
+    ],
+    "MtMap": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4320171312,
+        "score": 524
+      }
+    ],
+    "MtMatrix": [
+      {
+        "complete": true,
+        "cu_offset": 102978982,
+        "die_offset": 4338516790,
+        "score": 64
+      }
+    ],
+    "MtMatrix33": [
+      {
+        "complete": true,
+        "cu_offset": 600562149,
+        "die_offset": 25775518498,
+        "score": 64
+      }
+    ],
+    "MtMemoryStream": [
+      {
+        "complete": true,
+        "cu_offset": 99694709,
+        "die_offset": 4296370480,
+        "score": 40
+      }
+    ],
+    "MtNetBuffer": [
+      {
+        "complete": true,
+        "cu_offset": 602076943,
+        "die_offset": 25804638005,
+        "score": 136
+      }
+    ],
+    "MtNetContext": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4319614336,
+        "score": 224
+      }
+    ],
+    "MtNetFriendList": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4319619142,
+        "score": 240048
+      }
+    ],
+    "MtNetObject": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4319543379,
+        "score": 40
+      }
+    ],
+    "MtNetRequest": [
+      {
+        "complete": true,
+        "cu_offset": 602171675,
+        "die_offset": 25804871447,
+        "score": 1004
+      }
+    ],
+    "MtNetString": [
+      {
+        "complete": true,
+        "cu_offset": 264950457,
+        "die_offset": 10284635649,
+        "score": 56
+      }
+    ],
+    "MtNetUniqueId": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4319619399,
+        "score": 120
+      }
+    ],
+    "MtOBB": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297288055,
+        "score": 80
+      }
+    ],
+    "MtObject": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297148019,
+        "score": 8
+      }
+    ],
+    "MtOscillator": [
+      {
+        "complete": false,
+        "cu_offset": 100195734,
+        "die_offset": 4297401878,
+        "score": 1000
+      }
+    ],
+    "MtPlane": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297286419,
+        "score": 16
+      }
+    ],
+    "MtPlaneXZ": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297414516,
+        "score": 4
+      }
+    ],
+    "MtPoint": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297228545,
+        "score": 308
+      }
+    ],
+    "MtPointF": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297229606,
+        "score": 8
+      }
+    ],
+    "MtProperty": [
+      {
+        "complete": false,
+        "cu_offset": 100195734,
+        "die_offset": 4297156944,
+        "score": 1600
+      }
+    ],
+    "MtPropertyList": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297418550,
+        "score": 16
+      }
+    ],
+    "MtQuaternion": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4296636707,
+        "score": 12
+      }
+    ],
+    "MtRange": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297396323,
+        "score": 8
+      }
+    ],
+    "MtRangeF": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297397623,
+        "score": 8
+      }
+    ],
+    "MtRangeU16": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297400407,
+        "score": 16
+      }
+    ],
+    "MtRay": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297353264,
+        "score": 32
+      }
+    ],
+    "MtRayY": [
+      {
+        "complete": true,
+        "cu_offset": 664633423,
+        "die_offset": 27454366737,
+        "score": 32
+      }
+    ],
+    "MtRect": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297232464,
+        "score": 16
+      }
+    ],
+    "MtRect3D": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297412930,
+        "score": 32
+      }
+    ],
+    "MtRect3DC": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297344145,
+        "score": 160
+      }
+    ],
+    "MtRect3D_XZ": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297408871,
+        "score": 48
+      }
+    ],
+    "MtRectF": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297261714,
+        "score": 16
+      }
+    ],
+    "MtSize": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297152822,
+        "score": 308
+      }
+    ],
+    "MtSizeF": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297155633,
+        "score": 8
+      }
+    ],
+    "MtSoaVector1": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297327000,
+        "score": 16
+      }
+    ],
+    "MtSoaVector3": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297294370,
+        "score": 48
+      }
+    ],
+    "MtSphere": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297282435,
+        "score": 16
+      }
+    ],
+    "MtStlList<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> >": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4320199443,
+        "score": 24
+      }
+    ],
+    "MtStream": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4298217521,
+        "score": 8
+      }
+    ],
+    "MtString": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297208977,
+        "score": 512
+      }
+    ],
+    "MtTime": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297269846,
+        "score": 36
+      }
+    ],
+    "MtTorus": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297394249,
+        "score": 32
+      }
+    ],
+    "MtTriangle": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297364761,
+        "score": 48
+      }
+    ],
+    "MtTypedArray<AreaHitShape>": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4354032400,
+        "score": 32
+      }
+    ],
+    "MtTypedArray<CDataDropItemSetInfo>": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4366550536,
+        "score": 32
+      }
+    ],
+    "MtTypedArray<CDataGatheringItemElement>": [
+      {
+        "complete": true,
+        "cu_offset": 9210545,
+        "die_offset": 269576294,
+        "score": 32
+      }
+    ],
+    "MtTypedArray<CDataLayoutEnemyData>": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4366541668,
+        "score": 32
+      }
+    ],
+    "MtTypedArray<CDataLayoutItemData>": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4366542929,
+        "score": 32
+      }
+    ],
+    "MtTypedArray<cAreaHit>": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4354037303,
+        "score": 32
+      }
+    ],
+    "MtTypedArray<cGroupParam::cID>": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4354040952,
+        "score": 32
+      }
+    ],
+    "MtTypedArray<cGroupParam::cLifeArea>": [
+      {
+        "complete": true,
+        "cu_offset": 293776127,
+        "die_offset": 11065062707,
+        "score": 36
+      }
+    ],
+    "MtTypedArray<rTutorialDialogMessage::cDialogPage>": [
+      {
+        "complete": true,
+        "cu_offset": 104519184,
+        "die_offset": 4387532836,
+        "score": 32
+      }
+    ],
+    "MtUI": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297152787,
+        "score": 1
+      }
+    ],
+    "MtVariable": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297405794,
+        "score": 1304
+      }
+    ],
+    "MtVector2": [
+      {
+        "complete": true,
+        "cu_offset": 601330053,
+        "die_offset": 25789962072,
+        "score": 80
+      }
+    ],
+    "MtVector3": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297064807,
+        "score": 16
+      }
+    ],
+    "MtVector4": [
+      {
+        "complete": true,
+        "cu_offset": 102978982,
+        "die_offset": 4338497556,
+        "score": 16
+      }
+    ],
+    "MtVectorU4": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297333121,
+        "score": 16
+      }
+    ],
+    "MtVectorU43": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297343093,
+        "score": 48
+      }
+    ],
+    "MyDTI": [
+      {
+        "complete": true,
+        "cu_offset": 434925629,
+        "die_offset": 18073720980,
+        "score": 35104
+      }
+    ],
+    "Node": [
+      {
+        "complete": true,
+        "cu_offset": 191107723,
+        "die_offset": 6734189673,
+        "score": 272
+      }
+    ],
+    "NodeBinaryBasic": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299687968,
+        "score": 64
+      }
+    ],
+    "NodeBinaryCommon": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299691797,
+        "score": 80
+      }
+    ],
+    "Object": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4320138537,
+        "score": 37048
+      }
+    ],
+    "OmSetInfo": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4354021737,
+        "score": 16
+      }
+    ],
+    "PARAM": [
+      {
+        "complete": true,
+        "cu_offset": 328666586,
+        "die_offset": 13573247751,
+        "score": 48
+      }
+    ],
+    "Param": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299560706,
+        "score": 288
+      }
+    ],
+    "Parts": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299446337,
+        "score": 120
+      }
+    ],
+    "PartsInfo": [
+      {
+        "complete": true,
+        "cu_offset": 625006627,
+        "die_offset": 26391110937,
+        "score": 160
+      }
+    ],
+    "PixelShaderObject": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4298200580,
+        "score": 248
+      }
+    ],
+    "Port": [
+      {
+        "complete": true,
+        "cu_offset": 613277258,
+        "die_offset": 26092119381,
+        "score": 1004
+      }
+    ],
+    "PrimitiveSetup": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297679186,
+        "score": 4
+      }
+    ],
+    "Query": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297672737,
+        "score": 120
+      }
+    ],
+    "RasterizerState": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297606513,
+        "score": 104
+      }
+    ],
+    "RenderTarget": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297692678,
+        "score": 44
+      }
+    ],
+    "RenderTargetView": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297617472,
+        "score": 112
+      }
+    ],
+    "ReqCtx": [
+      {
+        "complete": true,
+        "cu_offset": 264950457,
+        "die_offset": 10284632103,
+        "score": 256
+      }
+    ],
+    "Resource": [
+      {
+        "complete": true,
+        "cu_offset": 356866765,
+        "die_offset": 14362972804,
+        "score": 40
+      }
+    ],
+    "Sbc": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299445525,
+        "score": 184
+      }
+    ],
+    "SbcInfo": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299503875,
+        "score": 144
+      }
+    ],
+    "SbcInfoBase": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299512145,
+        "score": 72
+      }
+    ],
+    "Scene": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297659000,
+        "score": 1552
+      }
+    ],
+    "ScrCollisionInfo": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299567449,
+        "score": 480
+      }
+    ],
+    "ScrCollisionInfoBase": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299568277,
+        "score": 320
+      }
+    ],
+    "SessionListener": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4319697285,
+        "score": 8
+      }
+    ],
+    "SetInfo": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4354024273,
+        "score": 32
+      }
+    ],
+    "ShaderObject": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4298200194,
+        "score": 24
+      }
+    ],
+    "ShapeInfoAABB": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4352017302,
+        "score": 64
+      }
+    ],
+    "ShapeInfoArea": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4352009013,
+        "score": 112
+      }
+    ],
+    "ShapeInfoBase": [
+      {
+        "complete": true,
+        "cu_offset": 99694709,
+        "die_offset": 4295255058,
+        "score": 16
+      }
+    ],
+    "ShapeInfoCone": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4352014599,
+        "score": 64
+      }
+    ],
+    "ShapeInfoCylinder": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4352013330,
+        "score": 64
+      }
+    ],
+    "ShapeInfoOBB": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4352021362,
+        "score": 112
+      }
+    ],
+    "ShapeInfoSphere": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4352012340,
+        "score": 32
+      }
+    ],
+    "SizeAlign": [
+      {
+        "complete": true,
+        "cu_offset": 102347023,
+        "die_offset": 4337276725,
+        "score": 8
+      }
+    ],
+    "StencilControl": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297679462,
+        "score": 4
+      }
+    ],
+    "StencilOpControl": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297679687,
+        "score": 4
+      }
+    ],
+    "String": [
+      {
+        "complete": true,
+        "cu_offset": 264950457,
+        "die_offset": 10284648343,
+        "score": 8
+      }
+    ],
+    "Texture": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297610596,
+        "score": 144
+      }
+    ],
+    "TraverseInfo": [
+      {
+        "complete": true,
+        "cu_offset": 611496777,
+        "die_offset": 26061456277,
+        "score": 4
+      }
+    ],
+    "Variable": [
+      {
+        "complete": true,
+        "cu_offset": 663544471,
+        "die_offset": 27436287592,
+        "score": 112
+      }
+    ],
+    "VertexBuffer": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297627939,
+        "score": 56
+      }
+    ],
+    "VertexShaderObject": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4298199607,
+        "score": 272
+      }
+    ],
+    "Viewport": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4329859365,
+        "score": 416
+      }
+    ],
+    "VsShader": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4298129490,
+        "score": 40
+      }
+    ],
+    "_List_alloc<false, std::_List_base_types<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> > >": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4314900632,
+        "score": 24
+      }
+    ],
+    "_List_buy<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> >": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4314900578,
+        "score": 24
+      }
+    ],
+    "_List_val<_Val_types>": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4314900789,
+        "score": 1
+      }
+    ],
+    "cAIGraph": [
+      {
+        "complete": true,
+        "cu_offset": 99694709,
+        "die_offset": 4296505145,
+        "score": 208
+      }
+    ],
+    "cAIObject": [
+      {
+        "complete": true,
+        "cu_offset": 99694709,
+        "die_offset": 4295230851,
+        "score": 8
+      }
+    ],
+    "cAITask": [
+      {
+        "complete": true,
+        "cu_offset": 99694709,
+        "die_offset": 4296512024,
+        "score": 136
+      }
+    ],
+    "cArray<CNamedEnemyParamClient, 5>": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4349589079,
+        "score": 320
+      }
+    ],
+    "cBVHCollision": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299686289,
+        "score": 128
+      }
+    ],
+    "cCellGroup": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299765769,
+        "score": 240
+      }
+    ],
+    "cCellRegisterArrayBase": [
+      {
+        "complete": true,
+        "cu_offset": 626813285,
+        "die_offset": 26415806210,
+        "score": 12
+      }
+    ],
+    "cControl": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4330169907,
+        "score": 3144
+      }
+    ],
+    "cDraw": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297548952,
+        "score": 601648
+      }
+    ],
+    "cFSMRelate": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588016535,
+        "score": 24
+      }
+    ],
+    "cGatherItemList": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4331084052,
+        "score": 280
+      }
+    ],
+    "cGeneralPoint": [
+      {
+        "complete": true,
+        "cu_offset": 99694709,
+        "die_offset": 4295583779,
+        "score": 96
+      }
+    ],
+    "cGeneralPointPtr": [
+      {
+        "complete": true,
+        "cu_offset": 99694709,
+        "die_offset": 4295583091,
+        "score": 16
+      }
+    ],
+    "cGridCollision": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299714626,
+        "score": 336
+      }
+    ],
+    "cGridCollisionRegistInfo": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299752761,
+        "score": 192
+      }
+    ],
+    "cGridInfo": [
+      {
+        "complete": true,
+        "cu_offset": 99694709,
+        "die_offset": 4295242552,
+        "score": 8
+      }
+    ],
+    "cGroupParam": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4353975335,
+        "score": 800
+      }
+    ],
+    "cHardwareDispCtrl": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297541171,
+        "score": 32
+      }
+    ],
+    "cHorizontalList": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4329969416,
+        "score": 3160
+      }
+    ],
+    "cID": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4353982551,
+        "score": 16
+      }
+    ],
+    "cItem": [
+      {
+        "complete": true,
+        "cu_offset": 46267689,
+        "die_offset": 1179131937,
+        "score": 1792
+      }
+    ],
+    "cLifeArea": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4353979523,
+        "score": 40
+      }
+    ],
+    "cLinkParam": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588046408,
+        "score": 40
+      }
+    ],
+    "cMatrix": [
+      {
+        "complete": true,
+        "cu_offset": 130101182,
+        "die_offset": 5102839081,
+        "score": 3184
+      }
+    ],
+    "cNode": [
+      {
+        "complete": true,
+        "cu_offset": 188001416,
+        "die_offset": 6582135075,
+        "score": 32
+      }
+    ],
+    "cOmControl": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4318200423,
+        "score": 928
+      }
+    ],
+    "cReferenceUIBase": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4329898297,
+        "score": 80
+      }
+    ],
+    "cReferenceUICloseBtn": [
+      {
+        "complete": true,
+        "cu_offset": 104519184,
+        "die_offset": 4384301716,
+        "score": 88
+      }
+    ],
+    "cReferenceUIToggleBtn": [
+      {
+        "complete": true,
+        "cu_offset": 224645835,
+        "die_offset": 9212278912,
+        "score": 176
+      }
+    ],
+    "cReferenceUIVlCursor": [
+      {
+        "complete": true,
+        "cu_offset": 104519184,
+        "die_offset": 4384358774,
+        "score": 176
+      }
+    ],
+    "cRegistInfo": [
+      {
+        "complete": true,
+        "cu_offset": 625006627,
+        "die_offset": 26390925408,
+        "score": 24
+      }
+    ],
+    "cRegistReserveInfo": [
+      {
+        "complete": true,
+        "cu_offset": 625006627,
+        "die_offset": 26390925864,
+        "score": 32
+      }
+    ],
+    "cResPath<rAIFSM>": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4318328727,
+        "score": 8
+      }
+    ],
+    "cResPathBase": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4298736404,
+        "score": 8
+      }
+    ],
+    "cResource": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4298212232,
+        "score": 112
+      }
+    ],
+    "cSbcMoveMatrix": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299456837,
+        "score": 72
+      }
+    ],
+    "cScrCollisionMoveMatrix": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299625555,
+        "score": 72
+      }
+    ],
+    "cScrCommonFilter": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299621669,
+        "score": 24
+      }
+    ],
+    "cScrollListItemBase": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4329963879,
+        "score": 88
+      }
+    ],
+    "cSetInfo": [
+      {
+        "complete": true,
+        "cu_offset": 244186960,
+        "die_offset": 9732985382,
+        "score": 16
+      }
+    ],
+    "cSetInfoCharacter": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588013073,
+        "score": 72
+      }
+    ],
+    "cSetInfoCoord": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588013428,
+        "score": 72
+      }
+    ],
+    "cSetInfoEnemy": [
+      {
+        "complete": true,
+        "cu_offset": 155989476,
+        "die_offset": 5743182151,
+        "score": 88
+      }
+    ],
+    "cSetInfoGeneralPoint": [
+      {
+        "complete": true,
+        "cu_offset": 157183273,
+        "die_offset": 5759202312,
+        "score": 80
+      }
+    ],
+    "cSetInfoNpc": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588011859,
+        "score": 120
+      }
+    ],
+    "cSetInfoOm": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588017265,
+        "score": 112
+      }
+    ],
+    "cSetInfoOmBadStatus": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588062981,
+        "score": 160
+      }
+    ],
+    "cSetInfoOmBoard": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588044657,
+        "score": 120
+      }
+    ],
+    "cSetInfoOmBowlOfLife": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588045175,
+        "score": 128
+      }
+    ],
+    "cSetInfoOmBreakTarget": [
+      {
+        "complete": true,
+        "cu_offset": 249684171,
+        "die_offset": 9933160819,
+        "score": 120
+      }
+    ],
+    "cSetInfoOmCtrl": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588046083,
+        "score": 296
+      }
+    ],
+    "cSetInfoOmDoor": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588049273,
+        "score": 160
+      }
+    ],
+    "cSetInfoOmElfSW": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588050037,
+        "score": 120
+      }
+    ],
+    "cSetInfoOmFall": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588050561,
+        "score": 120
+      }
+    ],
+    "cSetInfoOmGather": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588052615,
+        "score": 128
+      }
+    ],
+    "cSetInfoOmHakuryuu": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588053826,
+        "score": 120
+      }
+    ],
+    "cSetInfoOmHeal": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588054344,
+        "score": 120
+      }
+    ],
+    "cSetInfoOmLadder": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588054854,
+        "score": 120
+      }
+    ],
+    "cSetInfoOmLever": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588056914,
+        "score": 128
+      }
+    ],
+    "cSetInfoOmNav": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588057480,
+        "score": 128
+      }
+    ],
+    "cSetInfoOmRange": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588057989,
+        "score": 128
+      }
+    ],
+    "cSetInfoOmText": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588058678,
+        "score": 128
+      }
+    ],
+    "cSetInfoOmTreasureBox": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588053329,
+        "score": 128
+      }
+    ],
+    "cSetInfoOmWall": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588060786,
+        "score": 208
+      }
+    ],
+    "cSetInfoOmWarp": [
+      {
+        "complete": true,
+        "cu_offset": 110737552,
+        "die_offset": 4588061331,
+        "score": 184
+      }
+    ],
+    "cSupportBase": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4329904179,
+        "score": 24
+      }
+    ],
+    "cSupportInstAnim": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4329899840,
+        "score": 56
+      }
+    ],
+    "cUIObject": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4331231555,
+        "score": 8
+      }
+    ],
+    "cUIResource": [
+      {
+        "complete": true,
+        "cu_offset": 11085790,
+        "die_offset": 286552625,
+        "score": 8
+      }
+    ],
+    "cUnit": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297540169,
+        "score": 72
+      }
+    ],
+    "cVerticalList": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4329968008,
+        "score": 3160
+      }
+    ],
+    "cWarpLocation": [
+      {
+        "complete": true,
+        "cu_offset": 163598324,
+        "die_offset": 5990794355,
+        "score": 40
+      }
+    ],
+    "cWorkBuildOnlineFast": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299699798,
+        "score": 304
+      }
+    ],
+    "cpComponent": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297144693,
+        "score": 80
+      }
+    ],
+    "cpOmBase": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4331230040,
+        "score": 240
+      }
+    ],
+    "cpOmGather": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4331229273,
+        "score": 560
+      }
+    ],
+    "list<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> >": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4314900518,
+        "score": 24
+      }
+    ],
+    "rCollision": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299645779,
+        "score": 272
+      }
+    ],
+    "rCollisionHeightField": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299765305,
+        "score": 184
+      }
+    ],
+    "rGUI": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4329986337,
+        "score": 248
+      }
+    ],
+    "rLayout": [
+      {
+        "complete": true,
+        "cu_offset": 103400929,
+        "die_offset": 4354023956,
+        "score": 528
+      }
+    ],
+    "rMaterial": [
+      {
+        "complete": true,
+        "cu_offset": 279164655,
+        "die_offset": 10624324930,
+        "score": 224
+      }
+    ],
+    "rModel": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4298204208,
+        "score": 672
+      }
+    ],
+    "rTbl2<cWarpLocation>": [
+      {
+        "complete": true,
+        "cu_offset": 163598324,
+        "die_offset": 5990793367,
+        "score": 128
+      }
+    ],
+    "rTbl2Base": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4298731889,
+        "score": 112
+      }
+    ],
+    "rTexture": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4299229298,
+        "score": 264
+      }
+    ],
+    "rTextureMemory": [
+      {
+        "complete": true,
+        "cu_offset": 9210545,
+        "die_offset": 270604361,
+        "score": 264
+      }
+    ],
+    "rTutorialDialogMessage": [
+      {
+        "complete": true,
+        "cu_offset": 104519184,
+        "die_offset": 4387530066,
+        "score": 152
+      }
+    ],
+    "rWarpLocation": [
+      {
+        "complete": true,
+        "cu_offset": 163598324,
+        "die_offset": 5990791287,
+        "score": 128
+      }
+    ],
+    "uBaseModel": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297523720,
+        "score": 4528
+      }
+    ],
+    "uCamera": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4303431441,
+        "score": 176
+      }
+    ],
+    "uCoord": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297536817,
+        "score": 272
+      }
+    ],
+    "uDDOModel": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297421616,
+        "score": 9328
+      }
+    ],
+    "uDynamicSbc": [
+      {
+        "complete": true,
+        "cu_offset": 653062199,
+        "die_offset": 27164444437,
+        "score": 480
+      }
+    ],
+    "uGUI": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4329972055,
+        "score": 1088
+      }
+    ],
+    "uGUIBase": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4329870437,
+        "score": 2256
+      }
+    ],
+    "uGUIPick01": [
+      {
+        "complete": true,
+        "cu_offset": 224645835,
+        "die_offset": 9213060753,
+        "score": 5200
+      }
+    ],
+    "uGUIUseItemBase": [
+      {
+        "complete": true,
+        "cu_offset": 224645835,
+        "die_offset": 9213068358,
+        "score": 3136
+      }
+    ],
+    "uGUIsMenuBase": [
+      {
+        "complete": true,
+        "cu_offset": 124812593,
+        "die_offset": 4907824740,
+        "score": 2400
+      }
+    ],
+    "uModel": [
+      {
+        "complete": true,
+        "cu_offset": 100195734,
+        "die_offset": 4297472067,
+        "score": 8032
+      }
+    ],
+    "uScrollCollisionGeometry": [
+      {
+        "complete": true,
+        "cu_offset": 101230577,
+        "die_offset": 4317254488,
+        "score": 368
+      }
+    ]
+  },
+  "symbol_to_cu_offset": {
+    "Animation": 619249470,
+    "Area": 297299874,
+    "AreaHitShape": 103400929,
+    "Base": 613277258,
+    "BlendState": 100195734,
+    "BlockList": 264950457,
+    "Buffer": 100195734,
+    "BufferObject": 100195734,
+    "CBuffer": 100195734,
+    "CBufferSystem": 100195734,
+    "CConsistentHash": 101230577,
+    "CDataDropItemSetInfo": 103400929,
+    "CDataLayoutEnemyData": 103400929,
+    "CDataLayoutItemData": 103400929,
+    "CDataNamedEnemyParamClient": 103400929,
+    "CDataStageLayoutEnemyPresetEnemyInfoClient": 103400929,
+    "CDataStageLayoutID": 9210545,
+    "CListener": 101230577,
+    "CNode": 101230577,
+    "CPacketDataBase": 100195734,
+    "CProtocol": 101230577,
+    "CRecord": 101230577,
+    "CSessionListener": 101230577,
+    "Cache": 613538845,
+    "CommandCache": 100195734,
+    "ConstantTable": 102347023,
+    "Context": 99694709,
+    "Custom": 103162387,
+    "Data": 291038660,
+    "DataFormat": 100195734,
+    "DepthRenderTarget": 666920953,
+    "DepthStencilControl": 100195734,
+    "DepthStencilState": 100195734,
+    "DepthStencilView": 100195734,
+    "DropItemInfo": 103400929,
+    "EmSetInfo": 103400929,
+    "GeometryShaderObject": 314212615,
+    "IndexBuffer": 100195734,
+    "InputLot": 101230577,
+    "JOINT_INFO": 222798787,
+    "Leaf": 100195734,
+    "Link": 625006627,
+    "Material": 100195734,
+    "MtAABB": 100195734,
+    "MtAABB4": 100195734,
+    "MtAllocator": 100195734,
+    "MtArray": 100195734,
+    "MtCapsule": 100195734,
+    "MtColor": 100195734,
+    "MtColorF": 100195734,
+    "MtCone": 100195734,
+    "MtCriticalSection": 600993139,
+    "MtCylinder": 100195734,
+    "MtDTI": 639368226,
+    "MtDataReader": 100195734,
+    "MtDataWriter": 600273066,
+    "MtEaseCurve": 100195734,
+    "MtEllipsoid": 100195734,
+    "MtGeomConvex": 100195734,
+    "MtGeometry": 100195734,
+    "MtHermiteCurve": 100195734,
+    "MtLine": 100195734,
+    "MtLineSegment": 100195734,
+    "MtLineSegment4": 100195734,
+    "MtMap": 101230577,
+    "MtMatrix": 102978982,
+    "MtMatrix33": 600562149,
+    "MtMemoryStream": 99694709,
+    "MtNetBuffer": 602076943,
+    "MtNetContext": 101230577,
+    "MtNetFriendList": 101230577,
+    "MtNetObject": 101230577,
+    "MtNetRequest": 602171675,
+    "MtNetString": 264950457,
+    "MtNetUniqueId": 101230577,
+    "MtOBB": 100195734,
+    "MtObject": 100195734,
+    "MtOscillator": 100195734,
+    "MtPlane": 100195734,
+    "MtPlaneXZ": 100195734,
+    "MtPoint": 100195734,
+    "MtPointF": 100195734,
+    "MtProperty": 100195734,
+    "MtPropertyList": 100195734,
+    "MtQuaternion": 100195734,
+    "MtRange": 100195734,
+    "MtRangeF": 100195734,
+    "MtRangeU16": 100195734,
+    "MtRay": 100195734,
+    "MtRayY": 664633423,
+    "MtRect": 100195734,
+    "MtRect3D": 100195734,
+    "MtRect3DC": 100195734,
+    "MtRect3D_XZ": 100195734,
+    "MtRectF": 100195734,
+    "MtSize": 100195734,
+    "MtSizeF": 100195734,
+    "MtSoaVector1": 100195734,
+    "MtSoaVector3": 100195734,
+    "MtSphere": 100195734,
+    "MtStlList<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> >": 101230577,
+    "MtStream": 100195734,
+    "MtString": 100195734,
+    "MtTime": 100195734,
+    "MtTorus": 100195734,
+    "MtTriangle": 100195734,
+    "MtTypedArray<AreaHitShape>": 103400929,
+    "MtTypedArray<CDataDropItemSetInfo>": 103400929,
+    "MtTypedArray<CDataGatheringItemElement>": 9210545,
+    "MtTypedArray<CDataLayoutEnemyData>": 103400929,
+    "MtTypedArray<CDataLayoutItemData>": 103400929,
+    "MtTypedArray<cAreaHit>": 103400929,
+    "MtTypedArray<cGroupParam::cID>": 103400929,
+    "MtTypedArray<cGroupParam::cLifeArea>": 293776127,
+    "MtTypedArray<rTutorialDialogMessage::cDialogPage>": 104519184,
+    "MtUI": 100195734,
+    "MtVariable": 100195734,
+    "MtVector2": 601330053,
+    "MtVector3": 100195734,
+    "MtVector4": 102978982,
+    "MtVectorU4": 100195734,
+    "MtVectorU43": 100195734,
+    "MyDTI": 434925629,
+    "Node": 191107723,
+    "NodeBinaryBasic": 100195734,
+    "NodeBinaryCommon": 100195734,
+    "Object": 101230577,
+    "OmSetInfo": 103400929,
+    "PARAM": 328666586,
+    "Param": 100195734,
+    "Parts": 100195734,
+    "PartsInfo": 625006627,
+    "PixelShaderObject": 100195734,
+    "Port": 613277258,
+    "PrimitiveSetup": 100195734,
+    "Query": 100195734,
+    "RasterizerState": 100195734,
+    "RenderTarget": 100195734,
+    "RenderTargetView": 100195734,
+    "ReqCtx": 264950457,
+    "Resource": 356866765,
+    "Sbc": 100195734,
+    "SbcInfo": 100195734,
+    "SbcInfoBase": 100195734,
+    "Scene": 100195734,
+    "ScrCollisionInfo": 100195734,
+    "ScrCollisionInfoBase": 100195734,
+    "SessionListener": 101230577,
+    "SetInfo": 103400929,
+    "ShaderObject": 100195734,
+    "ShapeInfoAABB": 103400929,
+    "ShapeInfoArea": 103400929,
+    "ShapeInfoBase": 99694709,
+    "ShapeInfoCone": 103400929,
+    "ShapeInfoCylinder": 103400929,
+    "ShapeInfoOBB": 103400929,
+    "ShapeInfoSphere": 103400929,
+    "SizeAlign": 102347023,
+    "StencilControl": 100195734,
+    "StencilOpControl": 100195734,
+    "String": 264950457,
+    "Texture": 100195734,
+    "TraverseInfo": 611496777,
+    "Variable": 663544471,
+    "VertexBuffer": 100195734,
+    "VertexShaderObject": 100195734,
+    "Viewport": 101230577,
+    "VsShader": 100195734,
+    "_List_alloc<false, std::_List_base_types<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> > >": 101230577,
+    "_List_buy<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> >": 101230577,
+    "_List_val<_Val_types>": 101230577,
+    "cAIGraph": 99694709,
+    "cAIObject": 99694709,
+    "cAITask": 99694709,
+    "cArray<CNamedEnemyParamClient, 5>": 103400929,
+    "cBVHCollision": 100195734,
+    "cCellGroup": 100195734,
+    "cCellRegisterArrayBase": 626813285,
+    "cControl": 101230577,
+    "cDraw": 100195734,
+    "cFSMRelate": 110737552,
+    "cGatherItemList": 101230577,
+    "cGeneralPoint": 99694709,
+    "cGeneralPointPtr": 99694709,
+    "cGridCollision": 100195734,
+    "cGridCollisionRegistInfo": 100195734,
+    "cGridInfo": 99694709,
+    "cGroupParam": 103400929,
+    "cHardwareDispCtrl": 100195734,
+    "cHorizontalList": 101230577,
+    "cID": 103400929,
+    "cItem": 46267689,
+    "cLifeArea": 103400929,
+    "cLinkParam": 110737552,
+    "cMatrix": 130101182,
+    "cNode": 188001416,
+    "cOmControl": 101230577,
+    "cReferenceUIBase": 101230577,
+    "cReferenceUICloseBtn": 104519184,
+    "cReferenceUIToggleBtn": 224645835,
+    "cReferenceUIVlCursor": 104519184,
+    "cRegistInfo": 625006627,
+    "cRegistReserveInfo": 625006627,
+    "cResPath<rAIFSM>": 101230577,
+    "cResPathBase": 100195734,
+    "cResource": 100195734,
+    "cSbcMoveMatrix": 100195734,
+    "cScrCollisionMoveMatrix": 100195734,
+    "cScrCommonFilter": 100195734,
+    "cScrollListItemBase": 101230577,
+    "cSetInfo": 244186960,
+    "cSetInfoCharacter": 110737552,
+    "cSetInfoCoord": 110737552,
+    "cSetInfoEnemy": 155989476,
+    "cSetInfoGeneralPoint": 157183273,
+    "cSetInfoNpc": 110737552,
+    "cSetInfoOm": 110737552,
+    "cSetInfoOmBadStatus": 110737552,
+    "cSetInfoOmBoard": 110737552,
+    "cSetInfoOmBowlOfLife": 110737552,
+    "cSetInfoOmBreakTarget": 249684171,
+    "cSetInfoOmCtrl": 110737552,
+    "cSetInfoOmDoor": 110737552,
+    "cSetInfoOmElfSW": 110737552,
+    "cSetInfoOmFall": 110737552,
+    "cSetInfoOmGather": 110737552,
+    "cSetInfoOmHakuryuu": 110737552,
+    "cSetInfoOmHeal": 110737552,
+    "cSetInfoOmLadder": 110737552,
+    "cSetInfoOmLever": 110737552,
+    "cSetInfoOmNav": 110737552,
+    "cSetInfoOmRange": 110737552,
+    "cSetInfoOmText": 110737552,
+    "cSetInfoOmTreasureBox": 110737552,
+    "cSetInfoOmWall": 110737552,
+    "cSetInfoOmWarp": 110737552,
+    "cSupportBase": 101230577,
+    "cSupportInstAnim": 101230577,
+    "cUIObject": 101230577,
+    "cUIResource": 11085790,
+    "cUnit": 100195734,
+    "cVerticalList": 101230577,
+    "cWarpLocation": 163598324,
+    "cWorkBuildOnlineFast": 100195734,
+    "cpComponent": 100195734,
+    "cpOmBase": 101230577,
+    "cpOmGather": 101230577,
+    "list<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> >": 101230577,
+    "rCollision": 100195734,
+    "rCollisionHeightField": 100195734,
+    "rGUI": 101230577,
+    "rLayout": 103400929,
+    "rMaterial": 279164655,
+    "rModel": 100195734,
+    "rTbl2<cWarpLocation>": 163598324,
+    "rTbl2Base": 100195734,
+    "rTexture": 100195734,
+    "rTextureMemory": 9210545,
+    "rTutorialDialogMessage": 104519184,
+    "rWarpLocation": 163598324,
+    "uBaseModel": 100195734,
+    "uCamera": 100195734,
+    "uCoord": 100195734,
+    "uDDOModel": 100195734,
+    "uDynamicSbc": 653062199,
+    "uGUI": 101230577,
+    "uGUIBase": 101230577,
+    "uGUIPick01": 224645835,
+    "uGUIUseItemBase": 224645835,
+    "uGUIsMenuBase": 124812593,
+    "uModel": 100195734,
+    "uScrollCollisionGeometry": 101230577
+  },
+  "symbol_to_offset": {
+    "Animation": 26191664257,
+    "Area": 11126792288,
+    "AreaHitShape": 4354032711,
+    "Base": 26092115489,
+    "BlendState": 4297605462,
+    "BlockList": 10284636529,
+    "Buffer": 4297614681,
+    "BufferObject": 4298200322,
+    "CBuffer": 4297626720,
+    "CBufferSystem": 4297626161,
+    "CConsistentHash": 4320142464,
+    "CDataDropItemSetInfo": 4366550832,
+    "CDataLayoutEnemyData": 4366541958,
+    "CDataLayoutItemData": 4366543219,
+    "CDataNamedEnemyParamClient": 4354041431,
+    "CDataStageLayoutEnemyPresetEnemyInfoClient": 4366538562,
+    "CDataStageLayoutID": 269575573,
+    "CListener": 4320145970,
+    "CNode": 4320141623,
+    "CPacketDataBase": 4299423844,
+    "CProtocol": 4320143703,
+    "CRecord": 4320146193,
+    "CSessionListener": 4320143618,
+    "Cache": 26094048291,
+    "CommandCache": 4297670966,
+    "ConstantTable": 4337254550,
+    "Context": 4295426963,
+    "Custom": 4346886520,
+    "Data": 11022981526,
+    "DataFormat": 4297679729,
+    "DepthRenderTarget": 27490736149,
+    "DepthStencilControl": 4297679426,
+    "DepthStencilState": 4297609318,
+    "DepthStencilView": 4297618741,
+    "DropItemInfo": 4354019664,
+    "EmSetInfo": 4354020752,
+    "GeometryShaderObject": 13223986438,
+    "IndexBuffer": 4297654679,
+    "InputLot": 4318203944,
+    "JOINT_INFO": 9194062457,
+    "Leaf": 4299650096,
+    "Link": 26392753799,
+    "Material": 4297595206,
+    "MtAABB": 4297277554,
+    "MtAABB4": 4297359761,
+    "MtAllocator": 4297213537,
+    "MtArray": 4298466918,
+    "MtCapsule": 4297356040,
+    "MtColor": 4297218355,
+    "MtColorF": 4297225543,
+    "MtCone": 4297393955,
+    "MtCriticalSection": 25786987378,
+    "MtCylinder": 4297361174,
+    "MtDTI": 26729877907,
+    "MtDataReader": 4298732547,
+    "MtDataWriter": 25773148023,
+    "MtEaseCurve": 4297267046,
+    "MtEllipsoid": 4297394549,
+    "MtGeomConvex": 4299762072,
+    "MtGeometry": 4299703364,
+    "MtHermiteCurve": 4297267585,
+    "MtLine": 4297271559,
+    "MtLineSegment": 4297274152,
+    "MtLineSegment4": 4297291872,
+    "MtMap": 4320171312,
+    "MtMatrix": 4338516790,
+    "MtMatrix33": 25775518498,
+    "MtMemoryStream": 4296370480,
+    "MtNetBuffer": 25804638005,
+    "MtNetContext": 4319614336,
+    "MtNetFriendList": 4319619142,
+    "MtNetObject": 4319543379,
+    "MtNetRequest": 25804871447,
+    "MtNetString": 10284635649,
+    "MtNetUniqueId": 4319619399,
+    "MtOBB": 4297288055,
+    "MtObject": 4297148019,
+    "MtOscillator": 4297401878,
+    "MtPlane": 4297286419,
+    "MtPlaneXZ": 4297414516,
+    "MtPoint": 4297228545,
+    "MtPointF": 4297229606,
+    "MtProperty": 4297156944,
+    "MtPropertyList": 4297418550,
+    "MtQuaternion": 4296636707,
+    "MtRange": 4297396323,
+    "MtRangeF": 4297397623,
+    "MtRangeU16": 4297400407,
+    "MtRay": 4297353264,
+    "MtRayY": 27454366737,
+    "MtRect": 4297232464,
+    "MtRect3D": 4297412930,
+    "MtRect3DC": 4297344145,
+    "MtRect3D_XZ": 4297408871,
+    "MtRectF": 4297261714,
+    "MtSize": 4297152822,
+    "MtSizeF": 4297155633,
+    "MtSoaVector1": 4297327000,
+    "MtSoaVector3": 4297294370,
+    "MtSphere": 4297282435,
+    "MtStlList<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> >": 4320199443,
+    "MtStream": 4298217521,
+    "MtString": 4297208977,
+    "MtTime": 4297269846,
+    "MtTorus": 4297394249,
+    "MtTriangle": 4297364761,
+    "MtTypedArray<AreaHitShape>": 4354032400,
+    "MtTypedArray<CDataDropItemSetInfo>": 4366550536,
+    "MtTypedArray<CDataGatheringItemElement>": 269576294,
+    "MtTypedArray<CDataLayoutEnemyData>": 4366541668,
+    "MtTypedArray<CDataLayoutItemData>": 4366542929,
+    "MtTypedArray<cAreaHit>": 4354037303,
+    "MtTypedArray<cGroupParam::cID>": 4354040952,
+    "MtTypedArray<cGroupParam::cLifeArea>": 11065062707,
+    "MtTypedArray<rTutorialDialogMessage::cDialogPage>": 4387532836,
+    "MtUI": 4297152787,
+    "MtVariable": 4297405794,
+    "MtVector2": 25789962072,
+    "MtVector3": 4297064807,
+    "MtVector4": 4338497556,
+    "MtVectorU4": 4297333121,
+    "MtVectorU43": 4297343093,
+    "MyDTI": 18073720980,
+    "Node": 6734189673,
+    "NodeBinaryBasic": 4299687968,
+    "NodeBinaryCommon": 4299691797,
+    "Object": 4320138537,
+    "OmSetInfo": 4354021737,
+    "PARAM": 13573247751,
+    "Param": 4299560706,
+    "Parts": 4299446337,
+    "PartsInfo": 26391110937,
+    "PixelShaderObject": 4298200580,
+    "Port": 26092119381,
+    "PrimitiveSetup": 4297679186,
+    "Query": 4297672737,
+    "RasterizerState": 4297606513,
+    "RenderTarget": 4297692678,
+    "RenderTargetView": 4297617472,
+    "ReqCtx": 10284632103,
+    "Resource": 14362972804,
+    "Sbc": 4299445525,
+    "SbcInfo": 4299503875,
+    "SbcInfoBase": 4299512145,
+    "Scene": 4297659000,
+    "ScrCollisionInfo": 4299567449,
+    "ScrCollisionInfoBase": 4299568277,
+    "SessionListener": 4319697285,
+    "SetInfo": 4354024273,
+    "ShaderObject": 4298200194,
+    "ShapeInfoAABB": 4352017302,
+    "ShapeInfoArea": 4352009013,
+    "ShapeInfoBase": 4295255058,
+    "ShapeInfoCone": 4352014599,
+    "ShapeInfoCylinder": 4352013330,
+    "ShapeInfoOBB": 4352021362,
+    "ShapeInfoSphere": 4352012340,
+    "SizeAlign": 4337276725,
+    "StencilControl": 4297679462,
+    "StencilOpControl": 4297679687,
+    "String": 10284648343,
+    "Texture": 4297610596,
+    "TraverseInfo": 26061456277,
+    "Variable": 27436287592,
+    "VertexBuffer": 4297627939,
+    "VertexShaderObject": 4298199607,
+    "Viewport": 4329859365,
+    "VsShader": 4298129490,
+    "_List_alloc<false, std::_List_base_types<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> > >": 4314900632,
+    "_List_buy<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> >": 4314900578,
+    "_List_val<_Val_types>": 4314900789,
+    "cAIGraph": 4296505145,
+    "cAIObject": 4295230851,
+    "cAITask": 4296512024,
+    "cArray<CNamedEnemyParamClient, 5>": 4349589079,
+    "cBVHCollision": 4299686289,
+    "cCellGroup": 4299765769,
+    "cCellRegisterArrayBase": 26415806210,
+    "cControl": 4330169907,
+    "cDraw": 4297548952,
+    "cFSMRelate": 4588016535,
+    "cGatherItemList": 4331084052,
+    "cGeneralPoint": 4295583779,
+    "cGeneralPointPtr": 4295583091,
+    "cGridCollision": 4299714626,
+    "cGridCollisionRegistInfo": 4299752761,
+    "cGridInfo": 4295242552,
+    "cGroupParam": 4353975335,
+    "cHardwareDispCtrl": 4297541171,
+    "cHorizontalList": 4329969416,
+    "cID": 4353982551,
+    "cItem": 1179131937,
+    "cLifeArea": 4353979523,
+    "cLinkParam": 4588046408,
+    "cMatrix": 5102839081,
+    "cNode": 6582135075,
+    "cOmControl": 4318200423,
+    "cReferenceUIBase": 4329898297,
+    "cReferenceUICloseBtn": 4384301716,
+    "cReferenceUIToggleBtn": 9212278912,
+    "cReferenceUIVlCursor": 4384358774,
+    "cRegistInfo": 26390925408,
+    "cRegistReserveInfo": 26390925864,
+    "cResPath<rAIFSM>": 4318328727,
+    "cResPathBase": 4298736404,
+    "cResource": 4298212232,
+    "cSbcMoveMatrix": 4299456837,
+    "cScrCollisionMoveMatrix": 4299625555,
+    "cScrCommonFilter": 4299621669,
+    "cScrollListItemBase": 4329963879,
+    "cSetInfo": 9732985382,
+    "cSetInfoCharacter": 4588013073,
+    "cSetInfoCoord": 4588013428,
+    "cSetInfoEnemy": 5743182151,
+    "cSetInfoGeneralPoint": 5759202312,
+    "cSetInfoNpc": 4588011859,
+    "cSetInfoOm": 4588017265,
+    "cSetInfoOmBadStatus": 4588062981,
+    "cSetInfoOmBoard": 4588044657,
+    "cSetInfoOmBowlOfLife": 4588045175,
+    "cSetInfoOmBreakTarget": 9933160819,
+    "cSetInfoOmCtrl": 4588046083,
+    "cSetInfoOmDoor": 4588049273,
+    "cSetInfoOmElfSW": 4588050037,
+    "cSetInfoOmFall": 4588050561,
+    "cSetInfoOmGather": 4588052615,
+    "cSetInfoOmHakuryuu": 4588053826,
+    "cSetInfoOmHeal": 4588054344,
+    "cSetInfoOmLadder": 4588054854,
+    "cSetInfoOmLever": 4588056914,
+    "cSetInfoOmNav": 4588057480,
+    "cSetInfoOmRange": 4588057989,
+    "cSetInfoOmText": 4588058678,
+    "cSetInfoOmTreasureBox": 4588053329,
+    "cSetInfoOmWall": 4588060786,
+    "cSetInfoOmWarp": 4588061331,
+    "cSupportBase": 4329904179,
+    "cSupportInstAnim": 4329899840,
+    "cUIObject": 4331231555,
+    "cUIResource": 286552625,
+    "cUnit": 4297540169,
+    "cVerticalList": 4329968008,
+    "cWarpLocation": 5990794355,
+    "cWorkBuildOnlineFast": 4299699798,
+    "cpComponent": 4297144693,
+    "cpOmBase": 4331230040,
+    "cpOmGather": 4331229273,
+    "list<nNetwork::nSharedMemory2::Object::ReqLock, MtStlAllocator<nNetwork::nSharedMemory2::Object::ReqLock> >": 4314900518,
+    "rCollision": 4299645779,
+    "rCollisionHeightField": 4299765305,
+    "rGUI": 4329986337,
+    "rLayout": 4354023956,
+    "rMaterial": 10624324930,
+    "rModel": 4298204208,
+    "rTbl2<cWarpLocation>": 5990793367,
+    "rTbl2Base": 4298731889,
+    "rTexture": 4299229298,
+    "rTextureMemory": 270604361,
+    "rTutorialDialogMessage": 4387530066,
+    "rWarpLocation": 5990791287,
+    "uBaseModel": 4297523720,
+    "uCamera": 4303431441,
+    "uCoord": 4297536817,
+    "uDDOModel": 4297421616,
+    "uDynamicSbc": 27164444437,
+    "uGUI": 4329972055,
+    "uGUIBase": 4329870437,
+    "uGUIPick01": 9213060753,
+    "uGUIUseItemBase": 9213068358,
+    "uGUIsMenuBase": 4907824740,
+    "uModel": 4297472067,
+    "uScrollCollisionGeometry": 4317254488
+  },
+  "version": "5.0"
+}

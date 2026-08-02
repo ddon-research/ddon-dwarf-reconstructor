@@ -108,6 +108,12 @@ caches. Preserve these artifacts locally; routine cleanup must not delete valida
 exports. The full PS4 dump is more than 30 GB expanded, so real-asset work is opt-in and should use
 the local acceptance paths documented in [TESTING.md](docs/TESTING.md).
 
+This checkout also retains the regenerated PS4 dump index at
+`resources/.cache/DDOORBIS.elf.llvmdwarfdump.index.sqlite3` and source-bound symbol caches under
+`.cache/` and `resources/PS3/.cache/`. To reuse the checked-in cache for this checkout, set
+`DWARF_CACHE_DIR` to the corresponding cache directory before running the generator. These cache
+filenames include the resolved source path identity; regenerate them after moving the checkout.
+
 Runtime DWARF settings are validated at startup:
 
 ```text
