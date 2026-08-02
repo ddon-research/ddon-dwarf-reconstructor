@@ -3,22 +3,20 @@
 ## Prerequisites
 
 - Regular CPython 3.14.6.
-- `uv sync --python 3.14.6 --extra dev` completed.
+- `uv sync --python 3.14.6` completed.
 - Repository root as the working directory.
 - For real validation only: explicit local paths to the PS4 ELF, compressed DWARF
   dump, SQLite sidecar, and optional Orbis objdump.
 - For compiler validation: Visual Studio Community 2026 with the x64 VC tools
   component, discovered through `C:/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe`.
 
-## Focused Unit Checks
+## Unit and Quality Checks
 
-Run the implemented baseline slices:
+Run the locked baseline and quality gates:
 
 ```powershell
-uv run pytest tests/generators/test_dwarf_generator.py
-uv run pytest tests/domain/services/test_lazy_dwarf_index_service.py
-uv run pytest tests/infrastructure/test_zstd_dump_parser.py
-uv run pytest tests/test_artifact_cli.py
+uv run just test-unit
+uv run just check
 ```
 
 Expected outcomes:
@@ -30,12 +28,13 @@ Expected outcomes:
 - source changes rebuild the sidecar while timestamp-only changes reuse it;
 - artifact inspect, repair, and exact-path purge behavior pass.
 
+For a single focused diagnostic, invoke the locked pytest executable directly,
+for example `uv run pytest tests/test_artifact_cli.py`.
+
 ## Quality Checks
 
 ```powershell
-uvx ruff@0.16.1 check --no-fix src tests
-uvx ruff@0.16.1 format --check src tests
-uv run mypy src
+uv run just check
 ```
 
 Existing unrelated diagnostics must be resolved or explicitly recorded before the
@@ -49,7 +48,7 @@ Use explicit local paths and preserve the durable sidecar:
 $env:DDON_REAL_ELF = 'D:\research\DDON-binaries\IDA9.3\PS4_DDON_02020005_2016_12_21\DDOORBIS.elf'
 $env:DDON_REAL_DWARF_DUMP = "$env:DDON_REAL_ELF.llvmdwarfdump.zst"
 $env:DDON_REAL_DWARF_INDEX = 'D:\ddon-dwarf-reconstructor\output\real-dump-index\DDOORBIS.elf.llvmdwarfdump.index.sqlite3'
-uv run ddon-dwarf-artifacts inspect --elf $env:DDON_REAL_ELF `
+uv run ddon-dwarf-reconstructor artifacts inspect --elf $env:DDON_REAL_ELF `
   --dwarf-dump $env:DDON_REAL_DWARF_DUMP `
   --dump-index $env:DDON_REAL_DWARF_INDEX
 ```

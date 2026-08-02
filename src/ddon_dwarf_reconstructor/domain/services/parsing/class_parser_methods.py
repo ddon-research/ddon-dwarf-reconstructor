@@ -108,9 +108,9 @@ class ClassParserMethodsMixin:
     @staticmethod
     def _vtable_raw_bytes(value: object) -> list[int] | None:
         if isinstance(value, (bytes, bytearray)):
-            return [int(item) for item in value]
+            return list(value)
         if isinstance(value, (list, tuple)) and all(isinstance(item, int) for item in value):
-            return [int(item) for item in value]
+            return list(value)
         return None
 
     @staticmethod

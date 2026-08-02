@@ -3,12 +3,14 @@
 ## Canonical Entry Points
 
 ```text
-uv run ddon-dwarf-reconstructor <elf> --generate <symbol>
-uv run ddon-dwarf-artifacts <action> ...
+uv run ddon-dwarf-reconstructor generate <elf> --symbol <symbol>
+uv run ddon-dwarf-reconstructor export-knowledge <elf> --symbol <symbol> --output-dir <dir>
+uv run ddon-dwarf-reconstructor artifacts <action> ...
 ```
 
-The root `main.py` launcher may remain as a compatibility shim, but it must produce
-behavior equivalent to the package entry point.
+The root `main.py` launcher may remain as a native-build shim, but it must produce
+behavior equivalent to the packaged Typer entry point. The old argparse option
+syntax and separate `ddon-dwarf-artifacts` executable are not supported.
 
 ## Header Generation Contract
 
@@ -71,7 +73,7 @@ Validation reports MUST distinguish at least:
 ### `inspect`
 
 ```text
-uv run ddon-dwarf-artifacts inspect \
+uv run ddon-dwarf-reconstructor artifacts inspect \
   --elf <path> \
   --dwarf-dump <path> \
   --dump-index <path>
@@ -85,7 +87,8 @@ object containing:
 - `status`: `missing`, `ready`, `stale`, `invalid`, or `unavailable`;
 - metadata when the sidecar is readable.
 
-`inspect` MUST NOT build a missing index.
+`inspect` MUST NOT build a missing index. Repeated `--symbol` options and
+`--symbols-file` are mutually exclusive at the generation boundary.
 
 ### `repair-dump-index`
 

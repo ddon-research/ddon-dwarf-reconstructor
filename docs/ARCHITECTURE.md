@@ -23,7 +23,7 @@ artifact unavailable. The symbol cache and source-identity catalog are
 OS-local. The compressed dump index is a versioned SQLite sidecar next to the
 `.zst` by default, or at an explicit `--dwarf-index` path. The reconstructor
 slice of the common lifecycle provides inspect, verify, repair, rebuild, and
-exact-path purge operations via `ddon-dwarf-artifacts`; convergence with
+exact-path purge operations via `ddon-dwarf-reconstructor artifacts`; convergence with
 knowledge-graph inventories and bundles remains tracked in the active Spec Kit
 feature.
 
@@ -1193,7 +1193,7 @@ def build_hierarchy(self, name: str, max_depth: int = 10) -> tuple[dict, list]:
 ```
 
 **Why important:**
-- **Early error detection:** MyPy catches type mismatches at dev time
+- **Early error detection:** Pyrefly catches type mismatches at dev time
 - **Documentation:** Type signatures document expected inputs/outputs
 - **IDE support:** Autocomplete and type checking in editors
 - **Refactoring safety:** Type checker validates changes across codebase

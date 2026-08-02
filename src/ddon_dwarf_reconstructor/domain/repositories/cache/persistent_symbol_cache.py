@@ -23,7 +23,6 @@ class PersistentSymbolCache(
     CachePersistenceMixin,
     CacheDefinitionsMixin,
     CacheValidationMixin,
-    CacheContext,
 ):
     """Compatibility façade for schema, persistence, definition, and repair services."""
 
@@ -47,3 +46,7 @@ class PersistentSymbolCache(
         self.unbound_cache_validator = unbound_cache_validator
         self._modified = False  # Initialize before loading
         self.data = self._load_cache()  # May set _modified during cleanup
+
+    def _new_cache(self, cache_file: str | Path) -> CacheContext:
+        """Construct a cache of the same concrete type for repair operations."""
+        return type(self)(cache_file)

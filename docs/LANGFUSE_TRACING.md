@@ -48,13 +48,13 @@ not run headless user/project initialization; create the first account and proje
 UI after startup. `up -d` intentionally does not wait on the web service health state. Use the web
 logs and `http://localhost:3000` to confirm that Langfuse is ready.
 
-The equivalent Make targets are:
+The equivalent just recipes are:
 
 ```text
-make langfuse-config
-make langfuse-up
-make langfuse-logs
-make langfuse-status
+uv run just langfuse-config
+uv run just langfuse-up
+uv run just langfuse-logs
+uv run just langfuse-status
 ```
 
 Open <http://localhost:3000> and create a local account and project. Copy the project's public and

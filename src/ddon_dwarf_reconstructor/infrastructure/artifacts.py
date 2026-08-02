@@ -11,7 +11,7 @@ import hashlib
 import json
 import os
 import tempfile
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager, suppress
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -227,7 +227,7 @@ class SourceIdentityCatalog:
                 temporary_path.unlink()
 
     @contextmanager
-    def _exclusive_lock(self) -> Iterator[None]:
+    def _exclusive_lock(self) -> Generator[None]:
         """Serialize catalog read/modify/write operations across processes."""
         lock_path = self.path.with_suffix(f"{self.path.suffix}.lock")
         lock_path.parent.mkdir(parents=True, exist_ok=True)

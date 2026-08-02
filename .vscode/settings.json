@@ -1,0 +1,13 @@
+{
+    "python.testing.pytestArgs": [
+        "."
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.pyrefly.typeCheckingMode": "default",
+    "python.pyrefly.diagnosticMode": "workspace",
+    "files.associations": {
+        "atomic": "cpp"
+    },
+    "sonarlint.pathToCompileCommands": "${workspaceFolder}\\output\\msvc-header-validation-20260801\\sonar-build-wrapper\\compile_commands.json"
+}

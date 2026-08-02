@@ -3,20 +3,19 @@
 ## Quick Start
 
 ```bash
-# Install test dependencies
-uv sync --python 3.14.6 --extra dev
+# Install the locked development environment
+uv sync --python 3.14.6
 
-# Run all tests
-pytest
+# Run the canonical test tiers
+uv run just test
 
-# Run tests with coverage
-pytest --cov=src/ddon_dwarf_reconstructor --cov-report=html
+# Run tests with coverage thresholds
+uv run just coverage
 
 # Run specific test categories
-pytest -m unit              # Unit tests only
-pytest -m integration       # Integration tests only
-pytest -m performance       # Performance tests only
-pytest -m "not slow"        # Skip slow tests
+uv run just test-unit
+uv run just test-integration
+uv run just test-performance
 ```
 
 ## Test Structure
@@ -100,36 +99,33 @@ export ELF_FILE_PATH=resources/DDOORBIS.elf
 ## Common Test Commands
 
 ```bash
-# Run all tests with verbose output
-pytest -v
+# Run all non-performance tests
+uv run just test
 
 # Run tests and stop on first failure
-pytest -x
+uv run pytest -x
 
 # Run tests matching a pattern
-pytest -k "cache"
+uv run pytest -k "cache"
 
 # Run a specific test file
-pytest tests/performance/test_cu_caching.py
+uv run pytest tests/performance/test_cu_caching.py
 
 # Run a specific test function
-pytest tests/performance/test_cu_caching.py::test_cu_cache_speedup
+uv run pytest tests/performance/test_cu_caching.py::test_cu_cache_speedup
 
 # Show print statements
-pytest -s
+uv run pytest -s
 
 # Generate HTML coverage report
-pytest --cov=src/ddon_dwarf_reconstructor --cov-report=html
+uv run just coverage
 # Open htmlcov/index.html in browser
 
-# Run fast tests only (skip slow performance tests)
-pytest -m "not slow"
-
 # Run integration tests only
-pytest -m integration
+uv run just test-integration
 
 # Very verbose output with local variables on failure
-pytest -vv -l
+uv run pytest -vv -l
 ```
 
 ## Using Sample Symbols
@@ -219,19 +215,19 @@ def test_with_fixtures(
 
 ```bash
 # Run with pdb on failure
-pytest --pdb
+uv run pytest --pdb
 
 # Run with pdb at test start
-pytest --trace
+uv run pytest --trace
 
 # Show local variables on failure
-pytest -l
+uv run pytest -l
 
 # Very verbose output
-pytest -vv
+uv run pytest -vv
 
 # Run with full stdout/stderr
-pytest -s --tb=long
+uv run pytest -s --tb=long
 ```
 
 ## Continuous Integration
@@ -242,8 +238,8 @@ The test suite is designed for CI/CD pipelines:
 # Example GitHub Actions
 - name: Run tests
   run: |
-    uv sync --python 3.14.6 --extra dev --frozen
-    pytest -v -m "not slow" --cov=src/ddon_dwarf_reconstructor --cov-report=xml
+    uv sync --python 3.14.6 --frozen
+    uv run just coverage-ci
 ```
 
 ## Migration Notes

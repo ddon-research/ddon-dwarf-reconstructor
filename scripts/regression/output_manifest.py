@@ -115,9 +115,7 @@ def main(argv: list[str] | None = None) -> int:
         extensions = tuple(item.strip() for item in args.extensions.split(",") if item.strip())
         configuration = None
         if args.configuration_json is not None:
-            configuration = json.loads(
-                args.configuration_json.read_text(encoding="utf-8")
-            )
+            configuration = json.loads(args.configuration_json.read_text(encoding="utf-8"))
         manifest = build_manifest(
             args.root,
             extensions=extensions,

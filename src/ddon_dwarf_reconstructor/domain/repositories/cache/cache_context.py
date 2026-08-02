@@ -29,6 +29,8 @@ class CacheContext(Protocol):
 
     def _load_cache(self) -> dict[str, Any]: ...
 
+    def _new_cache(self, cache_file: str | Path) -> CacheContext: ...
+
     def _create_empty_cache(self) -> dict[str, Any]: ...
 
     def _migrate_cache_format(self, data: dict[str, Any]) -> dict[str, Any]: ...
@@ -71,7 +73,7 @@ class CacheContext(Protocol):
 
     @staticmethod
     def _merge_definition_list(
-        existing: list[dict[str, Any]], incoming: list[dict[str, Any]]
+        existing_definitions: list[dict[str, Any]], new_definitions: list[dict[str, Any]]
     ) -> list[dict[str, Any]]: ...
 
     @staticmethod

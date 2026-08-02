@@ -1,494 +1,87 @@
-﻿---
-description: 'Development conventions for DWARF-to-C++ header reconstruction project'
+---
+description: 'Copilot adapter for the DDON DWARF reconstructor'
 applyTo: '**/*'
 ---
 
-# Project Development Guidelines
+# Copilot project adapter
 
-> `AGENTS.md` is the canonical instruction source for Codex and project-wide performance, testing,
-> and safety conventions. This file remains a GitHub Copilot adapter.
+`AGENTS.md` is the canonical repository instruction source for Codex and Copilot. The
+path-specific Python rules in `.github/instructions/python.instructions.md` apply to every Python
+file. This file contains only Copilot-facing project context and workflow reminders; it must not
+contradict either source.
 
-## Project Context
+## Project constraints
 
-**Purpose:** Reconstructs C++ headers from DWARF debug info in ELF files for Dragon's Dogma Online modding.
+- The project reconstructs deterministic C++ headers from very large PS4 ELF/DWARF inputs.
+- Use regular CPython 3.14.6 and `uv`; install the development environment with
+  `uv sync --python 3.14.6`.
+- Treat inputs for a named DDON build as immutable. Preserve validated source-bound indexes and
+  caches locally, and never commit ELF files, compressed dumps, generated headers, caches, logs, or
+  credentials.
+- Preserve qualified names, inheritance, field offsets, sizes, source locations, DIE/CU
+  provenance, deterministic ordering, cache formats, and source offsets. Offset `0` is valid.
 
-**Architecture:** Domain-driven design with application/domain/infrastructure separation.
+## Architecture rules
 
-**Artifact lifecycle:** Inputs for a named DDON build are immutable. Preserve
-validated SQLite indexes and caches locally across runs; they are untracked and
-rebuildable, not routine cleanup targets. Follow `AGENTS.md` for source binding,
-atomic publication, and explicit targeted rebuild/purge rules.
+Use the existing domain-driven and hexagonal structure:
 
-**Tech Stack:**
-- Regular CPython 3.14.6
-- uv for dependency management
-- pytest for testing
-- pyelftools for DWARF parsing
+- Domain code owns models, policies, and ports. It must not import SQLite, zstd, `pyelftools`,
+  Orbis/process models, or concrete filesystem adapters.
+- Application code coordinates use cases through typed ports and request/response contracts.
+- Infrastructure implements adapters for ELF/DWARF, compressed dumps, SQLite, caches, disassembly,
+  filesystem, and processes. Composition roots construct those adapters.
+- Prefer typed contracts such as `GenerationRequest`, `HeaderBundle`, `DefinitionCandidate`, and
+  structured type/declarator models. Keep public compatibility façades and thin re-exports where
+  existing callers depend on them.
+- Reuse canonical policy services for definition selection, source identity, type classification,
+  method evidence, special-header rendering, and array/declarator parsing. Do not add a second
+  implementation in a legacy generator or adapter.
 
-## Running and Testing
+## Commands
 
-### Execute Code
+Always use `uv run` for project Python commands and the packaged entry point for generation:
 
-``````bash
-# Single class
-uv run python main.py resources/DDOORBIS.elf --generate MtObject
-
-# Multiple classes (comma-separated)
-uv run python main.py resources/DDOORBIS.elf --generate MtObject,MtVector4,rTbl2Base
-
-# Full hierarchy
-uv run python main.py resources/DDOORBIS.elf --generate ClassName --full-hierarchy
-
-# Batch processing from file (one symbol per line)
-uv run python main.py resources/DDOORBIS.elf --symbols-file resources/season2-resources.txt
-
-# Batch with full hierarchy (validated: 289/289 symbols, 100% success)
-uv run python main.py resources/DDOORBIS.elf --symbols-file resources/season2-resources.txt --full-hierarchy
-
-# With options
-uv run python main.py resources/DDOORBIS.elf --generate ClassName --output dir/ --verbose
-
-# Quick execution with Makefile
-make run CLASS=MtObject
-make run-full CLASS=MtPropertyList
-make run-batch FILE=resources/season2-resources.txt
-make run-batch-full FILE=resources/season2-resources.txt
-
-# Native executable (requires clang)
-make build
-build/main.exe --generate MtObject resources/DDOORBIS.elf
-``````
-
-### Searching Full DWARF Dump
-
-Full DWARF dump (30GB+ uncompressed, zstd-compressed): `D:\research\DDON-binaries\IDA9.3\PS4_DDON_02020005_2016_12_21\DDOORBIS.elf.llvmdwarfdump.zst`
-
-**Search via Git Bash + ripgrep (rg available in Git Bash PATH):**
-
-```bash
-# Basic search with context
-&"C:\Program Files\Git\bin\bash.exe" -c 'rg -z "PATTERN" "/d/research/DDON-binaries/IDA9.3/PS4_DDON_02020005_2016_12_21/DDOORBIS.elf.llvmdwarfdump.zst" -C 5 | head -100'
+```text
+uv run ddon-dwarf-reconstructor ...
+uv run just test-unit
+uv run just check
+uv run ddon-dwarf-reconstructor generate <elf> --symbol <name>
+uv run ddon-dwarf-reconstructor artifacts inspect --dwarf-dump <path>
 ```
 
-**Key patterns:**
-- `-z` flag: decompress zstd on-the-fly
-- `-C N`: context lines before/after match
-- `-A N` / `-B N`: lines after/before match
-- Use `/d/...` Unix paths in Git Bash
-- `* (0xOFFSET)`: parent DIE marker in llvm-dwarfdump output
-- Pipe to `head`/`tail` to limit output
-
-**Lookup guidance:**
-- Long-running class resolution usually indicates the matcher is scanning too
-    many later compilation units after an early viable definition already exists.
-- Verify this assumption by checking the text dump first with `rg -z` before
-    widening the algorithm.
-- Reserve exhaustive matching for the explicitly requested root symbol only.
-    Follow-up base-class and dependency lookups should prefer the fast path unless
-    there is concrete evidence that they also require exhaustive comparison.
-
-### Testing (CRITICAL)
-
-**ALWAYS use `uv run pytest` - never bare `pytest`**
-
-``````bash
-# Fast unit tests (preferred for development)
-uv run pytest -m unit
-
-# All tests
-uv run pytest
-
-# HTML coverage report
-uv run pytest -m unit --cov-report=html
-
-# Integration tests (slower, real ELF files)
-uv run pytest -m integration
-
-# Makefile shortcuts (recommended)
-make test          # Unit tests only
-make coverage      # HTML coverage report
-make coverage-open # Coverage + open in browser
-make ci            # Full CI suite (lint + typecheck + test)
-``````
-
-**Test Markers:**
-- @pytest.mark.unit - Fast mocked tests (<1s, preferred)
-- @pytest.mark.integration - Real ELF file tests (~3s)
-- @pytest.mark.slow - Long-running tests
-- @pytest.mark.performance - Performance benchmarks
-
-### Code Quality
-
-```bash
-# Linting
-uvx ruff check src/
-
-# Formatting
-uvx ruff format src/
-
-# Type checking
-uv run mypy src/
-
-# All quality checks
-make ci
-```
-
-## Python Code Conventions
-
-### Type Safety (REQUIRED)
-
-- **All functions** must have type hints for parameters and return values
-- Use | None instead of Optional (Python 3.14.6)
-- Use NoReturn for functions that always exit
-- Full mypy compliance required
-
-```python
-# Good
-def resolve_type(die: DIE) -> str | None:
-    """Resolve type name from DIE."""
-    
-# Bad - no type hints
-def resolve_type(die):
-    """Resolve type name from DIE."""
-```
-
-### Documentation (REQUIRED)
-
-- **PEP 257** docstring format
-- Document all parameters and return values
-- Include algorithm explanations for complex functions
-- Mention external dependencies
-
-```python
-def extract_die_by_offset(offset: int) -> DIE | None:
-    """
-    Retrieve DIE by its DWARF offset using cached index.
-    
-    Uses lazy-loaded offset index for O(1) lookup after initial build.
-    Returns None if offset not found in any compilation unit.
-    
-    Args:
-        offset: DWARF offset of the target DIE
-        
-    Returns:
-        DIE object if found, None otherwise
-        
-    Raises:
-        ValueError: If offset is negative
-    """
-    if offset < 0:
-        raise ValueError(f"Invalid offset: {offset}")
-    
-    return self._offset_index.get(offset)
-```
-
-### Code Style
-
-- **Line limit:** 100 characters
-- **Indentation:** 4 spaces
-- **Import order:** standard library, third-party, local modules
-- **Function names:** descriptive, verb-based (parse_class_info, not parse)
-- **Exception handling:** Use specific exception types, avoid bare except
-
-### Performance
-
-- Use lazy loading for expensive operations
-- Cache frequently accessed data (see TypeResolver cache example)
-- Document performance characteristics (O(n), memory usage)
-- Include performance assertions in tests
-
-## Testing Guidelines
-
-### Prefer Unit Tests
-
-**Use mocks for external dependencies** (files, ELF parsing, DWARF structures):
-
-```python
-@pytest.mark.unit
-def test_find_class_success(mocker):
-    """Test finding a class with realistic mocks."""
-    # Mock DWARF structure based on actual dumps
-    mock_die = Mock()
-    mock_die.tag = "DW_TAG_class_type"
-    mock_die.attributes = {'DW_AT_name': Mock(value=b'MtObject')}
-    
-    mock_cu = Mock()
-    mock_cu.iter_DIEs.return_value = [mock_die]
-    
-    mock_elf = Mock()
-    mock_elf.get_dwarf_info.return_value.iter_CUs.return_value = [mock_cu]
-    
-    mocker.patch("builtins.open")
-    mocker.patch("pyelftools.elf.elffile.ELFFile", return_value=mock_elf)
-    
-    with DwarfGenerator("test.elf") as generator:
-        result = generator.find_class("MtObject")
-        assert result == (mock_cu, mock_die)
-```
-
-### Integration Tests (When Needed)
-
-**Use real ELF files** for end-to-end validation:
-
-```python
-@pytest.mark.integration
-def test_mtpropertylist_full_hierarchy():
-    """Integration test with real ELF file."""
-    with DwarfGenerator(ELF_PATH) as generator:
-        header = generator.generate_complete_hierarchy_header("MtPropertyList")
-        assert "typedef unsigned short u16;" in header
-        assert "class MtObject" in header
-```
-
-### Test Best Practices
-
-- Base mocks on actual DWARF dump structures (resources/*.dwarfdump)
-- Mock at module boundaries (ELFFile), not internal functions
-- Test one component at a time
-- Include edge cases and error conditions
-- Use descriptive test names indicating what is tested
-- Mark slow tests with @pytest.mark.slow
-
-## Documentation Style
-
-### Writing Style (CRITICAL)
-
-**Technical, concise, professional - NO fluff:**
-- No emojis
-- No sales language or marketing speak
-- No excessive enthusiasm or casual tone
-- No redundant explanations
-- Focus on facts, code, and concrete examples
-
-**Good:**
-> Reconstructs C++ class definitions from DWARF debug information in ELF files.
-
-**Bad:**
->  The amazing DWARF reconstructor that will revolutionize your workflow! 
-
-### Documentation Structure
-
-**Location:**
-- Technical docs: docs/ directory
-- README.md: Project root
-- Architecture: docs/ARCHITECTURE.md
-- Testing: docs/TESTING.md
-- History/Plans: Root directory (REFACTORING_PLAN.md, CLAUDE.md)
-
-**README.md sections:**
-1. Title and description (1-2 lines)
-2. Features (bullet points)
-3. Requirements
-4. Installation (commands only)
-5. Usage (with examples)
-6. Architecture (brief overview + link to docs/)
-7. Development (commands with comments)
-8. Documentation (links to docs/)
-9. Performance (table with metrics)
-10. Limitations (honest list)
-11. Comparison (table with alternatives)
-12. License
-
-**ARCHITECTURE.md style:**
-- **Present-tense capabilities only** - describe what the system DOES, not how it evolved
-- **Include rationales** - explain WHY each design choice solves project-specific problems
-- **No historical/delta perspective** - avoid "previously", "now", "changed from", "improved"
-- **Problem-solution pairs** - for each component, state the problem it addresses
-
-**ARCHITECTURE.md sections:**
-1. Purpose and scope (what problems it solves)
-2. System overview (diagram with rationales)
-3. Directory structure (tree)
-4. Core components (with code signatures + WHY needed)
-5. Data flow (step-by-step with problem statements)
-6. Performance optimizations (table + what problem each solves)
-7. Design principles (with concrete examples of problems they prevent)
-8. Extension points
-9. Limitations
-10. References
-
-**TESTING.md sections:**
-1. Quick start (commands first)
-2. Test categories
-3. Test structure (tree)
-4. Configuration
-5. Writing tests (with examples)
-6. Coverage
-7. CI/CD pipeline
-8. Development workflow
-9. Performance (table)
-10. Troubleshooting
-11. References
-
-### Code Examples in Docs
-
-**Always include:**
-- Complete working examples
-- Actual file paths from the project
-- Real command output when relevant
-- Type hints in Python examples
-
-**Avoid:**
-- Pseudocode
-- Incomplete snippets (unless marked clearly)
-- Made-up class/function names
-- Vague "example" placeholders
-
-## File Organization
-
-### Project Structure
-
-```
-src/ddon_dwarf_reconstructor/
- application/generators/     # Orchestration layer
- domain/
-    models/dwarf/          # Data structures
-    repositories/cache/     # Caching
-    services/
-        parsing/           # DWARF parsing
-        generation/        # C++ generation
- infrastructure/
-     config/                # Configuration
-     logging/               # Logging
-
-tests/
- application/generators/    # Mirror src structure
- domain/services/parsing/
- infrastructure/config/
-
-docs/
- README.md                  # Documentation index
- ARCHITECTURE.md
- COMPONENT_DIAGRAM.md
- GENERATION_FLOWS.md
- TESTING.md
- DWARF_TAG_ANALYSIS.md
- PS3_DWARF2_LOCATION_EXPRESSIONS.md
- knowledge-base/
-   dwarf-specification/     # DWARF 2/3/4 canonical JSON/Markdown artifacts
-   dwarf/                   # DWARF parsing patterns
-   pyelftools/              # pyelftools usage
-   ps4-elf/                 # PS4 ELF format
-   tools/                   # Other tool approaches
-
-Root files:
- main.py                    # Entry point
- README.md
- pyproject.toml
- pytest.ini
-Makefile
-
-tools/
-  dwarf_spec_pipeline/      # Standalone source-to-artifact specification tool
-```
-
-### Where to Put New Code
-
-- **Orchestration:** application/generators/
-- **Business logic:** domain/services/
-- **Data models:** domain/models/dwarf/
-- **Config:** infrastructure/config/
-- **Utils:** infrastructure/utils/
-- **Tests:** Mirror the src/ structure in tests/
-
-## Common Workflows
-
-### Task Tracking
-
-For complex multi-step tasks (3+ steps):
-- Use manage_todo_list tool to track progress during active work
-- Mark tasks in-progress/completed as work proceeds
-- Provides visibility into planning and progress
-- Consider creating persistent planning files (ideas.md, task lists) for work spanning multiple sessions
-
-### Adding a New Feature
-
-1. Identify the layer (application/domain/infrastructure)
-2. Create the module in the appropriate location
-3. Write unit tests with mocks first
-4. Implement the feature
-5. Run tests: uv run pytest -m unit
-6. Check coverage: uv run pytest -m unit --cov-report=html
-7. Add integration test if needed
-8. Run quality checks: make ci
-9. Update documentation if public API changed
-
-### Fixing a Bug
-
-1. Write a failing test that reproduces the bug
-2. Fix the bug
-3. Verify test passes: uv run pytest -m unit
-4. Check no regressions: uv run pytest
-5. Update documentation if behavior changed
-
-### Updating Documentation
-
-1. Use the established style (technical, concise, no fluff)
-2. Include concrete examples with real code
-3. Update all affected docs (README, ARCHITECTURE, TESTING)
-4. Keep docs in sync with code
-5. Put technical docs in docs/, not root
-
-## AI Assistant Behavior
-
-### When Asked to Run Tests
-
-**Do this:**
-```bash
-uv run pytest -m unit
-```
-
-**Not this:**
-```bash
-pytest  # Wrong - missing uv run
-python -m pytest  # Wrong - use uv run
-```
-
-### When Asked to Document
-
-**Do this:**
-- Update existing docs in docs/ directory
-- Use technical, concise style
-- Include code examples with type hints
-- Add performance metrics when relevant
-- **For ARCHITECTURE.md:** Use present-tense capabilities, include WHY/rationale for each design choice, explain what problems each component solves
-
-**Not this:**
-- Create new ad-hoc documentation files
-- Use emojis, sales language, or casual tone
-- Generate verbose explanations without examples
-- Skip code examples or use pseudocode
-- **For ARCHITECTURE.md:** Use historical perspective ("previously", "now improved", "changed from")
-
-### When Writing Summaries
-
-- Keep technical and concise
-- No emojis or casual language
-- Focus on what was done, not motivational language
-- Include specific metrics when relevant
-- Keep the amount of summary files to a minimum
-
-### When Making Changes
-
-- Run tests after each change: uv run pytest -m unit
-- Check for errors: uvx ruff check src/
-- Verify type hints: uv run mypy src/
-- Update docs if public API changed
-
-## CI/CD Integration
-
-**GitHub Actions:**
-- Unit tests run on every push/PR (Python 3.14.6, ubuntu-latest)
-- Coverage minimum: 30% (enforced)
-- Quality gates: ruff, mypy, pytest
-
-**Artifacts:**
-- test-results.xml (JUnit XML)
-- coverage.xml (Cobertura XML)
-- htmlcov/ (HTML coverage)
-
-**Retention:** 30 days
-
-## License
-
-GPLv3 - See LICENSE file.
+Before handoff, run `uv run just test`, `uv run just coverage-ci`, and `uv run just audit`.
+`scripts/check.ps1`, `just check`, and the CI workflows are the authoritative aggregations of
+these gates. Coverage targets are at least 80% total lines, with at
+least 80% lines and 70% branches in parsing, generation, orchestration, and artifact modules. Ruff,
+Pyrefly, and deptry remain authoritative; Prospector is only for focused duplicate, dead-code,
+import, complexity, and maintainability diagnostics.
+
+## Regression and performance rules
+
+- Compare generated `.h` and `.hpp` files byte-for-byte using
+  `scripts/regression/output_manifest.py`; do not replace header regression tests with snapshots.
+- Compare canonical and compatibility entrypoints when both exist. Validate fresh-process and
+  warm-cache runs, and record input identity, producer/configuration identity, and cache state.
+- Keep real-artifact baselines outside source control; commit only small deterministic manifests or
+  structured expectations. Real PS4 runs are opt-in and require explicit local paths.
+- Stream compressed dumps in one pass with bounded memory. Avoid repeated ELF hashing, repeated
+  full-DIE scans, unnecessary rescans, and unbounded intermediate collections. Cache artifacts must
+  be source-bound, validated before reuse, and published atomically.
+
+## Change workflow
+
+- Inspect the current worktree and preserve unrelated edits.
+- Put new code in the owning layer and mirror the package layout in `tests/`; put shared typed DIE
+  builders and fixtures in `tests/support/`.
+- Add focused tests for incomplete, conflicting, duplicate, unavailable, cyclic, malformed, and
+  timeout evidence. Use Hypothesis for pure parser/type/declarator invariants and
+  `pytest-regressions` only for small deterministic records.
+- Keep every non-generated Python module under 400 lines, class under 250 lines, function/method
+  under 75 lines, and McCabe complexity at or below 10. There are no baseline exemptions.
+- Use specific exceptions and structured diagnostics. Do not add blanket `Any`, broad exception
+  swallowing, truthiness checks for optional offsets, or unexplained architecture exemptions.
+- Update affected README, architecture, generation-flow, testing, and Spec Kit artifacts. Record
+  unresolved evidence or deferred prerequisites there rather than hiding them in code.
+
+For repository-wide instructions, performance constraints, safety rules, and the complete
+validation sequence, follow `AGENTS.md`.

@@ -10,18 +10,11 @@ dependencies = [
     "lxml>=6.0,<7",
     "pydantic>=2.11,<3",
     "python-docx>=1.2,<2",
-]
-
-[project.optional-dependencies]
-dev = [
-    "mypy>=1.17,<2",
-    "pytest>=8.4,<9",
-    "pytest-cov>=6.2,<7",
-    "ruff>=0.12,<1",
+    "typer>=0.16,<1",
 ]
 
 [project.scripts]
-dwarf-spec-pipeline = "dwarf_spec_pipeline.cli:main"
+dwarf-spec-pipeline = "dwarf_spec_pipeline.cli:app"
 
 [build-system]
 requires = ["hatchling>=1.27,<2"]
@@ -45,11 +38,39 @@ target-version = "py314"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "B", "UP", "SIM"]
 
-[tool.mypy]
-python_version = "3.14"
-strict = true
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-check_untyped_defs = true
-ignore_missing_imports = true
+[tool.pyrefly]
+project-includes = ["src/**/*.py"]
+python-version = "3.14"
+preset = "default"
+check-unannotated-defs = true
+infer-return-types = "checked"
+
+[tool.deptry]
+known_first_party = ["dwarf_spec_pipeline"]
+
+[tool.deptry.package_module_name_map]
+beautifulsoup4 = ["bs4"]
+python-docx = ["docx"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/dwarf_spec_pipeline/cli.py" = ["B008"]
+
+[dependency-groups]
+test = [
+    "pytest>=8.4,<9",
+    "pytest-cov>=6.2,<7",
+]
+lint = ["ruff>=0.12,<1"]
+type = [
+    "pyrefly>=1.2,<2",
+    "types-jsonschema>=4,<5",
+]
+quality = ["deptry>=0.25,<1"]
+tools = ["rust-just>=1.42,<2"]
+dev = [
+    { include-group = "test" },
+    { include-group = "lint" },
+    { include-group = "type" },
+    { include-group = "quality" },
+    { include-group = "tools" },
+]

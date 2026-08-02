@@ -1,0 +1,38 @@
+set dotenv-load := false
+
+[windows]
+set shell := ["powershell.exe", "-NoLogo", "-Command"]
+
+default:
+    @just --list
+
+sync:
+    uv sync --python 3.14.6
+
+test:
+    uv run pytest
+
+lint:
+    uv run ruff check --no-fix src tests
+
+format-check:
+    uv run ruff format --check src tests
+
+format:
+    uv run ruff format src tests
+
+type-check:
+    uv run pyrefly check --min-severity warn
+
+deps:
+    uv run deptry .
+
+check: lint format-check type-check deps
+
+ci: check test
+
+package:
+    uv build
+
+docker-config:
+    docker compose -f compose.yaml config

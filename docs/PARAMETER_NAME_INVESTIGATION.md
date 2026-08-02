@@ -58,7 +58,7 @@ void __fastcall nPhysics::Constraint::Hinge::CalculateAxisAndError(
 - [ ] Test edge cases: unnamed parameters, variadic functions, reference/pointer parameters
 - [ ] Run existing unit test suite to check for regressions
 
-**Command:** `uv run pytest -m unit`
+**Command:** `uv run just test-unit`
 
 ### 4. Integration Test (Real ELF Phase)
 
@@ -68,7 +68,7 @@ void __fastcall nPhysics::Constraint::Hinge::CalculateAxisAndError(
 - [ ] Check if parameter names appear: "output_velocity_error", "output_angle_error", etc.
 - [ ] Document discrepancies between IDA Pro output and our output
 
-**Command:** `uv run python main.py resources/DDOORBIS.elf --generate "nPhysics::Constraint::Hinge" --output output/test-params/`
+**Command:** `uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf --symbol "nPhysics::Constraint::Hinge" --output output/test-params/`
 
 ### 5. Implement Fix (If Needed)
 
@@ -86,7 +86,7 @@ void __fastcall nPhysics::Constraint::Hinge::CalculateAxisAndError(
 ### 6. Validation
 
 **Tasks:**
-- [ ] Run full unit test suite: `uv run pytest -m unit`
+- [ ] Run full unit test suite: `uv run just test-unit`
 - [ ] Regenerate test case: nPhysics::Constraint::Hinge
 - [ ] Verify parameter names match IDA Pro output
 - [ ] Check multiple classes for proper parameter name reconstruction

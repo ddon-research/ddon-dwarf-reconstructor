@@ -1,25 +1,25 @@
-"""Failure and diagnostic paths for the canonical command-line workflow."""
+"""Failure and diagnostic paths for the typed generation workflow."""
 
 from __future__ import annotations
 
-from argparse import Namespace
+import importlib
 from pathlib import Path
 from unittest.mock import MagicMock, Mock
 
 import pytest
 
-from tests.test_main_paths import _args, cli_main
+from tests.test_main_paths import _options
+
+cli_main = importlib.import_module("ddon_dwarf_reconstructor.main")
 
 
 @pytest.mark.unit
-def test_config_and_symbol_file_errors_exit_with_diagnostics(mocker) -> None:
-    args = _args()
+def test_config_and_symbol_file_errors_return_nonzero(mocker) -> None:
     mocker.patch.object(cli_main.Config, "from_args", side_effect=ValueError("bad config"))
-    with pytest.raises(SystemExit):
-        cli_main._load_config(args)
+    assert cli_main.run_generation(_options()) == 1
 
     mocker.patch.object(Path, "open", side_effect=UnicodeError("bad encoding"))
-    with pytest.raises(SystemExit):
+    with pytest.raises(ValueError, match="Error reading symbols"):
         cli_main._read_symbol_file(Path("symbols.txt"), Mock())
 
 
@@ -27,14 +27,14 @@ def test_config_and_symbol_file_errors_exit_with_diagnostics(mocker) -> None:
 def test_generation_records_per_symbol_failures_and_fatal_context_failures(
     mocker,
 ) -> None:
-    config = Mock(verbose=False)
+    config = Mock(verbose=False, elf_file_path=Path("input.elf"))
     logger = Mock()
     generator = MagicMock()
     generator.__enter__.return_value = generator
     mocker.patch.object(cli_main, "DwarfGenerator", return_value=generator)
     mocker.patch.object(cli_main, "_process_symbol", side_effect=ValueError("bad symbol"))
 
-    success, failures = cli_main._run_generation(_args(), config, ["A"], logger)
+    success, failures = cli_main._run_generation(_options(), config, ["A"], logger)
 
     assert success == 0
     assert failures == [("A", "bad symbol")]
@@ -42,8 +42,8 @@ def test_generation_records_per_symbol_failures_and_fatal_context_failures(
     failing_generator = MagicMock()
     failing_generator.__enter__.side_effect = RuntimeError("cannot open")
     mocker.patch.object(cli_main, "DwarfGenerator", return_value=failing_generator)
-    with pytest.raises(SystemExit):
-        cli_main._run_generation(_args(), config, ["A"], logger)
+    with pytest.raises(RuntimeError, match="Fatal error"):
+        cli_main._run_generation(_options(), config, ["A"], logger)
 
 
 @pytest.mark.unit
@@ -56,7 +56,7 @@ def test_diagnostics_cover_unknown_platform_preview_and_failed_summary(
     assert cli_main._write_headers(config, generator, {"A.h": "content"}, logger) == 7
 
     cli_main._log_header_summary(
-        _args(full_hierarchy=True, verbose=True),
+        _options(full_hierarchy=True, verbose=True),
         generator,
         {"A.h": "content"},
         7,
@@ -64,7 +64,7 @@ def test_diagnostics_cover_unknown_platform_preview_and_failed_summary(
         logger,
     )
     cli_main._log_header_summary(
-        _args(verbose=True),
+        _options(verbose=True),
         generator,
         {"A.h": "\n".join(str(item) for item in range(31))},
         0,
@@ -77,7 +77,6 @@ def test_diagnostics_cover_unknown_platform_preview_and_failed_summary(
 
 
 @pytest.mark.unit
-def test_read_symbol_file_reports_os_errors_and_namespace_args_are_typed() -> None:
-    args = Namespace(generate=None, symbols_file=None)
-    with pytest.raises(SystemExit):
-        cli_main._read_symbols(args, Mock())
+def test_read_symbols_requires_a_selection() -> None:
+    with pytest.raises(ValueError, match="either"):
+        cli_main._read_symbols(_options(symbols=(), symbols_file=None), Mock())

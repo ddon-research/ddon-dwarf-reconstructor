@@ -8,12 +8,7 @@ dependencies = [
     "pyelftools>=0.31",
     "python-dotenv>=1.0.0",
     "psutil>=5.9.0",
-]
-authors = [
-    { name = "ddon-dwarf-reconstructor contributors", email = "contributors@example.com" }
-]
-maintainers = [
-    { name = "ddon-dwarf-reconstructor contributors", email = "contributors@example.com" }
+    "typer>=0.16,<1",
 ]
 license = "GPL-3.0-or-later"
 keywords = [
@@ -40,32 +35,12 @@ classifiers = [
 ]
 
 [project.urls]
-"Source Code" = "https://github.com/your-username/ddon-dwarf-reconstructor"
-"Bug Tracker" = "https://github.com/your-username/ddon-dwarf-reconstructor/issues"
-Documentation = "https://github.com/your-username/ddon-dwarf-reconstructor/tree/main/docs"
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0",
-    "pytest-cov>=4.0",
-    "pytest-timeout>=2.1",
-    "pytest-mock>=3.10",
-    "pytest-html>=3.1.0",
-    "hypothesis>=6.0",
-    "pytest-regressions>=2.0",
-    "mypy>=1.0",
-    "prospector==1.19.1",
-]
-test = [
-    "pytest>=7.0",
-    "pytest-mock>=3.10",
-    "hypothesis>=6.0",
-    "pytest-regressions>=2.0",
-]
+"Source Code" = "https://github.com/ddon-research/ddon-dwarf-reconstructor"
+"Bug Tracker" = "https://github.com/ddon-research/ddon-dwarf-reconstructor/issues"
+Documentation = "https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/docs"
 
 [project.scripts]
-ddon-dwarf-reconstructor = "ddon_dwarf_reconstructor.main:main"
-ddon-dwarf-artifacts = "ddon_dwarf_reconstructor.artifact_cli:main"
+ddon-dwarf-reconstructor = "ddon_dwarf_reconstructor.cli:app"
 
 [build-system]
 requires = ["hatchling>=1.26"]
@@ -122,29 +97,22 @@ log_cli = true
 log_cli_level = "INFO"
 log_cli_format = "%(levelname)s: %(message)s"
 
-[tool.mypy]
-python_version = "3.14"
-mypy_path = "src"
-explicit_package_bases = true
-strict = true
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-ignore_missing_imports = true
-exclude = "^tests/"
-check_untyped_defs = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-no_implicit_optional = true
+[tool.pyrefly]
+project-includes = ["src/**/*.py", "scripts/**/*.py"]
+search-path = ["src"]
+python-version = "3.14"
+preset = "default"
+ignore-missing-imports = ["elftools.*"]
+check-unannotated-defs = true
+infer-return-types = "checked"
 
-[[tool.mypy.overrides]]
-module = "elftools.*"
-ignore_missing_imports = true
+[tool.deptry]
+known_first_party = ["ddon_dwarf_reconstructor"]
+extend_exclude = ["^tools[/\\\\]dwarf_spec_pipeline"]
 
-[[tool.mypy.overrides]]
-module = "tests.*"
-disallow_untyped_defs = false
-ignore_errors = true
+[tool.deptry.package_module_name_map]
+pyelftools = ["elftools"]
+python-dotenv = ["dotenv"]
 
 [tool.ruff]
 line-length = 100
@@ -157,7 +125,6 @@ exclude = [
     "__pycache__",
     "src/**/migrations",
     ".git",
-    ".mypy_cache",
     ".pytest_cache",
     ".ruff_cache",
 ]
@@ -178,7 +145,36 @@ max-complexity = 10
     "PLR2004", # magic values in tests are OK
 ]
 
+"src/ddon_dwarf_reconstructor/cli.py" = ["B008"]
+"src/ddon_dwarf_reconstructor/artifact_cli.py" = ["B008"]
+
 [dependency-groups]
-dev = [
+test = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "pytest-timeout>=2.1",
+    "pytest-mock>=3.10",
+    "pytest-html>=3.1.0",
+    "hypothesis>=6.0",
+    "pytest-regressions>=2.0",
+]
+lint = ["ruff>=0.12,<1"]
+type = [
+    "pyrefly>=1.2,<2",
+    "types-psutil>=7,<8",
+]
+quality = [
+    "deptry>=0.25,<1",
+    "prospector==1.19.1",
+]
+tools = [
     "nuitka>=2.7.16",
+    "rust-just>=1.42,<2",
+]
+dev = [
+    { include-group = "test" },
+    { include-group = "lint" },
+    { include-group = "type" },
+    { include-group = "quality" },
+    { include-group = "tools" },
 ]

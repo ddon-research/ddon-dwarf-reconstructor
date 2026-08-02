@@ -60,11 +60,18 @@ def _percent(covered: int, total: int) -> float:
 def _summary(value: object) -> CoverageSummary:
     data = cast(dict[str, object], value)
     return CoverageSummary(
-        statements=int(data["num_statements"]),
-        missing_lines=int(data["missing_lines"]),
-        branches=int(data["num_branches"]),
-        missing_branches=int(data["missing_branches"]),
+        statements=_required_int(data, "num_statements"),
+        missing_lines=_required_int(data, "missing_lines"),
+        branches=_required_int(data, "num_branches"),
+        missing_branches=_required_int(data, "missing_branches"),
     )
+
+
+def _required_int(data: dict[str, object], key: str) -> int:
+    value = data.get(key)
+    if not isinstance(value, int):
+        raise ValueError(f"Coverage field {key!r} must be an integer")
+    return value
 
 
 def _matches(path: str, prefixes: tuple[str, ...]) -> bool:

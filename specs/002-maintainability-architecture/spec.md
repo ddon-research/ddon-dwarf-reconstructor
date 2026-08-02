@@ -29,9 +29,9 @@ warm-cache performance.
 - **MA-007**: Coverage MUST reach at least 80% overall, with at least 80% line
   and 70% branch coverage for parsing, generation, orchestration, and artifact
   modules.
-- **MA-008**: Unit, full non-performance, Ruff, format, Mypy, structure,
-  boundary, output-regression, and explicit real-artifact checks MUST be
-  documented and runnable.
+- **MA-008**: Unit, full non-performance, Ruff, format, Pyrefly, deptry,
+  structure, boundary, output-regression, and explicit real-artifact checks
+  MUST be documented and runnable.
 
 ## Non-goals
 
@@ -53,7 +53,7 @@ regression.
 - `394` unit tests pass; `408` non-performance tests pass with one opt-out.
 - Total coverage is `88.5%` lines and `74.8%` branches. Parsing, generation,
   orchestration, and artifact groups all exceed their enforced thresholds.
-- Ruff, formatting, Mypy, structure, boundary, compile, and focused Prospector
+- Ruff, formatting, Pyrefly, deptry, structure, boundary, compile, and focused Prospector
   checks pass.
 - The five retained fixture headers match the pre-refactor manifest exactly
   through both `ddon-dwarf-reconstructor` and `python main.py`.

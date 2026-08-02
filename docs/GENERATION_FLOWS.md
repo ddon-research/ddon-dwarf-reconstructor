@@ -250,8 +250,8 @@ flowchart TD
 
 After source changes, run the unit/static tier, then the non-performance
 coverage tier and `check_coverage.py`. The fixture acceptance run compares the
-five retained legacy single-file headers byte-for-byte. The compatibility
-`python main.py` and canonical console entrypoints are compared with the same
+five retained legacy single-file headers byte-for-byte. The native launcher and
+canonical console entrypoints are compared with the same
 manifest. The explicit real PS4 run uses the external ELF, compressed dump, and
 validated SQLite sidecar; fresh-process warm reruns must reproduce the same
 header manifest.

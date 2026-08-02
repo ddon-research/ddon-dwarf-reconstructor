@@ -2,8 +2,7 @@
 """
 Entry point for DDON DWARF Reconstructor.
 
-This file allows running the tool directly from the project root:
-    python main.py <elf_file> --generate <symbol>
+This file keeps the native-build launcher stable while the packaged Typer app owns the CLI.
 """
 
 import sys
@@ -14,7 +13,7 @@ project_root = Path(__file__).parent
 src_path = project_root / "src"
 sys.path.insert(0, str(src_path))
 
-from ddon_dwarf_reconstructor.main import main
+from ddon_dwarf_reconstructor.cli import app
 
 if __name__ == "__main__":
-    main()
+    app()

@@ -26,16 +26,16 @@ method bodies.
 **Language/Version**: CPython 3.14.6
 
 **Primary Dependencies**: pyelftools, native `compression.zstd`, SQLite from the
-standard library, pytest, and mypy. Ruff is invoked as a pinned UV tool. The pinned
-Orbis objdump is optional and available only through an explicit local path.
+standard library, Typer, pytest, Pyrefly, deptry, and Ruff. The pinned Orbis objdump
+is optional and available only through an explicit local path.
 
 **Storage**: Source-bound SQLite dump indexes, OS-local JSON symbol/header caches,
 and deterministic JSONL/JSON evidence exports. ELF files, expanded dumps, generated
 headers, logs, and caches remain local runtime artifacts.
 
-**Testing**: `uv run pytest` with unit, integration, performance, and explicit
-real-asset tiers; Ruff and mypy quality checks; compiler checks when a host C++
-compiler is installed.
+**Testing**: `uv run just` recipes with unit, integration, performance, and explicit
+real-asset tiers; Ruff, Pyrefly, and deptry quality checks; compiler checks when a
+host C++ compiler is installed.
 
 **Target Platform**: Windows development workstation, with PS4 x86-64 ELF/DWARF as
 the primary evidence target and existing PS3 support retained.

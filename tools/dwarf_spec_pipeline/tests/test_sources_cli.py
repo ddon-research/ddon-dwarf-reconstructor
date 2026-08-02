@@ -5,9 +5,10 @@ import json
 from pathlib import Path
 
 import pytest
+from typer.testing import CliRunner
 
 from dwarf_spec_pipeline import converters
-from dwarf_spec_pipeline.cli import main
+from dwarf_spec_pipeline.cli import app
 from dwarf_spec_pipeline.source_manifest import (
     SourceError,
     SourceSpec,
@@ -15,6 +16,8 @@ from dwarf_spec_pipeline.source_manifest import (
     load_manifest,
     verify_source,
 )
+
+runner = CliRunner()
 
 
 def _source_for_bytes(content: bytes) -> SourceSpec:
@@ -56,7 +59,7 @@ def test_missing_converter_is_reported(monkeypatch, tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
-def test_cli_reports_missing_sources_and_missing_artifacts(tmp_path: Path, capsys) -> None:  # type: ignore[no-untyped-def]
+def test_cli_reports_missing_sources_and_missing_artifacts(tmp_path: Path) -> None:
     content = b"locked source"
     source = _source_for_bytes(content)
     manifest = tmp_path / "sources.json"
@@ -65,22 +68,24 @@ def test_cli_reports_missing_sources_and_missing_artifacts(tmp_path: Path, capsy
         encoding="utf-8",
     )
 
-    assert (
-        main(["sources", "--manifest", str(manifest), "--cache-dir", str(tmp_path / "cache")]) == 2
+    result = runner.invoke(
+        app,
+        ["sources", "--manifest", str(manifest), "--cache-dir", str(tmp_path / "cache")],
     )
-    assert "Offline mode" not in capsys.readouterr().err
-    assert (
-        main(
-            [
-                "validate",
-                "--output-dir",
-                str(tmp_path / "missing-output"),
-                "--schema",
-                str(Path(__file__).parent.parent / "schema" / "dwarf-specification.schema.json"),
-            ]
-        )
-        == 2
+    assert result.exit_code == 2
+    assert "Offline mode" not in result.stdout
+
+    result = runner.invoke(
+        app,
+        [
+            "validate",
+            "--output-dir",
+            str(tmp_path / "missing-output"),
+            "--schema",
+            str(Path(__file__).parent.parent / "schema" / "dwarf-specification.schema.json"),
+        ],
     )
+    assert result.exit_code == 2
 
 
 @pytest.mark.unit

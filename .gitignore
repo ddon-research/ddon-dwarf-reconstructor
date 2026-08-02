@@ -30,7 +30,10 @@ env/
 .venv
 
 # IDEs
-.vscode/
+.vscode/*
+!.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
@@ -38,9 +41,7 @@ env/
 .DS_Store
 
 # Type checking
-.mypy_cache/
-.dmypy.json
-dmypy.json
+.pyrefly/
 .pytype/
 .pyre/
 

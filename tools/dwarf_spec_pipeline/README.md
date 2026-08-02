@@ -1,46 +1,41 @@
 # DWARF Specification Pipeline
 
-This standalone tool converts the official DWARF 2, 3, and 4 source documents
-into deterministic, machine-readable JSON and clean Markdown. The source
-documents are retained only in a checksum-verified local cache; they are not
+Standalone tool that converts the locked DWARF 2, 3, and 4 source documents into deterministic
+JSON and Markdown artifacts. Source documents stay in a checksum-verified local cache and are not
 repository artifacts.
-
-The supported runtime is regular CPython 3.14.6 managed by uv.
-
-## Full build
-
-The full build uses Docker Compose so the legacy `.doc` and `.mm` converters are
-consistent on Windows and Ubuntu:
-
-```text
-docker compose -f tools/dwarf_spec_pipeline/compose.yaml run --rm dwarf-spec-pipeline
-```
-
-The container downloads the locked sources, converts `.doc` to `.docx` with
-LibreOffice and `.mm` to HTML with Groff, then runs the Python readers and
-publishes to `docs/knowledge-base/dwarf-specification/generated/`.
 
 ## Local development
 
 ```text
-uv sync --project tools/dwarf_spec_pipeline --python 3.14.6 --extra dev
-uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev pytest
-uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev ruff check src tests
-uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev mypy src
+uv sync --python 3.14.6
+uv run just test
+uv run just check
+uv run dwarf-spec-pipeline --help
 ```
 
-The Python package can also parse pre-converted HTML and DOCX fixtures without
-Docker. Raw-source conversion requires the tools supplied by the Compose image.
+The command tree is typed with Typer:
 
-## Source and artifact contracts
+```text
+uv run dwarf-spec-pipeline build --offline
+uv run dwarf-spec-pipeline validate
+uv run dwarf-spec-pipeline sources
+```
 
-- `config/sources.json` locks the official URL, source filename, format, and
-  SHA-256 for each specification.
+`--manifest`, `--output-dir`, `--work-dir`, `--schema`, repeated `--version 2|3|4`, and
+`--cache-dir` retain their existing meanings. Use Docker Compose for the legacy `.doc` and `.mm`
+conversion environment:
+
+```text
+docker compose -f compose.yaml run --rm dwarf-spec-pipeline
+```
+
+## Contracts
+
+- `config/sources.json` locks source URLs, filenames, formats, and SHA-256 values.
 - `schema/dwarf-specification.schema.json` defines the published JSON shape.
-- `generated/dwarf{2,3,4}.json` is the canonical structured artifact.
-- `generated/dwarf{2,3,4}.md` is the human- and AI-readable rendering.
-- `generated/manifest.json` records deterministic artifact hashes and source
-  identity.
+- `generated/dwarf{2,3,4}.json` and `.md` are deterministic published artifacts.
+- `generated/manifest.json` records output hashes and source identity.
 
-Use `--offline` to require an already verified source cache. Updating a source
-checksum is an intentional manifest change, not an automatic fallback.
+The project uses Ruff, Pyrefly, deptry, and just through its frozen uv environment. Tests and
+quality checks do not download sources unless an explicit build requests it; `--offline` requires
+an already verified local cache.

@@ -3,7 +3,7 @@
 """Progress tracking for DWARF parsing operations."""
 
 import logging
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from time import time
 from typing import TYPE_CHECKING, Any
@@ -39,7 +39,7 @@ class ProgressTracker:
         self.operation_stack: list[tuple[str, float]] = []
 
     @contextmanager
-    def track_operation(self, operation_name: str) -> Iterator[None]:
+    def track_operation(self, operation_name: str) -> Generator[None]:
         """
         Track a high-level operation with timing.
 
@@ -66,7 +66,7 @@ class ProgressTracker:
             self.operation_stack.pop()
 
     @contextmanager
-    def track_cu(self, cu: Any) -> Iterator[None]:
+    def track_cu(self, cu: Any) -> Generator[None]:
         """
         Track compilation unit processing with detailed metrics.
 

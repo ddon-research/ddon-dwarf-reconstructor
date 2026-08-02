@@ -1,9 +1,10 @@
 <!--
 Sync Impact Report
-- Version change: template -> 1.0.0
+- Version change: 1.0.0 -> 1.0.1
 - Modified principles: replaced all illustrative principles with five DDON reconstruction principles
 - Added sections: Evidence and Artifact Constraints; Development Workflow and Quality Gates
 - Removed sections: illustrative template guidance and unresolved placeholder text
+- Tooling update: replace the active mypy/Makefile loop with locked Pyrefly/just/deptry checks
 - Follow-up TODOs: select the target C++ standard and compiler proxy in the first header feature
 -->
 
@@ -97,8 +98,9 @@ committed.
 	validation.
 3. Implement the smallest coherent slice, then run its focused check before
 	expanding scope.
-4. Before completion, run the relevant unit tests, `uvx ruff check --no-fix
-	src tests`, `uvx ruff format --check src tests`, and `uv run mypy src`.
+4. Before completion, run the relevant unit tests and `uv run just check`. The
+	blocking check includes locked Ruff, Pyrefly, deptry, structure, and boundary
+	checks; focused Prospector remains a non-blocking audit.
 5. Documentation MUST be updated when commands, configuration, public contracts,
 	artifact lifecycle, or supported behavior changes. Documentation MUST describe
 	verified behavior rather than historical claims.
@@ -123,4 +125,4 @@ determinism, performance assumptions, validation coverage, and documentation
 consistency. Deferred work MUST be recorded in the relevant Spec Kit task or
 feature artifact rather than hidden in generated output.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-01 | **Last Amended**: 2026-08-01
+**Version**: 1.0.1 | **Ratified**: 2026-08-01 | **Last Amended**: 2026-08-02

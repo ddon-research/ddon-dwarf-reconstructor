@@ -1,82 +1,130 @@
-"""Command-line interface for the DWARF specification pipeline."""
+"""Typer command-line interface for the DWARF specification pipeline."""
 
 from __future__ import annotations
 
-import argparse
-import sys
+from collections.abc import Callable
 from pathlib import Path
+
+import typer
 
 from .pipeline import PipelineError, build
 from .source_manifest import SourceError, load_manifest, verify_source
 from .validation import ArtifactValidationError, validate_output_directory
+
+app = typer.Typer(
+    name="dwarf-spec-pipeline",
+    help="Build and validate deterministic DWARF specification artifacts.",
+    no_args_is_help=True,
+    add_completion=True,
+)
 
 
 def _default_schema() -> Path:
     return Path("tools/dwarf_spec_pipeline/schema/dwarf-specification.schema.json")
 
 
-def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__)
-    subparsers = parser.add_subparsers(dest="command", required=True)
+def _run(operation: Callable[[], None]) -> None:
+    try:
+        operation()
+    except (ArtifactValidationError, PipelineError, SourceError, OSError, ValueError) as error:
+        typer.echo(f"error: {error}", err=True)
+        raise typer.Exit(code=2) from error
 
-    build_parser = subparsers.add_parser(
-        "build", help="build canonical JSON and Markdown artifacts"
-    )
-    build_parser.add_argument(
-        "--manifest", type=Path, default=Path("tools/dwarf_spec_pipeline/config/sources.json")
-    )
-    build_parser.add_argument(
+
+@app.command("build")
+def build_command(
+    manifest: Path = typer.Option(
+        Path("tools/dwarf_spec_pipeline/config/sources.json"),
+        "--manifest",
+        help="Locked source manifest.",
+    ),
+    output_dir: Path = typer.Option(
+        Path("docs/knowledge-base/dwarf-specification/generated"),
         "--output-dir",
-        type=Path,
-        default=Path("docs/knowledge-base/dwarf-specification/generated"),
-    )
-    build_parser.add_argument("--work-dir", type=Path, default=Path(".cache/dwarf_spec_pipeline"))
-    build_parser.add_argument("--schema", type=Path, default=_default_schema())
-    build_parser.add_argument("--version", type=int, action="append", choices=(2, 3, 4))
-    build_parser.add_argument("--offline", action="store_true")
+        help="Published artifact directory.",
+    ),
+    work_dir: Path = typer.Option(
+        Path(".cache/dwarf_spec_pipeline"),
+        "--work-dir",
+        help="Working and source-cache directory.",
+    ),
+    schema: Path = typer.Option(_default_schema(), "--schema", help="JSON Schema path."),
+    version: list[int] = typer.Option(
+        [],
+        "--version",
+        min=2,
+        max=4,
+        help="DWARF version to build; repeat for multiple versions.",
+    ),
+    offline: bool = typer.Option(False, "--offline", help="Require verified local sources."),
+) -> None:
+    """Build canonical JSON and Markdown artifacts."""
 
-    validate_parser = subparsers.add_parser("validate", help="validate generated artifacts")
-    validate_parser.add_argument(
+    def operation() -> None:
+        build(
+            manifest,
+            output_dir,
+            work_dir,
+            schema,
+            versions=set(version) if version else None,
+            offline=offline,
+        )
+        typer.echo(f"Built DWARF artifacts in {output_dir}")
+
+    _run(operation)
+
+
+@app.command("validate")
+def validate(
+    output_dir: Path = typer.Option(
+        Path("docs/knowledge-base/dwarf-specification/generated"),
         "--output-dir",
-        type=Path,
-        default=Path("docs/knowledge-base/dwarf-specification/generated"),
-    )
-    validate_parser.add_argument("--schema", type=Path, default=_default_schema())
+        help="Published artifact directory.",
+    ),
+    schema: Path = typer.Option(_default_schema(), "--schema", help="JSON Schema path."),
+) -> None:
+    """Validate generated artifacts against the JSON Schema and manifest."""
 
-    sources_parser = subparsers.add_parser("sources", help="verify cached source documents")
-    sources_parser.add_argument(
-        "--manifest", type=Path, default=Path("tools/dwarf_spec_pipeline/config/sources.json")
-    )
-    sources_parser.add_argument(
-        "--cache-dir", type=Path, default=Path(".cache/dwarf_spec_pipeline/sources")
-    )
+    def operation() -> None:
+        validate_output_directory(output_dir, schema)
+        typer.echo(f"Validated DWARF artifacts in {output_dir}")
 
-    return parser
+    _run(operation)
+
+
+@app.command("sources")
+def sources(
+    manifest: Path = typer.Option(
+        Path("tools/dwarf_spec_pipeline/config/sources.json"),
+        "--manifest",
+        help="Locked source manifest.",
+    ),
+    cache_dir: Path = typer.Option(
+        Path(".cache/dwarf_spec_pipeline/sources"),
+        "--cache-dir",
+        help="Verified source-cache directory.",
+    ),
+) -> None:
+    """Verify cached source documents against the locked manifest."""
+
+    def operation() -> None:
+        source_manifest = load_manifest(manifest)
+        for source in source_manifest.sources:
+            path = cache_dir / source.source_id / source.filename
+            verify_source(path, source)
+        typer.echo(f"Verified {len(source_manifest.sources)} cached DWARF sources")
+
+    _run(operation)
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = _build_parser().parse_args(argv)
+    """Invoke the Typer application from Python callers."""
     try:
-        if args.command == "build":
-            build(
-                args.manifest,
-                args.output_dir,
-                args.work_dir,
-                args.schema,
-                versions=set(args.version) if args.version else None,
-                offline=args.offline,
-            )
-            print(f"Built DWARF artifacts in {args.output_dir}")
-        elif args.command == "validate":
-            validate_output_directory(args.output_dir, args.schema)
-            print(f"Validated DWARF artifacts in {args.output_dir}")
-        elif args.command == "sources":
-            manifest = load_manifest(args.manifest)
-            for source in manifest.sources:
-                path = args.cache_dir / source.source_id / source.filename
-                verify_source(path, source)
-            print(f"Verified {len(manifest.sources)} cached DWARF sources")
-        return 0
-    except (ArtifactValidationError, PipelineError, SourceError, OSError, ValueError) as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 2
+        result = app(args=argv, prog_name="dwarf-spec-pipeline", standalone_mode=False)
+    except typer.Exit as error:
+        return error.exit_code or 0
+    return result if isinstance(result, int) else 0
+
+
+if __name__ == "__main__":  # pragma: no cover
+    app()

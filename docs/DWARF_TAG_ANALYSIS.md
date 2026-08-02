@@ -677,7 +677,7 @@ def is_primitive_type(die: DIE) -> bool:
 ### Complete Type Resolution Flow
 
 ```
-1. User Input: --generate rGUI
+1. User Input: `generate --symbol rGUI`
    └─> Exhaustive DWARF search for class named "rGUI" ✅ CORRECT
 
 2. Parse rGUI class:
@@ -836,7 +836,7 @@ die.tag in FORWARD_DECLARABLE_TYPES     # True
 **Integration Test: 289/289 symbols (100% success rate)**
 
 ```bash
-uv run python main.py resources/DDOORBIS.elf \
+uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf \
   --symbols-file resources/season2-resources.txt \
   --full-hierarchy
 ```

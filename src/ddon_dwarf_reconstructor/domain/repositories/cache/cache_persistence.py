@@ -64,7 +64,7 @@ class CachePersistenceMixin:
         source_path = Path(source_cache_file).resolve()
         if source_path == self.cache_file.resolve():
             raise ValueError("Source and destination symbol caches are identical")
-        replacement = type(self)(source_path)
+        replacement = self._new_cache(source_path)
         replacement.data["source_fingerprint"] = self.data.get("source_fingerprint")
         replacement.source_fingerprint = self.source_fingerprint
         replacement._validate_cache_integrity(replacement.data)

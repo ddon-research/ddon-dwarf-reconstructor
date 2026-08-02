@@ -12,17 +12,16 @@ copies or explicit temporary artifact paths.
 
 ```bash
 # Fast unit tests (recommended)
-uv run pytest -m unit
+uv run just test-unit
 
-# All tests
-uv run pytest
+# All non-performance tests
+uv run just test
 
 # With HTML coverage
-uv run pytest -m unit --cov-report=html
-# Open htmlcov/index.html
+uv run just coverage
 
 # Integration tests
-uv run pytest -m integration
+uv run just test-integration
 
 # Opt-in real warm export, including the pinned Orbis producer
 $env:DDON_REAL_PERFORMANCE='1'
@@ -30,12 +29,12 @@ $env:DDON_REAL_ELF='D:\research\DDON-binaries\IDA9.3\PS4_DDON_02020005_2016_12_2
 $env:DDON_REAL_DWARF_DUMP="$env:DDON_REAL_ELF.llvmdwarfdump.zst"
 $env:DDON_REAL_DWARF_INDEX='D:\ddon-dwarf-reconstructor\output\real-dump-index\DDOORBIS.elf.llvmdwarfdump.index.sqlite3'
 $env:DDON_ORBIS_OBJDUMP='D:\SCE\ORBIS SDKs\8.000\host_tools\bin\orbis-objdump.exe'
-uv run pytest tests/performance/test_real_rlayout_export_budget.py -q
+uv run just test-performance
 
-# Makefile shortcuts
-make test          # Unit tests only
-make coverage      # HTML coverage report
-make ci            # Full CI suite (lint + typecheck + test)
+# just shortcuts
+uv run just test-unit
+uv run just coverage
+uv run just ci
 ```
 
 ## Test Categories
@@ -48,9 +47,9 @@ make ci            # Full CI suite (lint + typecheck + test)
 
 **Usage:**
 ```bash
-uv run pytest -m "unit"              # Unit tests only
-uv run pytest -m "not slow"          # Skip slow tests
-uv run pytest -m "unit or integration" # Both categories
+uv run just test-unit                 # Unit tests only
+uv run just test-integration          # Integration tests
+uv run just test-performance          # Explicit performance tier
 ```
 
 ## DWARF specification pipeline
@@ -59,18 +58,16 @@ The specification tool has its own lockfile, test markers, and quality
 commands. Run these from the repository root:
 
 ```bash
-uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev pytest
-uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev ruff check src tests
-uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev ruff format --check src tests
-uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev mypy src
-docker compose -f tools/dwarf_spec_pipeline/compose.yaml config
+uv run --directory tools/dwarf_spec_pipeline just test
+uv run --directory tools/dwarf_spec_pipeline just check
+uv run --directory tools/dwarf_spec_pipeline just docker-config
 ```
 
 The official-source integration assertion is opt-in after a Docker build:
 
 ```powershell
 $env:DWARF_SPEC_OFFICIAL = '1'
-uv run --directory tools/dwarf_spec_pipeline --python 3.14.6 --extra dev pytest -m integration
+uv run --directory tools/dwarf_spec_pipeline pytest -m integration
 Remove-Item Env:DWARF_SPEC_OFFICIAL
 ```
 
@@ -225,17 +222,16 @@ def test_batch_processing():
 
 - Success rate: 289/289 (100%)
 - Source: resources/season2-resources.txt
-- Command: `uv run python main.py --symbols-file resources/season2-resources.txt --full-hierarchy`
+- Command: `uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf --symbols-file resources/season2-resources.txt --full-hierarchy`
 - Duration: ~15-30 minutes (full hierarchy mode)
 - Cache hits: 1519 symbols cached
 
 ## Coverage
 
 **Current Status:**
-- Unit tests: 48% coverage
-- Integration tests: +40% coverage
-- Total: 88% coverage
-- Branch coverage: Enabled
+- Full non-performance suite: 412 passed, 1 deselected
+- Total line coverage: 85.65% (80% gate passed)
+- Branch coverage: Enabled, with focused group thresholds enforced
 
 **Coverage Reports:**
 1. **Terminal** - Quick summary during test run
@@ -245,14 +241,14 @@ def test_batch_processing():
 
 **Viewing Coverage:**
 ```bash
-# Generate HTML report
-uv run pytest -m unit --cov-report=html
+# Generate HTML report and enforce coverage thresholds
+uv run just coverage
 
 # Open in browser (Windows)
 start htmlcov/index.html
 
-# Show missing lines in terminal
-uv run pytest -m unit --cov-report=term-missing
+# Generate CI-compatible XML/JUnit reports
+uv run just coverage-ci
 ```
 
 ## CI/CD Pipeline
@@ -267,8 +263,8 @@ Matrix: Python 3.14.6, ubuntu-latest
 Steps:
   1. Checkout code
   2. Setup Python and uv
-  3. Install dependencies (`uv sync --python 3.14.6 --extra dev --frozen`)
-  4. Run unit tests (pytest -m unit --cov)
+  3. Install dependencies (`uv sync --python 3.14.6 --frozen`)
+  4. Run `uv run just coverage-ci`
   5. Upload coverage to Codecov
   6. Upload test artifacts (30 days)
   7. Publish test results
@@ -284,9 +280,8 @@ Steps:
 ```yaml
 Trigger: Push to main, Pull Requests
 Steps:
-    1. Ruff linter (uvx ruff check)
-    2. Ruff formatter (uvx ruff format --check)
-  3. MyPy type checker (uv run mypy src/)
+    1. `uv run just check` (Ruff, Pyrefly, deptry, structure, boundaries)
+    2. Focused Prospector audit (non-blocking)
 ```
 
 ### CI Artifacts
@@ -307,27 +302,26 @@ Steps:
 vim src/domain/services/parsing/class_parser.py
 
 # 2. Run fast unit tests
-uv run pytest -m unit
+uv run just test-unit
 
 # 3. Check coverage
-uv run pytest -m unit --cov-report=html
-start htmlcov/index.html
+uv run just coverage
 
 # 4. Fix uncovered code
 # Add tests for new functionality
 
 # 5. Run integration tests before commit
-uv run pytest -m integration
+uv run just test-integration
 
 # 6. Full CI locally
-make ci
+uv run just ci
 ```
 
 ## Performance
 
 | Test Category | Count | Execution Time | Coverage |
 |---------------|-------|----------------|----------|
-| Fast/non-performance suite | 408 passed, 1 deselected | ~9s local | Default local gate |
+| Fast/non-performance suite | 412 passed, 1 deselected | ~6s local | Default local gate |
 | Real warm `rLayout` budget | opt-in | ~3.5s measured | 15s regression budget |
 | Real cold dump-index build | opt-in | 295.6s measured | One-time bootstrap behavior |
 
@@ -337,7 +331,7 @@ make ci
 - Parallel execution possible with pytest-xdist
 - The 2026-07-26 real acceptance run exported 116 types as 3,350 nodes and
   3,735 relationships; two fresh processes produced byte-identical files.
-- Use `ddon-dwarf-artifacts verify-source` for an explicit full-hash audit and
+- Use `ddon-dwarf-reconstructor artifacts verify-source` for an explicit full-hash audit and
   `inspect` before any targeted repair or rebuild.
 
 ## Troubleshooting
@@ -353,20 +347,19 @@ make ci
 2. **Coverage not generated:**
    ```bash
    # Verify coverage source path
-   uv run pytest --cov=src/ddon_dwarf_reconstructor --cov-report=term
+   uv run just coverage
    ```
 
 3. **Import errors:**
    ```bash
    # Install in editable mode
-   uv sync --python 3.14.6 --extra dev
+   uv sync --python 3.14.6
    ```
 
 4. **CI failures:**
    ```bash
    # Run exactly what CI runs
-   uv run pytest -m "not performance" --cov=src/ddon_dwarf_reconstructor --cov-branch --cov-fail-under=80
-   python scripts/quality/check_coverage.py coverage.json
+   uv run just coverage-ci
    ```
 
 **Debugging:**
@@ -402,7 +395,7 @@ uv run pytest -l
 
 **Installation:**
 ```bash
-uv sync --python 3.14.6 --extra dev  # Installs all dev dependencies
+uv sync --python 3.14.6  # Installs all development groups
 ```
 
 ### Real rLayout performance budget
@@ -412,7 +405,7 @@ normal checkout:
 
 ```powershell
 $env:DDON_REAL_PERFORMANCE='1'
-uv run pytest tests/performance/test_real_rlayout_export_budget.py
+uv run just test-performance
 ```
 
 The warm dependency-closure budget is 15 seconds. Current local measurements
@@ -433,7 +426,8 @@ reject the cached duplicate and verify the manifest authority projection.
 - All unit tests pass
 - Coverage >=80% with high-risk group thresholds
 - Ruff linting passes
-- MyPy type checking passes
+- Pyrefly type checking passes
+- deptry finds no missing or misplaced dependencies
 - Ruff formatting correct
 
 **Pre-merge checks:**
@@ -454,15 +448,9 @@ reject the cached duplicate and verify the manifest authority projection.
 The authoritative local sequence is:
 
 ```powershell
-uv run pytest -m unit -o addopts='-q --strict-markers'
-uvx ruff check --no-fix src tests
-uvx ruff format --check src tests
-uv run mypy src
-python scripts/quality/check_structure.py
-python scripts/quality/check_boundaries.py
-uv run pytest -m "not performance" --cov=src/ddon_dwarf_reconstructor --cov-branch --cov-report=json
-python scripts/quality/check_coverage.py coverage.json
-uv run prospector --profile .prospector.yml --tool pylint --tool pyflakes --tool mccabe src
+uv run just test-unit
+uv run just check
+uv run just coverage
 ```
 
 The enforced thresholds are 80% total line coverage, 80% line coverage for

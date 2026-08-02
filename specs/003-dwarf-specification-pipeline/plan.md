@@ -38,7 +38,7 @@ manifest hashes the exact bytes.
 
 ## Validation tiers
 
-- Tier 1: standalone `uv` Ruff, formatting, mypy, and unit tests.
+- Tier 1: standalone locked `uv` Ruff, formatting, Pyrefly, deptry, and unit tests through `just`.
 - Tier 2: deterministic mocked-converter build and schema validation.
 - Tier 3: `docker compose config` and official-source Compose build for all
   three locked sources, followed by the opt-in coverage assertion.

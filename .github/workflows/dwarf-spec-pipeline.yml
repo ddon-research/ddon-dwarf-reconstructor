@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   tool-quality:
     runs-on: ubuntu-latest
@@ -14,30 +17,22 @@ jobs:
         working-directory: tools/dwarf_spec_pipeline
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up Python 3.14.6
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.14.6"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
 
       - name: Install tool dependencies
-        run: uv sync --python 3.14.6 --extra dev --frozen
+        run: uv sync --python 3.14.6 --frozen
 
-      - name: Run tool tests
-        run: uv run pytest
-
-      - name: Run Ruff
-        run: |
-          uv run ruff check src tests
-          uv run ruff format --check src tests
-
-      - name: Run mypy
-        run: uv run mypy src
+      - name: Run locked tool checks
+        run: uv run just ci
 
       - name: Validate Docker Compose configuration
         working-directory: .
-        run: docker compose -f tools/dwarf_spec_pipeline/compose.yaml config
+        run: uv run --directory tools/dwarf_spec_pipeline just docker-config
