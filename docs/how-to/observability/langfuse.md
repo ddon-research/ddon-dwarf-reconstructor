@@ -6,6 +6,8 @@ telemetry to it. The Python reconstructor is not instrumented by this setup; its
 contract is documented in [application logging](../observability.md), and the architecture policy
 is in [crosscutting concepts](../../explanation/architecture/crosscutting-concepts.md).
 
+<!-- markdownlint-disable MD046 -->
+
 !!! warning "Local and potentially sensitive"
 
     Content capture can retain prompts, responses, reasoning summaries, tool arguments, tool
@@ -13,6 +15,8 @@ is in [crosscutting concepts](../../explanation/architecture/crosscutting-concep
     Keep `ops/langfuse/.env`, Codex key files, and VS Code settings containing Basic Auth values
     out of version control. The compose file binds its host ports to loopback, but the data is
     still durable on the local Docker volumes.
+
+<!-- markdownlint-enable MD046 -->
 
 ## What this setup covers
 

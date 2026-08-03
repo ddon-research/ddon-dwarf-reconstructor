@@ -59,6 +59,9 @@ coverage-*.json
 # UV
 .uv/
 
+# Node-based documentation validators
+tools/documentation/node_modules/
+
 # Output
 output/
 site/

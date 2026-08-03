@@ -13,8 +13,8 @@ uv run just test
 ```
 
 `check` includes Ruff, format verification, actionlint, Pyrefly, deptry, structure, architecture,
-and the strict documentation build. `test` includes deterministic integration tests but excludes
-performance, packaging, and real-asset qualifiers.
+Markdownlint, Mermaid CLI validation, and the strict documentation build. `test` includes
+deterministic integration tests but excludes performance, packaging, and real-asset qualifiers.
 
 ## Handoff loop
 
@@ -50,18 +50,23 @@ be hidden behind a green default test command.
 For a docs-only change, run at least:
 
 ```powershell
-uv run just docs-build
+uv run just docs-tools-install
+uv run just docs-check
 uv run just check
 ```
 
-Review generated `site/` locally, then remove or leave the ignored build output as convenient.
-The GitHub Pages workflow repeats the strict build from the lockfile.
+Run `docs-tools-install` once after checkout or a documentation-tool lockfile change. `docs-check`
+validates every Mermaid fence by rendering it to a temporary SVG and lints the authored site
+Markdown with the locked `markdownlint-cli2` configuration before building `site/`. Review the
+generated site locally, then remove or leave the ignored build output as convenient. The GitHub
+Pages workflow repeats all three checks from the lockfiles.
 
 ## Documentation review
 
 Use the [documentation style reference](../reference/documentation-style.md) and the
 [authoring how-to](write-documentation.md) before reviewing prose. Confirm that the page has one
 Diátaxis intent, an identifiable audience and outcome, source-backed claims, explicit evidence
-status, and links to the relevant arc42 compartment or reference contract. Check Mermaid source,
-commands, paths, headings, and internal links. Delete obsolete duplicate narratives instead of
-preserving competing instructions.
+status, and links to the relevant arc42 compartment or reference contract. Check Mermaid source
+with `uv run just docs-diagrams`, Markdown with `uv run just docs-lint`, commands, paths, headings,
+and internal links. Delete obsolete duplicate narratives instead of preserving competing
+instructions.

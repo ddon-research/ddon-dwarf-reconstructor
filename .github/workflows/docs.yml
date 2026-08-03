@@ -26,11 +26,21 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Set up Node.js 24.14.1
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24.14.1"
+          cache: npm
+          cache-dependency-path: tools/documentation/package-lock.json
+
+      - name: Install documentation validators
+        run: npm ci --prefix tools/documentation --no-audit --no-fund
+
       - name: Set up Python and uv
         uses: ./.github/actions/setup-python-uv
 
-      - name: Build documentation
-        run: uv run just docs-build
+      - name: Validate and build documentation
+        run: uv run just docs-check
 
   deploy:
     if: github.event_name != 'pull_request'
@@ -53,11 +63,21 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Set up Node.js 24.14.1
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24.14.1"
+          cache: npm
+          cache-dependency-path: tools/documentation/package-lock.json
+
+      - name: Install documentation validators
+        run: npm ci --prefix tools/documentation --no-audit --no-fund
+
       - name: Set up Python and uv
         uses: ./.github/actions/setup-python-uv
 
-      - name: Build documentation
-        run: uv run just docs-build
+      - name: Validate and build documentation
+        run: uv run just docs-check
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

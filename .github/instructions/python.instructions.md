@@ -77,8 +77,9 @@ through the repository's `src` directory.
   `docs/`, follow [the Markdown documentation instructions](documentation.instructions.md) and
   [the documentation style reference](../../docs/reference/documentation-style.md), use one
   Diátaxis page intent, arc42 architecture sections, and Mermaid/UML diagrams as Markdown code.
-  Run `uv run just docs-build` when behavior, commands, architecture, or validation guidance
-  changes. Keep Python docstrings factual and concise; link to the site for extended explanation.
+  Run `uv run just docs-tools-install` after checkout or a lockfile change, then run `uv run just
+  docs-check` when behavior, commands, architecture, or validation guidance changes. Keep Python
+  docstrings factual and concise; link to the site for extended explanation.
 - The committed Pyrefly configuration is explicit and authoritative. If a new checkout has no
   `[tool.pyrefly]` section, run `uv run pyrefly init pyproject.toml` once, then review and commit
   the explicit configuration; do not add a second type-checker configuration or broad
@@ -127,8 +128,8 @@ uv run just coverage-ci
 uv run just audit
 ```
 
-`uv run just check` includes the strict static-site build; use `uv run just docs-serve` to inspect
-navigation and diagrams locally.
+`uv run just check` includes Markdownlint, Mermaid CLI rendering, and the strict static-site build;
+use `uv run just docs-serve` to inspect navigation and diagrams locally.
 
 For a failing Dependabot or pull-request check, inspect the remote proposal before changing
 source: run gh auth status, gh pr list, gh pr diff, gh pr checks, and gh run view <run-id>

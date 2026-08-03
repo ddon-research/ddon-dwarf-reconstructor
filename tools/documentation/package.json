@@ -1,0 +1,16 @@
+{
+  "name": "ddon-dwarf-reconstructor-documentation-tools",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pinned local validators for Mermaid diagrams and Markdown documentation",
+  "engines": {
+    "node": ">=24.14.1"
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "11.16.0",
+    "markdownlint-cli2": "0.23.2"
+  },
+  "scripts": {
+    "validate:mermaid": "node validate-mermaid.mjs"
+  }
+}

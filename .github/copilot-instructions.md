@@ -155,7 +155,8 @@ capture read-only `gh` evidence and verify action release SHAs before editing.
   container, and component views plus native Mermaid/UML diagrams stay as code. Follow [the
   documentation style reference](../docs/reference/documentation-style.md)
   and record unresolved evidence or deferred prerequisites there rather than hiding them in code.
-  Run `uv run just docs-build` for documentation changes.
+  Run `uv run just docs-tools-install` after checkout or a lockfile change, then run
+  `uv run just docs-check` for documentation changes.
 
 ## Goal-oriented research workflow
 

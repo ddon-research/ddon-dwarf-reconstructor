@@ -8,6 +8,7 @@ default:
 
 sync:
     uv sync --python 3.14.6
+    npm ci --prefix tools/documentation --no-audit --no-fund
 
 test-unit:
     uv run pytest -m unit -o addopts='-q --strict-markers'
@@ -79,15 +80,24 @@ architecture:
 docs-serve:
     uv run zensical serve
 
+docs-tools-install:
+    npm ci --prefix tools/documentation --no-audit --no-fund
+
+docs-lint:
+    npm --offline --prefix tools/documentation exec -- markdownlint-cli2
+
+docs-diagrams:
+    npm --prefix tools/documentation run validate:mermaid
+
 docs-build:
     uv run zensical build --strict
 
-docs-check: docs-build
+docs-check: docs-lint docs-diagrams docs-build
 
 audit:
     uv run prospector --profile .prospector.yml --tool pylint --tool pyflakes --tool mccabe src
 
-check: lint format-check actionlint type-check deps structure architecture docs-build
+check: lint format-check actionlint type-check deps structure architecture docs-check
 
 ci: check test-unit package-smoke
 

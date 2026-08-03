@@ -1,12 +1,13 @@
 # IDA Pro PS4 Module Loader Insights
 
-Source: ps4_module_loader by SocraticBliss (https://github.com/SocraticBliss/ps4_module_loader)
+Source: ps4_module_loader by SocraticBliss (<https://github.com/SocraticBliss/ps4_module_loader>)
 
 ## Key Findings
 
 ### ELF Type Detection
 
 The IDA loader recognizes the same PS4 ELF types:
+
 ```python
 ET_SCE_EXEC = 0xFE00        # Main Module
 ET_SCE_REPLAY_EXEC = 0xFE01 # Replay Module
@@ -19,6 +20,7 @@ ET_SCE_DYNAMIC = 0xFE18     # Shared Object PRX
 ### Segment Type Handling
 
 PS4 segment types recognized:
+
 ```python
 PT_SCE_DYNLIBDATA = 0x61000000   # Dynamic library data
 PT_SCE_PROCPARAM = 0x61000001    # Process parameters
@@ -34,6 +36,7 @@ PT_SCE_SEGSYM = 0x700000A8       # Segment symbols
 ### Memory Layout Strategy
 
 The loader allows custom base address selection:
+
 - **Original addresses**: Use addresses from ELF (may be 0)
 - **0x400000**: Typical Linux/ELF base (default)
 - **0x10000000**: High memory
@@ -44,6 +47,7 @@ The loader allows custom base address selection:
 ### Segment Permission Mapping
 
 Segments are classified by their permission flags:
+
 - `EXEC | READ` (0x5) → CODE segment
 - Other combinations → DATA segment
 
@@ -55,6 +59,7 @@ Segments are classified by their permission flags:
 ### Compiler Settings for IDA
 
 When loading PS4 modules, the loader sets:
+
 ```python
 COMP_GNU                    # GNU compiler
 sizeof(bool) = 0x1         # 1 byte boolean
@@ -66,6 +71,7 @@ DEMNAM_GCC3                # Use GCC3 name demangling
 ### Segment Alignment
 
 Recognizes these alignment values:
+
 ```python
 AL_NONE = 0x0      # Absolute
 AL_BYTE = 0x1      # Byte-aligned
@@ -96,6 +102,7 @@ AL_4K = 0x4000     # 4K page-aligned
 ## Differences from Standard ELF
 
 The loader specifically checks for and handles:
+
 - Custom Sony segment types (PT_SCE_*)
 - Custom Sony ELF types (ET_SCE_*)
 - Missing or empty section header tables
@@ -105,6 +112,7 @@ The loader specifically checks for and handles:
 ## Integration Notes for Python Parser
 
 Key takeaways for our Python implementation:
+
 1. Must handle missing section headers gracefully
 2. Should support custom base address relocation
 3. Need to map PS4-specific segment types to meaningful names

@@ -1,6 +1,6 @@
 # dwarf2cpp - DWARF to C++ Header Generation
 
-Source: https://github.com/endstone-insider/dwarf2cpp
+Source: <https://github.com/endstone-insider/dwarf2cpp>
 Local: `D:\dwarf2cpp\src\dwarf2cpp`
 Language: Python + C++ (pybind11)
 Purpose: Generate C++ headers from DWARF debug information
@@ -8,6 +8,7 @@ Purpose: Generate C++ headers from DWARF debug information
 ## Overview
 
 dwarf2cpp is a **production tool** for reverse engineering that:
+
 - Extracts type information from DWARF-enabled binaries
 - Generates compilable C++ header files
 - Uses LLVM's industrial-strength DWARF parser via pybind11
@@ -19,7 +20,7 @@ dwarf2cpp is a **production tool** for reverse engineering that:
 
 ### Hybrid C++/Python Design
 
-```
+```text
 ┌─────────────────────────────────────┐
 │  Python Layer (visitor.py)          │
 │  - High-level logic                 │
@@ -89,6 +90,7 @@ private:
 ```
 
 **Exposed to Python**:
+
 - `DWARFContext` - Top-level parser
 - `DWARFUnit` - Compilation unit
 - `DWARFDie` - Debug information entry
@@ -133,6 +135,7 @@ class Function(Object):
 ```
 
 **Models**:
+
 - `Namespace` - Namespace scope
 - `Class` / `Struct` / `Union` - Aggregate types
 - `Function` - Methods and functions
@@ -187,6 +190,7 @@ class Visitor:
 ```
 
 **Visitor Methods** (40+ specialized visitors):
+
 - `visit_compile_unit` - Entry point
 - `visit_class_type` - C++ classes
 - `visit_structure_type` - C structs
@@ -204,6 +208,7 @@ class Visitor:
 **Challenge**: Convert DWARF type references to C++ syntax
 
 **LLVM's DWARFTypePrinter** handles:
+
 - **Qualified names**: `namespace::Class::NestedClass`
 - **Pointers/References**: `const int *`, `std::string &`
 - **Arrays**: `int[10]`, `char[5][5]`
@@ -212,6 +217,7 @@ class Visitor:
 - **Const/Volatile**: `const volatile int *`
 
 **Example**:
+
 ```python
 printer = DWARFTypePrinter()
 printer.append_qualified_name(die)
@@ -275,6 +281,7 @@ self._param_names: dict[str, list[str]] = {}
 ```
 
 **Why cache?**
+
 - Types referenced multiple times (e.g., `int`, `std::string`)
 - Forward declarations + definitions
 - Template instantiations
@@ -300,6 +307,7 @@ def merge(self, other: Object) -> bool:
 ```
 
 **Use case**:
+
 ```cpp
 // Declaration (DW_AT_declaration=true)
 class MyClass;
@@ -336,7 +344,8 @@ def files(self) -> Generator[tuple[str, dict[int, list[Object]]], None, None]:
 ```
 
 **Output structure**:
-```
+
+```text
 out/
 ├── include/
 │   ├── MyClass.h
@@ -348,6 +357,7 @@ out/
 ### 4. Template Handling
 
 **DWARF represents templates as**:
+
 - `DW_TAG_template_type_parameter` - Type parameters (`typename T`)
 - `DW_TAG_template_value_parameter` - Value parameters (`int N`)
 
@@ -366,6 +376,7 @@ def visit_template_type_parameter(self, die: DWARFDie):
 ```
 
 **Generated**:
+
 ```cpp
 template<typename T = int, int N = 10>
 class Array { ... };
@@ -387,7 +398,8 @@ for i, cu in (pbar := tqdm(
 ```
 
 **Output**:
-```
+
+```text
 [1/2305] Visiting compile unit src/main.cpp
 [2/2305] Visiting compile unit src/utils.cpp
 ...
@@ -404,6 +416,7 @@ for i, cu in (pbar := tqdm(
 | Type reconstruction | N/A | Native | ∞ |
 
 **Why faster?**
+
 - Native C++ DWARF parser (zero Python overhead)
 - LLVM's optimized data structures
 - Zero-copy string handling
@@ -415,6 +428,7 @@ for i, cu in (pbar := tqdm(
 - **LLVM**: Lazy parsing, handle-based DIEs (low)
 
 For DDOORBIS.elf (2,305 CUs):
+
 - pyelftools: ~2-3 GB
 - LLVM: ~500 MB - 1 GB
 
@@ -545,7 +559,7 @@ As documented in dwarf2cpp README:
 
 ## References
 
-- dwarf2cpp GitHub: https://github.com/endstone-insider/dwarf2cpp
-- LLVM DWARF docs: https://llvm.org/docs/SourceLevelDebugging.html
-- pybind11 docs: https://pybind11.readthedocs.io/
+- dwarf2cpp GitHub: <https://github.com/endstone-insider/dwarf2cpp>
+- LLVM DWARF docs: <https://llvm.org/docs/SourceLevelDebugging.html>
+- pybind11 docs: <https://pybind11.readthedocs.io/>
 - Example use: Minecraft Bedrock Edition header extraction

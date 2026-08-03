@@ -139,7 +139,7 @@ when the Mermaid source is the maintainable artifact.
    Explain each diagram in nearby text.
 6. **Label.** Attach implementation status, evidence, authority, uncertainty, and the next step.
 7. **Synchronize.** Update navigation, README, roadmap/spec, and applicable instruction adapters.
-8. **Validate.** Run `uv run just docs-build`, then `uv run just check` and relevant tests. For
+8. **Validate.** Run `uv run just docs-check`, then `uv run just check` and relevant tests. For
    nested tooling use `uv run --directory tools/dwarf_spec_pipeline ...`.
 9. **Retire.** Remove obsolete duplicate pages and stale links. Git history is the archive.
 

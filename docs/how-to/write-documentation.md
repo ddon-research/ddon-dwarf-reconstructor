@@ -81,7 +81,8 @@ an unchecked spec task with a named next step and acceptance evidence.
 Run the site build and repository gate:
 
 ```powershell
-uv run just docs-build
+uv run just docs-tools-install  # once after checkout or lockfile changes
+uv run just docs-check
 uv run just check
 ```
 
@@ -96,7 +97,7 @@ For a multi-turn documentation refactor, use this goal shape:
 
 ```text
 Outcome: one source-backed page or documentation contract is complete.
-Evidence: changed files, source/tests/spec links, docs-build, and applicable gates.
+Evidence: changed files, source/tests/spec links, docs-check, and applicable gates.
 Constraints: preserve code behavior, generated evidence, stable commands, and unrelated edits.
 Boundary: name excluded integrations, real assets, remote settings, or future work.
 Iteration: research -> inventory -> outline -> write -> review -> validate -> retire.

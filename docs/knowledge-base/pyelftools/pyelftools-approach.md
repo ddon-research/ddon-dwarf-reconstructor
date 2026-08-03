@@ -1,12 +1,13 @@
 # pyelftools API Reference and Usage Patterns
 
-Source: pyelftools (https://github.com/eliben/pyelftools)
+Source: pyelftools (<https://github.com/eliben/pyelftools>)
 **Policy**: We use pyelftools directly without reinventing DWARF parsing
 
 ## Overview
 
 pyelftools is a pure-Python library for parsing ELF and DWARF. We commit to using their API directly:
-- **Established API**: Use their proven `DWARFInfo`, `CompilationUnit`, `DIE` classes 
+
+- **Established API**: Use their proven `DWARFInfo`, `CompilationUnit`, `DIE` classes
 - **No reinvention**: Avoid custom abstractions over pyelftools
 - **Direct usage**: Leverage their methods like `iter_CUs()`, `get_DIE_from_attribute()`
 - **Upstream benefits**: Automatically get bug fixes and improvements
@@ -14,6 +15,7 @@ pyelftools is a pure-Python library for parsing ELF and DWARF. We commit to usin
 ## Core API Structure
 
 ### Entry Point - ELFFile
+
 ```python
 from elftools.elf.elffile import ELFFile
 
@@ -26,6 +28,7 @@ with open(filename, 'rb') as f:
 ```
 
 ### DWARF Information - DWARFInfo
+
 ```python
 # Main DWARF context object
 DWARFInfo
@@ -35,6 +38,7 @@ DWARFInfo
 ```
 
 ### Compilation Units - CompilationUnit
+
 ```python
 CompilationUnit
   ├── get_top_DIE() → DIE                  # Root DIE (typically DW_TAG_compile_unit)
@@ -44,6 +48,7 @@ CompilationUnit
 ```
 
 ### Debug Information Entries - DIE
+
 ```python
 DIE
   ├── tag: str                             # e.g., "DW_TAG_class_type"
@@ -57,6 +62,7 @@ DIE
 ## Essential Usage Patterns
 
 ### Basic DWARF Processing
+
 ```python
 # Standard pattern from pyelftools examples
 def process_file(filename):
@@ -74,6 +80,7 @@ def process_file(filename):
 ```
 
 ### DIE Attribute Access
+
 ```python
 # Access attributes using DWARF attribute names
 die = some_die
@@ -86,6 +93,7 @@ if type_die:
 ```
 
 ### Type Following Pattern
+
 ```python
 def resolve_type(cu: CompilationUnit, die: DIE) -> Optional[DIE]:
     """Follow DW_AT_type references - standard pyelftools pattern."""
@@ -96,6 +104,7 @@ def resolve_type(cu: CompilationUnit, die: DIE) -> Optional[DIE]:
 ```
 
 ### Tree Traversal
+
 ```python
 def find_class_by_name(cu: CompilationUnit, class_name: str) -> Optional[DIE]:
     """Find class DIE by name - use pyelftools iteration."""
@@ -110,16 +119,19 @@ def find_class_by_name(cu: CompilationUnit, class_name: str) -> Optional[DIE]:
 ## Key Characteristics
 
 ### Eager Loading
+
 - All attributes parsed when DIE is read
 - Simpler API, higher memory usage for large files
 - **Use as-is**: Don't try to optimize with custom lazy loading
 
 ### Reference Resolution  
+
 - Built-in `get_DIE_from_attribute()` method handles offsets
 - **Use built-in**: Avoid reimplementing reference following
 - Handles cross-CU references automatically
 
 ### Stream-Based Architecture
+
 - Uses file streams with seeking
 - **Reuse streams**: Don't create custom file handling
 
@@ -166,6 +178,7 @@ def find_class_by_name(cu: CompilationUnit, class_name: str) -> Optional[DIE]:
 ## PS4 ELF normalization ✅
 
 **PS4 ELF variations handled by the adapter:**
+
 - **Automatic Detection**: Identifies PS4 files by ELF type (0xfe10) and OS/ABI (FreeBSD)
 - **Dynamic Section Fixes**: Handles sh_link=0 pointing to NULL sections vs string tables
 - **Section Type Fallbacks**: Creates generic sections for unknown PS4-specific types
@@ -177,7 +190,7 @@ def find_class_by_name(cu: CompilationUnit, class_name: str) -> Optional[DIE]:
 
 Our implementation wraps pyelftools with enhanced PS4 support:
 
-```
+```text
 User Code
     ↓
 DWARFParser (our wrapper)
@@ -188,6 +201,7 @@ pyelftools (core parsing)
 ```
 
 Benefits:
+
 - Leverage pyelftools' robust parsing
 - Add PS4-specific handling
 - Provide higher-level abstractions
@@ -198,6 +212,7 @@ Benefits:
 Based on Ghidra's approach, could add:
 
 1. **Lazy Attribute Loading**
+
    ```python
    class LazyDIE:
        def __init__(self, offset, abbrev_code):
@@ -212,6 +227,7 @@ Based on Ghidra's approach, could add:
    ```
 
 2. **Index-Based Relationships**
+
    ```python
    class DWARFProgram:
        def __init__(self):
@@ -233,16 +249,19 @@ Based on Ghidra's approach, could add:
 ## Current Performance
 
 For our DDOORBIS.elf file (with DWARF):
+
 - **CUs**: 2,305 compilation units
 - **Search time**: ~1-2 minutes to find symbol
 - **Memory**: Moderate (Python overhead)
 
 Acceptable for:
+
 - One-time analysis
 - Development/research
 - Moderate-sized binaries
 
 May need optimization for:
+
 - Real-time analysis
 - Very large binaries (>1GB)
 - Batch processing

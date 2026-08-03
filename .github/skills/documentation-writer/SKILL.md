@@ -32,7 +32,8 @@ workflow, not a request to generate a generic project summary or a second source
    blocked work; do not imply that a future graph integration exists.
 6. Update navigation, the README, the roadmap/spec, and instruction adapters when the contract or
    workflow changes. Remove obsolete duplicates.
-7. Run `uv run just docs-build`, then `uv run just check` and the relevant tests. Report skipped
+7. Run `uv run just docs-tools-install` after checkout or a lockfile change, then run
+   `uv run just docs-check`, `uv run just check`, and the relevant tests. Report skipped
    real-asset, compiler, remote, or performance evidence separately.
 
 ## Review gate

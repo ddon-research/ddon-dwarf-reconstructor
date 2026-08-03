@@ -220,8 +220,8 @@ publication restores the previous bundle.
 
 ## Development automation
 
-`just` is the single task-runner source of truth. Every recipe invokes tools through the project’s
-locked uv environment:
+`just` is the single task-runner source of truth. Python tools use the locked uv environment, and
+documentation validators use the locked `tools/documentation/package-lock.json` environment:
 
 ```text
 uv run just                 # list recipes
@@ -235,14 +235,17 @@ uv run just test-non-functional # quality/operational checks
 uv run just test-observability # focused JSONL/chained traceback tests
 uv run just test            # required correctness loop, including integrations
 uv run just actionlint      # GitHub Actions workflow syntax and expression checks
-uv run just check           # Ruff, actionlint, Pyrefly, deptry, structure, architecture
+uv run just check           # code quality, Markdownlint, Mermaid, and strict site build
 uv run just coverage-ci     # coverage thresholds and CI reports
 uv run just audit            # Prospector duplicate/dead-code audit
 uv run just test-acceptance  # CLI, real-asset, and distribution acceptance
 uv run just test-real-assets # explicit local external inputs
 uv run just test-performance # explicit performance budgets
+uv run just docs-tools-install # install locked Markdown/Mermaid validators
 uv run just docs-serve       # local Zensical preview
-uv run just docs-build       # strict static-site build
+uv run just docs-lint        # lint authored Markdown
+uv run just docs-diagrams    # render Mermaid fences to temporary SVGs
+uv run just docs-check       # docs-lint, docs-diagrams, and strict site build
 uv run just package         # wheel and sdist
 uv run just package-smoke   # isolated uv tool install and CLI smoke test
 uv run just native-build    # optional Nuitka executable

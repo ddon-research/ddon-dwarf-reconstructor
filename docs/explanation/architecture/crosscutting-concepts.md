@@ -189,7 +189,7 @@ Documentation is maintained as a static, source-backed product:
 Architecture diagrams use C4 context/container/component/code levels only when each level adds
 information. UML class diagrams show code contracts, sequence diagrams show a scenario, and
 flowcharts show a pipeline or boundary. Every diagram is Mermaid source, has one stated question,
-labels every important relationship, and is validated by `uv run just docs-build`.
+labels every important relationship, and is validated by `uv run just docs-check`.
 
 ## Concept-to-source matrix
 

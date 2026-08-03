@@ -32,10 +32,13 @@ runtime telemetry or graph ingestion exists.
 - **DOC-014-8:** Publication MUST be committed, pushed, attached to the existing documentation/CI
   pull request, and verified at the configured GitHub Pages URL; a Pages settings limitation must
   be reported as a concrete remote blocker if it cannot be changed with the available authority.
+- **DOC-014-9:** The documentation quality loop MUST pin and run the official Mermaid CLI for every
+  Mermaid fence and `markdownlint-cli2` for authored site Markdown before the strict Zensical build.
 
 ## Evidence boundary
 
 Current behavior comes from the observability modules and tests, Sonar adapter and tests, Langfuse
-Compose/just recipes, and the existing Zensical workflow. Real Copilot/Codex traces, MSVC/Sonar
-execution, and public Pages availability are environmental or remote evidence and must be reported
-separately from the deterministic local site build.
+Compose/just recipes, the existing Zensical workflow, and the locked Node documentation-tool
+package. Real Copilot/Codex traces, MSVC/Sonar execution, and public Pages availability are
+environmental or remote evidence and must be reported separately from the deterministic local site
+build.

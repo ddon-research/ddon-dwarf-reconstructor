@@ -11,6 +11,8 @@
   validation; repair all local documentation gaps found by the scan.
 - [x] T008 Commit, push, and merge the intended documentation changes through PR #13.
 - [x] T009 Verify the new GitHub Pages site is reachable and record the successful deployment.
+- [x] T010 Add locked Mermaid CLI and `markdownlint-cli2` validators to the local and CI
+  documentation quality loop; repair the authored Markdown findings they expose.
 
 ## Deferred task tracking
 

@@ -8,6 +8,8 @@ unbounded in-memory intermediates. Preserve stable output ordering and source of
 
 - Use regular CPython 3.14.6 and install the complete development environment with
   `uv sync --python 3.14.6`.
+- Install Node.js 24.14.1 and the locked documentation validators with `uv run just
+  docs-tools-install` after a fresh checkout or a change to `tools/documentation/package-lock.json`.
 - Install actionlint v1.7.12 with the platform package manager and ensure it is on `PATH`; the
   root `uv run just check` recipe runs it for every local quality loop.
 - Use package-relative imports; do not import the package through the repository's `src` directory.
@@ -143,8 +145,9 @@ ordering.
   `AGENTS.md` remains the repository-wide source of truth. Keep workflow changes synchronized with
   `docs/how-to/validate-changes.md`, `docs/explanation/architecture/deployment.md`, the active
   Spec Kit feature, and the testing knowledge base.
-- GitHub Actions must mirror the local `just` contract: Code Quality runs `just check` (including
-  actionlint), package smoke, and blocking `just audit`; correctness runs taxonomy collection and
+- GitHub Actions must mirror the local `just` contract: Code Quality installs the locked
+  documentation validators, runs `just check` (including actionlint, Markdownlint, and Mermaid
+  rendering), package smoke, and blocking `just audit`; correctness runs taxonomy collection and
   `just coverage-ci`;
   the nested workflow runs its own `just ci` and Compose configuration check. Deterministic
   integration remains in the default correctness selection; real assets and performance remain
@@ -182,8 +185,10 @@ uv run just check
 uv run just test
 ```
 
-`uv run just check` includes the strict Zensical build. Use `uv run just docs-serve` for a local
-preview and keep Mermaid diagrams in Markdown source rather than generated images.
+`uv run just check` includes Markdownlint, Mermaid CLI rendering, and the strict Zensical build.
+Use `uv run just docs-serve` for a local preview and keep Mermaid diagrams in Markdown source
+rather than generated images. Run `uv run just docs-tools-install` once before the first local
+check on a fresh checkout.
 
 Before handoff, also run `uv run just test`, `uv run just coverage-ci`, and `uv run just audit`.
 For distribution changes, also run `uv run just package` and `uv run just package-smoke`.
@@ -235,7 +240,7 @@ security advisory when a patched lock entry is available.
   explanations, and research notes distinct; link between them rather than mixing purposes.
 - For current behavior, inspect source and tests; for intended behavior, cite the active spec; for
   research, preserve the source and authority. Remove obsolete duplicate prose instead of creating
-  a second contract. Use `uv run just docs-build` and then `uv run just check` for site changes.
+  a second contract. Use `uv run just docs-check` and then `uv run just check` for site changes.
 - Keep knowledge-graph infrastructure deferred until the explicit `KG-001` task defines the
   versioned loader, deterministic query fixtures, provenance rules, and acceptance evidence.
 

@@ -1,6 +1,6 @@
 # LLVM DWARF Parsing Implementation
 
-Source: LLVM Project (https://github.com/llvm/llvm-project)
+Source: LLVM Project (<https://github.com/llvm/llvm-project>)
 Path: `llvm/lib/DebugInfo/DWARF/`
 Language: C++
 Status: Production-quality, industry-standard
@@ -27,12 +27,14 @@ surface. In particular, CU-relative references must be resolved through the DIE 
 ## Overview
 
 LLVM's DWARF parser is the **reference implementation** used by:
+
 - Clang/LLVM compiler toolchain
 - lldb debugger
 - Many analysis and reverse engineering tools
 - dwarf2cpp (via pybind11 bindings)
 
 It represents the state-of-the-art in DWARF parsing with:
+
 - Full DWARF v2-v5 support
 - Thread-safe operation
 - Lazy and eager parsing modes
@@ -43,7 +45,7 @@ It represents the state-of-the-art in DWARF parsing with:
 
 ### Core Classes
 
-```
+```text
 DWARFContext (top-level)
   ├── DWARFObject (binary file abstraction)
   ├── DWARFUnitVector (collection of units)
@@ -59,6 +61,7 @@ DWARFContext (top-level)
 ### Key Components
 
 #### 1. `DWARFContext` - Top-Level Parser
+
 - **Purpose**: Entry point for all DWARF parsing
 - **Thread Safety**: Optional thread-safe mode via `DWARFContextState`
 - **Lazy Loading**: Parse on-demand or eager parse
@@ -82,6 +85,7 @@ public:
 ```
 
 #### 2. `DWARFDie` - Debug Information Entry
+
 - **Handle-based**: Lightweight, copyable (offset + unit pointer)
 - **Lazy attributes**: Attributes not parsed until accessed
 - **Navigation**: Parent/child traversal, sibling iteration
@@ -106,12 +110,14 @@ public:
 ```
 
 #### 3. `DWARFFormValue` - Attribute Values
+
 - **Type-safe access**: `getAsCString()`, `getAsUnsignedConstant()`, etc.
 - **Reference resolution**: `getAsReference()`, `getAsRelativeReference()`
 - **Block data**: `getAsBlock()` for expression blocks
 - **Error handling**: Returns `Expected<T>` for fallible operations
 
 #### 4. `DWARFTypePrinter` - Type Reconstruction
+
 - **Purpose**: Convert DWARF types to C++ syntax
 - **Qualified names**: Full namespace::class::member paths
 - **Complex types**: Pointers, arrays, templates, function types
@@ -135,12 +141,14 @@ public:
 LLVM supports multiple accelerator table formats for **O(1) symbol lookups**:
 
 #### Apple Accelerator Tables
+
 - `.debug_names` - Symbol names
 - `.debug_types` - Type names
 - `.debug_namespaces` - Namespace names
 - `.debug_objc` - Objective-C selectors
 
 #### DWARF v5 `.debug_names`
+
 - Standardized accelerator table
 - Supports multiple indexes per DIE
 - Hash-based lookup
@@ -175,6 +183,7 @@ for (auto CU : Context.compile_units()) {
 ```
 
 **Implementation**:
+
 - `DWARFContextState` protects shared state with mutexes
 - Lazy caches use `std::mutex` for thread-safe initialization
 - Each `DWARFDie` is lightweight and thread-safe to copy
@@ -193,6 +202,7 @@ std::shared_ptr<DWARFContext> DWOCtx =
 ```
 
 **Benefits**:
+
 - Smaller main binaries
 - Faster linking (debug info in separate files)
 - Share debug info across builds
@@ -214,6 +224,7 @@ Context.setWarningHandler([](Error E) {
 ```
 
 **Strategy**:
+
 - Invalid abbreviations → Skip DIE, continue
 - Malformed attributes → Use default value
 - Missing sections → Graceful degradation
@@ -223,6 +234,7 @@ Context.setWarningHandler([](Error E) {
 LLVM supports both modes:
 
 #### Lazy Parsing (Default)
+
 ```cpp
 // Units parsed on first access
 for (auto &CU : Context.compile_units()) {
@@ -232,12 +244,14 @@ for (auto &CU : Context.compile_units()) {
 ```
 
 #### Eager Parsing
+
 ```cpp
 // Force immediate parsing
 DWARFDie Die = CU->getUnitDIE(/*Extract=*/true);
 ```
 
 **Trade-offs**:
+
 - **Lazy**: Lower memory, faster startup, pay-per-use
 - **Eager**: Higher memory, slower startup, predictable performance
 
@@ -319,16 +333,19 @@ class DWARFObject {
 ### Option 1: Python Bindings (dwarf2cpp approach)
 
 **Pros**:
+
 - Native C++ speed
 - Full LLVM features
 - Battle-tested implementation
 
 **Cons**:
+
 - C++ build dependency (pybind11)
 - Platform-specific wheels
 - Larger distribution size
 
 **Example**:
+
 ```python
 from _dwarf import DWARFContext
 
@@ -342,16 +359,19 @@ for cu in context.compile_units:
 ### Option 2: Call LLVM Tools (llvm-dwarfdump)
 
 **Pros**:
+
 - No C++ build required
 - Easy integration
 - Human-readable output
 
 **Cons**:
+
 - Subprocess overhead
 - Parsing text output
 - Less flexible
 
 **Example**:
+
 ```python
 import subprocess
 import json
@@ -366,11 +386,13 @@ data = json.loads(result.stdout)
 ### Option 3: Hybrid (Our Current + LLVM for Advanced Features)
 
 **Pros**:
+
 - Best of both worlds
 - Use pyelftools for simple cases
 - Use LLVM bindings for complex cases (type printing, accelerators)
 
 **Cons**:
+
 - Dual dependency
 - Complexity
 
@@ -422,7 +444,7 @@ data = json.loads(result.stdout)
 
 ## References
 
-- LLVM DWARF docs: https://llvm.org/docs/SourceLevelDebugging.html
+- LLVM DWARF docs: <https://llvm.org/docs/SourceLevelDebugging.html>
 - LLVM DWARFContext header: `llvm/include/llvm/DebugInfo/DWARF/DWARFContext.h`
 - LLVM DWARFDie implementation: `llvm/lib/DebugInfo/DWARF/DWARFDie.cpp`
 - Type printer: `llvm/lib/DebugInfo/DWARF/DWARFTypePrinter.cpp` (24KB, ~800 lines)

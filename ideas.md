@@ -281,11 +281,45 @@ Most of the PRs are failing due to the correctness tests: https://github.com/ddo
 Afterwards, review the current copilot, codex, python instructions and revalidate the tooling loop for changes. Update documentation, specs and the knowledge base.
 Derive a plan first and refactor the code aggressively.
 --
-TODO:
+DONE:
 Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
 Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
 
-Scan the entire codebase and documentation. Completely revamp the documentation approach. Introduce a wiki-like setup with a knowledge graph. I want to have a static site publishable to GitHub pages. Consider we need functional and technical documentation incl. high-level architecture and low-level solution approaches. Check out the following resources and derive the next best step. I am leaning toward zensical as tool with arc42-style docs for architecture and an overarching diataxis-style approach. Diagrams and visualizations should be generated with an as-code approach using mermaid. Not sure if flint fits in anywhere yet. Our specs should serve as a roadmap. Identify gaps, fill them based on the source code analysis and how things currently work and throw away all obsolete documentation.
+Review the CI setup and the GitHub Actions workflows. Check if they are validating the right things compared to our local setup. Ensure all actions in use are up to date. Check if there are low effort integrations provided by GitHub and best practices we should follow. Make sure we stick to the free plan features. Also check in awesome-copilot for useful skills/agents that could help us out here. Improve instructions: 
+https://github.com/github/awesome-copilot/blob/main/agents/github-actions-expert.agent.md
+https://github.com/github/awesome-copilot
+
+Useful tools:
+https://github.com/github/github-mcp-server
+https://cli.github.com/manual/
+
+References:
+https://docs.github.com/en/actions/tutorials/build-and-test-code/python
+https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax
+https://docs.github.com/en/actions/concepts/workflows-and-actions/workflows
+https://docs.github.com/en/code-security/concepts/supply-chain-security/supply-chain-security
+https://docs.github.com/en/code-security/concepts/code-scanning/code-scanning
+https://docs.github.com/en/code-security/concepts/secret-security/secret-leakage-risks
+https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning
+https://docs.github.com/en/code-security/concepts/code-scanning/tool-status-page
+https://docs.github.com/en/code-security/concepts/code-scanning/codeql/codeql-code-scanning
+https://docs.github.com/en/code-security/concepts/supply-chain-security/best-practices-for-maintaining-dependencies
+https://docs.github.com/en/code-security/concepts/supply-chain-security/dependency-graph-data
+https://docs.github.com/en/code-security/concepts/supply-chain-security/about-the-dependabot-yml-file
+https://docs.github.com/en/code-security/concepts/supply-chain-security/dependency-graph
+https://github.com/github/awesome-copilot/blob/main/instructions/markdown.instructions.md
+https://learn.chatgpt.com/docs/agent-configuration/agents-md
+
+Afterwards, review the current copilot, codex, derive new GHA instructions (check https://github.com/github/awesome-copilot/blob/main/instructions/github-actions-ci-cd-best-practices.instructions.md, https://github.com/github/awesome-copilot/blob/main/instructions/markdown-content-creation.instructions.md as foundation & https://github.com/github/awesome-copilot/blob/main/instructions/instructions.instructions.md) and revalidate the tooling loop for changes. Update documentation, specs and the knowledge base.
+Derive a plan first and refactor the code aggressively.
+--
+DONE:
+Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
+Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
+
+
+
+Scan the entire codebase and documentation. Completely revamp the documentation approach. Introduce a wiki-like setup with a knowledge graph. I want to have a static site publishable to GitHub pages. Consider we need functional and technical documentation incl. high-level architecture and low-level solution approaches. Check out the following resources and derive the next best step. I am leaning toward zensical as tool with arc42-style docs for architecture and an overarching diataxis-style approach. Diagrams and visualizations should be generated with an as-code approach using mermaid. Make use of UML diagrams. Our specs should serve as a roadmap. Identify gaps, fill them based on the source code analysis and how things currently work and throw away all obsolete documentation. 
 https://github.com/zensical/zensical
 https://zensical.org/docs/get-started/
 https://zensical.org/docs/publish-your-site/
@@ -295,14 +329,76 @@ https://github.com/arc42/arc42-template/tree/master/EN
 https://diataxis.fr/
 https://github.com/evildmp/diataxis-documentation-framework
 
-Afterwards, review the current copilot, codex, python instructions and revalidate the tooling loop for changes. Update documentation, specs and the knowledge base.
-Derive a plan first and refactor the code aggressively.
+
+
+Afterwards, review the current copilot, codex, python instructions and revalidate the tooling loop for changes. 
+Derive a plan first and refactor aggressively.
+--
+DONE:
+Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
+Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
+
+Consider the following views on documentation and extract valuable principles to enhance our setup:
+arc42 tips/best practices:
+https://www.innoq.com/en/blog/2022/01/principles-of-technical-documentation/
+https://arc42.org/documentation/
+https://docs.arc42.org/home/ -> https://github.com/arc42/docs.arc42.org-site/
+https://docs.arc42.org/keywords/
+https://faq.arc42.org/home/
+https://www.innoq.com/en/blog/2022/08/brief-introduction-to-arc42/
+diataxis opinion pieces:
+https://emmanuelbernard.com/blog/2024/12/19/diataxis/
+https://blog.sequinstream.com/we-fixed-our-documentation-with-the-diataxis-framework/
+Foundation for our own custom instructions:
+https://github.com/github/awesome-copilot/blob/main/skills/documentation-writer/SKILL.md
+https://github.com/github/awesome-copilot/blob/main/agents/se-technical-writer.agent.md
+https://github.com/github/awesome-copilot/blob/main/agents/project-documenter.agent.md
+
+
+Afterwards, review the current copilot, codex, and custom instructions. Derive a new tone, style and instructions for reuse whenever documentation is created. Make sure we always stick to arc42+Diataxis for our overall documentation in the repository.
+Derive or update docs.
+Derive a plan first and refactor aggressively.
+--
+DONE:
+Migrate langfuse and sonarqube docs to developer-focused how-tos and/or crosscutting concepts sections https://docs.arc42.org/section-8/
+Also, continue to scan the source code and refine the docs incrementally until there are no gaps
+Be thorough and detailed, include UML and other useful architectural diagrams, e.g. follow the C4 model: https://c4model.com/, https://c4model.com/introduction, https://c4model.com/abstractions, https://c4model.com/diagrams, https://mermaid.ai/open-source/syntax/c4.html
+Mermaid best practices:
+https://handbook.gitlab.com/handbook/tools-and-tips/mermaid/
+https://mermaid.ai/open-source/intro/syntax-reference.html
+Pursue the publication end-to-end incl. committing, pushing, opening a PR
+Involve me when you really can't execute a settings change in GitHub yourself and are blocked
+/Goal: Don't stop until you can verify the new GitHub page is available on the web
+--
+WIP:
+Install and use mermaid-cli and/or mermaid-lint to validate diagrams:
+https://github.com/jasonworden/mermaid-lint
+https://pypi.org/project/mermaid-cli/
+https://github.com/mermaid-js/mermaid-cli
+Do the same for markdown:
+https://github.com/markdownlint/markdownlint
+https://github.com/davidanson/markdownlint
+https://github.com/DavidAnson/markdownlint-cli2
+--
+TODO:
+
+Instead of Neo4j, evaluate ladybugdb which follows a leaner approach similar to SQLite and provides a Python integration and CLI/uv support.
+
+https://theconsensus.dev/p/2026/05/29/ladybug-duckdb-and-postgresql.html
+https://volodymyrpavlyshyn.medium.com/hybrid-graph-rag-with-ladybugdb-when-vectors-meet-graphs-aa7ddec45632
+https://docs.ladybugdb.com/installation/
+https://docs.ladybugdb.com/tutorials/python/
+https://ladybugdb.com/
+https://docs.ladybugdb.com/
+https://github.com/LadybugDB/ladybug
+https://docs.ladybugdb.com/tutorials/python/
+https://docs.ladybugdb.com/import/graph-databases/
 --
 TODO:
 Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
 Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
 
-Profile the application. The goal for now is collecting metrics and evidence. Check approaches outlined here and derive an action plan and a reusable pattern for the future whenever we want to profile the application again. Derive new specs based on the findings:
+Profile the application. The goal for now is collecting metrics and evidence for CPU, RAM, I/O behavior and method-level traces. Check the references and identify the best and most modern tooling setup. Derive a reusable pattern for the future whenever we want to profile the application again, e.g. via "performance"/profiling tests that can be run via just/pytest or some tooling.
 https://daily.dev/blog/top-7-python-profiling-tools-for-performance/
 https://docs.python.org/3/library/profile.html
 https://github.com/joerick/pyinstrument
@@ -317,3 +413,4 @@ https://blog.sentry.io/python-performance-testing-a-comprehensive-guide/
 
 Afterwards, review the current copilot, codex, python instructions and revalidate the tooling loop for changes. Update documentation, specs and the knowledge base.
 Derive a plan first and refactor the code aggressively.
+--

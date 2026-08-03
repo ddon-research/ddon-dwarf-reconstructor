@@ -84,6 +84,7 @@ When CI behavior changes, update the affected Zensical source pages (especially
 base, and the Copilot/Claude adapters as applicable. Update `zensical.toml` navigation when adding
 pages. Follow the [documentation style reference](../../docs/reference/documentation-style.md): give
 the page one Diátaxis intent, map architecture explanation to arc42, label evidence and deferred
-work, and keep Mermaid/UML source in Markdown. Use CommonMark-compatible headings, blank lines
-around lists and code blocks, fenced blocks with a language where syntax is shown, valid descriptive
-links, and tables for repeated mappings.
+work, and keep Mermaid/UML source in Markdown. Use the locked `uv run just docs-check` contract
+for Markdownlint, Mermaid CLI rendering, and the strict site build. Use CommonMark-compatible
+headings, blank lines around lists and code blocks, fenced blocks with a language where syntax is
+shown, valid descriptive links, and tables for repeated mappings.

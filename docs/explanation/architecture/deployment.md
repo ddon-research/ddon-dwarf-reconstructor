@@ -13,10 +13,11 @@ into the container.
 
 ## Documentation deployment
 
-Zensical builds the checked-in `docs/` tree into `site/`. The repository's Pages workflow runs the
-strict build with the locked uv environment, uploads `site`, and deploys it through GitHub Pages.
-The workflow is an adapter over the local `uv run just docs-build` contract and pins every external
-action to a full commit SHA.
+Zensical builds the checked-in `docs/` tree into `site/`. The repository's Pages workflow installs
+the locked Node documentation validators, runs the local `uv run just docs-check` contract, uploads
+`site`, and deploys it through GitHub Pages. The workflow pins every external action to a full
+commit SHA and uses both `uv.lock` and `tools/documentation/package-lock.json` as dependency
+contracts.
 
 Developer-only observability and quality tooling is deliberately separate from this runtime
 deployment. [Langfuse](../../how-to/observability/langfuse.md) runs as a loopback Docker stack for
