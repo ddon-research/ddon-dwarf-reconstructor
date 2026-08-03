@@ -86,7 +86,7 @@ real PS4 output manifests in fresh and warm processes.
 - Run all required gates and record any deferred compiler or real-asset work in
   this feature rather than in generated output.
 
-## Phase 6: Converge cross-platform CI evidence — local slice complete; remote rerun pending
+## Phase 6: Converge cross-platform CI evidence — complete
 
 - Inspect every open Dependabot proposal with `gh pr diff`, `gh pr checks`, and failed job logs
   before changing product code. Separate proposal validation from the shared base failure.
@@ -97,8 +97,8 @@ real PS4 output manifests in fresh and warm processes.
   filesystem distinction in the testing knowledge base and client instructions.
 
 Validation: artifact/source-bound focused tests, root `just check`, required correctness and
-coverage loops, nested specification checks, and GitHub PR status inspection are complete for the
-unpublished local repair. A post-publication PR status reinspection remains T025.
+coverage loops, nested specification checks, and GitHub PR status inspection all passed. The
+Dependabot set was merged as PRs #1-6, #8, and #9; conflicted PR #7 was closed as superseded.
 
 ## Dependency order
 

@@ -70,7 +70,10 @@ Focused local evidence after the refactor:
 - `uv run --directory tools/dwarf_spec_pipeline just check`: passed; Ruff, formatting, Pyrefly,
   and deptry are green.
 
-No post-fix remote PR rerun was triggered because the repair has not been published to the
-Dependabot branches; T025 remains the external handoff action. The existing remote runs therefore
-remain evidence for the pre-fix failure, not acceptance of the repair. Real PS4, compiler, and
-proprietary tool evidence remain explicit environment-gated checks.
+Post-fix remote convergence completed. PRs #1-6, #8, and #9 merged after green correctness,
+quality, and nested-pipeline checks; the conflicted Dependabot PR #7 was closed as superseded by
+the conflict-free replacement #8. The final `main` commit `6d78943` passed the Required
+Correctness Tests and Coverage, Code Quality, Dependency Graph, and DWARF Specification Pipeline
+workflows. PR #9 synchronized `tools/dwarf_spec_pipeline/uv.lock` with the merged pytest and
+pytest-cov bounds. T025 is complete. Real PS4, compiler, and proprietary tool evidence remain
+explicit environment-gated checks.

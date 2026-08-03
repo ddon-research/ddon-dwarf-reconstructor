@@ -109,5 +109,6 @@
 - [x] T024 Update AGENTS/Copilot/Python/Claude guidance, goal workflow, README, architecture,
   testing docs, Spec Kit artifacts, and the testing knowledge base with the CI and filesystem
   contracts. **Tier 1/2**.
-- [ ] T025 Re-run the remote PR checks after publishing the fix and append the final CI evidence.
-  **Tier 2 external handoff**.
+- [x] T025 Re-run the remote PR checks after publishing the fix, resolve the stale pytest PR via
+  conflict-free replacement PR #8, synchronize the nested lockfile in PR #9, and append the
+  final CI evidence. **Tier 2 external handoff**.

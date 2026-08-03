@@ -134,9 +134,8 @@ The source catalog uses a relocation-stable metadata key (size, mtime, device, a
 reuse a verified SHA-256 when an immutable input is moved. It retains ctime and recorded paths as
 a same-path replacement guard; ctime drift is reusable only when the old path disappeared. Use
 `artifacts verify-source` when an explicit full rehash is required. This distinction is covered by
-the artifact regression tests intended for both the Linux CI runner and the Windows development
-host; the current Linux failure and post-fix Windows run are recorded in the testing knowledge
-base until the fix is published for a remote rerun.
+the artifact regression tests on both the Linux CI runner and the Windows development host; the
+post-fix PR checks and the merged `main` workflows now pass this contract.
 
 ## External tool evidence
 

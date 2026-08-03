@@ -133,5 +133,9 @@ index/cache tests passed 27 tests, and Pyrefly reported zero diagnostics. The ro
 passed `just check`, `just test-unit` (445 passed, 6 deselected), `just test` (447 passed, 4
 deselected), `just coverage-ci` (84.87% total coverage), and `just audit` (zero diagnostics).
 The nested project passed `just test` (17 passed, 1 deselected) and `just check`; its official
-test selection skipped one test because the external official artifact is unavailable. A
-post-fix remote PR rerun remains T025 because the repair has not been published.
+test selection skipped one test because the external official artifact is unavailable. Post-fix
+remote convergence then passed for every proposal: PRs #1-6, #8, and #9 merged after green
+correctness, quality, and nested-pipeline checks; conflicted PR #7 was closed as superseded by
+#8. The final `main` commit `6d78943` also passed the correctness, quality, dependency-graph, and
+specification workflows. PR #9 synchronized the nested `uv.lock` metadata with the merged
+pytest and pytest-cov bounds.
