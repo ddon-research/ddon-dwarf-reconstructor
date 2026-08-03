@@ -60,7 +60,7 @@ jobs:
         
     - name: Publish test results
       if: always()
-      uses: EnricoMi/publish-unit-test-result-action@b3f8796819acf652cecbf27a64fa9ac8d7e137ee # v2
+      uses: EnricoMi/publish-unit-test-result-action@d0a4676d0e0b938bc201470d88276b7c74c712b3 # v2
       continue-on-error: true
       with:
         files: test-results.xml
