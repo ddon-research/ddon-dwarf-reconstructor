@@ -39,8 +39,8 @@
 - Root fast: `uv run just test-unit`, `uv run just check`, `uv run just test`.
 - Handoff: `uv run just coverage-ci`, `uv run just audit`, package smoke as applicable.
 - Nested: `uv run --directory tools/dwarf_spec_pipeline just test`, `test-official`, and `check`.
-- External: GitHub Pages settings and deployment are remote follow-up evidence, not local build
-  evidence.
+- External: GitHub Pages activation and deployment are remote evidence checked after the local
+  build; record the configured URL and workflow result separately from local acceptance evidence.
 
 ## Final validation evidence
 
