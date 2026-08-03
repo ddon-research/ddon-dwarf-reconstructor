@@ -37,6 +37,6 @@
 - [x] T013 Run nested `just test`, `just check`, and `just test-official` when official-source
   prerequisites are available; record skipped external prerequisites explicitly.
 - [ ] T014 Run the final real-header/MSVC/Orbis loop-back with explicit compiler and disassembly
-  paths; this remains an external acceptance prerequisite, not a parser-completion claim. Current
-  blocker: `output/msvc-header-validation-20260801/compile_msvc.cmd` is absent, although the
-  documented Orbis executable is available.
+  paths; this remains an external acceptance prerequisite, not a parser-completion claim. The
+  repository-owned setup now generates and compiles the five standalone Sonar translation units;
+  the remaining gap is the final aggregate/Orbis assembly comparison.

@@ -68,6 +68,12 @@ The current validation corpus is:
 The generated bundle is local and ignored:
 `output/msvc-header-validation-20260801/`.
 
+Generate the Sonar/MSVC translation units and wrapper command from that bundle with:
+
+```powershell
+uv run just sonar-validate
+```
+
 Load the x64 developer environment and run the prepared wrapper from the validation
 directory:
 

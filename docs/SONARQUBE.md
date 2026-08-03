@@ -2,8 +2,8 @@
 
 The repository uses SonarQube for VS Code for local C/C++ analysis of the generated MSVC
 validation headers. SonarQube for VS Code requires a compilation database for C and C++ code.
-The repository generates that database with Sonar's Windows Build Wrapper around the existing
-Visual Studio x64 validation command.
+The repository generates the validation translation units and command file, then uses Sonar's
+Windows Build Wrapper around that generated Visual Studio x64 command.
 
 ## Prerequisites
 
@@ -46,16 +46,18 @@ Run the prerequisite check first:
 uv run just sonar-validate
 ```
 
-Then capture the existing MSVC validation command:
+Then capture the generated MSVC validation command:
 
 ```text
 uv run just sonar-capture
 ```
 
-On 2026-08-03 this prerequisite check was unavailable in the checkout because
-`output/msvc-header-validation-20260801/compile_msvc.cmd` was absent. Restore or explicitly supply
-the generated validation command before treating a Sonar/MSVC run as compiler evidence; this
-missing external artifact does not weaken the deterministic parser or specification gates.
+`prepare_msvc_analysis.py` creates the Sonar inputs from the generated headers in the validation
+bundle: one standalone `.cpp` per header, `sonar-inputs.json`, and `compile_msvc.cmd`. The current
+setup generated five standalone translation units, and `sonar-capture` produced a validated
+five-entry compilation database with MSVC exit code 0. It also writes `translation-units/compile_all.cpp`
+as optional aggregate evidence, but the default Sonar wrapper does not compile that aggregate
+because the representative headers intentionally repeat declarations across standalone closures.
 
 The database is written to:
 
@@ -81,6 +83,10 @@ uv run python -m tools.sonar.prepare_msvc_analysis --allow-validation-failure
 This mode succeeds only after the Build Wrapper has produced a valid JSON database containing at
 least one C or C++ translation-unit entry. It reports the original MSVC exit code in its result;
 it does not make the generated headers compile or suppress the compiler diagnostics.
+
+To inspect the optional aggregate separately, compile
+`output/msvc-header-validation-20260801/translation-units/compile_all.cpp` with the same MSVC
+environment and record its diagnostics independently from the Sonar compilation database.
 
 ## Activate Analysis in VS Code
 

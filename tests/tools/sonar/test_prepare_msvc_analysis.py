@@ -14,11 +14,14 @@ pytestmark = [pytest.mark.unit, pytest.mark.non_functional, pytest.mark.quality]
 def _paths(tmp_path: Path) -> sonar.SonarPaths:
     validation = tmp_path / "validation"
     validation.mkdir()
+    headers = validation / "ps4"
+    headers.mkdir()
     script = validation / "compile_msvc.cmd"
-    script.write_text("@echo off\n", encoding="utf-8")
     return sonar.SonarPaths(
         repository_root=tmp_path,
         validation_directory=validation,
+        header_directory=headers,
+        translation_unit_directory=validation / "translation-units",
         validation_script=script,
         output_directory=tmp_path / "wrapper",
     )
@@ -92,7 +95,19 @@ def test_msvc_probe_uses_cmd_and_returns_compiler(
     compiler = sonar.test_msvc_toolchain(developer)
 
     assert compiler.endswith("cl.exe")
-    assert calls == [["cmd.exe", "/d", "/s", "/c", f'call "{developer}" -arch=x64 && where cl']]
+    assert calls == [
+        [
+            "cmd.exe",
+            "/d",
+            "/c",
+            "call",
+            str(developer),
+            "-arch=x64",
+            "&&",
+            "where",
+            "cl",
+        ]
+    ]
 
 
 def test_compile_commands_require_cpp_unit_and_msvc_flags(tmp_path: Path) -> None:
@@ -112,6 +127,47 @@ def test_compile_commands_reject_malformed_json(tmp_path: Path) -> None:
 
     with pytest.raises(sonar.SonarAnalysisError, match="Could not read compilation database"):
         sonar.validate_compile_commands(report)
+
+
+def test_prepare_validation_inputs_generates_sources_command_and_manifest(tmp_path: Path) -> None:
+    paths = _paths(tmp_path)
+    (paths.header_directory / "rTexture.h").write_text("class rTexture {};\n", encoding="utf-8")
+    (paths.header_directory / "rTutorialDialogMessage.h").write_text(
+        "class rTutorialDialogMessage {};\n", encoding="utf-8"
+    )
+
+    inputs = sonar.prepare_validation_inputs(paths)
+
+    assert inputs.header_count == 2
+    assert inputs.translation_unit_count == 2
+    assert (paths.translation_unit_directory / "compile_rTexture.cpp").read_text(
+        encoding="utf-8"
+    ) == '#include "rTexture.h"\n'
+    assert (paths.translation_unit_directory / "compile_tutorial.cpp").read_text(
+        encoding="utf-8"
+    ) == '#include "rTutorialDialogMessage.h"\n'
+    aggregate = (paths.translation_unit_directory / "compile_all.cpp").read_text(encoding="utf-8")
+    assert aggregate.index('#include "rTexture.h"') < aggregate.index(
+        '#include "rTutorialDialogMessage.h"'
+    )
+    script = paths.validation_script.read_text(encoding="utf-8")
+    assert "/std:c++latest /EHsc /W4 /Zc:__cplusplus" in script
+    assert "compile_tutorial.cpp" in script
+    assert "compile_all.cpp" not in script
+    manifest = json.loads(inputs.manifest_path.read_text(encoding="utf-8"))
+    assert manifest["translation_units"] == [
+        "compile_rTexture.cpp",
+        "compile_tutorial.cpp",
+    ]
+    assert manifest["aggregate_translation_unit"] == "compile_all.cpp"
+    assert manifest["headers"][0]["path"] == "rTexture.h"
+
+
+def test_prepare_validation_inputs_requires_generated_headers(tmp_path: Path) -> None:
+    paths = _paths(tmp_path)
+
+    with pytest.raises(sonar.SonarAnalysisError, match=r"No generated C\+\+ headers"):
+        sonar.prepare_validation_inputs(paths)
 
 
 def test_validate_only_reports_configuration_without_creating_output(

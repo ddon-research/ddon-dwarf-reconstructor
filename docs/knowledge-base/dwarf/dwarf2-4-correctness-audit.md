@@ -79,10 +79,12 @@ or logs in source control.
   unavailable original C++ behavior or prove that a generated declaration is recompilable.
 - MSVC compilation and Sonar/assembly comparison remain external validation stages for final header
   stubs. A passing parser test is not behavioral proof.
-- On 2026-08-03, `uv run just sonar-validate` was unavailable because the retained validation
-  directory did not contain `output/msvc-header-validation-20260801/compile_msvc.cmd`. The
-  documented Orbis tool exists at `D:\SCE\ORBIS SDKs\8.000\host_tools\bin\orbis-objdump.exe`,
-  but this missing MSVC command prevents claiming the final compiler/disassembly loop-back.
+- On 2026-08-03, `prepare_msvc_analysis.py` generated five standalone translation units and
+  `compile_msvc.cmd`; `uv run just sonar-validate` and strict `uv run just sonar-capture` passed,
+  producing a validated five-entry MSVC compilation database. The generated aggregate unit remains
+  optional evidence because it reports duplicate declarations across independent header closures.
+- The documented Orbis tool exists at `D:\SCE\ORBIS SDKs\8.000\host_tools\bin\orbis-objdump.exe`.
+  A final assembly/disassembly comparison is still separate acceptance evidence.
 - DWARF3 is indexed and tested as a compatibility vocabulary, but no identified PS4 producer asset
   in this checkout establishes a DWARF3 target baseline.
 - The implementation supports the exercised producer subset, not every tag/form/operation in the
@@ -98,3 +100,5 @@ or logs in source control.
   `semantic-index.json` establish the normalized specification facts.
 - `src/ddon_dwarf_reconstructor/infrastructure/elf_evidence.py` and
   `zstd_dump_evidence.py` define the repeatable evidence surfaces.
+- `tools/sonar/prepare_msvc_analysis.py` generates the local MSVC/Sonar translation units,
+  wrapper command, input manifest, and validated compilation database.

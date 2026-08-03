@@ -9,9 +9,10 @@ DWARF reconstructor without becoming part of the runtime package.
   2, 3, and 4 source documents into deterministic, structured JSON and clean
   Markdown artifacts.
 - [`sonar/`](sonar/) contains the root checkout's typed SonarQube/MSVC
-  preparation adapter. Invoke it through `uv run just sonar-validate`,
-  `uv run just sonar-capture`, or its Python module; it is not a separately
-  installed runtime tool.
+  preparation adapter. It generates validation translation units and
+  `compile_msvc.cmd` from the local generated header bundle, then can be
+  invoked through `uv run just sonar-validate`, `uv run just sonar-capture`,
+  or its Python module; it is not a separately installed runtime tool.
 
 The DWARF specification pipeline owns its own Python project metadata, lockfile,
 tests, and operational documentation. Repository-wide behavior and durable

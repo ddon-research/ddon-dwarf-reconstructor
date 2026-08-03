@@ -41,10 +41,10 @@ This keeps the quality loop meaningful on machines and CI workers without the 80
 
 ## Validation evidence
 
-After the DWARF2-DWARF4 audit, collection reports 441 tests with zero unscoped and zero
-no-purpose items. The required correctness selection contains 437 tests; the remaining tests are
+After the DWARF2-DWARF4 audit and Sonar setup update, collection reports 443 tests with zero unscoped and zero
+no-purpose items. The required correctness selection contains 439 tests; the remaining tests are
 one performance benchmark, one packaging acceptance, and two real-asset acceptance tests beyond
-the benchmark. The fast unit tier passes 435 tests, and the deterministic exporter integration
+the benchmark. The fast unit tier passes 437 tests, and the deterministic exporter integration
 tier contains two tests. The nested specification project contains 18 tests: 15 unit, 2
 integration, and 1 official artifact test.
 

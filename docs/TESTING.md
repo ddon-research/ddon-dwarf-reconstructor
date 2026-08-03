@@ -82,16 +82,16 @@ pytestmark = [
 
 ## Pyramid and current inventory
 
-The 2026-08-03 root collection baseline is 441 tests:
+The 2026-08-03 root collection baseline is 443 tests:
 
 | Layer/purpose | Current evidence |
 | --- | ---: |
-| Unit scope | 435 |
+| Unit scope | 437 |
 | Integration scope | 2 required exporter tests and 1 performance integration test |
 | Acceptance scope | 2 real-asset generation tests and 1 packaging test |
 | Performance | 1 explicit real-asset budget |
 | Regression purpose | 14 output/authority/acceptance contracts |
-| Non-functional purpose | 28 quality/performance tests |
+| Non-functional purpose | 30 quality/performance tests |
 
 The unit layer remains the largest. The required integration layer is deliberately small and
 crosses real application, source-identity, model, serialization, and filesystem boundaries in

@@ -9,6 +9,9 @@
 - DWARF4 permits a constant `DW_AT_high_pc` offset; this must not be treated as an absolute address.
 - A full streaming scan of the compressed PS4 LLVM dump independently reports 2,305 DWARF4 CUs
   and the same producer in all units; it completed in 183.2 seconds.
+- `prepare_msvc_analysis.py` generated five standalone translation units from the retained header
+  bundle, and strict `sonar-capture` produced a validated five-entry MSVC compilation database
+  with exit code 0.
 
 ## Approximate or producer-specific
 
@@ -20,6 +23,6 @@
 ## Blocked or deferred
 
 - No identified PS4 DWARF3 producer asset is available in the current evidence set.
-- MSVC compilation and final Orbis/assembly loop-back require explicit external tool paths. The
-  Orbis executable is present, but `uv run just sonar-validate` currently stops because
-  `output/msvc-header-validation-20260801/compile_msvc.cmd` is absent.
+- The generated aggregate translation unit remains a separate diagnostic artifact because the
+  representative standalone closures repeat declarations when combined. Final Orbis assembly
+  comparison remains an explicit acceptance follow-up.
