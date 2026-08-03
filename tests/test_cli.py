@@ -102,3 +102,31 @@ def test_export_knowledge_requires_output_dir_and_uses_unified_command(mocker) -
     options = run_generation.call_args.args[0]
     assert options.export_knowledge == Path("output/knowledge")
     assert options.build_id == "build-1"
+
+
+@pytest.mark.unit
+def test_export_knowledge_maps_repeatable_tool_evidence(mocker) -> None:
+    run_generation = mocker.patch("ddon_dwarf_reconstructor.cli.run_generation", return_value=0)
+
+    result = runner.invoke(
+        app,
+        [
+            "export-knowledge",
+            "input.elf",
+            "--output-dir",
+            "output/knowledge",
+            "--symbol",
+            "A",
+            "--tool-evidence",
+            "exports/orbis.json",
+            "--tool-evidence",
+            "exports/llvm.json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    options = run_generation.call_args.args[0]
+    assert options.tool_export_manifests == (
+        Path("exports/orbis.json"),
+        Path("exports/llvm.json"),
+    )

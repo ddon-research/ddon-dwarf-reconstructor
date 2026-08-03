@@ -152,6 +152,28 @@ An error includes the chained exception and should be investigated from the
 JSONL record before changing parser policy. See [OBSERVABILITY.md](OBSERVABILITY.md)
 for field and severity rules.
 
+## Optional external evidence flow
+
+Toolchain exports happen before knowledge export and are never part of ordinary header generation:
+
+```mermaid
+flowchart LR
+    Probe["Probe --help / --version"] --> Profile["Select named profile"]
+    ELF["Immutable ELF/DWARF"] --> Run["Stream one-time export"]
+    Profile --> Run
+    Run --> Manifest["Atomic source-bound manifest"]
+    Manifest --> Validate["Validate source, key, checksum, and path"]
+    Validate --> Knowledge["Attach with --tool-evidence"]
+    Knowledge --> Graph["Additive Tool/Evidence records"]
+```
+
+The export command is bounded by a timeout and bounded diagnostic/help captures; raw profile
+output is streamed to disk. `ToolchainExporter` reuses the source identity catalog and rejects
+stale or incomplete manifests. Orbis profiles carry PS4 ABI authority, while LLVM/GNU/elfutils/
+libdwarf profiles carry cross-check authority. pyelftools remains the in-process structured parser;
+LIEF and OpenOrbis are comparison references until PS4-specific behavior is validated. `elfldr`
+is not an offline ingestion or execution dependency.
+
 ## Shared workflow services
 
 Both generation modes use the same operations through the composed `GeneratorWorkflow`:

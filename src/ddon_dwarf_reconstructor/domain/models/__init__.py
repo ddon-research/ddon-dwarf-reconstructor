@@ -10,6 +10,7 @@ from .disassembly import (
     OrbisInstruction,
     OrbisToolIdentity,
 )
+from .tool_evidence import ToolExport, ToolExportOutput
 
 __all__ = [
     "dwarf",
@@ -18,4 +19,6 @@ __all__ = [
     "OrbisFunctionSymbol",
     "OrbisInstruction",
     "OrbisToolIdentity",
+    "ToolExport",
+    "ToolExportOutput",
 ]

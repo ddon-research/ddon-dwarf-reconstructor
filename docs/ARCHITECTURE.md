@@ -76,7 +76,7 @@ ELF parser, cache, process, or filesystem adapter supplies their inputs.
 | Domain policies and ports | `domain/models/`, `domain/services/`, `domain/ports/` | Core, domain models/ports, and standard library | Domain has no infrastructure imports and no `elftools.*` dependency. `DwarfInfo`, `DwarfEntry`, and cache/source-hash protocols keep external types out of signatures. |
 | Application use cases | `application/generators/`, `application/exporters/` | Core, domain, and typed ports | Application does not construct infrastructure adapters or import infrastructure. Cache sizing, source identity, dump lookup, and disassembly arrive through constructor ports from the composition root. |
 | Inbound adapters | `cli.py`, `artifact_cli.py`, `main.py` | Application plus concrete infrastructure wiring | `main.py` is the composition root: it uses `infrastructure/composition.py`, supplies cache paths/sizes, and injects `SourceIdentityCatalog`. |
-| Outbound adapters | `infrastructure/` including `ElfDwarfSession` and `AtomicHeaderPublisher` | Core/domain ports and external libraries | Adapters own `pyelftools`, zstd, SQLite, Orbis processes, durable artifacts, configuration, and logging setup. |
+| Outbound adapters | `infrastructure/` including `ElfDwarfSession`, `AtomicHeaderPublisher`, and `ToolchainExporter` | Core/domain ports and external libraries | Adapters own `pyelftools`, zstd, SQLite, bounded subprocesses, Orbis processes, durable artifacts, configuration, and logging setup. |
 | Separate tool boundary | `tools/dwarf_spec_pipeline/` | Its own package, lockfile, and checks | Specification acquisition/conversion is not imported by the runtime package. |
 
 ### Port and adapter rules
@@ -209,6 +209,8 @@ src/ddon_dwarf_reconstructor/
     │
     ├── elf_platform.py                 # Platform detection (PS3/PS4)
     ├── orbis_objdump.py                # Orbis disassembly adapter
+    ├── toolchain_profiles.py           # Named bounded export recipes and authority
+    ├── toolchain_exports.py            # Source/tool-bound external output adapter
     └── zstd_dump_parser.py             # Compressed-DWARF lookup adapter
 ```
 
@@ -235,6 +237,34 @@ Generated `reconstructed.hpp` currently represents accurate declarations and
 layout syntax, not method bodies. Its graph unit carries
 `METHOD_BODY_RECONSTRUCTION_NOT_IMPLEMENTED`, making that limitation queryable
 rather than implying decompiler-equivalent coverage.
+
+### External tool evidence flow
+
+The external-tool path is intentionally one-time and additive:
+
+```mermaid
+flowchart LR
+    Probe["tool --version / --help"] --> Identity["Tool identity and probe artifact"]
+    Source["Immutable ELF/DWARF source"] --> Export["Named bounded profile"]
+    Identity --> Export
+    Export --> Manifest["Atomic source-bound manifest"]
+    Manifest --> Validate["Revalidate source, key, output path, and checksum"]
+    Validate --> Graph["Tool, SourceArtifact, Evidence nodes"]
+    Dwarf["Deterministic DWARF producer facts"] --> Graph
+```
+
+`ToolchainExporter` streams raw output directly to a staged file, fingerprints the source and
+executable through `SourceIdentityCatalog`, and publishes a content key covering source, tool,
+profile arguments, output format, and authority. `load_tool_exports` rejects incomplete, stale,
+duplicate, or path-escaping manifests before application export. The graph projection stores the
+tool, output artifact, evidence scope, authority, and relationships; it never updates a `Type`,
+`Field`, `Method`, or deterministic producer fact. Orbis `readelf`/`objdump`/`nm` profiles are the
+PS4 ABI and SCE authority. LLVM, GNU Binutils, elfutils, libdwarf, pyelftools, LIEF, and OpenOrbis
+outputs are cross-check evidence unless a separate validated adapter promotes a specific fact.
+`elfldr` is outside the offline inspection boundary.
+
+The generic baseline can run through `tools/binary_toolchain/compose.yaml`. Sony SDK binaries are
+host-mounted only for explicit local runs and are never copied into the image or committed.
 
 ## Core Components
 

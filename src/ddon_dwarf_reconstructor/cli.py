@@ -62,6 +62,7 @@ def _options(
     build_id: str | None = None,
     orbis_objdump: Path | None = None,
     resolve_param_names: bool = False,
+    tool_export_manifests: tuple[Path, ...] = (),
 ) -> GenerationOptions:
     return GenerationOptions(
         elf_file=elf_file,
@@ -78,6 +79,7 @@ def _options(
         build_id=build_id,
         orbis_objdump=orbis_objdump,
         resolve_param_names=resolve_param_names,
+        tool_export_manifests=tool_export_manifests,
     )
 
 
@@ -187,6 +189,12 @@ def export_knowledge(
         "--resolve-param-names",
         help="Search method implementations for parameter names.",
     ),
+    tool_evidence: list[Path] = typer.Option(
+        [],
+        "--tool-evidence",
+        metavar="MANIFEST",
+        help="Source-bound external-tool manifest; repeat to attach multiple exports.",
+    ),
 ) -> None:
     """Export deterministic evidence for one or more symbols as a knowledge bundle."""
     _run(
@@ -205,6 +213,7 @@ def export_knowledge(
             build_id=build_id,
             orbis_objdump=orbis_objdump,
             resolve_param_names=resolve_param_names,
+            tool_export_manifests=tuple(tool_evidence),
         )
     )
 

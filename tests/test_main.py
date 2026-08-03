@@ -78,6 +78,7 @@ def test_run_generation_uses_export_knowledge_path(mocker) -> None:
         Path("output/knowledge"),
         "ps4-02020005",
         orbis_objdump_path=Path(r"D:\SCE\orbis-objdump.exe"),
+        tool_exports=(),
     )
 
 

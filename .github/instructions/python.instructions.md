@@ -33,6 +33,10 @@ through the repository's `src` directory.
   Callers must make an explicit decision about partial or unavailable evidence.
 - `AtomicHeaderPublisher` is the sole generated-header writer. Stage a complete bundle, publish its
   manifest, and preserve rollback behavior; do not add a second content cache or direct writes.
+- External tool exports belong in infrastructure. Use the typed `ToolExport` contract and
+  `ToolchainExporter`; validate source/tool identity, output checksums, profile, authority, and
+  atomic publication before passing manifests into application knowledge export. Orbis output is
+  the PS4 ABI authority; generic tool output is additive evidence only.
 - Use explicit `is not None` checks for optional numeric evidence. Offset `0` is valid.
 - Catch specific expected exceptions, preserve useful context, and emit structured diagnostics.
   Do not use bare `except`, unexplained `Any`, or silent fallbacks.
@@ -59,6 +63,9 @@ through the repository's `src` directory.
 - Use the unified root command tree (`generate`, `export-knowledge`, `artifacts`) and the nested
   `dwarf-spec-pipeline` command tree. Repeat `--symbol` for multiple symbols; do not reintroduce
   comma-separated parsing.
+- For one-time binary inspection, probe `--help`/`--version` first, then use a named bounded
+  profile. The Compose baseline is `tools/binary_toolchain/compose.yaml`; never execute `elfldr`
+  or perform SELF loading/decryption in the offline ingestion path.
 - Declare runtime dependencies in `[project.dependencies]` and development tools in PEP 735
   `[dependency-groups]`. Run tools through `uv run`; use `deptry` to detect missing or misplaced
   dependencies and keep module-name mappings explicit for packages such as `pyelftools`.

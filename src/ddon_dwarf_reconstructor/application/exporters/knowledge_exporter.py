@@ -12,6 +12,7 @@ from .knowledge_export_fields import KnowledgeExportFieldsMixin
 from .knowledge_export_methods import KnowledgeExportMethodsMixin
 from .knowledge_export_output import KnowledgeExportOutputMixin
 from .knowledge_export_serialization import KnowledgeExportSerializationMixin
+from .knowledge_export_tools import KnowledgeExportToolsMixin
 
 
 class KnowledgeExporter(
@@ -19,12 +20,13 @@ class KnowledgeExporter(
     KnowledgeExportFieldsMixin,
     KnowledgeExportMethodsMixin,
     KnowledgeExportDisassemblyMixin,
+    KnowledgeExportToolsMixin,
     KnowledgeExportOutputMixin,
     KnowledgeExportSerializationMixin,
 ):
     """Coordinate the typed graph-export stages."""
 
-    SCHEMA_VERSION = "1.0"
+    SCHEMA_VERSION = "1.1"
     PRODUCER = "ddon-dwarf-reconstructor"
 
     def __init__(

@@ -12,6 +12,7 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import (
     MethodInfo,
     ParameterInfo,
 )
+from ddon_dwarf_reconstructor.domain.models.tool_evidence import ToolExport, ToolExportOutput
 from ddon_dwarf_reconstructor.infrastructure.artifacts import SourceIdentityCatalog
 
 
@@ -115,6 +116,51 @@ def test_export_records_root_authority_in_manifest(tmp_path: Path) -> None:
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert manifest["root_authority"] == authority
+
+
+@pytest.mark.unit
+def test_export_projects_external_tool_evidence_additively(tmp_path: Path) -> None:
+    elf_path = tmp_path / "DDOORBIS.elf"
+    elf_path.write_bytes(b"deterministic dwarf fixture")
+    layout = ClassInfo("rLayout", 528, [], [], [], [], [], [], die_offset=0x20)
+    tool_export = ToolExport(
+        artifact_key="a" * 64,
+        source_path=str(elf_path),
+        source_sha256=SourceIdentityCatalog().sha256(elf_path),
+        source_size=elf_path.stat().st_size,
+        tool_name="orbis-readelf",
+        tool_path="D:/SCE/ORBIS/orbis-readelf.exe",
+        tool_sha256="b" * 64,
+        tool_version="GNU readelf 2.22 Orbis 8.00",
+        profile="orbis-elf-headers",
+        arguments=("-h", "-l"),
+        authority="ps4_abi_authority",
+        output=ToolExportOutput("export.txt", 64, 128, "text"),
+    )
+
+    manifest_path = _exporter(elf_path).export(
+        "rLayout",
+        {"rLayout": layout},
+        ["rLayout"],
+        tmp_path / "tool-export",
+        tool_exports=(tool_export,),
+    )
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    nodes = [
+        json.loads(line)
+        for line in (manifest_path.parent / "nodes.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    relationships = [
+        json.loads(line)
+        for line in (manifest_path.parent / "relationships.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    ]
+    assert manifest["schema_version"] == "1.1"
+    assert manifest["tool_exports"][0]["artifact_key"] == "a" * 64
+    assert {node["kind"] for node in nodes} >= {"Tool", "SourceArtifact", "Evidence"}
+    assert any(relationship["type"] == "PRODUCED_BY" for relationship in relationships)
 
 
 @pytest.mark.unit

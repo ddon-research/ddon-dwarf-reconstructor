@@ -110,6 +110,9 @@ run-batch-full symbols_file elf_file="resources/DDOORBIS.elf":
 spec-check:
     uv run --directory tools/dwarf_spec_pipeline just check
 
+binary-toolchain-config:
+    docker compose --file tools/binary_toolchain/compose.yaml config --quiet
+
 langfuse-config:
     docker compose --project-name ddon-langfuse --file ops/langfuse/compose.yaml --env-file ops/langfuse/.env config --quiet
 

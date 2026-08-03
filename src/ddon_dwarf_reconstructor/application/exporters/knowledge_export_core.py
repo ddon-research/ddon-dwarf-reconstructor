@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from ...domain.models.disassembly import OrbisDisassemblyReport
 from ...domain.models.dwarf import ClassInfo
+from ...domain.models.tool_evidence import ToolExport
 from .knowledge_export_context import KnowledgeExportContext
 
 
@@ -18,6 +20,7 @@ class _OptionalRecords:
     extra_files: dict[str, dict[str, Any]]
     tool_source: dict[str, Any] | None
     disassembly_report: OrbisDisassemblyReport | None = None
+    tool_exports: list[dict[str, Any]] = field(default_factory=list)
 
 
 class KnowledgeExportCoreMixin:
@@ -30,6 +33,7 @@ class KnowledgeExportCoreMixin:
         root_authority: dict[str, Any] | None = None,
         reconstructed_cpp: str | None = None,
         disassembly_report: OrbisDisassemblyReport | None = None,
+        tool_exports: Sequence[ToolExport] = (),
     ) -> Path:
         """Write nodes, relationships, optional artifacts, and a manifest."""
         if not class_infos:
@@ -52,6 +56,7 @@ class KnowledgeExportCoreMixin:
             output_dir,
             reconstructed_cpp,
             disassembly_report,
+            tool_exports,
         )
         nodes.extend(optional.nodes)
         relationships.extend(optional.relationships)

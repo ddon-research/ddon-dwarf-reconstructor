@@ -20,6 +20,11 @@ contradict either source.
   credentials.
 - Preserve qualified names, inheritance, field offsets, sizes, source locations, DIE/CU
   provenance, deterministic ordering, cache formats, and source offsets. Offset `0` is valid.
+- Treat external tool output as a separate, source-bound evidence layer. Start with
+  `artifacts list-tool-profiles` and explicit `probe-tool` help/version captures; publish named
+  exports with `export-tool-evidence` and attach them to knowledge export with repeated
+  `--tool-evidence`. Orbis is authoritative for PS4 ABI/SCE semantics; generic LLVM, GNU,
+  elfutils, libdwarf, pyelftools, LIEF, and OpenOrbis results remain additive until validated.
 
 ## Architecture rules
 
@@ -70,6 +75,13 @@ uv run ddon-dwarf-reconstructor generate <elf> --symbol <name>
 uv run ddon-dwarf-reconstructor artifacts inspect --dwarf-dump <path>
 uv run ddon-dwarf-reconstructor artifacts inspect-elf <elf>
 uv run ddon-dwarf-reconstructor artifacts inspect-dwarf-dump <dump.zst>
+uv run ddon-dwarf-reconstructor artifacts list-tool-profiles
+uv run ddon-dwarf-reconstructor artifacts probe-tool <tool> --output-dir output/tool-probes
+uv run ddon-dwarf-reconstructor artifacts export-tool-evidence <elf> \
+  --tool <tool> --profile <profile> --output-dir output/tool-exports
+uv run ddon-dwarf-reconstructor export-knowledge <elf> --symbol <name> \
+  --output-dir output/knowledge --tool-evidence output/tool-exports/<key>/manifest.json
+docker compose --file tools/binary_toolchain/compose.yaml config --quiet
 uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
   --output-dir docs/knowledge-base/dwarf-specification/generated --source-root src
 ```
@@ -98,6 +110,9 @@ import, complexity, and maintainability diagnostics.
   runs, and record input identity, producer/configuration identity, and cache state.
 - Keep real-artifact baselines outside source control; commit only small deterministic manifests or
   structured expectations. Real PS4 runs are opt-in and require explicit local paths.
+- The Compose image is a non-proprietary generic baseline only. Do not copy Sony SDKs into it;
+  mount inputs read-only and preserve tool identity, command profile, output checksum, authority,
+  and cache state in the export manifest.
 - Stream compressed dumps in one pass with bounded memory. Avoid repeated ELF hashing, repeated
   full-DIE scans, unnecessary rescans, and unbounded intermediate collections. Cache artifacts must
   be source-bound, validated before reuse, and published atomically.

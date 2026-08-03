@@ -13,6 +13,8 @@ Dragon's Dogma Online research and modding.
 - Deterministic single-file and multi-file header generation.
 - Persistent source-bound symbol caches and streaming compressed-DWARF indexes.
 - Knowledge-graph exports with explicit producer and Orbis evidence provenance.
+- Bounded one-time exports from Orbis, LLVM, GNU Binutils, elfutils, and libdwarf profiles, with
+  source/tool/output hashes and authority metadata.
 - Typed CLI, locked uv dependencies, Ruff, Pyrefly, deptry, and just automation.
 
 ## Requirements and setup
@@ -127,6 +129,43 @@ uv run ddon-dwarf-reconstructor artifacts repair-catalog
 `purge-dump-index` requires `--confirm-index-path` containing the exact resolved sidecar path.
 Repair, rebuild, and purge operations never broaden their target beyond the explicitly selected
 artifact. The former `ddon-dwarf-artifacts` executable is intentionally removed.
+
+## External tool evidence
+
+External inspection is an explicit, source-bound artifact workflow. Probe local executables first,
+then run a named profile; raw output is streamed to disk, hashed, and published atomically.
+Matching Orbis tools remain authoritative for PS4 ABI and SCE-specific values. LLVM, GNU Binutils,
+elfutils, libdwarf, pyelftools, LIEF, and OpenOrbis outputs are additive evidence until a PS4
+behavior has been validated. `elfldr` is loader research and is not executed by this project.
+
+```powershell
+uv run ddon-dwarf-reconstructor artifacts list-tool-profiles
+uv run ddon-dwarf-reconstructor artifacts probe-tool `
+  D:/SCE/ORBIS SDKs/8.000/host_tools/bin/orbis-readelf.exe `
+  --output-dir output/tool-probes
+uv run ddon-dwarf-reconstructor artifacts export-tool-evidence `
+  resources/DDOORBIS.elf `
+  --tool 'D:/SCE/ORBIS SDKs/8.000/host_tools/bin/orbis-readelf.exe' `
+  --profile orbis-elf-headers --output-dir output/tool-exports
+uv run ddon-dwarf-reconstructor export-knowledge resources/DDOORBIS.elf `
+  --symbol rLayout --output-dir output/rLayout `
+  --tool-evidence output/tool-exports/<artifact-key>/manifest.json
+```
+
+`--tool-evidence` may be repeated. A manifest whose source identity, output checksum, artifact key,
+or output path is stale is rejected before graph export. The resulting bundle contains additive
+`Tool`, `SourceArtifact`, and `Evidence` records; deterministic DWARF layout and producer facts are
+not overwritten. The non-proprietary Docker baseline is documented in
+[`tools/binary_toolchain/README.md`](tools/binary_toolchain/README.md):
+
+```text
+docker compose --file tools/binary_toolchain/compose.yaml build
+docker compose --file tools/binary_toolchain/compose.yaml run --rm binary-toolchain
+```
+
+The container does not include Sony SDKs, proprietary binaries, credentials, SELF loading, or
+decryption. Mount explicit input directories read-only and keep raw outputs under ignored output
+paths.
 
 `inspect-elf` performs an explicit all-CU header/producer pass. `inspect-dwarf-dump` performs an
 explicit streaming pass over the compressed LLVM text and retains only bounded counters. Neither

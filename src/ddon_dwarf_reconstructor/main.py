@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 from logging import Logger
 from pathlib import Path
@@ -12,6 +13,7 @@ from uuid import uuid4
 from .application.generators import DwarfGenerator, GenerationRequest
 from .core.observability import bind_context, get_logger, log_event, log_exception
 from .core.platform import ELFPlatform
+from .domain.models.tool_evidence import ToolExport
 from .infrastructure.artifacts import SourceIdentityCatalog
 from .infrastructure.composition import (
     create_disassembly_producer,
@@ -21,6 +23,7 @@ from .infrastructure.composition import (
 from .infrastructure.config import Config, DwarfRuntimeConfig, get_cache_file_path
 from .infrastructure.header_output import AtomicHeaderPublisher
 from .infrastructure.logging import LoggerSetup
+from .infrastructure.toolchain_exports import load_tool_exports
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,6 +44,7 @@ class GenerationOptions:
     build_id: str | None = None
     orbis_objdump: Path | None = None
     resolve_param_names: bool = False
+    tool_export_manifests: tuple[Path, ...] = ()
 
 
 def _load_config(options: GenerationOptions) -> Config:
@@ -101,6 +105,8 @@ def _log_options(
         dwarf_dump=options.dwarf_dump,
         dwarf_index=options.dwarf_index,
         export_knowledge=options.export_knowledge,
+        tool_export_manifest_count=len(options.tool_export_manifests),
+        tool_export_manifests=options.tool_export_manifests,
     )
 
 
@@ -127,6 +133,11 @@ def _run_generation_impl(
     pending_headers: dict[str, str] = {}
     dwarf_config = DwarfRuntimeConfig.from_environment()
     identity_catalog = SourceIdentityCatalog()
+    tool_exports = load_tool_exports(
+        options.tool_export_manifests,
+        config.elf_file_path,
+        identity_catalog,
+    )
     with DwarfGenerator(
         config.elf_file_path,
         session_factory=create_dwarf_session,
@@ -149,7 +160,15 @@ def _run_generation_impl(
                 log_event(logger, 20, "symbol_started", symbol=symbol_name)
                 try:
                     if options.export_knowledge:
-                        _process_symbol(options, config, generator, symbol_name, symbols, logger)
+                        _process_symbol(
+                            options,
+                            config,
+                            generator,
+                            symbol_name,
+                            symbols,
+                            logger,
+                            tool_exports,
+                        )
                     else:
                         pending_headers.update(_build_headers(options, generator, symbol_name))
                         if generator.lazy_index is not None:
@@ -177,6 +196,7 @@ def _process_symbol(
     symbol_name: str,
     symbols: list[str],
     logger: Logger,
+    tool_exports: Sequence[ToolExport] = (),
 ) -> None:
     if options.export_knowledge:
         build_id = options.build_id or f"{generator.platform.value}-{config.elf_file_path.stem}"
@@ -185,6 +205,7 @@ def _process_symbol(
             options.export_knowledge,
             build_id,
             orbis_objdump_path=options.orbis_objdump,
+            tool_exports=tool_exports,
         )
         return
     headers = _build_headers(options, generator, symbol_name)

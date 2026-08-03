@@ -1,0 +1,22 @@
+name: ddon-binary-toolchain
+
+services:
+  binary-toolchain:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /workspace
+    environment:
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ${DDON_TOOLCHAIN_INPUT_DIR:-../../resources}:/inputs:ro
+      - ${DDON_TOOLCHAIN_OUTPUT_DIR:-../../output/toolchain}:/output
+    command:
+      - bash
+      - -lc
+      - >-
+        printf '%s\n' 'Use docker compose run --rm binary-toolchain <command>';
+        python3 --version;
+        readelf --version | head -n 1;
+        llvm-readelf --version | head -n 1;
+        eu-readelf --version | head -n 1

@@ -3,17 +3,26 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 import typer
 
+from .domain.models.tool_evidence import TOOL_EXPORT_SCHEMA_VERSION
 from .domain.repositories.cache import PersistentSymbolCache
 from .infrastructure.artifacts import SourceIdentityCatalog
 from .infrastructure.config import get_cache_file_path
 from .infrastructure.elf_evidence import inspect_elf
 from .infrastructure.logging import LoggerSetup, get_logger, log_exception
+from .infrastructure.toolchain_exports import (
+    ToolchainExporter,
+    list_tool_export_profiles,
+)
+from .infrastructure.toolchain_exports import (
+    probe_tool as probe_external_tool,
+)
 from .infrastructure.zstd_dump_evidence import inspect_dump
 from .infrastructure.zstd_dump_parser import ZstdDumpParser
 
@@ -135,6 +144,96 @@ def inspect_dwarf_dump(
 ) -> None:
     """Stream a compressed LLVM dump and report CU versions and producers."""
     _run_operation(lambda: _write_result(inspect_dump(dwarf_dump)))
+
+
+@app.command("list-tool-profiles")
+def list_tool_profiles() -> None:
+    """List bounded external-tool export profiles and authority boundaries."""
+    _run_operation(
+        lambda: _write_result(
+            {
+                "profiles": [
+                    {
+                        "name": profile.name,
+                        "tool_name": profile.tool_name,
+                        "arguments": list(profile.arguments),
+                        "output_format": profile.output_format,
+                        "authority": profile.authority,
+                        "max_output_bytes": profile.max_output_bytes,
+                        "description": profile.description,
+                    }
+                    for profile in list_tool_export_profiles()
+                ]
+            }
+        )
+    )
+
+
+@app.command("probe-tool")
+def probe_tool(
+    tool: Path = typer.Argument(..., help="External tool executable to probe."),
+    output_dir: Path = typer.Option(
+        ...,
+        "--output-dir",
+        help="Directory in which to publish version and bounded --help artifacts.",
+    ),
+    timeout_seconds: float = typer.Option(
+        30.0,
+        "--timeout-seconds",
+        min=0.1,
+        help="Maximum time for each tool probe command.",
+    ),
+) -> None:
+    """Capture a source-independent tool identity and bounded help artifact."""
+
+    def operation() -> None:
+        result = probe_external_tool(tool, output_dir, timeout_seconds=timeout_seconds)
+        tool_info = result.get("tool")
+        if not isinstance(tool_info, dict) or not isinstance(tool_info.get("sha256"), str):
+            raise ValueError("Tool probe returned no stable tool identity")
+        safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", tool.stem)
+        result["probe_path"] = str(
+            (
+                output_dir
+                / f"{safe_name}-v{TOOL_EXPORT_SCHEMA_VERSION}-{tool_info['sha256'][:16]}"
+                / "probe.json"
+            ).resolve()
+        )
+        _write_result(result)
+
+    _run_operation(operation)
+
+
+@app.command("export-tool-evidence")
+def export_tool_evidence(
+    source: Path = typer.Argument(..., help="ELF/DWARF source to inspect."),
+    tool: Path = typer.Option(..., "--tool", help="External inspection tool executable."),
+    profile: str = typer.Option(..., "--profile", help="Named bounded export profile."),
+    output_dir: Path = typer.Option(
+        ...,
+        "--output-dir",
+        help="Directory in which to publish the source-bound export bundle.",
+    ),
+    timeout_seconds: float = typer.Option(
+        300.0,
+        "--timeout-seconds",
+        min=0.1,
+        help="Maximum time for each external tool command.",
+    ),
+) -> None:
+    """Run one explicit tool profile and publish its raw output plus manifest."""
+
+    def operation() -> None:
+        exporter = ToolchainExporter(timeout_seconds=timeout_seconds)
+        result = exporter.export(source, tool, profile, output_dir)
+        payload = result.to_dict()
+        payload["manifest_path"] = str(
+            (output_dir / result.artifact_key / result.manifest_name).resolve()
+        )
+        payload["cache_hit"] = exporter.last_cache_hit
+        _write_result(payload)
+
+    _run_operation(operation)
 
 
 def _dump_operation(dwarf_dump: Path, index_path: Path | None, *, rebuild: bool) -> None:

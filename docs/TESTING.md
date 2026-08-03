@@ -156,6 +156,9 @@ $env:DDON_REAL_DWARF_INDEX = 'D:\ddon-dwarf-reconstructor\output\real-dump-index
 $env:DDON_ORBIS_OBJDUMP = 'D:\SCE\ORBIS SDKs\8.000\host_tools\bin\orbis-objdump.exe'
 uv run ddon-dwarf-reconstructor artifacts inspect-elf $env:DDON_REAL_ELF
 uv run ddon-dwarf-reconstructor artifacts inspect-dwarf-dump $env:DDON_REAL_DWARF_DUMP
+uv run ddon-dwarf-reconstructor artifacts probe-tool $env:DDON_ORBIS_OBJDUMP --output-dir output/tool-probes
+uv run ddon-dwarf-reconstructor artifacts export-tool-evidence $env:DDON_REAL_ELF `
+  --tool $env:DDON_ORBIS_OBJDUMP --profile orbis-elf-headers --output-dir output/tool-exports
 uv run just test-performance
 uv run just test-real-assets
 ```
@@ -168,6 +171,20 @@ is proportional to the expanded dump and should be recorded as a separate cold e
 Record cold/warm state, elapsed time, source identity, producer/configuration identity, and
 manifest identity in the active Spec Kit feature. Preserve validated sidecars; do not routinely
 delete them to make a benchmark pass.
+
+External tool evidence has its own deterministic unit coverage in
+`tests/infrastructure/test_toolchain_exports.py`. Those tests exercise source binding, warm-cache
+reuse, checksum/path validation, bounded help probes, and the typed manifest contract without a
+proprietary binary. Real Orbis/LLVM/GNU/libdwarf runs remain explicit evidence. The generic Docker
+baseline can be checked with:
+
+```text
+uv run just binary-toolchain-config
+docker compose --file tools/binary_toolchain/compose.yaml build
+```
+
+The image is not a PS4 ABI oracle: Orbis output must be captured from a matching local SDK and
+generic output must retain unknown SCE values rather than normalizing them away.
 
 ## Nested specification project
 

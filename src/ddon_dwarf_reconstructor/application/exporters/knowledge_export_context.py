@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -11,6 +11,7 @@ from ...domain.models.disassembly import (
     OrbisFunctionDisassembly,
 )
 from ...domain.models.dwarf import ClassInfo, MethodInfo
+from ...domain.models.tool_evidence import ToolExport
 from ...domain.ports.source_identity import SourceHashPort
 
 if TYPE_CHECKING:
@@ -83,6 +84,7 @@ class KnowledgeExportContext(Protocol):
         output_dir: Path,
         reconstructed_cpp: str | None,
         disassembly_report: OrbisDisassemblyReport | None,
+        tool_exports: Sequence[ToolExport],
     ) -> _OptionalRecords: ...
 
     def _append_cpp_records(
@@ -102,6 +104,14 @@ class KnowledgeExportContext(Protocol):
         source_id: str,
         output_dir: Path,
         report: OrbisDisassemblyReport,
+    ) -> None: ...
+
+    def _append_tool_export_records(
+        self,
+        records: _OptionalRecords,
+        root_symbol: str,
+        source_id: str,
+        exports: Sequence[ToolExport],
     ) -> None: ...
 
     def _write_bundle(

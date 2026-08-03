@@ -32,6 +32,13 @@ uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf --symbols-file r
 uv run ddon-dwarf-reconstructor artifacts inspect --elf resources/DDOORBIS.elf
 uv run ddon-dwarf-reconstructor artifacts inspect-elf <PS4-ELF>
 uv run ddon-dwarf-reconstructor artifacts inspect-dwarf-dump <LLVM-DWARF-DUMP.zst>
+uv run ddon-dwarf-reconstructor artifacts list-tool-profiles
+uv run ddon-dwarf-reconstructor artifacts probe-tool <tool> --output-dir output/tool-probes
+uv run ddon-dwarf-reconstructor artifacts export-tool-evidence <elf> \
+  --tool <tool> --profile <profile> --output-dir output/tool-exports
+uv run ddon-dwarf-reconstructor export-knowledge <elf> --symbol <name> \
+  --output-dir output/knowledge --tool-evidence output/tool-exports/<key>/manifest.json
+docker compose --file tools/binary_toolchain/compose.yaml config --quiet
 ```
 
 The standalone specification tool is run from its own project boundary:
@@ -54,6 +61,10 @@ uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
   performance artifacts.
 - Use explicit local paths for real PS4 and compiler validation; retain cold/warm state and record
   the manifest identity.
+- Probe external tools before selecting an export profile. Orbis executables are authoritative for
+  PS4 ABI/SCE semantics; LLVM, GNU Binutils, elfutils, libdwarf, pyelftools, LIEF, and OpenOrbis
+  outputs are additive evidence. The `elfldr` reference is loader research only and is not run by
+  the ingestion path.
 - Update the README, architecture/testing docs, active contracts, and Spec Kit artifacts whenever
   public commands, configuration, or validation behavior changes.
 - Root tests use one scope (`unit`, `integration`, or `acceptance`) plus a purpose

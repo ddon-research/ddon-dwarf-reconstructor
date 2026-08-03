@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 
 from ...core.observability import get_logger
+from ...domain.models.tool_evidence import ToolExport
 from .dwarf_generator_context import DwarfGeneratorContext
 
 logger = get_logger(__name__)
@@ -18,6 +20,7 @@ class KnowledgeExportService:
         build_id: str,
         *,
         orbis_objdump_path: Path | None = None,
+        tool_exports: Sequence[ToolExport] = (),
     ) -> Path:
         """Export a deterministic DWARF closure and optional Orbis evidence.
 
@@ -26,6 +29,7 @@ class KnowledgeExportService:
             output_dir: Directory receiving the knowledge bundle.
             build_id: Stable identifier for the input build.
             orbis_objdump_path: Optional pinned Orbis objdump executable.
+            tool_exports: Complete source-bound exports from explicit tool profiles.
 
         Returns:
             Path to the generated manifest.
@@ -69,4 +73,5 @@ class KnowledgeExportService:
             output_dir,
             reconstructed_cpp=reconstructed_cpp,
             disassembly_report=disassembly_report,
+            tool_exports=tool_exports,
         )

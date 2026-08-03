@@ -12,12 +12,14 @@ This is the main generator that orchestrates the modular components:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from ...core.dwarf import DwarfCompilationUnit, DwarfEntry
 from ...core.path_policy import create_header_filename
 from ...domain.models.dwarf import ClassInfo
+from ...domain.models.tool_evidence import ToolExport
 from ...domain.ports.class_parser import ClassParserPort
 from ...domain.ports.disassembly import DisassemblyProducerFactory
 from ...domain.ports.dump_lookup import DumpLookupFactory
@@ -146,12 +148,14 @@ class DwarfGenerator:
         build_id: str,
         *,
         orbis_objdump_path: Path | None = None,
+        tool_exports: Sequence[ToolExport] = (),
     ) -> Path:
         return self.workflow.export_knowledge_graph(
             root_symbol,
             output_dir,
             build_id,
             orbis_objdump_path=orbis_objdump_path,
+            tool_exports=tool_exports,
         )
 
     def generate_bundle(self, request: GenerationRequest) -> HeaderBundle:

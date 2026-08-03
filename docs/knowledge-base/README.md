@@ -20,7 +20,8 @@ knowledge-base/
 ├── pyelftools/          # Current implementation approach
 │   └── pyelftools-approach.md
 ├── tools/               # Related tools and their approaches
-│   └── dwarf2cpp-approach.md
+│   ├── dwarf2cpp-approach.md
+│   └── external-tool-evidence.md
 ├── optimization/        # Performance optimization strategies
 │   └── indexing-strategy.md
 └── observability/        # Structured logs, tracebacks, and telemetry seam
@@ -88,7 +89,18 @@ contract, commands, source provenance, and schema link.
    - Source: https://github.com/davea42/libdwarf-code
    - Local: `C:\msys64\home\morph\libdwarf-code\src\lib\libdwarf`
    - Focus: Official DWARF reference implementation
-   - Status: Not yet fully analyzed
+   - Status: Help/integrity-profile inventory complete; structured output ingestion remains scoped
+     to explicit cross-check artifacts.
+
+8. **External binary toolchain**
+   - Sources: [LLVM Command Guide](https://llvm.org/docs/CommandGuide/index.html),
+     [GNU Binutils](https://www.gnu.org/software/binutils/),
+     [elfutils](https://sourceware.org/elfutils/),
+     [LIEF](https://github.com/lief-project/LIEF), and
+     [OpenOrbis repositories](https://github.com/orgs/OpenOrbis/repositories)
+   - Local workflow: `artifacts list-tool-profiles`, `probe-tool`, and `export-tool-evidence`
+   - Focus: immutable one-time exports that can be indexed without rescanning the ELF
+   - Authority: matching Orbis tools for PS4 ABI/SCE semantics; all generic output is additive
 
 ## Key Findings Summary
 
@@ -174,6 +186,8 @@ contract, commands, source provenance, and schema link.
 - Compare behavior with Ghidra/IDA implementations
 - Validate constants against multiple sources
 - Test edge cases documented in insights files
+- Compare tool exports by `artifact_key`, source/tool/output hashes, profile, and authority; never
+  promote a generic parser's interpretation over a matching Orbis result without evidence.
 
 ### For Documentation
 - Link to specific sections in knowledge base docs

@@ -7,6 +7,7 @@ from . import config, logging
 from .elf_session import ElfDwarfSession
 from .header_output import AtomicHeaderPublisher
 from .orbis_objdump import OrbisObjdumpProducer
+from .toolchain_exports import ToolchainExporter, load_tool_exports, probe_tool
 
 __all__ = [
     "config",
@@ -15,4 +16,7 @@ __all__ = [
     "logging",
     "OrbisDisassemblyReport",
     "OrbisObjdumpProducer",
+    "ToolchainExporter",
+    "load_tool_exports",
+    "probe_tool",
 ]

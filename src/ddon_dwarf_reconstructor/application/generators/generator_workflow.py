@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 
 from ...core.dwarf import DwarfCompilationUnit, DwarfEntry
 from ...domain.models.dwarf import ClassInfo
+from ...domain.models.tool_evidence import ToolExport
 from ...domain.services.generation.file_registry import FileRegistry
 from .dwarf_generator_context import DwarfGeneratorContext
 from .dwarf_header_generation import HeaderGenerationService
@@ -112,6 +114,7 @@ class GeneratorWorkflow:
         build_id: str,
         *,
         orbis_objdump_path: Path | None = None,
+        tool_exports: Sequence[ToolExport] = (),
     ) -> Path:
         return KnowledgeExportService.export_knowledge_graph(
             self.context,
@@ -119,4 +122,5 @@ class GeneratorWorkflow:
             output_dir,
             build_id,
             orbis_objdump_path=orbis_objdump_path,
+            tool_exports=tool_exports,
         )

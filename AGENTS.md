@@ -28,6 +28,14 @@ unbounded in-memory intermediates. Preserve stable output ordering and source of
   provenance; partial results are never complete evidence and must not be consumed as complete.
 - `ElfDwarfSession` owns the opened ELF/DWARF graph and one-time PS4 normalization. Generated
   headers go through `AtomicHeaderPublisher`, which writes a manifest and rolls back failed bundles.
+- External inspection is an explicit artifact workflow: use `artifacts list-tool-profiles`,
+  `probe-tool`, and `export-tool-evidence` for bounded one-time exports. Matching Orbis tools are
+  authoritative for PS4 ABI/SCE semantics; LLVM, GNU, elfutils, libdwarf, pyelftools, LIEF, and
+  OpenOrbis outputs are additive cross-checks until PS4 behavior is validated. `elfldr` is loader
+  research only and must not be executed by the offline ingestion path.
+- The standard non-proprietary container baseline is
+  `tools/binary_toolchain/compose.yaml`. Mount explicit inputs read-only, publish outputs outside
+  source control, and never copy Sony SDKs or SELF credentials into the image.
 
 ## Local acceptance artifact
 
@@ -165,8 +173,9 @@ its `just test`, `just test-official`, and `just check` from that project bounda
   evidence surface, preservation constraints, scope boundary, next iteration action, and blocked
   condition. The goal is a workflow aid, not a replacement for these repository instructions.
 - Start DWARF investigations with `artifacts inspect-elf`, `artifacts inspect-dwarf-dump`, and the
-  standalone specification `dwarf-spec-pipeline audit` command. Record confirmed, approximate,
-  blocked, and remaining-uncertainty findings separately.
+  standalone specification `dwarf-spec-pipeline audit` command. For toolchain work, probe local
+  `--help`/`--version` surfaces first, then run only named profiles and retain their manifests.
+  Record confirmed, approximate, blocked, and remaining-uncertainty findings separately.
 - After each parser or evidence slice, run the focused tests, `uv run just check`, and the required
   correctness loop before advancing. Complete the goal only when the named evidence surface passes;
   a time or token budget is never completion evidence.

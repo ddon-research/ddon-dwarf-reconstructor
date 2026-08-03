@@ -54,6 +54,17 @@ def test_inspect_reports_missing_dump_index(
 
 
 @pytest.mark.unit
+def test_list_tool_profiles_reports_authority_and_output_limits() -> None:
+    result = runner.invoke(app, ["list-tool-profiles"])
+
+    assert result.exit_code == 0
+    profiles = json.loads(result.stdout)["profiles"]
+    by_name = {profile["name"]: profile for profile in profiles}
+    assert by_name["orbis-elf-headers"]["authority"] == "ps4_abi_authority"
+    assert by_name["libdwarf-check-all"]["max_output_bytes"] == 64 * 1024 * 1024
+
+
+@pytest.mark.unit
 def test_purge_requires_exact_resolved_index_confirmation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

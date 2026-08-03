@@ -22,16 +22,20 @@ missing prerequisite and the action that would unlock it.
 
 1. Establish the evidence surface: inspect the worktree, identify immutable inputs, and run
    `artifacts inspect-elf` and `artifacts inspect-dwarf-dump` when explicit local paths are present.
-2. Build or validate the specification index with
+2. Inventory external binary tools and their local `--version`/`--help` output. Select only
+   named bounded profiles, with Orbis tools as PS4 ABI authority and generic tools recorded as
+   additive cross-checks. Publish source-bound manifests before attaching evidence to a graph.
+3. Build or validate the specification index with
    `uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline audit --output-dir
    docs/knowledge-base/dwarf-specification/generated --source-root src`.
-3. Convert each suspected relationship into a focused test or a documented, intentionally deferred
+4. Convert each suspected relationship into a focused test or a documented, intentionally deferred
    contract. Preserve producer facts; derived checks must not overwrite them.
-4. Refactor one owning module or adapter slice. Keep domain policy independent of pyelftools,
+5. Refactor one owning module or adapter slice. Keep domain policy independent of pyelftools,
    SQLite, zstd, and CLI composition details.
-5. Run the focused tests, `uv run just test-unit`, and `uv run just check`; then run the required
+6. Run the focused tests, `uv run just test-unit`, and `uv run just check`; then run the required
    `uv run just test` loop before moving to another slice.
-6. At handoff, run coverage/audit gates and record external real-asset or MSVC validation separately.
+7. At handoff, run coverage/audit gates and record external real-asset, Docker, or MSVC validation
+   separately.
 
 ## Completion record
 
@@ -39,6 +43,7 @@ Every goal handoff should separate:
 
 - confirmed facts, with the command or artifact that proves each one;
 - approximate or producer-specific behavior that is intentionally bounded;
+- tool authority, profile arguments, source/tool/output hashes, and cold/warm cache state;
 - blocked checks and their exact missing prerequisite;
 - remaining uncertainty, especially where original C++ behavior cannot be recovered from DWARF.
 

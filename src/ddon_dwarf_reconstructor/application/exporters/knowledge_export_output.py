@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
 from ...domain.models.disassembly import OrbisDisassemblyReport
 from ...domain.models.dwarf import ClassInfo
+from ...domain.models.tool_evidence import ToolExport
 from .knowledge_export_context import KnowledgeExportContext
 from .knowledge_export_core import _OptionalRecords
 
@@ -22,6 +24,7 @@ class KnowledgeExportOutputMixin:
         output_dir: Path,
         reconstructed_cpp: str | None,
         disassembly_report: OrbisDisassemblyReport | None,
+        tool_exports: Sequence[ToolExport],
     ) -> _OptionalRecords:
         records = _OptionalRecords([], [], {}, None)
         if reconstructed_cpp is not None:
@@ -32,6 +35,8 @@ class KnowledgeExportOutputMixin:
             self._append_disassembly_records(
                 records, root_symbol, source_id, output_dir, disassembly_report
             )
+        if tool_exports:
+            self._append_tool_export_records(records, root_symbol, source_id, tool_exports)
         return records
 
     def _append_cpp_records(
@@ -97,6 +102,7 @@ class KnowledgeExportOutputMixin:
         ]
         if optional.tool_source is not None:
             source_artifacts.append(optional.tool_source)
+        source_artifacts.extend(optional.tool_exports)
         manifest = self._manifest(
             root_symbol,
             root_authority,
@@ -131,6 +137,7 @@ class KnowledgeExportOutputMixin:
             "completeness": "complete" if not diagnostics else "partial",
             "diagnostics": diagnostics,
             "source_artifacts": source_artifacts,
+            "tool_exports": optional.tool_exports,
             "files": {
                 "nodes": self._file_descriptor(nodes_path),
                 "relationships": self._file_descriptor(relationships_path),
