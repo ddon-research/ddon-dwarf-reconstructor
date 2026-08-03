@@ -47,9 +47,9 @@ Validation: focused infrastructure/domain/application unit tests and full Ruff.
 
 - Update `AGENTS.md`, `.github/copilot-instructions.md`,
   `.github/instructions/python.instructions.md`, and `CLAUDE.md`.
-- Update `README.md`, `docs/ARCHITECTURE.md`, `docs/TESTING.md`,
-  `docs/GENERATION_FLOWS.md`, and `docs/README.md`.
-- Add `docs/OBSERVABILITY.md` and the observability knowledge-base note.
+- Update `README.md`, the architecture explanation, testing reference,
+  runtime-flow explanation, and site index.
+- Add the application-logging how-to and the observability knowledge-base note.
 - Add this feature's event contract and research record.
 
 Validation: documentation links/search, instruction consistency, quality gates.

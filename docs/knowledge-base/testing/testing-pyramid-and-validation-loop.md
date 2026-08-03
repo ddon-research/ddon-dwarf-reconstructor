@@ -58,10 +58,10 @@ The evidence loop also has explicit read-only commands:
 ```text
 uv run ddon-dwarf-reconstructor artifacts inspect-elf <absolute-ELF-path>
 uv run ddon-dwarf-reconstructor artifacts inspect-dwarf-dump <absolute-dump-path>
-uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
-  --output-dir docs/knowledge-base/dwarf-specification/generated --source-root src
-uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline validate \
-  --output-dir docs/knowledge-base/dwarf-specification/generated
+uv run --directory tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
+  --output-dir ../../docs/knowledge-base/dwarf-specification/generated --source-root ../../src
+uv run --directory tools/dwarf_spec_pipeline dwarf-spec-pipeline validate \
+  --output-dir ../../docs/knowledge-base/dwarf-specification/generated
 ```
 
 The ELF pass is an all-CU header/top-level-attribute scan; the compressed-dump pass is a bounded

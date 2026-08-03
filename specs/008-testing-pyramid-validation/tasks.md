@@ -34,7 +34,7 @@
 
 ## Documentation and durable guidance
 
-- [x] T010 Rewrite `docs/TESTING.md` and `tests/README.md` around the executable taxonomy and
+- [x] T010 Rewrite the testing reference and `tests/README.md` around the executable taxonomy and
   command matrix; correct stale counts and opt-in language.
 - [x] T011 Update README, architecture, docs index, and nested README links and claims.
 - [x] T012 Update `AGENTS.md`, Copilot, Python, and Claude instructions so the same test loop and

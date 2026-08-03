@@ -61,6 +61,9 @@ format:
 format-check:
     uv run ruff format --check src tests tools/sonar
 
+actionlint:
+    actionlint -color
+
 type-check:
     uv run pyrefly check --min-severity warn
 
@@ -73,10 +76,18 @@ structure:
 architecture:
     uv run pytest tests/quality/test_architecture.py -q
 
+docs-serve:
+    uv run zensical serve
+
+docs-build:
+    uv run zensical build --strict
+
+docs-check: docs-build
+
 audit:
     uv run prospector --profile .prospector.yml --tool pylint --tool pyflakes --tool mccabe src
 
-check: lint format-check type-check deps structure architecture
+check: lint format-check actionlint type-check deps structure architecture docs-build
 
 ci: check test-unit package-smoke
 
