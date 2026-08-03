@@ -8,6 +8,8 @@ Refine the static documentation site after the first platform migration. Move La
 SonarQube material into developer-focused Diátaxis how-to pages, give arc42 section 8 a central
 crosscutting-concepts page, and add source-backed C4/UML/Mermaid views without claiming deferred
 runtime telemetry or graph ingestion exists.
+The deferred LadybugDB-first graph evaluation is tracked in the
+[KG-001 feature record](../015-ladybugdb-knowledge-graph/spec.md).
 
 ## Requirements
 

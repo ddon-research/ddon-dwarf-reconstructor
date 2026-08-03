@@ -30,10 +30,12 @@ search results are not complete evidence. Conflicting or unavailable observation
 
 ## Next graph step
 
-The repository does not currently publish a Neo4j database, graph API, or interactive graph view.
-The next implementation should define a versioned loader over the existing JSONL contract, preserve
-producer authority, and add deterministic query fixtures before a live deployment is introduced.
-This is the unchecked `KG-001` task in the
-[documentation style and governance feature](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/013-documentation-style-governance).
-It remains a roadmap task; this static site does not imply that the loader or a live deployment
-exists.
+The repository does not currently publish a LadybugDB database, graph API, or interactive graph
+view. The next implementation is a LadybugDB-first evaluation and versioned loader over the
+existing JSONL contract. It must preserve producer authority, validate source checksums, and add
+deterministic query fixtures before a live deployment is introduced.
+
+The unchecked `KG-001` task is defined in the
+[dedicated LadybugDB knowledge-graph feature](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/015-ladybugdb-knowledge-graph).
+LadybugDB is a proposed derived read model, not current runtime behavior; this static site does
+not imply that the loader or a live deployment exists.

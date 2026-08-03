@@ -6,7 +6,8 @@
   the former monolithic architecture page was 1,625 lines and was the main source of overlap. That
   legacy page is now retired in favor of the navigated architecture explanations.
 - The runtime exposes `generate`, `export-knowledge`, and `artifacts`; the graph exporter writes
-  deterministic JSONL and manifests, not a live database.
+  deterministic JSONL and manifests, not a live database. The LadybugDB-first evaluation is
+  tracked in the [KG-001 feature record](../015-ladybugdb-knowledge-graph/spec.md).
 - The root and `tools/dwarf_spec_pipeline` projects have independent uv boundaries. The canonical
   nested invocation is `uv run --directory tools/dwarf_spec_pipeline ...`.
 - The existing code and tests implement PS3 `DW_OP_plus_uconst`/`DW_OP_constu` location decoding,

@@ -1,7 +1,7 @@
 # Export the knowledge graph
 
 The exporter projects deterministic producer evidence into a portable graph-shaped bundle. The
-current contract is JSON Lines plus a manifest, not a live Neo4j service. That keeps the export
+current contract is JSON Lines plus a manifest, not a live LadybugDB database or service. That keeps the export
 bounded, reviewable, and usable by downstream graph loaders without making graph infrastructure
 a requirement for reconstruction.
 
@@ -28,4 +28,6 @@ uv run ddon-dwarf-reconstructor export-knowledge --help
 
 This is the bridge between the reconstructor and a future searchable knowledge graph. See the
 [knowledge graph contract](../reference/knowledge-graph.md) for the node/edge model and the
-[roadmap](../roadmap/index.md) for the missing live-ingestion and visualization layer.
+[roadmap](../roadmap/index.md) for the missing live-ingestion and visualization layer. The
+LadybugDB-first loader contract is tracked in
+[`KG-001`](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/015-ladybugdb-knowledge-graph).

@@ -16,5 +16,6 @@
 
 ## Deferred task tracking
 
-- [ ] KG-001 remains the separate knowledge-graph loader/integration task. This feature documents
-  the current JSONL projection and must not implement or imply a live graph integration.
+- [ ] KG-001 remains the separate LadybugDB-first knowledge-graph loader/evaluation task in the
+  [KG-001 feature record](../015-ladybugdb-knowledge-graph/tasks.md). This feature documents the
+  current JSONL projection and must not implement or imply a live graph integration.

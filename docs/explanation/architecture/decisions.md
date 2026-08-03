@@ -19,12 +19,12 @@ Producer facts are never overwritten by semantic or external-tool guesses. Parti
 complete evidence. This costs some convenience but makes generated headers and graph records
 auditable.
 
-## Static docs before live graph infrastructure
+## Static docs before live embedded graph infrastructure
 
 The current exporter already provides deterministic JSONL nodes and relationships. Zensical gives
-the project a low-cost, searchable publication surface without adding Neo4j as a runtime
-dependency. A live graph loader/browser is intentionally a roadmap feature until its schema,
-provenance, and update policy are specified.
+the project a low-cost, searchable publication surface without adding LadybugDB as a runtime
+dependency. A LadybugDB-first graph loader/browser is intentionally a roadmap feature until its
+compatibility, schema, provenance, concurrency, and update policy are verified in `KG-001`.
 
 ## One task runner
 

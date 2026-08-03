@@ -153,12 +153,13 @@ Producer facts and derived observations have different authority:
 | `SearchResult` | Bounded lookup contract | Preserve `complete`, `partial`, `not_found`, and `unavailable`; partial evidence is never complete evidence. |
 | Orbis/LLVM/GNU/other tool export | Additive observation | Keep tool identity, command, version, manifest, and uncertainty; never overwrite producer facts. |
 | SonarQube diagnostics | Local quality observation | Report compiler and database evidence separately from generated-header correctness. |
-| JSONL knowledge bundle | Current projection | It is a deterministic export contract, not proof that a live Neo4j loader exists. |
+| JSONL knowledge bundle | Current projection | It is a deterministic export contract, not proof that a live LadybugDB loader exists. |
 
-The [knowledge graph reference](../../reference/knowledge-graph.md) and
-[external-tool evidence record](../../knowledge-base/tools/external-tool-evidence.md) are the
-details. Live graph ingestion remains a separately tracked task; this documentation slice does
-not introduce a graph integration.
+The [knowledge graph reference](../../reference/knowledge-graph.md),
+[external-tool evidence record](../../knowledge-base/tools/external-tool-evidence.md), and
+[LadybugDB import contract](https://github.com/ddon-research/ddon-dwarf-reconstructor/blob/main/specs/015-ladybugdb-knowledge-graph/contracts/import-contract.md)
+are the details. Live graph ingestion remains a separately tracked task; this documentation slice
+does not introduce a graph integration.
 
 ## Validation and quality analysis
 
@@ -215,7 +216,8 @@ The following are intentional boundaries rather than undocumented gaps:
 - The Python application has no Langfuse SDK instrumentation; only Copilot and Codex developer
   clients export traces.
 - SonarQube is local, optional, and additive; it is not a CI correctness gate.
-- The knowledge graph loader remains deferred to `KG-001`; current exports are JSONL plus manifest.
+- The LadybugDB-first knowledge graph loader remains deferred to `KG-001`; current exports are
+  JSONL plus manifest.
 - The C4 views stop at context, container, and component levels because finer diagrams would repeat
   the package inventory without adding a reader decision; native UML/sequence views cover the code
   and runtime questions.

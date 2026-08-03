@@ -71,7 +71,7 @@ behavior:
 
 For this project, owning DWARF producer facts remain authoritative. External tool observations are
 additive. Missing, partial, conflicting, unavailable, and real-asset evidence stays visible. A
-static page must not imply that a live Neo4j service, graph browser, compiler validation, or
+static page must not imply that a live LadybugDB database, graph browser, compiler validation, or
 proprietary-tool run exists when the repository has only a JSONL bundle or a deferred task.
 
 ## Architecture writing with arc42

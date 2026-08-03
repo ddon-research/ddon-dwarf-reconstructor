@@ -18,7 +18,8 @@ The repository shall publish a source-backed, searchable static wiki through Zen
 Pages. Its navigation shall follow Diátaxis page intent, its architecture explanation shall follow
 arc42, diagrams shall be Mermaid/UML source in Markdown, and Spec Kit features shall remain the
 roadmap and decision record. The site shall document the current JSONL knowledge-graph projection
-without claiming that a live graph database or browser exists.
+without claiming that the deferred LadybugDB loader, live graph database, or browser exists. The
+LadybugDB-first loader evaluation is tracked separately in the [KG-001 feature record](../015-ladybugdb-knowledge-graph/spec.md).
 
 ## Requirements
 
@@ -30,8 +31,9 @@ without claiming that a live graph database or browser exists.
   runtime, deployment, decisions, quality risks, and evidence boundaries.
 - **DOC-004**: At least one flowchart, sequence/state diagram, and UML class diagram MUST be kept
   as Mermaid source and rendered by the site build.
-- **DOC-005**: The roadmap MUST index features 001-012 with status derived from their specs/tasks;
-  it MUST link to the authoritative Spec Kit records rather than copying requirements.
+- **DOC-005**: The roadmap MUST index every current feature, including the LadybugDB-first feature
+  015, with status derived from its specs/tasks; it MUST link to the authoritative Spec Kit records
+  rather than copying requirements.
 - **DOC-006**: The CLI, artifact, testing, source-identity, knowledge-export, and low-level
   type-resolution pages MUST reflect the current implementation and preserve uncertainty.
 - **DOC-007**: The root `justfile` MUST expose `docs-serve` and strict `docs-build`; `docs-build`
@@ -58,7 +60,7 @@ without claiming that a live graph database or browser exists.
 
 ## Non-goals
 
-- Building a Neo4j server, graph API, or interactive graph browser in this feature.
+- Building a LadybugDB database, graph API, or interactive graph browser in this feature.
 - Moving or publishing proprietary ELF/dump inputs, generated headers, credentials, or runtime
   caches.
 - Replacing the existing graph export contract or changing reconstruction semantics.

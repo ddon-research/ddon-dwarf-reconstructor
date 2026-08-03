@@ -24,5 +24,7 @@
 ## Deferred knowledge-graph task
 
 - [ ] KG-001 Define and implement a versioned loader over the existing JSONL bundle with
-  deterministic query fixtures, provenance-preserving authority rules, and acceptance evidence.
-  Do not start live Neo4j/API/browser integration until this task is specified and verified.
+  deterministic query fixtures, provenance-preserving authority rules, LadybugDB-first compatibility
+  evidence, and acceptance evidence. The authoritative task record is the [KG-001 feature
+  record](../015-ladybugdb-knowledge-graph/tasks.md); do not start live LadybugDB/API/browser
+  integration until that contract is verified.

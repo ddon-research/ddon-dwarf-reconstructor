@@ -56,8 +56,8 @@ Completion requires evidence; elapsed time, token budget, or confidence is not c
   applicable arc42 compartment before drafting.
 - Update the site, README, instruction adapters, and testing/architecture references in the same
   slice when a public command or workflow changes.
-- Track the next graph-loader step as `KG-001`; do not start live graph infrastructure as part of a
-  writing-style change.
+- Track the next LadybugDB-first graph-loader step as `KG-001` in the dedicated feature record; do
+  not start live graph infrastructure as part of a writing-style change.
 - Use `get_goal` for status and `update_goal` only when the named evidence surface is complete or
   the same blocking condition has repeated for three consecutive goal turns.
 

@@ -6,7 +6,8 @@
   workflows, and worktree state; preserve unrelated edits.
 - [x] T002 Define the Zensical, Diátaxis, arc42, Mermaid/UML, knowledge-graph, and roadmap source
   boundaries in `docs/explanation/documentation-system.md`.
-- [x] T003 Record the current graph contract and missing live-ingestion capability.
+- [x] T003 Record the current graph contract and missing live-ingestion capability; link the
+  deferred LadybugDB-first evaluation to the [KG-001 feature record](../015-ladybugdb-knowledge-graph/spec.md).
 
 ## Site implementation
 
