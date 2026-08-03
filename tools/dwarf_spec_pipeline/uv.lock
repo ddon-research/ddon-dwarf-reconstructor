@@ -157,8 +157,8 @@ requires-dist = [
 dev = [
     { name = "deptry", specifier = ">=0.25,<1" },
     { name = "pyrefly", specifier = ">=1.2,<2" },
-    { name = "pytest", specifier = ">=8.4,<9" },
-    { name = "pytest-cov", specifier = ">=6.2,<7" },
+    { name = "pytest", specifier = ">=8.4,<10" },
+    { name = "pytest-cov", specifier = ">=6.2,<8" },
     { name = "ruff", specifier = ">=0.12,<1" },
     { name = "rust-just", specifier = ">=1.42,<2" },
     { name = "types-jsonschema", specifier = ">=4,<5" },
@@ -166,8 +166,8 @@ dev = [
 lint = [{ name = "ruff", specifier = ">=0.12,<1" }]
 quality = [{ name = "deptry", specifier = ">=0.25,<1" }]
 test = [
-    { name = "pytest", specifier = ">=8.4,<9" },
-    { name = "pytest-cov", specifier = ">=6.2,<7" },
+    { name = "pytest", specifier = ">=8.4,<10" },
+    { name = "pytest-cov", specifier = ">=6.2,<8" },
 ]
 tools = [{ name = "rust-just", specifier = ">=1.42,<2" }]
 type = [
