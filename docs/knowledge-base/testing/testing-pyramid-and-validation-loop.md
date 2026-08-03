@@ -39,6 +39,11 @@ The real PS4 generator and warm budget remain explicit `real_asset` acceptance/p
 This keeps the quality loop meaningful on machines and CI workers without the 800 MB ELF or the
 30+ GB expanded dump.
 
+The required correctness tier also carries cross-platform filesystem evidence. The source identity
+catalog must reuse an unchanged object after relocation on POSIX and Windows, while still rehashing
+ctime-only mutation at an existing path. A local Windows pass is therefore insufficient by itself;
+the Ubuntu Actions job is part of the contract.
+
 ## Validation evidence
 
 After the DWARF2-DWARF4 audit and Sonar setup update, collection reports 443 tests with zero unscoped and zero

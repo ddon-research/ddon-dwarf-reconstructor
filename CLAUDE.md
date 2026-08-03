@@ -53,8 +53,11 @@ uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
 
 ## Engineering constraints
 
-- Preserve immutable input identity, source-bound durable caches, atomic publication, deterministic
   ordering, qualified names, offsets, layouts, provenance, and generated-header bytes.
+- Preserve immutable input identity, source-bound durable caches, atomic publication, deterministic
+  ordering, qualified names, offsets, layouts, provenance, and generated-header bytes. Source
+  identity fast keys use size, mtime, device, and inode; ctime drift is accepted only for a moved
+  catalog path, and explicit verification performs the complete hash.
 - Keep domain, application, and infrastructure boundaries intact. New CLI code belongs at the
   composition root and must convert into typed application requests.
 - Do not commit ELF files, expanded dumps, generated headers, caches, logs, credentials, or real
@@ -78,6 +81,9 @@ For a multi-turn DWARF investigation, use a thread-scoped Codex goal. Define the
 evidence surface first, inspect the validated PS4 DWARF4/PS3 DWARF2 producer facts and semantic
 index, then iterate through focused tests and the required gates. Separate confirmed facts from
 approximation, blocked prerequisites, and remaining uncertainty before declaring completion.
+For CI or Dependabot work, inspect gh auth status, gh pr diff, gh pr checks, and gh run view
+<run-id> --log-failed before changing the local implementation. Passing quality checks do not
+replace a failed correctness check.
 
 ## Observability loop
 

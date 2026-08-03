@@ -130,6 +130,14 @@ uv run ddon-dwarf-reconstructor artifacts repair-catalog
 Repair, rebuild, and purge operations never broaden their target beyond the explicitly selected
 artifact. The former `ddon-dwarf-artifacts` executable is intentionally removed.
 
+The source catalog uses a relocation-stable metadata key (size, mtime, device, and inode) to
+reuse a verified SHA-256 when an immutable input is moved. It retains ctime and recorded paths as
+a same-path replacement guard; ctime drift is reusable only when the old path disappeared. Use
+`artifacts verify-source` when an explicit full rehash is required. This distinction is covered by
+the artifact regression tests intended for both the Linux CI runner and the Windows development
+host; the current Linux failure and post-fix Windows run are recorded in the testing knowledge
+base until the fix is published for a remote rerun.
+
 ## External tool evidence
 
 External inspection is an explicit, source-bound artifact workflow. Probe local executables first,

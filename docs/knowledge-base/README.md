@@ -24,9 +24,13 @@ knowledge-base/
 │   └── external-tool-evidence.md
 ├── optimization/        # Performance optimization strategies
 │   └── indexing-strategy.md
-└── observability/        # Structured logs, tracebacks, and telemetry seam
+├── observability/        # Structured logs, tracebacks, and telemetry seam
+│   ├── README.md
+│   └── structured-logging-and-exception-tracing.md
+└── testing/              # Test taxonomy, CI convergence, and validation evidence
     ├── README.md
-    └── structured-logging-and-exception-tracing.md
+    ├── testing-pyramid-and-validation-loop.md
+    └── dependabot-correctness-convergence-2026-08-03.md
 ```
 
 ## Machine-readable DWARF specifications

@@ -243,7 +243,7 @@ Thus, getting the DWARF parsing correct is important.
 Afterwards, review the current copilot, codex, python instructions and revalidate the tooling loop for changes. Update documentation, specs and the knowledge base.
 Derive a plan first and refactor the code aggressively.
 --
-WIP:
+DONE:
 Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
 Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
 
@@ -269,6 +269,7 @@ https://www.psdevwiki.com/ps4/SELF_-_SPRX
 Afterwards, review the current copilot, codex, python instructions and revalidate the tooling loop for changes. Update documentation, specs and the knowledge base.
 Derive a plan first and refactor the code aggressively.
 --
+DONE:
 Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
 Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
 
@@ -276,6 +277,9 @@ Check the GitHub Actions failures and dependabot PRs and validate the proposed c
 https://github.com/ddon-research/ddon-dwarf-reconstructor/pulls
 https://github.com/ddon-research/ddon-dwarf-reconstructor/actions
 Most of the PRs are failing due to the correctness tests: https://github.com/ddon-research/ddon-dwarf-reconstructor/actions/runs/30774416064/job/91567057120?pr=7 & https://github.com/ddon-research/ddon-dwarf-reconstructor/actions/runs/30774416064/workflow?pr=7
+
+Afterwards, review the current copilot, codex, python instructions and revalidate the tooling loop for changes. Update documentation, specs and the knowledge base.
+Derive a plan first and refactor the code aggressively.
 --
 TODO:
 Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)

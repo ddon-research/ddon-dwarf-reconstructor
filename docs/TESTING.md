@@ -18,6 +18,22 @@ uv run just coverage-ci
 uv run just audit
 ```
 
+### Pull-request and Dependabot convergence
+
+When a dependency-update PR fails, establish the remote evidence before changing source:
+
+```text
+gh auth status
+gh pr list --repo ddon-research/ddon-dwarf-reconstructor --state open
+gh pr diff <pr-number> --repo ddon-research/ddon-dwarf-reconstructor
+gh pr checks <pr-number> --repo ddon-research/ddon-dwarf-reconstructor
+gh run view <run-id> --repo ddon-research/ddon-dwarf-reconstructor --log-failed
+```
+
+Reproduce the named failure locally with `uv run` and keep the proposed dependency/action diff
+separate from the product fix. A passing quality or nested-tool job validates that proposal's
+surface; it does not substitute for the required correctness and coverage job.
+
 Useful selections:
 
 ```text
@@ -135,6 +151,12 @@ Do not replace generated-header validation with normalized snapshots. A regressi
 source identity, producer/schema/configuration identity, cache state, sorted paths, byte counts,
 and SHA-256 values. Preserve offsets, qualified names, inheritance, layouts, source locations,
 DIE/CU provenance, and deterministic ordering.
+
+Filesystem metadata semantics are part of correctness, not an operating-system detail. The source
+catalog regression suite covers fresh-process warm reuse, relocation across directories, same-path
+replacement, same-size middle replacement, ctime-only mutation, malformed catalogs, atomic
+publication, and lock recovery. The relocation test must run on a POSIX CI worker as well as the
+Windows development host because rename ctime behavior differs.
 
 ## Property-based tests
 

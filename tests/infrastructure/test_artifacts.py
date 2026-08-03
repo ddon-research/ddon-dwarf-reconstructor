@@ -42,7 +42,15 @@ def test_catalog_reuses_identity_after_source_relocation(tmp_path: Path, mocker)
     catalog_path = tmp_path / "source-identities.json"
     identity = SourceIdentityCatalog(catalog_path).identify(original)
     original.replace(relocated)
+    relocated_metadata = artifacts.SourceMetadata(
+        size=identity.size,
+        mtime_ns=identity.mtime_ns,
+        ctime_ns=identity.ctime_ns + 1,
+        device=identity.device,
+        inode=identity.inode,
+    )
 
+    mocker.patch.object(artifacts, "probe_source", return_value=relocated_metadata)
     hash_spy = mocker.patch(
         "ddon_dwarf_reconstructor.infrastructure.artifacts.sha256_file",
         side_effect=AssertionError("relocation rehashed the complete source"),
@@ -55,6 +63,31 @@ def test_catalog_reuses_identity_after_source_relocation(tmp_path: Path, mocker)
     record = catalog["sources"][identity.lookup_key]
     assert str(original.resolve()) in record["paths"]
     assert str(relocated.resolve()) in record["paths"]
+
+
+@pytest.mark.unit
+def test_catalog_rehashes_when_ctime_changes_at_existing_path(tmp_path: Path, mocker) -> None:
+    """ctime drift at a recorded path remains a replacement signal."""
+    source = tmp_path / "DDOORBIS.elf"
+    source.write_bytes(b"same-bytes" * 20_000)
+    catalog = SourceIdentityCatalog(tmp_path / "source-identities.json")
+    identity = catalog.identify(source)
+    observed = artifacts.probe_source(source)
+    changed_metadata = artifacts.SourceMetadata(
+        size=observed.size,
+        mtime_ns=observed.mtime_ns,
+        ctime_ns=observed.ctime_ns + 1,
+        device=observed.device,
+        inode=observed.inode,
+    )
+    mocker.patch.object(artifacts, "probe_source", return_value=changed_metadata)
+    hash_spy = mocker.spy(artifacts, "sha256_file")
+
+    refreshed = catalog.identify(source)
+
+    assert refreshed.sha256 == identity.sha256
+    assert refreshed != identity
+    hash_spy.assert_called_once_with(source.resolve())
 
 
 @pytest.mark.unit

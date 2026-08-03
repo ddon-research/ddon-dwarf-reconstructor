@@ -20,6 +20,10 @@ contradict either source.
   credentials.
 - Preserve qualified names, inheritance, field offsets, sizes, source locations, DIE/CU
   provenance, deterministic ordering, cache formats, and source offsets. Offset `0` is valid.
+- Source identity fast lookup uses size, mtime, device, and inode, while retaining ctime to detect
+  mutation. A ctime change is reusable only when a recorded source path disappeared and the file
+  was relocated; explicit verification hashes the complete source. Keep this cross-platform
+  regression covered before changing cache or artifact policy.
 - Treat external tool output as a separate, source-bound evidence layer. Start with
   `artifacts list-tool-profiles` and explicit `probe-tool` help/version captures; publish named
   exports with `export-tool-evidence` and attach them to knowledge export with repeated
@@ -140,6 +144,11 @@ ELF/dump producer evidence and the generated DWARF semantic index; then make one
 slice, run the focused tests and `just check`, and continue only from observed results. A goal is
 complete only when its evidence surface passes. Report confirmed, approximate, blocked, and
 remaining-uncertainty findings separately; do not treat a time or token budget as completion.
+
+For CI or Dependabot work, capture GitHub evidence before editing: gh auth status, gh pr list, gh
+pr diff, gh pr checks, and gh run view <run-id> --log-failed. Passing dependency-update and
+quality checks validate the proposed change surface but do not waive the required correctness
+job.
 
 For repository-wide instructions, performance constraints, safety rules, and the complete
 validation sequence, follow `AGENTS.md`.

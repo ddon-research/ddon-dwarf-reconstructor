@@ -15,7 +15,7 @@ from time import monotonic, sleep, time, time_ns
 from typing import Any, cast
 
 from ..core.observability import get_logger, log_event
-from ..domain.ports.source_identity import SourceIdentity
+from ..domain.ports.source_identity import SourceIdentity, source_metadata_lookup_key
 
 CATALOG_SCHEMA_VERSION = "1.0"
 LOCK_TIMEOUT_SECONDS = 30.0
@@ -50,8 +50,7 @@ class SourceMetadata:
     @property
     def lookup_key(self) -> str:
         """Return a relocation-stable key for an unchanged filesystem object."""
-        payload = ":".join(str(value) for value in asdict(self).values()).encode()
-        return hashlib.sha256(payload).hexdigest()
+        return source_metadata_lookup_key(self.size, self.mtime_ns, self.device, self.inode)
 
 
 def probe_source(path: Path) -> SourceMetadata:
@@ -89,48 +88,15 @@ class SourceIdentityCatalog:
         lookup_key = metadata.lookup_key
         with self._exclusive_lock():
             catalog = self._load()
-            record = catalog["sources"].get(lookup_key)
-            if not verify and self._valid_record(record, metadata):
-                identity = SourceIdentity(
-                    sha256=str(record["sha256"]),
-                    **asdict(metadata),
-                )
-                self._remember_path(catalog, lookup_key, record, resolved)
-                log_event(
-                    logger,
-                    logging.DEBUG,
-                    "source_identity_cache_hit",
-                    source_path=resolved,
-                    source_size=metadata.size,
-                    source_sha256=identity.sha256,
-                    verified=False,
+            record_key, record = self._locate_record(catalog, lookup_key, metadata, resolved)
+            if record is not None and self._can_reuse(record, metadata, resolved, verify):
+                identity = self._identity_from_record(record)
+                self._publish_cache_hit(
+                    catalog, record_key, lookup_key, record, resolved, metadata, identity
                 )
                 return identity
 
-            identity = SourceIdentity(
-                sha256=sha256_file(resolved),
-                **asdict(metadata),
-            )
-            paths = [] if record is None else list(record.get("paths", []))
-            resolved_text = str(resolved)
-            if resolved_text not in paths:
-                paths.append(resolved_text)
-            catalog["sources"][identity.lookup_key] = {
-                **asdict(identity),
-                "paths": sorted(paths),
-                "verified_at_ns": time_ns(),
-            }
-            self._save(catalog)
-            log_event(
-                logger,
-                logging.INFO,
-                "source_identity_rehashed",
-                source_path=resolved,
-                source_size=metadata.size,
-                source_sha256=identity.sha256,
-                verified=verify,
-            )
-            return identity
+            return self._rehash_and_store(catalog, record_key, record, resolved, metadata, verify)
 
     def sha256(self, source_path: Path) -> str:
         """Implement the application source-hash port with durable warm reuse."""
@@ -170,17 +136,23 @@ class SourceIdentityCatalog:
         """Record an already-established strong identity without rehashing."""
         resolved = source_path.resolve()
         metadata = probe_source(resolved)
-        if asdict(metadata) != {
-            key: value for key, value in asdict(identity).items() if key != "sha256"
-        }:
-            raise ValueError(f"Source no longer matches supplied identity: {resolved}")
         with self._exclusive_lock():
             catalog = self._load()
-            existing = catalog["sources"].get(identity.lookup_key, {})
-            paths = list(existing.get("paths", [])) if isinstance(existing, dict) else []
+            record_key, existing = self._locate_record(
+                catalog, identity.lookup_key, metadata, resolved
+            )
+            if not self._identity_metadata_matches(identity, metadata) and not (
+                isinstance(existing, dict)
+                and existing.get("sha256") == identity.sha256
+                and self._valid_record(existing, metadata, resolved)
+            ):
+                raise ValueError(f"Source no longer matches supplied identity: {resolved}")
+            stored_record = existing if isinstance(existing, dict) else {}
+            paths = self._record_paths(stored_record)
             resolved_text = str(resolved)
             if resolved_text not in paths:
                 paths.append(resolved_text)
+            self._rekey_record(catalog, record_key, identity.lookup_key, stored_record)
             catalog["sources"][identity.lookup_key] = {
                 **asdict(identity),
                 "paths": sorted(paths),
@@ -189,24 +161,170 @@ class SourceIdentityCatalog:
             self._save(catalog)
 
     @staticmethod
-    def _valid_record(record: Any, metadata: SourceMetadata) -> bool:
+    def _identity_metadata_matches(identity: SourceIdentity, metadata: SourceMetadata) -> bool:
+        return all(
+            getattr(identity, key) == getattr(metadata, key)
+            for key in ("size", "mtime_ns", "ctime_ns", "device", "inode")
+        )
+
+    @classmethod
+    def _can_reuse(
+        cls,
+        record: dict[str, Any],
+        metadata: SourceMetadata,
+        source_path: Path,
+        verify: bool,
+    ) -> bool:
+        if verify:
+            return False
+        return cls._valid_record(record, metadata, source_path)
+
+    def _publish_cache_hit(
+        self,
+        catalog: dict[str, Any],
+        record_key: str | None,
+        lookup_key: str,
+        record: dict[str, Any],
+        source_path: Path,
+        metadata: SourceMetadata,
+        identity: SourceIdentity,
+    ) -> None:
+        catalog_changed = self._rekey_record(catalog, record_key, lookup_key, record)
+        catalog_changed = (
+            self._remember_path(catalog, lookup_key, record, source_path) or catalog_changed
+        )
+        if catalog_changed:
+            self._save(catalog)
+        log_event(
+            logger,
+            logging.DEBUG,
+            "source_identity_cache_hit",
+            source_path=source_path,
+            source_size=metadata.size,
+            source_sha256=identity.sha256,
+            verified=False,
+            relocated=identity.ctime_ns != metadata.ctime_ns,
+        )
+
+    def _rehash_and_store(
+        self,
+        catalog: dict[str, Any],
+        record_key: str | None,
+        record: dict[str, Any] | None,
+        source_path: Path,
+        metadata: SourceMetadata,
+        verify: bool,
+    ) -> SourceIdentity:
+        identity = SourceIdentity(sha256=sha256_file(source_path), **asdict(metadata))
+        paths = self._record_paths(record)
+        resolved_text = str(source_path)
+        if resolved_text not in paths:
+            paths.append(resolved_text)
+        if record_key is not None and record_key != identity.lookup_key:
+            catalog["sources"].pop(record_key, None)
+        catalog["sources"][identity.lookup_key] = {
+            **asdict(identity),
+            "paths": sorted(paths),
+            "verified_at_ns": time_ns(),
+        }
+        self._save(catalog)
+        log_event(
+            logger,
+            logging.INFO,
+            "source_identity_rehashed",
+            source_path=source_path,
+            source_size=metadata.size,
+            source_sha256=identity.sha256,
+            verified=verify,
+        )
+        return identity
+
+    @staticmethod
+    def _record_paths(record: dict[str, Any] | None) -> list[str]:
+        if not isinstance(record, dict) or not isinstance(record.get("paths"), list):
+            return []
+        return [path for path in record["paths"] if isinstance(path, str)]
+
+    @staticmethod
+    def _stable_metadata_matches(record: dict[str, Any], metadata: SourceMetadata) -> bool:
+        return all(
+            record.get(key) == getattr(metadata, key)
+            for key in ("size", "mtime_ns", "device", "inode")
+        )
+
+    @staticmethod
+    def _is_relocated(record: dict[str, Any], source_path: Path) -> bool:
+        paths = record.get("paths")
+        if not isinstance(paths, list):
+            return False
+        resolved_text = str(source_path)
+        return resolved_text not in paths and any(
+            isinstance(path, str) and not Path(path).exists() for path in paths
+        )
+
+    @classmethod
+    def _valid_record(cls, record: Any, metadata: SourceMetadata, source_path: Path) -> bool:
         return (
             isinstance(record, dict)
-            and all(record.get(key) == value for key, value in asdict(metadata).items())
+            and cls._stable_metadata_matches(record, metadata)
             and isinstance(record.get("sha256"), str)
             and len(record["sha256"]) == 64
+            and (
+                record.get("ctime_ns") == metadata.ctime_ns
+                or cls._is_relocated(record, source_path)
+            )
         )
+
+    @staticmethod
+    def _identity_from_record(record: dict[str, Any]) -> SourceIdentity:
+        return SourceIdentity(
+            sha256=str(record["sha256"]),
+            size=int(record["size"]),
+            mtime_ns=int(record["mtime_ns"]),
+            ctime_ns=int(record["ctime_ns"]),
+            device=int(record["device"]),
+            inode=int(record["inode"]),
+        )
+
+    def _locate_record(
+        self,
+        catalog: dict[str, Any],
+        lookup_key: str,
+        metadata: SourceMetadata,
+        source_path: Path,
+    ) -> tuple[str | None, dict[str, Any] | None]:
+        direct = catalog["sources"].get(lookup_key)
+        if lookup_key in catalog["sources"]:
+            return lookup_key, direct if isinstance(direct, dict) else None
+        for candidate_key in sorted(catalog["sources"]):
+            candidate = catalog["sources"][candidate_key]
+            if isinstance(candidate, dict) and self._valid_record(candidate, metadata, source_path):
+                return candidate_key, candidate
+        return None, None
+
+    @staticmethod
+    def _rekey_record(
+        catalog: dict[str, Any],
+        record_key: str | None,
+        lookup_key: str,
+        record: dict[str, Any],
+    ) -> bool:
+        if record_key is None or record_key == lookup_key:
+            return False
+        catalog["sources"][lookup_key] = record
+        catalog["sources"].pop(record_key, None)
+        return True
 
     def _remember_path(
         self, catalog: dict[str, Any], lookup_key: str, record: dict[str, Any], path: Path
-    ) -> None:
+    ) -> bool:
         resolved_text = str(path)
-        paths = list(record.get("paths", []))
+        paths = self._record_paths(record)
         if resolved_text in paths:
-            return
+            return False
         record["paths"] = sorted([*paths, resolved_text])
         catalog["sources"][lookup_key] = record
-        self._save(catalog)
+        return True
 
     def _load(self) -> dict[str, Any]:
         if not self.path.exists():

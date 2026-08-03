@@ -24,6 +24,10 @@ through the repository's `src` directory.
   callers, tests, and contracts atomically; do not add a wrapper just to avoid changing a caller.
 - Keep one policy implementation for definition selection, source identity, primitive/excluded-type
   classification, method evidence, special-header rendering, and array/declarator parsing.
+- Source identity metadata keys must be relocation-stable (size, mtime, device, inode). Keep ctime
+  as a same-path mutation signal, allow ctime-only drift only when catalog path history proves a
+  move, and preserve the recorded identity for downstream warm-cache reuse. `verify=True` is the
+  explicit full-hash boundary.
 - `DwarfRuntimeConfig.from_environment()` is the only source for runtime cache sizes and search
   bounds. Invalid `DWARF_DIE_CACHE_SIZE`, `DWARF_TYPE_CACHE_SIZE`, or
   `DWARF_MAX_SEARCH_TIME_MS` values are configuration errors, not reasons to silently use defaults.
@@ -116,6 +120,11 @@ uv run just test
 uv run just coverage-ci
 uv run just audit
 ```
+
+For a failing Dependabot or pull-request check, inspect the remote proposal before changing
+source: run gh auth status, gh pr list, gh pr diff, gh pr checks, and gh run view <run-id>
+--log-failed. Reproduce the failing test with uv run before updating code or expectations; a
+passing lint/tooling job does not replace the required correctness evidence.
 
 For real PS4 or performance validation, use explicit local input and index paths, retain cold and
 warm state, and store generated artifacts outside source control. Update the relevant Spec Kit and

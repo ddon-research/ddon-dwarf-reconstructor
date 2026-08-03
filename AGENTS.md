@@ -22,8 +22,11 @@ unbounded in-memory intermediates. Preserve stable output ordering and source of
   before reuse, and publish atomically. Routine cleanup must preserve them; make purge, repair, or
   rebuild narrowly targeted and explicit.
 - `SourceIdentityCatalog` is the shared source-binding implementation. A warm identity may reuse a
-  verified metadata key, while explicit verification rehashes the complete source; do not create
-  boundary-sampling or path-only identity schemes.
+  verified metadata key when metadata indicates the same filesystem object. The key uses size,
+  mtime, device, and inode so an unchanged file can be relocated without a second full hash.
+  Retain ctime as a mutation signal and reuse ctime drift only when the recorded path disappeared
+  and a new path has the same stable object metadata. Explicit `verify=True` always rehashes the
+  complete source; do not create boundary-sampling or path-only identity schemes.
 - `SearchResult` is the contract for bounded targeted lookup. Preserve status and candidate
   provenance; partial results are never complete evidence and must not be consumed as complete.
 - `ElfDwarfSession` owns the opened ELF/DWARF graph and one-time PS4 normalization. Generated
@@ -172,6 +175,11 @@ its `just test`, `just test-official`, and `just check` from that project bounda
 - For multi-turn correctness work, create a thread-scoped goal whose objective names the outcome,
   evidence surface, preservation constraints, scope boundary, next iteration action, and blocked
   condition. The goal is a workflow aid, not a replacement for these repository instructions.
+- For GitHub Actions or Dependabot correctness work, establish remote evidence before changing
+  code: run gh auth status, inventory open PRs with gh pr list, inspect each proposal with gh pr
+  diff, collect gh pr checks, and read failing job output with gh run view <run-id> --log-failed.
+  Treat action/dependency-update checks that pass as proposal evidence, not as a substitute for
+  the required correctness job.
 - Start DWARF investigations with `artifacts inspect-elf`, `artifacts inspect-dwarf-dump`, and the
   standalone specification `dwarf-spec-pipeline audit` command. For toolchain work, probe local
   `--help`/`--version` surfaces first, then run only named profiles and retain their manifests.

@@ -20,6 +20,31 @@ missing prerequisite and the action that would unlock it.
 
 ## Iteration stages
 
+Before changing code for a CI or Dependabot problem, capture the remote evidence surface:
+
+```text
+gh auth status
+gh pr list --repo ddon-research/ddon-dwarf-reconstructor --state open
+gh pr diff <pr-number> --repo ddon-research/ddon-dwarf-reconstructor
+gh pr checks <pr-number> --repo ddon-research/ddon-dwarf-reconstructor
+gh run view <run-id> --repo ddon-research/ddon-dwarf-reconstructor --log-failed
+```
+
+A passing action-update, dependency-update, lint, or nested-tool check validates only that
+proposal's surface. The goal remains active until the required correctness job is reproduced and
+the local and remote evidence agree.
+
+A suitable maintenance goal for this loop is:
+
+```text
+/goal Resolve all open Dependabot correctness failures, verified by gh pr checks, focused
+reproduction, uv run just test-unit, uv run just check, uv run just test, coverage-ci, and audit,
+while preserving deterministic source identity, cache reuse, provenance, and output bytes. Use
+the checkout, explicit local assets, and gh evidence. Between iterations record the observed
+failure, the smallest safe change, and the next validation. If a remote permission, asset, or
+tooling prerequisite blocks progress, report it with the exact unlock action.
+```
+
 1. Establish the evidence surface: inspect the worktree, identify immutable inputs, and run
    `artifacts inspect-elf` and `artifacts inspect-dwarf-dump` when explicit local paths are present.
 2. Inventory external binary tools and their local `--version`/`--help` output. Select only

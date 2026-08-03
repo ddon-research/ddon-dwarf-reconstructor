@@ -86,6 +86,20 @@ real PS4 output manifests in fresh and warm processes.
 - Run all required gates and record any deferred compiler or real-asset work in
   this feature rather than in generated output.
 
+## Phase 6: Converge cross-platform CI evidence — local slice complete; remote rerun pending
+
+- Inspect every open Dependabot proposal with `gh pr diff`, `gh pr checks`, and failed job logs
+  before changing product code. Separate proposal validation from the shared base failure.
+- Make source identity's metadata key relocation-stable without weakening same-path mutation
+  detection: size, mtime, device, and inode form the fast key; ctime and path history remain
+  safety signals; `verify=True` performs the complete hash.
+- Add a focused regression for ctime-only drift at an existing path and record the Linux/Windows
+  filesystem distinction in the testing knowledge base and client instructions.
+
+Validation: artifact/source-bound focused tests, root `just check`, required correctness and
+coverage loops, nested specification checks, and GitHub PR status inspection are complete for the
+unpublished local repair. A post-publication PR status reinspection remains T025.
+
 ## Dependency order
 
 Phase 1 and Phase 2 enabled deletion of duplicate caches and application

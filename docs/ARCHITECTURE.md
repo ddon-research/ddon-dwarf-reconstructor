@@ -27,6 +27,13 @@ exact-path purge operations via `ddon-dwarf-reconstructor artifacts`; convergenc
 knowledge-graph inventories and bundles remains tracked in the active Spec Kit
 feature.
 
+`SourceIdentityCatalog` separates the fast filesystem observation from the strong content
+identity. Its lookup key uses size, mtime, device, and inode; ctime is retained to reject
+same-path mutations, while a ctime-only change is accepted only when catalog path history proves
+that the unchanged object was moved. A cache hit returns the recorded identity metadata, so a
+relocated immutable input remains eligible for warm source-bound caches. `verify-source` is the
+explicit full-SHA-256 verification boundary.
+
 ### Specification knowledge artifacts
 
 The runtime reconstructor and the specification publishing tool are separate

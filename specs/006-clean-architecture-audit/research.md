@@ -107,3 +107,31 @@ acceptance artifact remains outside the repository.
 | Composition and publication | `infrastructure/elf_session.py`, `application/generators/generator_workflow.py`, `infrastructure/header_output.py`, and generator setup/main-path tests cover partial construction, one-time patching, atomic replacement, rollback, and stale-file removal. |
 | Nested specification pipeline | `tools/dwarf_spec_pipeline/src/dwarf_spec_pipeline/readers.py` and `source_manifest.py` were reviewed; source cleanup catches only download/checksum/filesystem failures, and nested checks/tests pass. |
 | Documentation contract | `AGENTS.md`, Python instructions, README, architecture/testing/flow docs, and this feature describe the packaged CLI, typed configuration, session ownership, search results, and atomic publication. |
+
+## CI follow-up: cross-platform source identity
+
+The 2026-08-03 goal run inspected all seven open Dependabot PRs with the GitHub CLI. PRs 1-7
+propose isolated GitHub Action or nested-pipeline dependency updates; their lint, quality, and
+nested-tool checks pass, while each required correctness job fails at the same test:
+`tests/infrastructure/test_artifacts.py::test_catalog_reuses_identity_after_source_relocation`.
+The referenced [PR #7 job](https://github.com/ddon-research/ddon-dwarf-reconstructor/actions/runs/30774416064/job/91567057120)
+reports `AssertionError: relocation rehashed the complete source`.
+
+The failure is platform-specific. Linux changes `st_ctime_ns` when a file is renamed, but the
+existing lookup key included ctime. Windows therefore passed the test locally while Ubuntu
+rehashes the unchanged moved file. The test-result publisher's separate 403 check-run write is
+secondary and does not explain the correctness failure.
+
+The follow-up implementation centralizes the relocation-stable key in the source-identity port
+using size, mtime, device, and inode. The infrastructure catalog retains ctime and path history
+as a mutation guard, accepts ctime-only drift only when the recorded path disappeared, reuses the
+recorded strong identity, and keeps `verify=True` as the complete-hash boundary. A ctime-only
+existing-path regression prevents the portability fix from accepting same-path mutation.
+
+Focused validation after the change: the artifact unit module passed 12 tests, source-bound lazy
+index/cache tests passed 27 tests, and Pyrefly reported zero diagnostics. The root loop then
+passed `just check`, `just test-unit` (445 passed, 6 deselected), `just test` (447 passed, 4
+deselected), `just coverage-ci` (84.87% total coverage), and `just audit` (zero diagnostics).
+The nested project passed `just test` (17 passed, 1 deselected) and `just check`; its official
+test selection skipped one test because the external official artifact is unavailable. A
+post-fix remote PR rerun remains T025 because the repair has not been published.

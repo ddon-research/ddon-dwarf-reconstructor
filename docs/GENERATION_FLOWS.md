@@ -152,6 +152,15 @@ An error includes the chained exception and should be investigated from the
 JSONL record before changing parser policy. See [OBSERVABILITY.md](OBSERVABILITY.md)
 for field and severity rules.
 
+### Source identity fast path
+
+The source catalog probes filesystem metadata before any content read. Size, mtime, device, and
+inode form the relocation-stable lookup key. ctime is checked as a same-path mutation signal; a
+ctime-only difference is accepted without hashing only when the recorded path no longer exists and
+the new path has the same stable object metadata. The catalog returns the original strong identity
+and records the new path, preserving source-bound warm caches. Use `verify-source` for an explicit
+full SHA-256 pass.
+
 ## Optional external evidence flow
 
 Toolchain exports happen before knowledge export and are never part of ordinary header generation:

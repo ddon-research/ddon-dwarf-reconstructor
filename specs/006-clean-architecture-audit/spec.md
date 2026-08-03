@@ -38,6 +38,11 @@ real-asset/compiler validation rather than hidden behind alternate paths.
   and Python instruction documents MUST describe the canonical packaged command,
   typed boundaries, and the breaking-change policy consistently.
 
+- **CA-009**: Source identity fast lookup MUST remain stable when an unchanged input is
+  relocated across directories on supported filesystems. It MUST retain a mutation guard for
+  ctime drift at a recorded path, return the original strong identity after relocation, and
+  provide an explicit full-hash verification boundary.
+
 ## Non-goals
 
 - Reconstructing source constructs absent from DWARF evidence.

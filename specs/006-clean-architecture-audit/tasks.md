@@ -97,3 +97,17 @@
 - [x] T021 Re-run the repository-wide terminology and architecture review, update
   affected README, architecture, testing, generation-flow, Python instructions,
   and Spec Kit artifacts, and close only findings backed by evidence. **Tier 1/2**.
+
+## Phase 6: Cross-platform CI convergence
+
+- [x] T022 Inspect all open Dependabot PR diffs, checks, and failed Actions logs with `gh`;
+  record the shared correctness failure separately from the publisher permission warning.
+  **Tier 1 evidence**.
+- [x] T023 Refactor `SourceIdentityCatalog` and the source-identity port so relocation keeps
+  the strong identity without allowing ctime-only mutation at an existing path. Add the
+  ctime regression in `tests/infrastructure/test_artifacts.py`. **Tier 1**.
+- [x] T024 Update AGENTS/Copilot/Python/Claude guidance, goal workflow, README, architecture,
+  testing docs, Spec Kit artifacts, and the testing knowledge base with the CI and filesystem
+  contracts. **Tier 1/2**.
+- [ ] T025 Re-run the remote PR checks after publishing the fix and append the final CI evidence.
+  **Tier 2 external handoff**.
