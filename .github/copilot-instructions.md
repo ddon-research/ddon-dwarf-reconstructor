@@ -91,11 +91,26 @@ uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
 ```
 
 Before handoff, run `uv run just test`, `uv run just coverage-ci`, and `uv run just audit`.
-`just check` and the CI workflows are the authoritative aggregations of these gates. Coverage
+`just check` and the CI workflows are the authoritative aggregations of these gates; `just check`
+also runs actionlint for workflow syntax and expressions. Coverage
 targets are at least 80% total lines, with at
 least 80% lines and 70% branches in parsing, generation, orchestration, and artifact modules. Ruff,
-Pyrefly, and deptry remain authoritative; Prospector is only for focused duplicate, dead-code,
-import, complexity, and maintainability diagnostics.
+Pyrefly, and deptry remain authoritative; Prospector is focused on duplicate, dead-code, import,
+complexity, and maintainability diagnostics and is blocking in the Code Quality workflow.
+
+## GitHub Actions and security
+
+Workflow-specific rules live in `.github/instructions/github-actions.instructions.md`; keep them
+consistent with `AGENTS.md` and [docs/CI.md](../docs/CI.md). CI uses the local composite setup at
+`.github/actions/setup-python-uv/action.yml`, full-SHA action pins, shallow credential-free
+checkouts, lockfile-keyed uv caching, timeouts, concurrency cancellation, and manual dispatch.
+
+The public-repository security integrations are additive: Dependency Review checks pull requests,
+and CodeQL scans Python plus GitHub Actions workflow code. Default permissions are read-only;
+additional write access is limited to CodeQL `security-events` uploads and same-repository test
+result checks. Do not use `pull_request_target` to execute contributor code, log secrets, or make
+Codecov/real assets/proprietary tools a correctness prerequisite. For workflow or Dependabot work,
+capture read-only `gh` evidence and verify action release SHAs before editing.
 
 ## Regression and performance rules
 

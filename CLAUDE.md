@@ -51,6 +51,21 @@ uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
   --output-dir docs/knowledge-base/dwarf-specification/generated --source-root src
 ```
 
+## GitHub Actions and supply-chain loop
+
+Read `.github/instructions/github-actions.instructions.md` and [docs/CI.md](docs/CI.md) for the
+workflow contract. Hosted CI is an adapter over the local `just` recipes: quality runs `check`,
+including actionlint, package smoke, and blocking `audit`; correctness runs `coverage-ci` with deterministic integration;
+the nested workflow runs its own `just ci`. All action references are full-SHA pins with release
+comments, and Dependabot owns discovery of new refs.
+
+Use shallow credential-free checkout, lockfile-keyed uv caching, explicit timeouts, concurrency
+cancellation, and least-privilege permissions. CodeQL and Dependency Review are free public-repo
+integrations; Codecov is advisory. Do not use `pull_request_target` to execute contributor code,
+upload proprietary inputs, log secrets, or treat remote Settings changes as completed by editing
+the checkout. Capture read-only `gh` workflow, PR, action-release, and security-setting evidence
+before changing CI.
+
 ## Engineering constraints
 
   ordering, qualified names, offsets, layouts, provenance, and generated-header bytes.

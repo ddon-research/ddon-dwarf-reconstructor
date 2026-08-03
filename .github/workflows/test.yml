@@ -5,6 +5,11 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -12,22 +17,21 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      checks: write
+
     steps:
     - name: Check out code
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      
-    - name: Set up Python 3.14.6
-      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
       with:
-        python-version: '3.14.6'
-        
-    - name: Install uv
-      uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
-        
-    - name: Install dependencies
-      run: uv sync --python 3.14.6 --frozen
-        
+        fetch-depth: 1
+        persist-credentials: false
+
+    - name: Set up Python and uv
+      uses: ./.github/actions/setup-python-uv
+
     - name: Verify test taxonomy and required integration collection
       run: |
         uv run pytest --collect-only -q
@@ -49,19 +53,19 @@ jobs:
         
     - name: Upload test results
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: test-results
         path: |
           test-results.xml
           coverage.xml
           htmlcov/
-        retention-days: 30
-        
+        retention-days: 14
+
     - name: Publish test results
-      if: always()
-      uses: EnricoMi/publish-unit-test-result-action@d0a4676d0e0b938bc201470d88276b7c74c712b3 # v2
-      continue-on-error: true
+      if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+      uses: EnricoMi/publish-unit-test-result-action@d0a4676d0e0b938bc201470d88276b7c74c712b3 # v2.24.0
       with:
         files: test-results.xml
         check_name: "Correctness Test Results"
+        comment_mode: off

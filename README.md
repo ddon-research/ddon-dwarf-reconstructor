@@ -231,7 +231,8 @@ uv run just test-regression  # output and authority contracts
 uv run just test-non-functional # quality/operational checks
 uv run just test-observability # focused JSONL/chained traceback tests
 uv run just test            # required correctness loop, including integrations
-uv run just check           # Ruff, Pyrefly, deptry, structure, architecture
+uv run just actionlint      # GitHub Actions workflow syntax and expression checks
+uv run just check           # Ruff, actionlint, Pyrefly, deptry, structure, architecture
 uv run just coverage-ci     # coverage thresholds and CI reports
 uv run just audit            # Prospector duplicate/dead-code audit
 uv run just test-acceptance  # CLI, real-asset, and distribution acceptance
@@ -262,7 +263,9 @@ mutate temporary environments or require local external inputs.
 
 The root Pyrefly configuration checks `src`, typed test support, and the checkout-local SonarQube
 adapter; the nested project checks its own `src`. Pyrefly is authoritative for typing, deptry
-validates dependency declarations, and focused Prospector diagnostics remain a non-blocking audit.
+validates dependency declarations, and the required CI quality workflow includes the Prospector
+audit as a blocking gate. See [CI and GitHub Actions](docs/CI.md) for hosted/local parity,
+security integrations, and the free-plan boundary.
 
 ## Architecture and testing
 

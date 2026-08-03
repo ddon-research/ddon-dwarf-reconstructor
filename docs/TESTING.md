@@ -9,6 +9,12 @@ signal; it does not replace functional, regression, integration, or non-function
 The default correctness loop includes deterministic integration tests. The explicit fast opt-out
 exists for short iteration only and is not a merge-quality substitute.
 
+The hosted parity contract is documented in [CI and GitHub Actions](CI.md). Code Quality runs
+`just check`, package smoke, and the same Prospector audit as a blocking step; the correctness
+workflow runs the required integration collection and `coverage-ci`. Codecov and the test-result
+publisher are reporting integrations, while the repository's own tests and coverage thresholds
+remain authoritative.
+
 ```text
 uv sync --python 3.14.6
 uv run just test-unit

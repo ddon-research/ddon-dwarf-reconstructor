@@ -61,6 +61,9 @@ format:
 format-check:
     uv run ruff format --check src tests tools/sonar
 
+actionlint:
+    actionlint -color
+
 type-check:
     uv run pyrefly check --min-severity warn
 
@@ -76,7 +79,7 @@ architecture:
 audit:
     uv run prospector --profile .prospector.yml --tool pylint --tool pyflakes --tool mccabe src
 
-check: lint format-check type-check deps structure architecture
+check: lint format-check actionlint type-check deps structure architecture
 
 ci: check test-unit package-smoke
 

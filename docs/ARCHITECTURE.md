@@ -1458,6 +1458,28 @@ Real PS4/PS3 generator checks are `acceptance` tests qualified with `real_asset`
 warm `rLayout` budget is also `performance` and `non_functional`. They require explicit local
 paths and are run with `just test-real-assets` or `just test-performance`.
 
+### CI adapter and security evidence
+
+GitHub Actions is an adapter over the repository's local automation boundary, not a second test
+policy. The root workflows call the same `just check`, `just audit`, `coverage-ci`, and nested
+`just ci` recipes used by maintainers. `.github/actions/setup-python-uv/action.yml` owns the
+repeated Python/uv setup so action pins, lockfile caching, and frozen installation cannot drift
+between root and nested jobs.
+
+The hosted security workflows are deliberately additive:
+
+- Dependency Review checks dependency changes on pull requests.
+- CodeQL scans Python and GitHub Actions workflow code on pushes, pull requests, and a weekly
+  schedule.
+- Dependabot and the dependency graph remain GitHub-managed supply-chain inputs; their alert state
+  is checked separately from product correctness.
+
+All hosted actions use full commit SHAs with human-readable version comments. Workflow permissions
+default to `contents: read`; only CodeQL's SARIF upload and the same-repository test-result check
+publisher receive the additional write permission they require. A hosted green result never
+substitutes for explicit real-asset, compiler, proprietary-tool, or performance evidence. See
+[CI and GitHub Actions](CI.md) for the remote settings boundary and current free-plan assumptions.
+
 **Critical test cases:**
 
 - Multi-CU resolution: complete definitions chosen over forward declarations

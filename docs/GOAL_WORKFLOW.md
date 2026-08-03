@@ -45,6 +45,25 @@ failure, the smallest safe change, and the next validation. If a remote permissi
 tooling prerequisite blocks progress, report it with the exact unlock action.
 ```
 
+For a repository-wide CI/Actions audit, make the completion contract explicit before starting:
+
+```text
+/goal Bring ddon-dwarf-reconstructor CI into parity with the local uv/just validation contract,
+verified by the checked-in workflow files, current action release SHAs, GitHub workflow runs,
+`uv run just test-unit`, `uv run just check`, `uv run just test`, `uv run just coverage-ci`,
+`uv run just audit`, and the nested project's checks, while preserving deterministic integration
+coverage, explicit real-asset boundaries, least-privilege tokens, and free public-repository
+features. Use only this checkout, read-only gh evidence, official GitHub/OpenAI documentation,
+and the named awesome-copilot guidance. Between iterations, record the observed CI/local mismatch,
+make one cohesive workflow or instruction slice, and run the smallest relevant validation before
+the full loop. If a GitHub Settings change requires remote administrative authorization, record it
+as a bounded follow-up with the exact setting and unlock action; do not treat it as silently done.
+```
+
+This template names the outcome, verification surface, constraints, boundaries, iteration policy,
+and blocked condition. It also keeps remote settings changes separate from checkout edits, which
+makes a final handoff auditable.
+
 1. Establish the evidence surface: inspect the worktree, identify immutable inputs, and run
    `artifacts inspect-elf` and `artifacts inspect-dwarf-dump` when explicit local paths are present.
 2. Inventory external binary tools and their local `--version`/`--help` output. Select only

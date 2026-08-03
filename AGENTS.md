@@ -8,6 +8,8 @@ unbounded in-memory intermediates. Preserve stable output ordering and source of
 
 - Use regular CPython 3.14.6 and install the complete development environment with
   `uv sync --python 3.14.6`.
+- Install actionlint v1.7.12 with the platform package manager and ensure it is on `PATH`; the
+  root `uv run just check` recipe runs it for every local quality loop.
 - Use package-relative imports; do not import the package through the repository's `src` directory.
 - Run fast tests with `uv run just test-unit` and the locked quality gate with `uv run just check`.
 - Use `uv run ddon-dwarf-reconstructor` as the canonical unified Typer entry point. Generation uses
@@ -135,6 +137,40 @@ ordering.
 - Update `docs/TESTING.md`, `docs/knowledge-base/testing/`, and the active Spec Kit feature when
   the taxonomy, test loop, test evidence, or external prerequisites change.
 
+### GitHub Actions and supply-chain policy
+
+- `.github/instructions/github-actions.instructions.md` is the workflow-specific Copilot adapter;
+  `AGENTS.md` remains the repository-wide source of truth. Keep workflow changes synchronized with
+  `docs/CI.md`, the active Spec Kit feature, and the testing knowledge base.
+- GitHub Actions must mirror the local `just` contract: Code Quality runs `just check` (including
+  actionlint), package smoke, and blocking `just audit`; correctness runs taxonomy collection and
+  `just coverage-ci`;
+  the nested workflow runs its own `just ci` and Compose configuration check. Deterministic
+  integration remains in the default correctness selection; real assets and performance remain
+  explicit.
+- Pin every external `uses:` reference, including first-party and third-party action dependencies,
+  to a full commit SHA with a human-readable version comment. Local composite action paths are
+  repository source and must be reviewed with the workflow diff. Dependabot owns update discovery;
+  verify the release tag and SHA before accepting an update. Do not use `@main`, `@latest`, or
+  mutable major-version tags.
+- Workflows default to `contents: read`, use credential-free shallow checkouts, cache only through
+  the project lockfiles, set timeouts, expose manual dispatch where useful, and cancel superseded
+  branch/PR runs. Do not add `pull_request_target` when the workflow checks out or executes
+  contributor code.
+- Additional write permissions are exceptional: CodeQL may upload `security-events`, and the
+  same-repository test-result publisher may write `checks`. Fork pull requests must retain artifact
+  evidence without receiving a privileged token. Never log secrets or upload proprietary inputs.
+- The public-repository free-plan boundary permits CodeQL, secret scanning, dependency graph, and
+  dependency review. Do not make correctness depend on Codecov, paid GitHub Code Security, hosted
+  proprietary runners, cloud credentials, or external commercial scanners. Record GitHub Settings
+  gaps such as branch protection, secret scanning, or Dependabot security updates as explicit
+  remote follow-up actions rather than pretending a checkout edit enabled them.
+- For workflow/Dependabot audits, capture `gh auth status`, open PRs, proposal diffs/checks, failed
+  run logs, current action refs, and live security settings before editing. Run `uv run just
+  actionlint` after workflow changes; the root `check` recipe includes it and hosted quality
+  installs the pinned v1.7.12 binary with a checksum before running `check`. Then run the complete
+  local and nested validation loop.
+
 ## Required validation
 
 After each refactoring slice, run the smallest relevant tests plus the complete fast gate:
@@ -150,11 +186,12 @@ For distribution changes, also run `uv run just package` and `uv run just packag
 Use the matching just recipes so structure, architecture, typing, lint,
 dependency, and duplicate/dead-code diagnostics remain part of routine development.
 Ruff, Pyrefly, and deptry are authoritative for linting, formatting, production typing, and
-dependency hygiene; keep Prospector focused on duplicate, dead-code, import, complexity, and
-maintainability diagnostics. Run real PS4 and performance checks only with explicit local paths and
-record cold/warm state, timing, and manifest identity in the relevant Spec Kit artifact. The nested
-`tools/dwarf_spec_pipeline` project has its own uv lockfile and mirrors the marker vocabulary; run
-its `just test`, `just test-official`, and `just check` from that project boundary as applicable.
+dependency hygiene; Prospector remains focused on duplicate, dead-code, import, complexity, and
+maintainability diagnostics and is a blocking CI gate. Run real PS4 and performance checks only
+with explicit local paths and record cold/warm state, timing, and manifest identity in the relevant
+Spec Kit artifact. The nested `tools/dwarf_spec_pipeline` project has its own uv lockfile and
+mirrors the marker vocabulary; run its `just test`, `just test-official`, and `just check` from
+that project boundary as applicable.
 For nested dependency-update PRs, also run `uv lock --directory tools/dwarf_spec_pipeline --check`
 and verify live Dependabot alerts after the dependency graph refresh; do not dismiss an actionable
 security advisory when a patched lock entry is available.

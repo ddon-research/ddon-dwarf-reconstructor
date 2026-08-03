@@ -7,6 +7,7 @@ Complete documentation for the DWARF-to-C++ header reconstructor.
 ### Getting Started
 - [README](../README.md) - Project overview, installation, and usage examples
 - [TESTING](TESTING.md) - Testing strategy, running tests, and coverage
+- [CI](CI.md) - GitHub Actions, local parity, security integrations, and free-plan boundaries
 - [SONARQUBE](SONARQUBE.md) - Local SonarQube for VS Code C/C++ analysis with MSVC
 - [LANGFUSE_TRACING](LANGFUSE_TRACING.md) - Local Langfuse tracing for Copilot and Codex
 
