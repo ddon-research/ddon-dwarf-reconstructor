@@ -9,8 +9,8 @@
   active links; remove retired flat pages.
 - [x] T007 Run strict site, root, nested, Mermaid parser, link, and relevant external-tool
   validation; repair all local documentation gaps found by the scan.
-- [ ] T008 Commit and push the intended documentation changes and update PR #13.
-- [ ] T009 Verify the new GitHub Pages site is reachable and report any settings blocker.
+- [x] T008 Commit, push, and merge the intended documentation changes through PR #13.
+- [x] T009 Verify the new GitHub Pages site is reachable and record the successful deployment.
 
 ## Deferred task tracking
 

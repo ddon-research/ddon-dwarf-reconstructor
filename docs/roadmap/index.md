@@ -19,13 +19,13 @@ tasks remain visible.
 | [011 CI hardening](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/011-ci-actions-hardening) | Complete | pinned workflows and local/hosted parity |
 | [012 Documentation platform](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/012-documentation-platform) | Implemented; acceptance-verified | Zensical, Diátaxis, arc42, Mermaid/UML, Pages, and graph readiness |
 | [013 Documentation style and governance](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/013-documentation-style-governance) | Style contract implemented; `KG-001` deferred | reusable tone, page intent, arc42 mapping, evidence labels, and authoring loop |
-| [014 Architecture and developer observability docs](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/014-documentation-architecture-observability) | Local implementation complete; publication pending | Langfuse/SonarQube how-tos, arc42 section 8, source-backed C4/UML views, and Pages verification |
+| [014 Architecture and developer observability docs](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/014-documentation-architecture-observability) | Implemented, merged, and publicly verified | Langfuse/SonarQube how-tos, arc42 section 8, source-backed C4/UML views, and Pages verification |
 
 ## Next best step
 
-The documentation architecture refinement is the current publication slice. After its Pages URL is
-verified, the next technical integration remains `KG-001`: define a versioned loader over the
-existing JSONL bundle and deterministic query fixtures. Complete the deferred real-asset/compiler
+The documentation architecture refinement is published and Pages-verified. The next technical
+integration remains `KG-001`: define a versioned loader over the existing JSONL bundle and
+deterministic query fixtures. Complete the deferred real-asset/compiler
 evidence in features 001, 004, 007, and 009 as separate evidence slices. Do not publish a graph
 projection until its schema, provenance, authority, and acceptance evidence are defined.
 

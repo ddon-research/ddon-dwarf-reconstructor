@@ -1,6 +1,6 @@
 # Feature specification: source-backed architecture and developer how-tos
 
-**Status:** Local implementation complete; publication verification pending
+**Status:** Implemented, merged, and publicly verified on GitHub Pages
 
 ## Intent
 

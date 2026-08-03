@@ -1,7 +1,7 @@
 # Feature Specification: Source-backed documentation platform
 
 **Feature branch:** `012-documentation-platform`
-**Status:** Implemented and acceptance-verified; GitHub Pages activation remains remote follow-up
+**Status:** Implemented, acceptance-verified, and publicly deployed on GitHub Pages
 **Owner:** DDON DWARF Reconstructor maintainers
 
 ## Problem
