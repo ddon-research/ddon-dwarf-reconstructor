@@ -19,7 +19,7 @@ The checked-in deliverables are under [`generated/`](generated/):
 [`manifest.json`](generated/manifest.json) records the source identity and
 SHA-256 of every published JSON/Markdown artifact, including the derived semantic index. The
 JSON shape is defined
-by [`tools/dwarf_spec_pipeline/schema/dwarf-specification.schema.json`](../../../tools/dwarf_spec_pipeline/schema/dwarf-specification.schema.json).
+by the [DWARF specification JSON schema](https://github.com/ddon-research/ddon-dwarf-reconstructor/blob/main/tools/dwarf_spec_pipeline/schema/dwarf-specification.schema.json).
 
 The review-oriented [`semantic-index.json`](generated/semantic-index.json) and
 [`semantic-index.md`](generated/semantic-index.md) normalize the DWARF 2/3/4 vocabulary into
@@ -55,7 +55,7 @@ uv run --directory tools/dwarf_spec_pipeline just check
 ```
 
 `--offline` makes a build require an already cached, checksum-verified source.
-The locked inputs live in [`sources.json`](../../../tools/dwarf_spec_pipeline/config/sources.json).
+The locked inputs live in the repository's [sources.json](https://github.com/ddon-research/ddon-dwarf-reconstructor/blob/main/tools/dwarf_spec_pipeline/config/sources.json).
 
 ## Provenance and scope
 

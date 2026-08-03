@@ -58,10 +58,10 @@ The audit repaired these concrete issues:
 ```text
 uv run ddon-dwarf-reconstructor artifacts inspect-elf <PS4-ELF>
 uv run ddon-dwarf-reconstructor artifacts inspect-dwarf-dump <LLVM-DWARF-DUMP.zst>
-uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
-  --output-dir docs/knowledge-base/dwarf-specification/generated --source-root src
-uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline validate \
-  --output-dir docs/knowledge-base/dwarf-specification/generated
+uv run --directory tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
+  --output-dir ../../docs/knowledge-base/dwarf-specification/generated --source-root ../../src
+uv run --directory tools/dwarf_spec_pipeline dwarf-spec-pipeline validate \
+  --output-dir ../../docs/knowledge-base/dwarf-specification/generated
 uv run just test-unit
 uv run just check
 uv run just test

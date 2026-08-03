@@ -37,7 +37,7 @@ are recorded during convergence.
 
 - [x] T011 Update `AGENTS.md`, Copilot, Python, and Claude instructions with
   event/severity/exception and dependency-boundary rules. **Tier 1**
-- [x] T012 Add `docs/OBSERVABILITY.md` and update README, architecture, testing,
+- [x] T012 Add the observability how-to and update README, architecture, testing,
   generation-flow, docs index, and knowledge-base index. **Tier 1**
 - [x] T013 Add this Spec Kit package and the typed event contract. **Tier 1**
 - [x] T014 Re-run the complete fast/static/full/coverage/audit gates and record

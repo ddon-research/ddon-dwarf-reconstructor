@@ -101,8 +101,11 @@ Get-Content $log.FullName | ConvertFrom-Json |
   Where-Object event -in @('symbol_failed', 'generation_failed')
 ```
 
-See [OBSERVABILITY.md](docs/OBSERVABILITY.md) for the event contract, low-noise severity policy,
-exception handling, and future OpenTelemetry seam.
+See the [operational observability guide](docs/how-to/observability.md) for the event contract,
+low-noise severity policy, exception handling, and the boundary between runtime logging and
+optional developer-tool tracing. Use the [Langfuse developer tracing how-to](docs/how-to/observability/langfuse.md)
+for local Copilot/Codex telemetry and the [SonarQube C/C++ how-to](docs/how-to/quality/sonarqube.md)
+for local generated-header analysis.
 
 ## Durable artifact operations
 
@@ -182,8 +185,8 @@ The standalone specification project builds the semantic index from the checked-
 source artifacts:
 
 ```text
-uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
-  --output-dir docs/knowledge-base/dwarf-specification/generated --source-root src
+uv run --directory tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
+  --output-dir ../../docs/knowledge-base/dwarf-specification/generated --source-root ../../src
 ```
 
 The index records versioned tags, attributes, forms, operations, attribute encodings, tag
@@ -195,7 +198,7 @@ The first dump-assisted exhaustive lookup can build a durable SQLite sidecar fro
 dump in one streaming pass. Subsequent fresh processes reuse source-bound indexes and symbol
 caches. Preserve these artifacts locally; routine cleanup must not delete validated indexes or
 exports. The full PS4 dump is more than 30 GB expanded, so real-asset work is opt-in and should use
-the local acceptance paths documented in [TESTING.md](docs/TESTING.md).
+the local acceptance paths documented in the [testing and evidence reference](docs/reference/testing.md).
 
 This checkout also retains the regenerated PS4 dump index at
 `resources/.cache/DDOORBIS.elf.llvmdwarfdump.index.sqlite3` and source-bound symbol caches under
@@ -238,6 +241,8 @@ uv run just audit            # Prospector duplicate/dead-code audit
 uv run just test-acceptance  # CLI, real-asset, and distribution acceptance
 uv run just test-real-assets # explicit local external inputs
 uv run just test-performance # explicit performance budgets
+uv run just docs-serve       # local Zensical preview
+uv run just docs-build       # strict static-site build
 uv run just package         # wheel and sdist
 uv run just package-smoke   # isolated uv tool install and CLI smoke test
 uv run just native-build    # optional Nuitka executable
@@ -264,19 +269,22 @@ mutate temporary environments or require local external inputs.
 The root Pyrefly configuration checks `src`, typed test support, and the checkout-local SonarQube
 adapter; the nested project checks its own `src`. Pyrefly is authoritative for typing, deptry
 validates dependency declarations, and the required CI quality workflow includes the Prospector
-audit as a blocking gate. See [CI and GitHub Actions](docs/CI.md) for hosted/local parity,
-security integrations, and the free-plan boundary.
+audit as a blocking gate. See [validate changes](docs/how-to/validate-changes.md) and the
+[architecture/deployment notes](docs/explanation/architecture/deployment.md) for the local/hosted
+contract, security integrations, and Pages build.
 
 ## Architecture and testing
 
-- [Architecture](docs/ARCHITECTURE.md)
-- [Component diagram](docs/COMPONENT_DIAGRAM.md)
-- [Generation flows](docs/GENERATION_FLOWS.md)
-- [Observability and diagnostics](docs/OBSERVABILITY.md)
-- [Testing and acceptance tiers](docs/TESTING.md)
-- [DWARF tag analysis](docs/DWARF_TAG_ANALYSIS.md)
+- [Documentation site](docs/index.md)
+- [Documentation style and authoring loop](docs/reference/documentation-style.md)
+- [Architecture overview](docs/explanation/architecture/index.md)
+- [Component boundaries](docs/explanation/architecture/components.md)
+- [Generation runtime](docs/explanation/architecture/runtime.md)
+- [Observability and diagnostics](docs/how-to/observability.md)
+- [Testing and acceptance tiers](docs/reference/testing.md)
+- [DWARF tag classification](docs/reference/dwarf/tags.md)
 - [DWARF specification pipeline](tools/dwarf_spec_pipeline/README.md)
-- [Goal-oriented research workflow](docs/GOAL_WORKFLOW.md)
+- [Goal-oriented research workflow](docs/how-to/goal-oriented-workflow.md)
 - [DWARF 2-4 correctness audit](docs/knowledge-base/dwarf/dwarf2-4-correctness-audit.md)
 
 The architecture policy is executable: `uv run just architecture` runs the pinned
@@ -285,7 +293,8 @@ pytest tier.
 
 Generated headers and evidence bundles are wire-format contracts. Validate them with exact
 byte-level output manifests across fresh and warm processes. The test taxonomy and rationale are
-documented in [Testing](docs/TESTING.md) and the [testing knowledge base](docs/knowledge-base/testing/).
+documented in the [testing reference](docs/reference/testing.md) and the [testing knowledge
+base](docs/knowledge-base/testing/).
 Real ELF, compressed dumps, compiler validation, and performance tests require explicit local paths
 and never commit proprietary inputs or generated runtime artifacts.
 

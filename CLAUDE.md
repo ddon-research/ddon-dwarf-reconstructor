@@ -7,7 +7,9 @@ applyTo: '**/*'
 
 `AGENTS.md` is the canonical repository instruction source. The Python-specific rules in
 `.github/instructions/python.instructions.md` apply to Python files; this file only supplies the
-same tool loop for Claude-compatible clients.
+same tool loop for Claude-compatible clients. Markdown changes also follow
+`.github/instructions/documentation.instructions.md` and the
+[documentation style reference](docs/reference/documentation-style.md).
 
 ## Development loop
 
@@ -45,15 +47,15 @@ The standalone specification tool is run from its own project boundary:
 
 ```text
 uv run --directory tools/dwarf_spec_pipeline just check
-uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline validate \
-  --output-dir docs/knowledge-base/dwarf-specification/generated
-uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
-  --output-dir docs/knowledge-base/dwarf-specification/generated --source-root src
+uv run --directory tools/dwarf_spec_pipeline dwarf-spec-pipeline validate \
+  --output-dir ../../docs/knowledge-base/dwarf-specification/generated
+uv run --directory tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
+  --output-dir ../../docs/knowledge-base/dwarf-specification/generated --source-root ../../src
 ```
 
 ## GitHub Actions and supply-chain loop
 
-Read `.github/instructions/github-actions.instructions.md` and [docs/CI.md](docs/CI.md) for the
+Read `.github/instructions/github-actions.instructions.md` and [validate changes](docs/how-to/validate-changes.md) for the
 workflow contract. Hosted CI is an adapter over the local `just` recipes: quality runs `check`,
 including actionlint, package smoke, and blocking `audit`; correctness runs `coverage-ci` with deterministic integration;
 the nested workflow runs its own `just ci`. All action references are full-SHA pins with release
@@ -68,7 +70,6 @@ before changing CI.
 
 ## Engineering constraints
 
-  ordering, qualified names, offsets, layouts, provenance, and generated-header bytes.
 - Preserve immutable input identity, source-bound durable caches, atomic publication, deterministic
   ordering, qualified names, offsets, layouts, provenance, and generated-header bytes. Source
   identity fast keys use size, mtime, device, and inode; ctime drift is accepted only for a moved
@@ -83,8 +84,11 @@ before changing CI.
   PS4 ABI/SCE semantics; LLVM, GNU Binutils, elfutils, libdwarf, pyelftools, LIEF, and OpenOrbis
   outputs are additive evidence. The `elfldr` reference is loader research only and is not run by
   the ingestion path.
-- Update the README, architecture/testing docs, active contracts, and Spec Kit artifacts whenever
-  public commands, configuration, or validation behavior changes.
+- Update the README, the affected Zensical source pages, active contracts, and Spec Kit artifacts
+  whenever public commands, configuration, or validation behavior changes. Keep Mermaid/UML
+  diagrams in Markdown, use C4 context/container/component views plus native UML or runtime views
+  at the smallest useful abstraction, keep one Diátaxis page intent per page, use the applicable
+  arc42 sections for architecture, and run `uv run just docs-build` for the strict site check.
 - Root tests use one scope (`unit`, `integration`, or `acceptance`) plus a purpose
   (`functional`, `regression`, or `non_functional`). Collection enforces the taxonomy; qualify
   performance, slow, real-asset, packaging, and quality work explicitly.

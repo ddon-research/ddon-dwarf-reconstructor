@@ -77,8 +77,8 @@ loop a meaningful higher-level check without making proprietary files a prerequi
   module, packaging module, and taxonomy regression tests.
 - Nested project configuration: `tools/dwarf_spec_pipeline/pyproject.toml`, its `justfile`,
   `tests/conftest.py`, and official-artifact test markers.
-- User-facing docs: `README.md`, `tests/README.md`, `docs/TESTING.md`, `docs/README.md`,
-  `docs/ARCHITECTURE.md`, and `tools/dwarf_spec_pipeline/README.md`.
+- User-facing docs: `README.md`, `tests/README.md`, `docs/reference/testing.md`,
+  `docs/index.md`, the architecture explanations, and `tools/dwarf_spec_pipeline/README.md`.
 - Durable instructions: `AGENTS.md`, `.github/copilot-instructions.md`,
   `.github/instructions/python.instructions.md`, and `CLAUDE.md`.
 - Spec Kit and knowledge base: this feature directory and

@@ -181,10 +181,12 @@ tools = [
     "nuitka>=2.7.16",
     "rust-just>=1.42,<2",
 ]
+docs = ["zensical>=0.0.52,<0.1"]
 dev = [
     { include-group = "test" },
     { include-group = "lint" },
     { include-group = "type" },
     { include-group = "quality" },
     { include-group = "tools" },
+    { include-group = "docs" },
 ]

@@ -73,6 +73,12 @@ through the repository's `src` directory.
 - Declare runtime dependencies in `[project.dependencies]` and development tools in PEP 735
   `[dependency-groups]`. Run tools through `uv run`; use `deptry` to detect missing or misplaced
   dependencies and keep module-name mappings explicit for packages such as `pyelftools`.
+- The root documentation tool is Zensical in the `docs` dependency group. Keep site source under
+  `docs/`, follow [the Markdown documentation instructions](documentation.instructions.md) and
+  [the documentation style reference](../../docs/reference/documentation-style.md), use one
+  Diátaxis page intent, arc42 architecture sections, and Mermaid/UML diagrams as Markdown code.
+  Run `uv run just docs-build` when behavior, commands, architecture, or validation guidance
+  changes. Keep Python docstrings factual and concise; link to the site for extended explanation.
 - The committed Pyrefly configuration is explicit and authoritative. If a new checkout has no
   `[tool.pyrefly]` section, run `uv run pyrefly init pyproject.toml` once, then review and commit
   the explicit configuration; do not add a second type-checker configuration or broad
@@ -120,6 +126,9 @@ uv run just test
 uv run just coverage-ci
 uv run just audit
 ```
+
+`uv run just check` includes the strict static-site build; use `uv run just docs-serve` to inspect
+navigation and diagrams locally.
 
 For a failing Dependabot or pull-request check, inspect the remote proposal before changing
 source: run gh auth status, gh pr list, gh pr diff, gh pr checks, and gh run view <run-id>

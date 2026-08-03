@@ -3,7 +3,7 @@
 """DIE type classification and validation utilities.
 
 Provides safe tag checking and type classification for DWARF DIEs.
-See docs/DWARF_TAG_ANALYSIS.md for algorithm details.
+See docs/reference/dwarf/tags.md for the classification contract.
 
 This module ensures we never make assumptions about DIE types without
 checking their tags first. Critical for preventing bugs like treating

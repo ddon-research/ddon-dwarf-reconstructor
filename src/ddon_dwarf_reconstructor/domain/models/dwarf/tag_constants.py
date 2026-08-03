@@ -3,7 +3,7 @@
 """DWARF tag constants and type classification.
 
 Defines tag categories based on DWARF standard and project's actual tag usage.
-See docs/DWARF_TAG_ANALYSIS.md for detailed analysis.
+See docs/reference/dwarf/tags.md for the source-backed classification contract.
 
 These constants are used to properly classify DIE types and determine how to
 handle them during type resolution and dependency extraction.

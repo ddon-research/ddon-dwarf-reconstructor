@@ -39,8 +39,8 @@ Read-only local and GitHub evidence on 2026-08-03 established:
   `.github/workflows/*.yml`, `.github/dependabot.yml`.
 - Durable guidance: `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`,
   `.github/instructions/github-actions.instructions.md`.
-- User docs: `README.md`, `docs/CI.md`, `docs/README.md`, `docs/TESTING.md`,
-  `docs/ARCHITECTURE.md`, `docs/GOAL_WORKFLOW.md`.
+- User docs: `README.md`, `docs/index.md`, `docs/reference/testing.md`, the architecture
+  explanations, and `docs/how-to/goal-oriented-workflow.md`.
 - Evidence: `docs/knowledge-base/testing/ci-actions-hardening-2026-08-03.md` and this feature.
 
 ## Validation tiers

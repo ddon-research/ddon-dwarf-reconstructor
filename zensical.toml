@@ -1,0 +1,128 @@
+[project]
+site_name = "DDON DWARF Reconstructor"
+site_description = "Source-backed documentation for deterministic C++ header reconstruction from ELF/DWARF evidence."
+site_author = "DDON Research"
+site_url = "https://ddon-research.github.io/ddon-dwarf-reconstructor/"
+repo_url = "https://github.com/ddon-research/ddon-dwarf-reconstructor"
+repo_name = "ddon-research/ddon-dwarf-reconstructor"
+copyright = "Copyright &copy; 2026 DDON Research"
+nav = [
+  { "Home" = "index.md" },
+  { "Tutorials" = [
+    { "First generation" = "tutorials/first-generation.md" },
+  ] },
+  { "How-to" = [
+    { "Generate headers" = "how-to/generate-headers.md" },
+    { "Export the knowledge graph" = "how-to/export-knowledge-graph.md" },
+    { "Inspect durable artifacts" = "how-to/inspect-artifacts.md" },
+    { "Validate changes" = "how-to/validate-changes.md" },
+    { "Write or update documentation" = "how-to/write-documentation.md" },
+    { "Use a goal-oriented workflow" = "how-to/goal-oriented-workflow.md" },
+    { "Observability" = [
+      { "Application logging" = "how-to/observability.md" },
+      { "Langfuse developer tracing" = "how-to/observability/langfuse.md" },
+    ] },
+    { "Quality analysis" = [
+      { "SonarQube C/C++ analysis" = "how-to/quality/sonarqube.md" },
+    ] },
+  ] },
+  { "Explanation" = [
+    { "Documentation system" = "explanation/documentation-system.md" },
+    { "Architecture" = [
+      { "Overview" = "explanation/architecture/index.md" },
+      { "System context" = "explanation/architecture/context.md" },
+      { "Containers and building blocks" = "explanation/architecture/containers.md" },
+      { "Components and boundaries" = "explanation/architecture/components.md" },
+      { "Crosscutting concepts" = "explanation/architecture/crosscutting-concepts.md" },
+      { "Runtime flows" = "explanation/architecture/runtime.md" },
+      { "Deployment and operations" = "explanation/architecture/deployment.md" },
+      { "Decisions and trade-offs" = "explanation/architecture/decisions.md" },
+    ] },
+    { "DWARF type resolution" = "explanation/dwarf/type-resolution.md" },
+  ] },
+  { "Reference" = [
+    { "CLI" = "reference/cli.md" },
+    { "Configuration and paths" = "reference/configuration.md" },
+    { "Durable artifacts" = "reference/artifacts.md" },
+    { "Knowledge graph contract" = "reference/knowledge-graph.md" },
+    { "Testing and evidence tiers" = "reference/testing.md" },
+    { "Documentation style" = "reference/documentation-style.md" },
+    { "DWARF tag classification" = "reference/dwarf/tags.md" },
+    { "External sources" = "reference/knowledge/external-sources.md" },
+  ] },
+  { "Roadmap" = "roadmap/index.md" },
+  { "Knowledge base" = [
+    { "Index" = "knowledge-base/README.md" },
+    { "DWARF 2-4 correctness audit" = "knowledge-base/dwarf/dwarf2-4-correctness-audit.md" },
+    { "Ghidra DWARF parsing" = "knowledge-base/dwarf/ghidra-dwarf-parsing.md" },
+    { "LLVM DWARF parsing" = "knowledge-base/dwarf/llvm-dwarf-parsing.md" },
+    { "Observability" = [
+      { "Structured logging and exception tracing" = "knowledge-base/observability/structured-logging-and-exception-tracing.md" },
+    ] },
+    { "PS4 ELF" = [
+      { "IDA loader insights" = "knowledge-base/ps4-elf/ida-loader-insights.md" },
+      { "PS4 constants" = "knowledge-base/ps4-elf/ps4-constants.md" },
+    ] },
+    { "pyelftools" = [
+      { "Approach" = "knowledge-base/pyelftools/pyelftools-approach.md" },
+      { "API reference" = "knowledge-base/pyelftools-api-reference.md" },
+      { "Examples" = "knowledge-base/pyelftools-examples.md" },
+    ] },
+    { "Testing and CI" = [
+      { "Testing loop" = "knowledge-base/testing/testing-pyramid-and-validation-loop.md" },
+      { "CI hardening" = "knowledge-base/testing/ci-actions-hardening-2026-08-03.md" },
+      { "Dependabot convergence" = "knowledge-base/testing/dependabot-correctness-convergence-2026-08-03.md" },
+    ] },
+    { "Tools" = [
+      { "External tool evidence" = "knowledge-base/tools/external-tool-evidence.md" },
+      { "dwarf2cpp approach" = "knowledge-base/tools/dwarf2cpp-approach.md" },
+    ] },
+    { "DWARF specification pipeline" = [
+      { "Overview" = "knowledge-base/dwarf-specification/README.md" },
+      { "DWARF 2" = "knowledge-base/dwarf-specification/generated/dwarf2.md" },
+      { "DWARF 3" = "knowledge-base/dwarf-specification/generated/dwarf3.md" },
+      { "DWARF 4" = "knowledge-base/dwarf-specification/generated/dwarf4.md" },
+      { "Semantic index" = "knowledge-base/dwarf-specification/generated/semantic-index.md" },
+    ] },
+  ] },
+]
+
+[project.theme]
+language = "en"
+features = [
+  "content.code.copy",
+  "content.code.annotate",
+  "navigation.footer",
+  "navigation.indexes",
+  "navigation.instant",
+  "navigation.path",
+  "navigation.sections",
+  "navigation.top",
+  "navigation.tracking",
+  "search.highlight",
+]
+
+[[project.theme.palette]]
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to light mode"
+
+[project.markdown_extensions.admonition]
+[project.markdown_extensions.toc]
+permalink = true
+[project.markdown_extensions.pymdownx.details]
+[project.markdown_extensions.pymdownx.highlight]
+anchor_linenums = true
+[project.markdown_extensions.pymdownx.superfences]
+custom_fences = [
+  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" }
+]
+[project.markdown_extensions.pymdownx.tabbed]
+alternate_style = true
+[project.markdown_extensions.pymdownx.tasklist]
+custom_checkbox = true

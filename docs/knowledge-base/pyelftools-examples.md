@@ -709,5 +709,6 @@ with CompleteDwarfParser(Path("game.elf")) as parser:
 ## References
 
 - [pyelftools-api-reference.md](pyelftools-api-reference.md) - Complete API documentation
-- [dwarf-parsing-patterns.md](dwarf-parsing-patterns.md) - Advanced DWARF patterns
+- [Type-resolution explanation](../explanation/dwarf/type-resolution.md) - Current low-level
+  traversal and declarator policy
 - [pyelftools GitHub](https://github.com/eliben/pyelftools)

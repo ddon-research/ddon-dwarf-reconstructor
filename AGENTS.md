@@ -134,14 +134,15 @@ ordering.
   `test-real-assets`, and `test-performance` for explicit evidence slices.
 - The knowledge exporter integration path must continue to run without proprietary ELF inputs;
   real PS4/PS3 inputs remain explicitly qualified environmental acceptance evidence.
-- Update `docs/TESTING.md`, `docs/knowledge-base/testing/`, and the active Spec Kit feature when
-  the taxonomy, test loop, test evidence, or external prerequisites change.
+- Update the Zensical source pages under `docs/`, `docs/knowledge-base/testing/`, and the active
+  Spec Kit feature when the taxonomy, test loop, test evidence, or external prerequisites change.
 
 ### GitHub Actions and supply-chain policy
 
 - `.github/instructions/github-actions.instructions.md` is the workflow-specific Copilot adapter;
   `AGENTS.md` remains the repository-wide source of truth. Keep workflow changes synchronized with
-  `docs/CI.md`, the active Spec Kit feature, and the testing knowledge base.
+  `docs/how-to/validate-changes.md`, `docs/explanation/architecture/deployment.md`, the active
+  Spec Kit feature, and the testing knowledge base.
 - GitHub Actions must mirror the local `just` contract: Code Quality runs `just check` (including
   actionlint), package smoke, and blocking `just audit`; correctness runs taxonomy collection and
   `just coverage-ci`;
@@ -181,6 +182,9 @@ uv run just check
 uv run just test
 ```
 
+`uv run just check` includes the strict Zensical build. Use `uv run just docs-serve` for a local
+preview and keep Mermaid diagrams in Markdown source rather than generated images.
+
 Before handoff, also run `uv run just test`, `uv run just coverage-ci`, and `uv run just audit`.
 For distribution changes, also run `uv run just package` and `uv run just package-smoke`.
 Use the matching just recipes so structure, architecture, typing, lint,
@@ -202,6 +206,11 @@ security advisory when a patched lock entry is available.
   `.github/skills/speckit-*/`.
 - Project principles live in `.specify/memory/constitution.md`; feature intent and
   implementation artifacts live under `specs/<feature>/`.
+- `zensical.toml` and `docs/` are the published documentation source. The site follows Diátaxis
+  navigation, uses arc42 for architecture, and keeps Mermaid/UML diagrams as code. Architecture
+  uses C4 context/container/component views when each level adds information, with the arc42
+  section-8 crosscutting concepts page as the home for recurring policies. Specs remain the roadmap
+  and are indexed from `docs/roadmap/index.md` rather than copied into site prose.
 - For cross-module behavior changes, use the feature sequence
   `/speckit-specify`, `/speckit-clarify`, `/speckit-plan`, `/speckit-tasks`,
   `/speckit-analyze`, implementation, and `/speckit-converge` as applicable.
@@ -209,6 +218,26 @@ security advisory when a patched lock entry is available.
   logs outside Spec Kit feature directories and source control.
 - Every task must name exact source/test paths and a validation tier; unresolved
   evidence and deferred compiler prerequisites belong in the feature artifacts.
+
+## Documentation governance
+
+- This file is the durable repository instruction source for Codex; path-specific Copilot
+  instructions supplement it. The Markdown adapter is
+  `.github/instructions/documentation.instructions.md`, and the reusable writer workflow is
+  `.github/skills/documentation-writer/SKILL.md`.
+- The authoritative writing contract is
+  `docs/reference/documentation-style.md`: classify every authored page with Diátaxis, use the
+  applicable arc42 compartments for architecture explanations, keep Mermaid/UML diagrams as code,
+  use C4 for progressive architecture abstraction, and label implementation status, authority,
+  uncertainty, and deferred work.
+- Start documentation with the reader's goal, audience, scope, prerequisites, and evidence
+  boundary. Use active, precise, source-backed language. Keep tutorials, how-to guides, reference,
+  explanations, and research notes distinct; link between them rather than mixing purposes.
+- For current behavior, inspect source and tests; for intended behavior, cite the active spec; for
+  research, preserve the source and authority. Remove obsolete duplicate prose instead of creating
+  a second contract. Use `uv run just docs-build` and then `uv run just check` for site changes.
+- Keep knowledge-graph infrastructure deferred until the explicit `KG-001` task defines the
+  versioned loader, deterministic query fixtures, provenance rules, and acceptance evidence.
 
 ## Goal-oriented research loop
 

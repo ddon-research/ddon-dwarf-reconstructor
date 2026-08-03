@@ -11,8 +11,8 @@ uv run just coverage-ci
 uv run just audit
 ```
 
-See [docs/TESTING.md](../docs/TESTING.md) for the full marker contract, pyramid rationale, real
-asset policy, and nested specification-project loop.
+See the [testing and evidence reference](../docs/reference/testing.md) for the full marker
+contract, pyramid rationale, real-asset policy, and nested specification-project loop.
 
 ## Ownership
 

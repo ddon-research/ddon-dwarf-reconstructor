@@ -6,7 +6,9 @@ applyTo: '.github/workflows/**/*.yml,.github/workflows/**/*.yaml,.github/actions
 # GitHub Actions instructions
 
 These rules supplement `AGENTS.md` and keep hosted automation aligned with the local `uv` and
-`just` contracts. Read [docs/CI.md](../../docs/CI.md) before changing a workflow, composite
+`just` contracts. Read [validate changes](../../docs/how-to/validate-changes.md), the
+[deployment architecture](../../docs/explanation/architecture/deployment.md), and the
+[documentation instructions](documentation.instructions.md) before changing a workflow, composite
 action, or Dependabot configuration.
 
 ## Workflow design
@@ -76,7 +78,12 @@ nested project checks. Separate confirmed, blocked, and deferred remote-setting 
 
 ## Documentation changes
 
-When CI behavior changes, update `docs/CI.md`, `docs/TESTING.md`, `docs/ARCHITECTURE.md`, the active
-Spec Kit feature, the testing knowledge base, and the Copilot/Claude adapters as applicable. Use
-CommonMark-compatible headings, blank lines around lists and code blocks, fenced blocks with a
-language where syntax is shown, valid descriptive links, and tables for repeated mappings.
+When CI behavior changes, update the affected Zensical source pages (especially
+`docs/how-to/validate-changes.md`, `docs/reference/testing.md`, and
+`docs/explanation/architecture/deployment.md`), the active Spec Kit feature, the testing knowledge
+base, and the Copilot/Claude adapters as applicable. Update `zensical.toml` navigation when adding
+pages. Follow the [documentation style reference](../../docs/reference/documentation-style.md): give
+the page one Diátaxis intent, map architecture explanation to arc42, label evidence and deferred
+work, and keep Mermaid/UML source in Markdown. Use CommonMark-compatible headings, blank lines
+around lists and code blocks, fenced blocks with a language where syntax is shown, valid descriptive
+links, and tables for repeated mappings.

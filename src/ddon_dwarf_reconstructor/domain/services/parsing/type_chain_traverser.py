@@ -3,7 +3,7 @@
 """Type chain traversal for following DWARF type references.
 
 Handles traversal of type qualifier chains (pointer→const→class) to find
-terminal types. See docs/DWARF_TAG_ANALYSIS.md section 4.2 for algorithm.
+terminal types. See docs/reference/dwarf/tags.md for the classification contract.
 
 Example: Member type "const MtObject*" in DWARF:
     Member DIE → DW_AT_type → Pointer DIE → DW_AT_type →

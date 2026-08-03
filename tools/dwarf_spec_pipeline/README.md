@@ -16,19 +16,20 @@ uv run just check
 uv run dwarf-spec-pipeline --help
 ```
 
-The command tree is typed with Typer:
+Run the commands below from the repository root. `--directory` changes the command's working
+directory to this project, so paths back to the root use `../../`:
 
 ```text
-uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline build --offline \
-  --manifest tools/dwarf_spec_pipeline/config/sources.json \
-  --output-dir docs/knowledge-base/dwarf-specification/generated \
-  --work-dir .cache/dwarf_spec_pipeline \
-  --schema tools/dwarf_spec_pipeline/schema/dwarf-specification.schema.json
-uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline validate \
-  --output-dir docs/knowledge-base/dwarf-specification/generated
-uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline sources
-uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
-  --output-dir docs/knowledge-base/dwarf-specification/generated --source-root src
+uv run --directory tools/dwarf_spec_pipeline dwarf-spec-pipeline build --offline \
+  --manifest config/sources.json \
+  --output-dir ../../docs/knowledge-base/dwarf-specification/generated \
+  --work-dir ../../.cache/dwarf_spec_pipeline \
+  --schema schema/dwarf-specification.schema.json
+uv run --directory tools/dwarf_spec_pipeline dwarf-spec-pipeline validate \
+  --output-dir ../../docs/knowledge-base/dwarf-specification/generated
+uv run --directory tools/dwarf_spec_pipeline dwarf-spec-pipeline sources
+uv run --directory tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
+  --output-dir ../../docs/knowledge-base/dwarf-specification/generated --source-root ../../src
 ```
 
 `--manifest`, `--output-dir`, `--work-dir`, `--schema`, repeated `--version 2|3|4`, and

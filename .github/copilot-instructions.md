@@ -7,8 +7,9 @@ applyTo: '**/*'
 
 `AGENTS.md` is the canonical repository instruction source for Codex and Copilot. The
 path-specific Python rules in `.github/instructions/python.instructions.md` apply to every Python
-file. This file contains only Copilot-facing project context and workflow reminders; it must not
-contradict either source.
+file, and `.github/instructions/documentation.instructions.md` applies to Markdown. This file
+contains only Copilot-facing project context and workflow reminders; it must not contradict those
+sources.
 
 ## Project constraints
 
@@ -86,8 +87,8 @@ uv run ddon-dwarf-reconstructor artifacts export-tool-evidence <elf> \
 uv run ddon-dwarf-reconstructor export-knowledge <elf> --symbol <name> \
   --output-dir output/knowledge --tool-evidence output/tool-exports/<key>/manifest.json
 docker compose --file tools/binary_toolchain/compose.yaml config --quiet
-uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
-  --output-dir docs/knowledge-base/dwarf-specification/generated --source-root src
+uv run --directory tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
+  --output-dir ../../docs/knowledge-base/dwarf-specification/generated --source-root ../../src
 ```
 
 Before handoff, run `uv run just test`, `uv run just coverage-ci`, and `uv run just audit`.
@@ -101,9 +102,10 @@ complexity, and maintainability diagnostics and is blocking in the Code Quality 
 ## GitHub Actions and security
 
 Workflow-specific rules live in `.github/instructions/github-actions.instructions.md`; keep them
-consistent with `AGENTS.md` and [docs/CI.md](../docs/CI.md). CI uses the local composite setup at
-`.github/actions/setup-python-uv/action.yml`, full-SHA action pins, shallow credential-free
-checkouts, lockfile-keyed uv caching, timeouts, concurrency cancellation, and manual dispatch.
+consistent with `AGENTS.md` and [validate changes](../docs/how-to/validate-changes.md). CI uses the
+local composite setup at `.github/actions/setup-python-uv/action.yml`, full-SHA action pins,
+shallow credential-free checkouts, lockfile-keyed uv caching, timeouts, concurrency cancellation,
+and manual dispatch.
 
 The public-repository security integrations are additive: Dependency Review checks pull requests,
 and CodeQL scans Python plus GitHub Actions workflow code. Default permissions are read-only;
@@ -148,8 +150,12 @@ capture read-only `gh` evidence and verify action release SHAs before editing.
   under 75 lines, and McCabe complexity at or below 10. There are no baseline exemptions.
 - Use specific exceptions and structured diagnostics. Do not add blanket `Any`, broad exception
   swallowing, truthiness checks for optional offsets, or unexplained architecture exemptions.
-- Update affected README, architecture, generation-flow, testing, and Spec Kit artifacts. Record
-  unresolved evidence or deferred prerequisites there rather than hiding them in code.
+- Update the affected README, Zensical source pages, knowledge-base records, and Spec Kit
+  artifacts. Architecture pages use arc42 structure; task pages use Diátaxis intent; C4 context,
+  container, and component views plus native Mermaid/UML diagrams stay as code. Follow [the
+  documentation style reference](../docs/reference/documentation-style.md)
+  and record unresolved evidence or deferred prerequisites there rather than hiding them in code.
+  Run `uv run just docs-build` for documentation changes.
 
 ## Goal-oriented research workflow
 
@@ -170,3 +176,10 @@ actionable security advisory when a patched lock entry is available.
 
 For repository-wide instructions, performance constraints, safety rules, and the complete
 validation sequence, follow `AGENTS.md`.
+
+<!-- mermaid-ai-skills:start -->
+## Mermaid Diagrams
+
+When the user asks to create, edit, or visualize a diagram, follow the
+instructions in `.github/instructions/mermaid.instructions.md`.
+<!-- mermaid-ai-skills:end -->

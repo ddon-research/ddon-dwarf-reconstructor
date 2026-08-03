@@ -93,7 +93,9 @@ contributing evidence identifiers and leaves the header facts traceable.
 
 ## Phase 6: Polish and Cross-Cutting Concerns
 
-- [ ] T033 [P] Reconcile stale CLI, timeout, test-count, and workflow claims in `README.md`, `docs/ARCHITECTURE.md`, `docs/GENERATION_FLOWS.md`, `docs/TESTING.md`, `docs/README.md`, and `tests/README.md`.
+- [ ] T033 [P] Reconcile stale CLI, timeout, test-count, and workflow claims in `README.md`, the
+  architecture and runtime-flow explanations, the testing reference, the site index, and
+  `tests/README.md`.
 - [ ] T034 [P] Reduce duplicated policy in `CLAUDE.md` and `.github/copilot-instructions.md` so `AGENTS.md` remains canonical and remove unavailable-tool references.
 - [ ] T035 Replace destructive `clean-all` behavior with transient-only cleanup in `justfile` and retain explicit artifact maintenance recipes.
 - [ ] T036 Extend `.gitignore` for root caches, SQLite journals/temporary sidecars, Nuitka outputs, and runtime logs without hiding curated fixtures.
