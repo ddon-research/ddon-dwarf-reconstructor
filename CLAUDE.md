@@ -95,7 +95,14 @@ before changing CI.
   performance, slow, real-asset, packaging, and quality work explicitly.
 - The default `just test` and coverage loop includes deterministic integration tests. Use
   `just test-without-integration` only for exceptional iteration, and run the required loop before
-handoff. Real-asset and performance checks remain explicit local evidence.
+  handoff. Real-asset and performance checks remain explicit local evidence.
+- Profiling uses the canonical `performance` command group and the `performance-*` just recipes.
+  `performance doctor` reports tool availability; `performance profile-index` measures a true
+  compressed-dump rebuild separately; the typed runner samples an isolated process
+  tree with psutil and publishes checksummed raw manifests outside Git; `performance history`
+  writes the tracked SQLite/static exports. Scalene is primary, cProfile/pyinstrument/py-spy and
+  tracemalloc are cross-checks, and pyperf is the repeated deterministic fixture harness. Never
+  instrument normal generation or treat unavailable/partial real-asset evidence as green.
 
 For a multi-turn DWARF investigation, use a thread-scoped Codex goal. Define the outcome and
 evidence surface first, inspect the validated PS4 DWARF4/PS3 DWARF2 producer facts and semantic

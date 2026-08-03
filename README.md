@@ -241,6 +241,12 @@ uv run just audit            # Prospector duplicate/dead-code audit
 uv run just test-acceptance  # CLI, real-asset, and distribution acceptance
 uv run just test-real-assets # explicit local external inputs
 uv run just test-performance # explicit performance budgets
+uv run just test-performance-fixtures # deterministic resource budget
+uv run just test-performance-real-assets # explicit real-asset performance
+uv run just performance-tools-install # install Scalene/pyperf/profiler tools
+uv run just performance-profile # warm rLayout profile recipe
+uv run just performance-profile-index # cold compressed-dump index profile recipe
+uv run just performance-history # export tracked benchmark history
 uv run just docs-tools-install # install locked Markdown/Mermaid validators
 uv run just docs-serve       # local Zensical preview
 uv run just docs-lint        # lint authored Markdown
@@ -285,6 +291,8 @@ contract, security integrations, and Pages build.
 - [Generation runtime](docs/explanation/architecture/runtime.md)
 - [Observability and diagnostics](docs/how-to/observability.md)
 - [Testing and acceptance tiers](docs/reference/testing.md)
+- [Performance commands and metrics](docs/reference/performance.md)
+- [Profile the application](docs/how-to/profile-performance.md)
 - [DWARF tag classification](docs/reference/dwarf/tags.md)
 - [DWARF specification pipeline](tools/dwarf_spec_pipeline/README.md)
 - [Goal-oriented research workflow](docs/how-to/goal-oriented-workflow.md)
@@ -300,6 +308,12 @@ documented in the [testing reference](docs/reference/testing.md) and the [testin
 base](docs/knowledge-base/testing/).
 Real ELF, compressed dumps, compiler validation, and performance tests require explicit local paths
 and never commit proprietary inputs or generated runtime artifacts.
+
+Performance evidence is collected only through the opt-in `performance` command group. The
+process runner uses psutil for CPU/RAM/I/O sampling and publishes checksummed raw profiler
+manifests outside the checkout; historical summaries and static exports are tracked under
+`resources/performance/` and `docs/knowledge-base/performance/`. Profiling is never enabled in the
+normal generation path.
 
 ## License
 

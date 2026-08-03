@@ -16,6 +16,7 @@ nav = [
     { "Export the knowledge graph" = "how-to/export-knowledge-graph.md" },
     { "Inspect durable artifacts" = "how-to/inspect-artifacts.md" },
     { "Validate changes" = "how-to/validate-changes.md" },
+    { "Profile performance" = "how-to/profile-performance.md" },
     { "Write or update documentation" = "how-to/write-documentation.md" },
     { "Use a goal-oriented workflow" = "how-to/goal-oriented-workflow.md" },
     { "Observability" = [
@@ -46,6 +47,7 @@ nav = [
     { "Durable artifacts" = "reference/artifacts.md" },
     { "Knowledge graph contract" = "reference/knowledge-graph.md" },
     { "Testing and evidence tiers" = "reference/testing.md" },
+    { "Performance commands and metrics" = "reference/performance.md" },
     { "Documentation style" = "reference/documentation-style.md" },
     { "DWARF tag classification" = "reference/dwarf/tags.md" },
     { "External sources" = "reference/knowledge/external-sources.md" },
@@ -72,6 +74,10 @@ nav = [
       { "Testing loop" = "knowledge-base/testing/testing-pyramid-and-validation-loop.md" },
       { "CI hardening" = "knowledge-base/testing/ci-actions-hardening-2026-08-03.md" },
       { "Dependabot convergence" = "knowledge-base/testing/dependabot-correctness-convergence-2026-08-03.md" },
+    ] },
+    { "Performance" = [
+      { "Section index" = "knowledge-base/performance/README.md" },
+      { "Benchmark history" = "knowledge-base/performance/benchmark-history.md" },
     ] },
     { "Tools" = [
       { "External tool evidence" = "knowledge-base/tools/external-tool-evidence.md" },

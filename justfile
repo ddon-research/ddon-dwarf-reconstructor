@@ -34,8 +34,26 @@ test-acceptance:
 test-real-assets:
     uv run pytest -m real_asset
 
+test-performance-fixtures:
+    uv run pytest tests/performance/test_fixture_benchmark.py -m "performance and not real_asset"
+
+test-performance-real-assets:
+    $env:DDON_REAL_PERFORMANCE = "1"; uv run pytest -m "performance and real_asset"
+
 test-performance:
     uv run pytest -m performance
+
+performance-tools-install:
+    uv sync --group performance
+
+performance-profile elf_file="resources/DDOORBIS.elf" symbol="rLayout" state="warm":
+    uv run ddon-dwarf-reconstructor performance profile {{elf_file}} --symbol {{symbol}} --state {{state}} --profiler scalene --profiler cprofile --profiler pyinstrument
+
+performance-profile-index dwarf_dump="D:/research/DDON-binaries/IDA9.3/PS4_DDON_02020005_2016_12_21/DDOORBIS.elf.llvmdwarfdump.zst" index_path="D:/ddon-perf-artifacts/cold-dump-index.sqlite3":
+    uv run ddon-dwarf-reconstructor performance profile-index {{dwarf_dump}} --index-path {{index_path}} --state cold --profiler process-sampler
+
+performance-history:
+    uv run ddon-dwarf-reconstructor performance history export
 
 test:
     uv run pytest -m "not performance and not packaging and not real_asset"

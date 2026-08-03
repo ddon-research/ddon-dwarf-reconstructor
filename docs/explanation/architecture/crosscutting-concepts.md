@@ -23,15 +23,19 @@ title "Crosscutting concepts — observability and quality components"
 Container_Boundary(runtime, "Runtime composition") {
     Component(coreObservability, "core.observability", "Python standard logging facade", "Binds context and emits structured events without importing infrastructure libraries.")
     Component(loggerSetup, "LoggerSetup", "structlog + Rich adapters", "Adds JSONL file and human-readable stderr handlers while preserving foreign handlers.")
-    Component(progressTracker, "ProgressTracker", "typed runtime helper", "Reports bounded operation, compilation-unit, timing, and memory events.")
+    Component(performanceRunner, "PerformanceRunner", "opt-in infrastructure adapter", "Samples isolated process trees and publishes bounded CPU, RAM, I/O, and manifest evidence.")
+    Component(historyStore, "HistoryStore", "SQLite infrastructure adapter", "Stores source-bound summaries and method aggregates for like-for-like comparison.")
 }
 Component_Ext(jsonl, "JSONL diagnostic log", "Process-local file", "Retains structured fields, callsite data, and chained traceback frames.")
 Component_Ext(stderr, "Diagnostic stderr", "Human-readable stream", "Shows bounded operational messages; stdout remains available for JSON artifacts.")
 Component_Ext(langfuse, "Langfuse developer tracing", "Optional loopback Docker stack", "Receives Copilot/Codex telemetry; the Python application is not instrumented.")
 Component_Ext(sonar, "SonarQube adapter", "tools/sonar Python CLI", "Creates and validates a local MSVC compilation database for generated headers.")
 Component_Ext(qualityTests, "Focused quality tests", "pytest", "Verify logging fields, chained errors, tool arguments, and compilation-database contracts.")
+Component_Ext(performanceArtifacts, "OS-local performance artifacts", "external files", "Retains raw profiles, sample streams, and bounded child output outside Git.")
 Rel(coreObservability, loggerSetup, "uses standard LogRecord boundary")
-Rel(progressTracker, coreObservability, "emits bounded events")
+Rel(performanceRunner, coreObservability, "emits bounded stage events")
+Rel(performanceRunner, historyStore, "records summaries")
+Rel(historyStore, performanceArtifacts, "references checksummed paths")
 Rel(loggerSetup, jsonl, "renders structured records")
 Rel(loggerSetup, stderr, "renders diagnostics")
 Rel(langfuse, qualityTests, "is validated as an external developer workflow")
@@ -81,12 +85,14 @@ class LoggerSetup {
     +get_log_file_path() Path
     +is_initialized() bool
 }
-class ProgressTracker {
-    +track_operation(name)
-    +track_cu(compile_unit)
-    +count_die()
-    +report_summary()
-    +log_memory_usage()
+class PerformanceRunner {
+    +run(workload) RunSummary
+    +publish(summary)
+}
+class HistoryStore {
+    +record(summary)
+    +compare(workload, run_id) Mapping
+    +export_payload(workload) Mapping
 }
 class StructuredLogRecord {
     +event: str
@@ -96,7 +102,8 @@ class StructuredLogRecord {
 }
 CoreObservabilityModule ..> StructuredLogRecord : adds fields through LogRecord
 LoggerSetup ..> StructuredLogRecord : renders JSONL and stderr
-ProgressTracker --> CoreObservabilityModule : emits events
+PerformanceRunner --> CoreObservabilityModule : emits bounded events
+PerformanceRunner --> HistoryStore : records summaries
 ```
 
 The boundary is exercised by
@@ -168,6 +175,11 @@ packaging, compiler, and Sonar evidence are explicit tiers. The [testing referen
 and [testing knowledge base](../../knowledge-base/testing/testing-pyramid-and-validation-loop.md)
 define marker and command policy.
 
+Performance is a separate infrastructure boundary. `PerformanceRunner` samples only an explicit
+child process, while `HistoryStore` writes the v1 ledger at `resources/performance/` and static
+exports under the knowledge base. The normal generation path has no profiler hooks. See [Profile
+the application](../../how-to/profile-performance.md) and the [performance reference](../../reference/performance.md).
+
 SonarQube follows the same boundary. `tools.sonar.prepare_msvc_analysis` creates one standalone
 translation unit per generated header, runs the required MSVC flags through the Build Wrapper, and
 validates the resulting compilation database. The default strict exit code is acceptance evidence;
@@ -197,7 +209,7 @@ labels every important relationship, and is validated by `uv run just docs-check
 | Concept | Primary implementation | Focused evidence | Task-oriented entry point |
 | --- | --- | --- | --- |
 | Logging boundary | `core/observability.py`, `infrastructure/logging/logger_setup.py` | `tests/infrastructure/test_logging.py` | [Application logging](../../how-to/observability.md) |
-| Progress and bounded metrics | `infrastructure/logging/progress_tracker.py` | logging and runtime tests | [Application logging](../../how-to/observability.md) |
+| Opt-in performance evidence | `infrastructure/performance/runner.py`, `infrastructure/performance/history.py` | performance runner/history tests and explicit fixture tier | [Profile the application](../../how-to/profile-performance.md) |
 | Local developer tracing | `ops/langfuse/compose.yaml`, `justfile` | compose config and manual trace verification | [Langfuse](../../how-to/observability/langfuse.md) |
 | MSVC/Sonar evidence | `tools/sonar/prepare_msvc_analysis.py` | `tests/tools/sonar/test_prepare_msvc_analysis.py` | [SonarQube](../../how-to/quality/sonarqube.md) |
 | Source-bound publication | [`SourceIdentityCatalog`](../../../src/ddon_dwarf_reconstructor/infrastructure/artifacts.py), [`AtomicHeaderPublisher`](../../../src/ddon_dwarf_reconstructor/infrastructure/header_output.py) | artifact and determinism tests | [Durable artifacts](../../how-to/inspect-artifacts.md) |

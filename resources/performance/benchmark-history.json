@@ -1,0 +1,3928 @@
+{
+  "latest_baselines": [
+    {
+      "artifacts": [
+        {
+          "detail": "",
+          "format": "jsonl",
+          "path": "D:\\ddon-perf-artifacts\\profiles\\cold-dump-index\\456cb3f22e9f476cb23d6ae626ef784f\\process-samples.jsonl",
+          "profiler": "process-sampler",
+          "sha256": "c13f9f5e4d34ec205e7d24d368b342a74ba87b7a2aeb982c67591eafee26280f",
+          "size": 425,
+          "status": "observed",
+          "tool_version": "built-in"
+        }
+      ],
+      "configuration_fingerprint": "98272f33f3e35b08d1c48361f8378743dfc230d9c5a077e075219ea0b288833b",
+      "duration_seconds": 2.012113999997382,
+      "git_dirty": true,
+      "git_revision": "6d6676315634057aeb60e01fc7a0e62aea7e0f91",
+      "machine_profile": "Windows:AMD64:AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+      "manifest_path": "D:\\ddon-perf-artifacts\\profiles\\cold-dump-index\\456cb3f22e9f476cb23d6ae626ef784f\\manifest.json",
+      "method_metrics": [],
+      "metrics": {
+        "cpu_system_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.40625
+        },
+        "cpu_user_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.578125
+        },
+        "peak_rss_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 848371712
+        },
+        "peak_vms_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 834895872
+        },
+        "read_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1504416082
+        },
+        "read_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 1121
+        },
+        "sample_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "samples",
+          "value": 2
+        },
+        "stderr_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "stdout_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "wall_time_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 2.012113999997382
+        },
+        "write_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 20128
+        },
+        "write_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 38
+        }
+      },
+      "platform": "Windows-11-10.0.26200-SP0",
+      "profiler_mode": "process-sampler",
+      "python_version": "3.14.6",
+      "return_code": 0,
+      "run_id": "456cb3f22e9f476cb23d6ae626ef784f",
+      "source_identity": "4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0",
+      "started_at": "2026-08-03T21:37:08.244556+00:00",
+      "state": "cold",
+      "status": "not_observed",
+      "workload": "cold-dump-index"
+    },
+    {
+      "artifacts": [
+        {
+          "detail": "",
+          "format": "jsonl",
+          "path": "D:\\ddon-perf-artifacts\\profiles\\cold-dump-index-rebuild\\1ecd2a0afc7d4755a65d036876d0d8bf\\process-samples.jsonl",
+          "profiler": "process-sampler",
+          "sha256": "8dc04a926cc3b38108d16f371fe120180e5b073a5dfc1e34c23ff746ab29c287",
+          "size": 62898,
+          "status": "observed",
+          "tool_version": "built-in"
+        }
+      ],
+      "configuration_fingerprint": "27b47c9bcfa6611aa3c4b05d55b9c8f4ab4f1fb63cbdf2836d164c95b42a0b7a",
+      "duration_seconds": 275.1390964999882,
+      "git_dirty": true,
+      "git_revision": "6d6676315634057aeb60e01fc7a0e62aea7e0f91",
+      "machine_profile": "Windows:AMD64:AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+      "manifest_path": "D:\\ddon-perf-artifacts\\profiles\\cold-dump-index-rebuild\\1ecd2a0afc7d4755a65d036876d0d8bf\\manifest.json",
+      "method_metrics": [],
+      "metrics": {
+        "cpu_system_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 16.421875
+        },
+        "cpu_user_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 256.6875
+        },
+        "peak_rss_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 807493632
+        },
+        "peak_vms_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 793939968
+        },
+        "read_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 11437217487
+        },
+        "read_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 2534280
+        },
+        "sample_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "samples",
+          "value": 274
+        },
+        "stderr_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "stdout_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "wall_time_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 275.1390964999882
+        },
+        "write_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 9569041641
+        },
+        "write_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 2336107
+        }
+      },
+      "platform": "Windows-11-10.0.26200-SP0",
+      "profiler_mode": "process-sampler",
+      "python_version": "3.14.6",
+      "return_code": 0,
+      "run_id": "1ecd2a0afc7d4755a65d036876d0d8bf",
+      "source_identity": "21def1c1dac96f578826c489c40178865afbfdc5754e534035ef9a1097acd2e8",
+      "started_at": "2026-08-03T21:41:37.689664+00:00",
+      "state": "cold",
+      "status": "observed",
+      "workload": "cold-dump-index-rebuild"
+    },
+    {
+      "artifacts": [
+        {
+          "detail": "",
+          "format": "jsonl",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\fixture\\08d961b330664efd89505a1c67e0c6aa\\process-samples.jsonl",
+          "profiler": "process-sampler",
+          "sha256": "e62b2e8b25b42095975fd67e1a1e319c2b7e3d678fc2170f7a031df306aac7d9",
+          "size": 54655,
+          "status": "observed",
+          "tool_version": "built-in"
+        },
+        {
+          "detail": "",
+          "format": "json",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\fixture\\08d961b330664efd89505a1c67e0c6aa\\pyperf.json",
+          "profiler": "pyperf",
+          "sha256": "6cbcee3d1bf03f2cbe68e5402b1d52e6ce6818f43931f6d65f59f5e47ae412a8",
+          "size": 2930,
+          "status": "observed",
+          "tool_version": "2.10.0"
+        }
+      ],
+      "configuration_fingerprint": "34fa0d5bb01eab30b65508e4b9e025b4819bf0b5df76093e307c1348b1d16ed4",
+      "duration_seconds": 13.544178100011777,
+      "git_dirty": true,
+      "git_revision": "6d6676315634057aeb60e01fc7a0e62aea7e0f91",
+      "machine_profile": "Windows:AMD64:AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+      "manifest_path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\fixture\\08d961b330664efd89505a1c67e0c6aa\\manifest.json",
+      "method_metrics": [],
+      "metrics": {
+        "cpu_system_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.171875
+        },
+        "cpu_user_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.109375
+        },
+        "peak_rss_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 144166912
+        },
+        "peak_vms_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 87830528
+        },
+        "pyperf_mean_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.2910345550000784
+        },
+        "pyperf_stddev_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.0025836685842935084
+        },
+        "pyperf_value_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "values",
+          "value": 20
+        },
+        "read_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 6031327
+        },
+        "read_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 827
+        },
+        "sample_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "samples",
+          "value": 249
+        },
+        "stderr_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "stdout_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "wall_time_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 13.544178100011777
+        },
+        "write_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 530
+        },
+        "write_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 58
+        }
+      },
+      "platform": "Windows-11-10.0.26200-SP0",
+      "profiler_mode": "pyperf",
+      "python_version": "3.14.6",
+      "return_code": 0,
+      "run_id": "08d961b330664efd89505a1c67e0c6aa",
+      "source_identity": null,
+      "started_at": "2026-08-03T21:52:05.762718+00:00",
+      "state": "warm",
+      "status": "observed",
+      "workload": "fixture"
+    },
+    {
+      "artifacts": [
+        {
+          "detail": "",
+          "format": "pstats",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\485e36cb9496484a826ae96ea4f9e791\\cprofile.prof",
+          "profiler": "cprofile",
+          "sha256": "bd8e5cb3f9ec334a169387a7f88f08eff4b49ff92a35e9c6ceff206dd1129c4b",
+          "size": 524017,
+          "status": "observed",
+          "tool_version": "3.14.6"
+        },
+        {
+          "detail": "",
+          "format": "jsonl",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\485e36cb9496484a826ae96ea4f9e791\\process-samples.jsonl",
+          "profiler": "process-sampler",
+          "sha256": "32895944875a20dfce89fd1b816b610380417e79bf1a9fe78f1276f17fd09e0f",
+          "size": 4946,
+          "status": "observed",
+          "tool_version": "built-in"
+        }
+      ],
+      "configuration_fingerprint": "e0de9338043de335897015dd4bb07495e0c69123564def01f8190bc9f0a1eb8e",
+      "duration_seconds": 4.554307300000801,
+      "git_dirty": true,
+      "git_revision": "6d6676315634057aeb60e01fc7a0e62aea7e0f91",
+      "machine_profile": "Windows:AMD64:AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+      "manifest_path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\485e36cb9496484a826ae96ea4f9e791\\manifest.json",
+      "method_metrics": [
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "~",
+          "line": 0,
+          "memory_bytes": null,
+          "name": "<built-in method builtins.exec>",
+          "profiler": "cprofile",
+          "rank": 1,
+          "self_seconds": 0.0281438,
+          "total_seconds": 4.2144141
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "<frozen runpy>",
+          "line": 206,
+          "memory_bytes": null,
+          "name": "run_module",
+          "profiler": "cprofile",
+          "rank": 2,
+          "self_seconds": 1.0300000000000001e-05,
+          "total_seconds": 4.2143785000000005
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "<frozen runpy>",
+          "line": 65,
+          "memory_bytes": null,
+          "name": "_run_code",
+          "profiler": "cprofile",
+          "rank": 3,
+          "self_seconds": 3.1000000000000004e-06,
+          "total_seconds": 3.8983429000000003
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\__main__.py",
+          "line": 1,
+          "memory_bytes": null,
+          "name": "<module>",
+          "profiler": "cprofile",
+          "rank": 4,
+          "self_seconds": 6.1e-06,
+          "total_seconds": 3.8983158
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\main.py",
+          "line": 1133,
+          "memory_bytes": null,
+          "name": "__call__",
+          "profiler": "cprofile",
+          "rank": 5,
+          "self_seconds": 8.200000000000001e-06,
+          "total_seconds": 3.8983093
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\_click\\core.py",
+          "line": 805,
+          "memory_bytes": null,
+          "name": "__call__",
+          "profiler": "cprofile",
+          "rank": 6,
+          "self_seconds": 3.6000000000000003e-06,
+          "total_seconds": 3.8871842
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\core.py",
+          "line": 1194,
+          "memory_bytes": null,
+          "name": "main",
+          "profiler": "cprofile",
+          "rank": 7,
+          "self_seconds": 9.600000000000001e-06,
+          "total_seconds": 3.8871806
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\core.py",
+          "line": 157,
+          "memory_bytes": null,
+          "name": "_main",
+          "profiler": "cprofile",
+          "rank": 8,
+          "self_seconds": 3.4e-05,
+          "total_seconds": 3.8871710000000004
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\core.py",
+          "line": 1094,
+          "memory_bytes": null,
+          "name": "invoke",
+          "profiler": "cprofile",
+          "rank": 9,
+          "self_seconds": 1.5100000000000001e-05,
+          "total_seconds": 3.8860895
+        },
+        {
+          "call_count": 2,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\_click\\core.py",
+          "line": 734,
+          "memory_bytes": null,
+          "name": "invoke",
+          "profiler": "cprofile",
+          "rank": 10,
+          "self_seconds": 8.1e-06,
+          "total_seconds": 3.8855353000000004
+        },
+        {
+          "call_count": 2,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\_click\\core.py",
+          "line": 474,
+          "memory_bytes": null,
+          "name": "invoke",
+          "profiler": "cprofile",
+          "rank": 11,
+          "self_seconds": 9.4e-06,
+          "total_seconds": 3.8855272000000003
+        },
+        {
+          "call_count": 2,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\main.py",
+          "line": 1515,
+          "memory_bytes": null,
+          "name": "wrapper",
+          "profiler": "cprofile",
+          "rank": 12,
+          "self_seconds": 1.3700000000000001e-05,
+          "total_seconds": 3.8855035000000004
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\cli.py",
+          "line": 155,
+          "memory_bytes": null,
+          "name": "export_knowledge",
+          "profiler": "cprofile",
+          "rank": 13,
+          "self_seconds": 4.6e-06,
+          "total_seconds": 3.8854726000000004
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\cli.py",
+          "line": 88,
+          "memory_bytes": null,
+          "name": "_run",
+          "profiler": "cprofile",
+          "rank": 14,
+          "self_seconds": 6.300000000000001e-06,
+          "total_seconds": 3.8854583000000003
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\main.py",
+          "line": 310,
+          "memory_bytes": null,
+          "name": "run_generation",
+          "profiler": "cprofile",
+          "rank": 15,
+          "self_seconds": 3.2500000000000004e-05,
+          "total_seconds": 3.8854520000000003
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\main.py",
+          "line": 119,
+          "memory_bytes": null,
+          "name": "_run_generation",
+          "profiler": "cprofile",
+          "rank": 16,
+          "self_seconds": 7.4e-06,
+          "total_seconds": 3.875957
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\main.py",
+          "line": 128,
+          "memory_bytes": null,
+          "name": "_run_generation_impl",
+          "profiler": "cprofile",
+          "rank": 17,
+          "self_seconds": 4.25e-05,
+          "total_seconds": 3.8759496
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\main.py",
+          "line": 192,
+          "memory_bytes": null,
+          "name": "_process_symbol",
+          "profiler": "cprofile",
+          "rank": 18,
+          "self_seconds": 4.9000000000000005e-06,
+          "total_seconds": 3.4409563000000003
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\application\\generators\\dwarf_generator.py",
+          "line": 144,
+          "memory_bytes": null,
+          "name": "export_knowledge_graph",
+          "profiler": "cprofile",
+          "rank": 19,
+          "self_seconds": 3e-06,
+          "total_seconds": 3.4409514000000003
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\application\\generators\\generator_workflow.py",
+          "line": 110,
+          "memory_bytes": null,
+          "name": "export_knowledge_graph",
+          "profiler": "cprofile",
+          "rank": 20,
+          "self_seconds": 7.75e-05,
+          "total_seconds": 3.4409484000000004
+        }
+      ],
+      "metrics": {
+        "cpu_system_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.484375
+        },
+        "cpu_user_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 3.828125
+        },
+        "peak_rss_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1338105856
+        },
+        "peak_vms_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1541812224
+        },
+        "read_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1505316193
+        },
+        "read_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 1141
+        },
+        "sample_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "samples",
+          "value": 22
+        },
+        "stderr_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "stdout_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "wall_time_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 4.554307300000801
+        },
+        "write_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 2152046
+        },
+        "write_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 2250
+        }
+      },
+      "platform": "Windows-11-10.0.26200-SP0",
+      "profiler_mode": "cprofile",
+      "python_version": "3.14.6",
+      "return_code": 0,
+      "run_id": "485e36cb9496484a826ae96ea4f9e791",
+      "source_identity": "4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0",
+      "started_at": "2026-08-03T21:32:36.962886+00:00",
+      "state": "warm",
+      "status": "observed",
+      "workload": "warm-rlayout"
+    },
+    {
+      "artifacts": [
+        {
+          "detail": "",
+          "format": "jsonl",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\8012b6bcc0bf45378849cd8c5a4862bb\\process-samples.jsonl",
+          "profiler": "process-sampler",
+          "sha256": "b9431d7a8b6701924abf2b60957e594b522bad96cd70713b1950fdd93f3f01c7",
+          "size": 4732,
+          "status": "observed",
+          "tool_version": "built-in"
+        },
+        {
+          "detail": "",
+          "format": "json",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\8012b6bcc0bf45378849cd8c5a4862bb\\pyinstrument.json",
+          "profiler": "pyinstrument",
+          "sha256": "59e289a8053f03182c65258c7adf7e9735f40d202d3da49553fdc3475e833fea",
+          "size": 39167,
+          "status": "observed",
+          "tool_version": "pyinstrument 5.1.3, on Python 3.14.6"
+        }
+      ],
+      "configuration_fingerprint": "e0de9338043de335897015dd4bb07495e0c69123564def01f8190bc9f0a1eb8e",
+      "duration_seconds": 4.34605969999393,
+      "git_dirty": true,
+      "git_revision": "6d6676315634057aeb60e01fc7a0e62aea7e0f91",
+      "machine_profile": "Windows:AMD64:AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+      "manifest_path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\8012b6bcc0bf45378849cd8c5a4862bb\\manifest.json",
+      "method_metrics": [
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\main.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "__call__",
+          "profiler": "pyinstrument",
+          "rank": 1,
+          "self_seconds": null,
+          "total_seconds": 3.460624
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\__main__.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "<module>",
+          "profiler": "pyinstrument",
+          "rank": 2,
+          "self_seconds": null,
+          "total_seconds": 3.460624
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\_click\\core.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "__call__",
+          "profiler": "pyinstrument",
+          "rank": 3,
+          "self_seconds": null,
+          "total_seconds": 3.452623
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\core.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "_main",
+          "profiler": "pyinstrument",
+          "rank": 4,
+          "self_seconds": null,
+          "total_seconds": 3.452623
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\core.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "main",
+          "profiler": "pyinstrument",
+          "rank": 5,
+          "self_seconds": null,
+          "total_seconds": 3.452623
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\_click\\core.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "invoke",
+          "profiler": "pyinstrument",
+          "rank": 6,
+          "self_seconds": null,
+          "total_seconds": 3.451622
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\_click\\core.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "invoke",
+          "profiler": "pyinstrument",
+          "rank": 7,
+          "self_seconds": null,
+          "total_seconds": 3.451622
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\core.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "invoke",
+          "profiler": "pyinstrument",
+          "rank": 8,
+          "self_seconds": null,
+          "total_seconds": 3.451622
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\main.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "wrapper",
+          "profiler": "pyinstrument",
+          "rank": 9,
+          "self_seconds": null,
+          "total_seconds": 3.451622
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\cli.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "_run",
+          "profiler": "pyinstrument",
+          "rank": 10,
+          "self_seconds": null,
+          "total_seconds": 3.450622
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\cli.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "export_knowledge",
+          "profiler": "pyinstrument",
+          "rank": 11,
+          "self_seconds": null,
+          "total_seconds": 3.450622
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\main.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "run_generation",
+          "profiler": "pyinstrument",
+          "rank": 12,
+          "self_seconds": null,
+          "total_seconds": 3.450622
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\main.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "_run_generation",
+          "profiler": "pyinstrument",
+          "rank": 13,
+          "self_seconds": null,
+          "total_seconds": 3.442341
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\main.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "_run_generation_impl",
+          "profiler": "pyinstrument",
+          "rank": 14,
+          "self_seconds": null,
+          "total_seconds": 3.442341
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\application\\generators\\dwarf_generator.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "export_knowledge_graph",
+          "profiler": "pyinstrument",
+          "rank": 15,
+          "self_seconds": null,
+          "total_seconds": 2.995385
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\application\\generators\\dwarf_knowledge.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "export_knowledge_graph",
+          "profiler": "pyinstrument",
+          "rank": 16,
+          "self_seconds": null,
+          "total_seconds": 2.995385
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\application\\generators\\generator_workflow.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "export_knowledge_graph",
+          "profiler": "pyinstrument",
+          "rank": 17,
+          "self_seconds": null,
+          "total_seconds": 2.995385
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\main.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "_process_symbol",
+          "profiler": "pyinstrument",
+          "rank": 18,
+          "self_seconds": null,
+          "total_seconds": 2.995385
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\application\\generators\\dwarf_header_support.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "_build_hierarchy_with_timing",
+          "profiler": "pyinstrument",
+          "rank": 19,
+          "self_seconds": null,
+          "total_seconds": 2.814158
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\application\\generators\\generator_workflow.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "build_hierarchy_with_timing",
+          "profiler": "pyinstrument",
+          "rank": 20,
+          "self_seconds": null,
+          "total_seconds": 2.814158
+        }
+      ],
+      "metrics": {
+        "cpu_system_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.5
+        },
+        "cpu_user_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 3.5625
+        },
+        "peak_rss_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1477132288
+        },
+        "peak_vms_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1542463488
+        },
+        "read_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1505704407
+        },
+        "read_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 1197
+        },
+        "sample_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "samples",
+          "value": 21
+        },
+        "stderr_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "stdout_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "wall_time_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 4.34605969999393
+        },
+        "write_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1667196
+        },
+        "write_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 2250
+        }
+      },
+      "platform": "Windows-11-10.0.26200-SP0",
+      "profiler_mode": "pyinstrument",
+      "python_version": "3.14.6",
+      "return_code": 0,
+      "run_id": "8012b6bcc0bf45378849cd8c5a4862bb",
+      "source_identity": "4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0",
+      "started_at": "2026-08-03T21:32:41.608485+00:00",
+      "state": "warm",
+      "status": "observed",
+      "workload": "warm-rlayout"
+    },
+    {
+      "artifacts": [
+        {
+          "detail": "",
+          "format": "jsonl",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\02d8c7a585994088b7931f53761ca6d2\\process-samples.jsonl",
+          "profiler": "process-sampler",
+          "sha256": "b40c305b1f4ffcf876dc956dfd19869b69c1e0b2f0ad08398aac3a84981312b1",
+          "size": 5202,
+          "status": "observed",
+          "tool_version": "built-in"
+        },
+        {
+          "detail": "",
+          "format": "json",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\02d8c7a585994088b7931f53761ca6d2\\scalene.json",
+          "profiler": "scalene",
+          "sha256": "db80d132b509c308d7f16842bff768f1438cfbfb491b3e384766d5e566656d11",
+          "size": 729817,
+          "status": "observed",
+          "tool_version": "Scalene version 2.3.0 (2026.05.08)"
+        }
+      ],
+      "configuration_fingerprint": "e0de9338043de335897015dd4bb07495e0c69123564def01f8190bc9f0a1eb8e",
+      "duration_seconds": 4.746071399989887,
+      "git_dirty": true,
+      "git_revision": "6d6676315634057aeb60e01fc7a0e62aea7e0f91",
+      "machine_profile": "Windows:AMD64:AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+      "manifest_path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\02d8c7a585994088b7931f53761ca6d2\\manifest.json",
+      "method_metrics": [
+        {
+          "call_count": null,
+          "cpu_percent": 50.86505920166172,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\infrastructure\\elf_platform.py",
+          "line": 138,
+          "memory_bytes": 0,
+          "name": "line 138",
+          "profiler": "scalene",
+          "rank": 1,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 31.016238367033758,
+          "file": "<eval@__init__.py:447>",
+          "line": 1,
+          "memory_bytes": 0,
+          "name": "line 1",
+          "profiler": "scalene",
+          "rank": 2,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.4676345929484124,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\infrastructure\\elf_platform.py",
+          "line": 141,
+          "memory_bytes": 0,
+          "name": "line 141",
+          "profiler": "scalene",
+          "rank": 3,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 1,
+          "memory_bytes": 0,
+          "name": "line 1",
+          "profiler": "scalene",
+          "rank": 4,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 10,
+          "memory_bytes": 0,
+          "name": "line 10",
+          "profiler": "scalene",
+          "rank": 5,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 100,
+          "memory_bytes": 0,
+          "name": "line 100",
+          "profiler": "scalene",
+          "rank": 6,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 101,
+          "memory_bytes": 0,
+          "name": "line 101",
+          "profiler": "scalene",
+          "rank": 7,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 102,
+          "memory_bytes": 0,
+          "name": "line 102",
+          "profiler": "scalene",
+          "rank": 8,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 103,
+          "memory_bytes": 0,
+          "name": "line 103",
+          "profiler": "scalene",
+          "rank": 9,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 104,
+          "memory_bytes": 0,
+          "name": "line 104",
+          "profiler": "scalene",
+          "rank": 10,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 105,
+          "memory_bytes": 0,
+          "name": "line 105",
+          "profiler": "scalene",
+          "rank": 11,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 106,
+          "memory_bytes": 0,
+          "name": "line 106",
+          "profiler": "scalene",
+          "rank": 12,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 107,
+          "memory_bytes": 0,
+          "name": "line 107",
+          "profiler": "scalene",
+          "rank": 13,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 108,
+          "memory_bytes": 0,
+          "name": "line 108",
+          "profiler": "scalene",
+          "rank": 14,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 109,
+          "memory_bytes": 0,
+          "name": "line 109",
+          "profiler": "scalene",
+          "rank": 15,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 11,
+          "memory_bytes": 0,
+          "name": "line 11",
+          "profiler": "scalene",
+          "rank": 16,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 110,
+          "memory_bytes": 0,
+          "name": "line 110",
+          "profiler": "scalene",
+          "rank": 17,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 111,
+          "memory_bytes": 0,
+          "name": "line 111",
+          "profiler": "scalene",
+          "rank": 18,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 112,
+          "memory_bytes": 0,
+          "name": "line 112",
+          "profiler": "scalene",
+          "rank": 19,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 113,
+          "memory_bytes": 0,
+          "name": "line 113",
+          "profiler": "scalene",
+          "rank": 20,
+          "self_seconds": null,
+          "total_seconds": null
+        }
+      ],
+      "metrics": {
+        "cpu_system_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 1.171875
+        },
+        "cpu_user_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 3.53125
+        },
+        "peak_rss_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1720025088
+        },
+        "peak_vms_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 2239168512
+        },
+        "read_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1517149916
+        },
+        "read_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 2569
+        },
+        "sample_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "samples",
+          "value": 23
+        },
+        "stderr_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "stdout_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "wall_time_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 4.746071399989887
+        },
+        "write_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 2858004
+        },
+        "write_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 2309
+        }
+      },
+      "platform": "Windows-11-10.0.26200-SP0",
+      "profiler_mode": "scalene",
+      "python_version": "3.14.6",
+      "return_code": 0,
+      "run_id": "02d8c7a585994088b7931f53761ca6d2",
+      "source_identity": "4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0",
+      "started_at": "2026-08-03T21:32:32.099300+00:00",
+      "state": "warm",
+      "status": "observed",
+      "workload": "warm-rlayout"
+    },
+    {
+      "artifacts": [
+        {
+          "detail": "",
+          "format": "jsonl",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\a7b0cf58033a44289b836e955960be2d\\process-samples.jsonl",
+          "profiler": "process-sampler",
+          "sha256": "1435bcce210ff1a11be6abd47983598832e67f8ac3d692b0c551cf76cd92a778",
+          "size": 49454,
+          "status": "observed",
+          "tool_version": "built-in"
+        },
+        {
+          "detail": "",
+          "format": "json",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\a7b0cf58033a44289b836e955960be2d\\tracemalloc.json",
+          "profiler": "tracemalloc",
+          "sha256": "1dee5ca1b3729bc3652cc16cf305cbc3b77d22dba7e2e938957987078a19ccf0",
+          "size": 3468,
+          "status": "observed",
+          "tool_version": "3.14.6"
+        }
+      ],
+      "configuration_fingerprint": "e0de9338043de335897015dd4bb07495e0c69123564def01f8190bc9f0a1eb8e",
+      "duration_seconds": 44.48003270001209,
+      "git_dirty": true,
+      "git_revision": "6d6676315634057aeb60e01fc7a0e62aea7e0f91",
+      "machine_profile": "Windows:AMD64:AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+      "manifest_path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\a7b0cf58033a44289b836e955960be2d\\manifest.json",
+      "method_metrics": [
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 747199592,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\elf\\elffile.py:904",
+          "profiler": "tracemalloc",
+          "rank": 1,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 49357888,
+          "name": "<string>:1",
+          "profiler": "tracemalloc",
+          "rank": 2,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 27328584,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\compileunit.py:296",
+          "profiler": "tracemalloc",
+          "rank": 3,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 19454232,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\die.py:282",
+          "profiler": "tracemalloc",
+          "rank": 4,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 15186368,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\die.py:266",
+          "profiler": "tracemalloc",
+          "rank": 5,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 10410944,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\die.py:102",
+          "profiler": "tracemalloc",
+          "rank": 6,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 8038832,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\construct\\core.py:373",
+          "profiler": "tracemalloc",
+          "rank": 7,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 3076032,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\compileunit.py:217",
+          "profiler": "tracemalloc",
+          "rank": 8,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 2790293,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\common\\utils.py:77",
+          "profiler": "tracemalloc",
+          "rank": 9,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 1448896,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\compileunit.py:298",
+          "profiler": "tracemalloc",
+          "rank": 10,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 1448896,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\compileunit.py:297",
+          "profiler": "tracemalloc",
+          "rank": 11,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 1064288,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\compileunit.py:203",
+          "profiler": "tracemalloc",
+          "rank": 12,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 1064256,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\compileunit.py:243",
+          "profiler": "tracemalloc",
+          "rank": 13,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 952256,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\construct\\core.py:661",
+          "profiler": "tracemalloc",
+          "rank": 14,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 743520,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\construct\\core.py:663",
+          "profiler": "tracemalloc",
+          "rank": 15,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 433256,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\construct\\lib\\container.py:91",
+          "profiler": "tracemalloc",
+          "rank": 16,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 303880,
+          "name": "<frozen importlib._bootstrap_external>:511",
+          "profiler": "tracemalloc",
+          "rank": 17,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 286080,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\dwarfinfo.py:612",
+          "profiler": "tracemalloc",
+          "rank": 18,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 231872,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\construct\\core.py:439",
+          "profiler": "tracemalloc",
+          "rank": 19,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 132229,
+          "name": "C:\\Users\\morph\\AppData\\Roaming\\uv\\python\\cpython-3.14.6-windows-x86_64-none\\Lib\\logging\\__init__.py:1248",
+          "profiler": "tracemalloc",
+          "rank": 20,
+          "self_seconds": null,
+          "total_seconds": null
+        }
+      ],
+      "metrics": {
+        "cpu_system_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.671875
+        },
+        "cpu_user_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 43.453125
+        },
+        "peak_rss_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1615585280
+        },
+        "peak_vms_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 2138640384
+        },
+        "read_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1505360180
+        },
+        "read_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 1141
+        },
+        "sample_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "samples",
+          "value": 216
+        },
+        "stderr_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "stdout_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "traced_current_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 892692437
+        },
+        "traced_peak_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 2091626645
+        },
+        "wall_time_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 44.48003270001209
+        },
+        "write_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1633968
+        },
+        "write_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 2254
+        }
+      },
+      "platform": "Windows-11-10.0.26200-SP0",
+      "profiler_mode": "tracemalloc",
+      "python_version": "3.14.6",
+      "return_code": 0,
+      "run_id": "a7b0cf58033a44289b836e955960be2d",
+      "source_identity": "4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0",
+      "started_at": "2026-08-03T21:32:46.027046+00:00",
+      "state": "warm",
+      "status": "observed",
+      "workload": "warm-rlayout"
+    },
+    {
+      "artifacts": [
+        {
+          "detail": "",
+          "format": "jsonl",
+          "path": "D:\\ddon-perf-artifacts\\profiles\\warm-rlayout-py-spy\\8ba8e7d1fb7d43bd993e9e5b6a5cea58\\process-samples.jsonl",
+          "profiler": "process-sampler",
+          "sha256": "10f2d1670dafd137c7485897bdb3b4897ceed022650a0564d3ba16354a7eaa2f",
+          "size": 419,
+          "status": "observed",
+          "tool_version": "built-in"
+        },
+        {
+          "detail": "profiler did not publish the expected output",
+          "format": "speedscope",
+          "path": "D:\\ddon-perf-artifacts\\profiles\\warm-rlayout-py-spy\\8ba8e7d1fb7d43bd993e9e5b6a5cea58\\py-spy.speedscope.json",
+          "profiler": "py-spy",
+          "sha256": null,
+          "size": null,
+          "status": "partial",
+          "tool_version": "py-spy 0.4.2"
+        }
+      ],
+      "configuration_fingerprint": "003b14dae3b86d3870314b0361ee9cc2d173e38a57b0a96c8110289aadfd44ea",
+      "duration_seconds": 0.621380999989924,
+      "git_dirty": true,
+      "git_revision": "6d6676315634057aeb60e01fc7a0e62aea7e0f91",
+      "machine_profile": "Windows:AMD64:AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+      "manifest_path": "D:\\ddon-perf-artifacts\\profiles\\warm-rlayout-py-spy\\8ba8e7d1fb7d43bd993e9e5b6a5cea58\\manifest.json",
+      "method_metrics": [],
+      "metrics": {
+        "cpu_system_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.109375
+        },
+        "cpu_user_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.125
+        },
+        "peak_rss_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 52596736
+        },
+        "peak_vms_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 31932416
+        },
+        "read_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 5609547
+        },
+        "read_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 717
+        },
+        "sample_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "samples",
+          "value": 2
+        },
+        "stderr_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "stdout_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "wall_time_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.621380999989924
+        },
+        "write_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 0
+        },
+        "write_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 0
+        }
+      },
+      "platform": "Windows-11-10.0.26200-SP0",
+      "profiler_mode": "py-spy",
+      "python_version": "3.14.6",
+      "return_code": 1,
+      "run_id": "8ba8e7d1fb7d43bd993e9e5b6a5cea58",
+      "source_identity": "4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0",
+      "started_at": "2026-08-03T21:49:23.600696+00:00",
+      "state": "warm",
+      "status": "partial",
+      "workload": "warm-rlayout-py-spy"
+    }
+  ],
+  "runs": [
+    {
+      "artifacts": [
+        {
+          "detail": "",
+          "format": "jsonl",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\fixture\\b94fce7ed6854f25b96d7f44bc4ae8f8\\process-samples.jsonl",
+          "profiler": "process-sampler",
+          "sha256": "b37d8206201841883834b7e34dd394bf31b28beb6fb7c7f47899aab510bd3abb",
+          "size": 54256,
+          "status": "observed",
+          "tool_version": "built-in"
+        },
+        {
+          "detail": "",
+          "format": "json",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\fixture\\b94fce7ed6854f25b96d7f44bc4ae8f8\\pyperf.json",
+          "profiler": "pyperf",
+          "sha256": "9fabc7d14a46507533f4172709dcc0de3bcc78e424cf42abcd199cf70fb1b35d",
+          "size": 2925,
+          "status": "observed",
+          "tool_version": "2.10.0"
+        }
+      ],
+      "configuration_fingerprint": "34fa0d5bb01eab30b65508e4b9e025b4819bf0b5df76093e307c1348b1d16ed4",
+      "duration_seconds": 13.706085999991046,
+      "git_dirty": true,
+      "git_revision": "6d6676315634057aeb60e01fc7a0e62aea7e0f91",
+      "machine_profile": "Windows:AMD64:AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+      "manifest_path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\fixture\\b94fce7ed6854f25b96d7f44bc4ae8f8\\manifest.json",
+      "method_metrics": [],
+      "metrics": {
+        "cpu_system_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.15625
+        },
+        "cpu_user_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.109375
+        },
+        "peak_rss_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 144216064
+        },
+        "peak_vms_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 88088576
+        },
+        "pyperf_mean_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.2959848950020387
+        },
+        "pyperf_stddev_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.003967296274938236
+        },
+        "pyperf_value_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "values",
+          "value": 20
+        },
+        "read_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 6031324
+        },
+        "read_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 834
+        },
+        "sample_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "samples",
+          "value": 247
+        },
+        "stderr_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "stdout_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "wall_time_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 13.706085999991046
+        },
+        "write_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 530
+        },
+        "write_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 58
+        }
+      },
+      "platform": "Windows-11-10.0.26200-SP0",
+      "profiler_mode": "pyperf",
+      "python_version": "3.14.6",
+      "return_code": 0,
+      "run_id": "b94fce7ed6854f25b96d7f44bc4ae8f8",
+      "source_identity": null,
+      "started_at": "2026-08-03T21:32:06.352214+00:00",
+      "state": "warm",
+      "status": "observed",
+      "workload": "fixture"
+    },
+    {
+      "artifacts": [
+        {
+          "detail": "",
+          "format": "jsonl",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\02d8c7a585994088b7931f53761ca6d2\\process-samples.jsonl",
+          "profiler": "process-sampler",
+          "sha256": "b40c305b1f4ffcf876dc956dfd19869b69c1e0b2f0ad08398aac3a84981312b1",
+          "size": 5202,
+          "status": "observed",
+          "tool_version": "built-in"
+        },
+        {
+          "detail": "",
+          "format": "json",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\02d8c7a585994088b7931f53761ca6d2\\scalene.json",
+          "profiler": "scalene",
+          "sha256": "db80d132b509c308d7f16842bff768f1438cfbfb491b3e384766d5e566656d11",
+          "size": 729817,
+          "status": "observed",
+          "tool_version": "Scalene version 2.3.0 (2026.05.08)"
+        }
+      ],
+      "configuration_fingerprint": "e0de9338043de335897015dd4bb07495e0c69123564def01f8190bc9f0a1eb8e",
+      "duration_seconds": 4.746071399989887,
+      "git_dirty": true,
+      "git_revision": "6d6676315634057aeb60e01fc7a0e62aea7e0f91",
+      "machine_profile": "Windows:AMD64:AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+      "manifest_path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\02d8c7a585994088b7931f53761ca6d2\\manifest.json",
+      "method_metrics": [
+        {
+          "call_count": null,
+          "cpu_percent": 50.86505920166172,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\infrastructure\\elf_platform.py",
+          "line": 138,
+          "memory_bytes": 0,
+          "name": "line 138",
+          "profiler": "scalene",
+          "rank": 1,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 31.016238367033758,
+          "file": "<eval@__init__.py:447>",
+          "line": 1,
+          "memory_bytes": 0,
+          "name": "line 1",
+          "profiler": "scalene",
+          "rank": 2,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.4676345929484124,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\infrastructure\\elf_platform.py",
+          "line": 141,
+          "memory_bytes": 0,
+          "name": "line 141",
+          "profiler": "scalene",
+          "rank": 3,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 1,
+          "memory_bytes": 0,
+          "name": "line 1",
+          "profiler": "scalene",
+          "rank": 4,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 10,
+          "memory_bytes": 0,
+          "name": "line 10",
+          "profiler": "scalene",
+          "rank": 5,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 100,
+          "memory_bytes": 0,
+          "name": "line 100",
+          "profiler": "scalene",
+          "rank": 6,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 101,
+          "memory_bytes": 0,
+          "name": "line 101",
+          "profiler": "scalene",
+          "rank": 7,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 102,
+          "memory_bytes": 0,
+          "name": "line 102",
+          "profiler": "scalene",
+          "rank": 8,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 103,
+          "memory_bytes": 0,
+          "name": "line 103",
+          "profiler": "scalene",
+          "rank": 9,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 104,
+          "memory_bytes": 0,
+          "name": "line 104",
+          "profiler": "scalene",
+          "rank": 10,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 105,
+          "memory_bytes": 0,
+          "name": "line 105",
+          "profiler": "scalene",
+          "rank": 11,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 106,
+          "memory_bytes": 0,
+          "name": "line 106",
+          "profiler": "scalene",
+          "rank": 12,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 107,
+          "memory_bytes": 0,
+          "name": "line 107",
+          "profiler": "scalene",
+          "rank": 13,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 108,
+          "memory_bytes": 0,
+          "name": "line 108",
+          "profiler": "scalene",
+          "rank": 14,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 109,
+          "memory_bytes": 0,
+          "name": "line 109",
+          "profiler": "scalene",
+          "rank": 15,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 11,
+          "memory_bytes": 0,
+          "name": "line 11",
+          "profiler": "scalene",
+          "rank": 16,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 110,
+          "memory_bytes": 0,
+          "name": "line 110",
+          "profiler": "scalene",
+          "rank": 17,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 111,
+          "memory_bytes": 0,
+          "name": "line 111",
+          "profiler": "scalene",
+          "rank": 18,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 112,
+          "memory_bytes": 0,
+          "name": "line 112",
+          "profiler": "scalene",
+          "rank": 19,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": 0.0,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\domain\\services\\parsing\\class_parser_class_info.py",
+          "line": 113,
+          "memory_bytes": 0,
+          "name": "line 113",
+          "profiler": "scalene",
+          "rank": 20,
+          "self_seconds": null,
+          "total_seconds": null
+        }
+      ],
+      "metrics": {
+        "cpu_system_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 1.171875
+        },
+        "cpu_user_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 3.53125
+        },
+        "peak_rss_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1720025088
+        },
+        "peak_vms_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 2239168512
+        },
+        "read_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1517149916
+        },
+        "read_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 2569
+        },
+        "sample_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "samples",
+          "value": 23
+        },
+        "stderr_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "stdout_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "wall_time_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 4.746071399989887
+        },
+        "write_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 2858004
+        },
+        "write_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 2309
+        }
+      },
+      "platform": "Windows-11-10.0.26200-SP0",
+      "profiler_mode": "scalene",
+      "python_version": "3.14.6",
+      "return_code": 0,
+      "run_id": "02d8c7a585994088b7931f53761ca6d2",
+      "source_identity": "4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0",
+      "started_at": "2026-08-03T21:32:32.099300+00:00",
+      "state": "warm",
+      "status": "observed",
+      "workload": "warm-rlayout"
+    },
+    {
+      "artifacts": [
+        {
+          "detail": "",
+          "format": "pstats",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\485e36cb9496484a826ae96ea4f9e791\\cprofile.prof",
+          "profiler": "cprofile",
+          "sha256": "bd8e5cb3f9ec334a169387a7f88f08eff4b49ff92a35e9c6ceff206dd1129c4b",
+          "size": 524017,
+          "status": "observed",
+          "tool_version": "3.14.6"
+        },
+        {
+          "detail": "",
+          "format": "jsonl",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\485e36cb9496484a826ae96ea4f9e791\\process-samples.jsonl",
+          "profiler": "process-sampler",
+          "sha256": "32895944875a20dfce89fd1b816b610380417e79bf1a9fe78f1276f17fd09e0f",
+          "size": 4946,
+          "status": "observed",
+          "tool_version": "built-in"
+        }
+      ],
+      "configuration_fingerprint": "e0de9338043de335897015dd4bb07495e0c69123564def01f8190bc9f0a1eb8e",
+      "duration_seconds": 4.554307300000801,
+      "git_dirty": true,
+      "git_revision": "6d6676315634057aeb60e01fc7a0e62aea7e0f91",
+      "machine_profile": "Windows:AMD64:AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+      "manifest_path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\485e36cb9496484a826ae96ea4f9e791\\manifest.json",
+      "method_metrics": [
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "~",
+          "line": 0,
+          "memory_bytes": null,
+          "name": "<built-in method builtins.exec>",
+          "profiler": "cprofile",
+          "rank": 1,
+          "self_seconds": 0.0281438,
+          "total_seconds": 4.2144141
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "<frozen runpy>",
+          "line": 206,
+          "memory_bytes": null,
+          "name": "run_module",
+          "profiler": "cprofile",
+          "rank": 2,
+          "self_seconds": 1.0300000000000001e-05,
+          "total_seconds": 4.2143785000000005
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "<frozen runpy>",
+          "line": 65,
+          "memory_bytes": null,
+          "name": "_run_code",
+          "profiler": "cprofile",
+          "rank": 3,
+          "self_seconds": 3.1000000000000004e-06,
+          "total_seconds": 3.8983429000000003
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\__main__.py",
+          "line": 1,
+          "memory_bytes": null,
+          "name": "<module>",
+          "profiler": "cprofile",
+          "rank": 4,
+          "self_seconds": 6.1e-06,
+          "total_seconds": 3.8983158
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\main.py",
+          "line": 1133,
+          "memory_bytes": null,
+          "name": "__call__",
+          "profiler": "cprofile",
+          "rank": 5,
+          "self_seconds": 8.200000000000001e-06,
+          "total_seconds": 3.8983093
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\_click\\core.py",
+          "line": 805,
+          "memory_bytes": null,
+          "name": "__call__",
+          "profiler": "cprofile",
+          "rank": 6,
+          "self_seconds": 3.6000000000000003e-06,
+          "total_seconds": 3.8871842
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\core.py",
+          "line": 1194,
+          "memory_bytes": null,
+          "name": "main",
+          "profiler": "cprofile",
+          "rank": 7,
+          "self_seconds": 9.600000000000001e-06,
+          "total_seconds": 3.8871806
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\core.py",
+          "line": 157,
+          "memory_bytes": null,
+          "name": "_main",
+          "profiler": "cprofile",
+          "rank": 8,
+          "self_seconds": 3.4e-05,
+          "total_seconds": 3.8871710000000004
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\core.py",
+          "line": 1094,
+          "memory_bytes": null,
+          "name": "invoke",
+          "profiler": "cprofile",
+          "rank": 9,
+          "self_seconds": 1.5100000000000001e-05,
+          "total_seconds": 3.8860895
+        },
+        {
+          "call_count": 2,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\_click\\core.py",
+          "line": 734,
+          "memory_bytes": null,
+          "name": "invoke",
+          "profiler": "cprofile",
+          "rank": 10,
+          "self_seconds": 8.1e-06,
+          "total_seconds": 3.8855353000000004
+        },
+        {
+          "call_count": 2,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\_click\\core.py",
+          "line": 474,
+          "memory_bytes": null,
+          "name": "invoke",
+          "profiler": "cprofile",
+          "rank": 11,
+          "self_seconds": 9.4e-06,
+          "total_seconds": 3.8855272000000003
+        },
+        {
+          "call_count": 2,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\main.py",
+          "line": 1515,
+          "memory_bytes": null,
+          "name": "wrapper",
+          "profiler": "cprofile",
+          "rank": 12,
+          "self_seconds": 1.3700000000000001e-05,
+          "total_seconds": 3.8855035000000004
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\cli.py",
+          "line": 155,
+          "memory_bytes": null,
+          "name": "export_knowledge",
+          "profiler": "cprofile",
+          "rank": 13,
+          "self_seconds": 4.6e-06,
+          "total_seconds": 3.8854726000000004
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\cli.py",
+          "line": 88,
+          "memory_bytes": null,
+          "name": "_run",
+          "profiler": "cprofile",
+          "rank": 14,
+          "self_seconds": 6.300000000000001e-06,
+          "total_seconds": 3.8854583000000003
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\main.py",
+          "line": 310,
+          "memory_bytes": null,
+          "name": "run_generation",
+          "profiler": "cprofile",
+          "rank": 15,
+          "self_seconds": 3.2500000000000004e-05,
+          "total_seconds": 3.8854520000000003
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\main.py",
+          "line": 119,
+          "memory_bytes": null,
+          "name": "_run_generation",
+          "profiler": "cprofile",
+          "rank": 16,
+          "self_seconds": 7.4e-06,
+          "total_seconds": 3.875957
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\main.py",
+          "line": 128,
+          "memory_bytes": null,
+          "name": "_run_generation_impl",
+          "profiler": "cprofile",
+          "rank": 17,
+          "self_seconds": 4.25e-05,
+          "total_seconds": 3.8759496
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\main.py",
+          "line": 192,
+          "memory_bytes": null,
+          "name": "_process_symbol",
+          "profiler": "cprofile",
+          "rank": 18,
+          "self_seconds": 4.9000000000000005e-06,
+          "total_seconds": 3.4409563000000003
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\application\\generators\\dwarf_generator.py",
+          "line": 144,
+          "memory_bytes": null,
+          "name": "export_knowledge_graph",
+          "profiler": "cprofile",
+          "rank": 19,
+          "self_seconds": 3e-06,
+          "total_seconds": 3.4409514000000003
+        },
+        {
+          "call_count": 1,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\application\\generators\\generator_workflow.py",
+          "line": 110,
+          "memory_bytes": null,
+          "name": "export_knowledge_graph",
+          "profiler": "cprofile",
+          "rank": 20,
+          "self_seconds": 7.75e-05,
+          "total_seconds": 3.4409484000000004
+        }
+      ],
+      "metrics": {
+        "cpu_system_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.484375
+        },
+        "cpu_user_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 3.828125
+        },
+        "peak_rss_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1338105856
+        },
+        "peak_vms_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1541812224
+        },
+        "read_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1505316193
+        },
+        "read_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 1141
+        },
+        "sample_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "samples",
+          "value": 22
+        },
+        "stderr_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "stdout_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "wall_time_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 4.554307300000801
+        },
+        "write_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 2152046
+        },
+        "write_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 2250
+        }
+      },
+      "platform": "Windows-11-10.0.26200-SP0",
+      "profiler_mode": "cprofile",
+      "python_version": "3.14.6",
+      "return_code": 0,
+      "run_id": "485e36cb9496484a826ae96ea4f9e791",
+      "source_identity": "4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0",
+      "started_at": "2026-08-03T21:32:36.962886+00:00",
+      "state": "warm",
+      "status": "observed",
+      "workload": "warm-rlayout"
+    },
+    {
+      "artifacts": [
+        {
+          "detail": "",
+          "format": "jsonl",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\8012b6bcc0bf45378849cd8c5a4862bb\\process-samples.jsonl",
+          "profiler": "process-sampler",
+          "sha256": "b9431d7a8b6701924abf2b60957e594b522bad96cd70713b1950fdd93f3f01c7",
+          "size": 4732,
+          "status": "observed",
+          "tool_version": "built-in"
+        },
+        {
+          "detail": "",
+          "format": "json",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\8012b6bcc0bf45378849cd8c5a4862bb\\pyinstrument.json",
+          "profiler": "pyinstrument",
+          "sha256": "59e289a8053f03182c65258c7adf7e9735f40d202d3da49553fdc3475e833fea",
+          "size": 39167,
+          "status": "observed",
+          "tool_version": "pyinstrument 5.1.3, on Python 3.14.6"
+        }
+      ],
+      "configuration_fingerprint": "e0de9338043de335897015dd4bb07495e0c69123564def01f8190bc9f0a1eb8e",
+      "duration_seconds": 4.34605969999393,
+      "git_dirty": true,
+      "git_revision": "6d6676315634057aeb60e01fc7a0e62aea7e0f91",
+      "machine_profile": "Windows:AMD64:AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+      "manifest_path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\8012b6bcc0bf45378849cd8c5a4862bb\\manifest.json",
+      "method_metrics": [
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\main.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "__call__",
+          "profiler": "pyinstrument",
+          "rank": 1,
+          "self_seconds": null,
+          "total_seconds": 3.460624
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\__main__.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "<module>",
+          "profiler": "pyinstrument",
+          "rank": 2,
+          "self_seconds": null,
+          "total_seconds": 3.460624
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\_click\\core.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "__call__",
+          "profiler": "pyinstrument",
+          "rank": 3,
+          "self_seconds": null,
+          "total_seconds": 3.452623
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\core.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "_main",
+          "profiler": "pyinstrument",
+          "rank": 4,
+          "self_seconds": null,
+          "total_seconds": 3.452623
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\core.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "main",
+          "profiler": "pyinstrument",
+          "rank": 5,
+          "self_seconds": null,
+          "total_seconds": 3.452623
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\_click\\core.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "invoke",
+          "profiler": "pyinstrument",
+          "rank": 6,
+          "self_seconds": null,
+          "total_seconds": 3.451622
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\_click\\core.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "invoke",
+          "profiler": "pyinstrument",
+          "rank": 7,
+          "self_seconds": null,
+          "total_seconds": 3.451622
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\core.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "invoke",
+          "profiler": "pyinstrument",
+          "rank": 8,
+          "self_seconds": null,
+          "total_seconds": 3.451622
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\typer\\main.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "wrapper",
+          "profiler": "pyinstrument",
+          "rank": 9,
+          "self_seconds": null,
+          "total_seconds": 3.451622
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\cli.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "_run",
+          "profiler": "pyinstrument",
+          "rank": 10,
+          "self_seconds": null,
+          "total_seconds": 3.450622
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\cli.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "export_knowledge",
+          "profiler": "pyinstrument",
+          "rank": 11,
+          "self_seconds": null,
+          "total_seconds": 3.450622
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\main.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "run_generation",
+          "profiler": "pyinstrument",
+          "rank": 12,
+          "self_seconds": null,
+          "total_seconds": 3.450622
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\main.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "_run_generation",
+          "profiler": "pyinstrument",
+          "rank": 13,
+          "self_seconds": null,
+          "total_seconds": 3.442341
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\main.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "_run_generation_impl",
+          "profiler": "pyinstrument",
+          "rank": 14,
+          "self_seconds": null,
+          "total_seconds": 3.442341
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\application\\generators\\dwarf_generator.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "export_knowledge_graph",
+          "profiler": "pyinstrument",
+          "rank": 15,
+          "self_seconds": null,
+          "total_seconds": 2.995385
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\application\\generators\\dwarf_knowledge.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "export_knowledge_graph",
+          "profiler": "pyinstrument",
+          "rank": 16,
+          "self_seconds": null,
+          "total_seconds": 2.995385
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\application\\generators\\generator_workflow.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "export_knowledge_graph",
+          "profiler": "pyinstrument",
+          "rank": 17,
+          "self_seconds": null,
+          "total_seconds": 2.995385
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\main.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "_process_symbol",
+          "profiler": "pyinstrument",
+          "rank": 18,
+          "self_seconds": null,
+          "total_seconds": 2.995385
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\application\\generators\\dwarf_header_support.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "_build_hierarchy_with_timing",
+          "profiler": "pyinstrument",
+          "rank": 19,
+          "self_seconds": null,
+          "total_seconds": 2.814158
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": "D:\\ddon-dwarf-reconstructor\\src\\ddon_dwarf_reconstructor\\application\\generators\\generator_workflow.py",
+          "line": null,
+          "memory_bytes": null,
+          "name": "build_hierarchy_with_timing",
+          "profiler": "pyinstrument",
+          "rank": 20,
+          "self_seconds": null,
+          "total_seconds": 2.814158
+        }
+      ],
+      "metrics": {
+        "cpu_system_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.5
+        },
+        "cpu_user_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 3.5625
+        },
+        "peak_rss_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1477132288
+        },
+        "peak_vms_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1542463488
+        },
+        "read_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1505704407
+        },
+        "read_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 1197
+        },
+        "sample_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "samples",
+          "value": 21
+        },
+        "stderr_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "stdout_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "wall_time_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 4.34605969999393
+        },
+        "write_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1667196
+        },
+        "write_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 2250
+        }
+      },
+      "platform": "Windows-11-10.0.26200-SP0",
+      "profiler_mode": "pyinstrument",
+      "python_version": "3.14.6",
+      "return_code": 0,
+      "run_id": "8012b6bcc0bf45378849cd8c5a4862bb",
+      "source_identity": "4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0",
+      "started_at": "2026-08-03T21:32:41.608485+00:00",
+      "state": "warm",
+      "status": "observed",
+      "workload": "warm-rlayout"
+    },
+    {
+      "artifacts": [
+        {
+          "detail": "",
+          "format": "jsonl",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\a7b0cf58033a44289b836e955960be2d\\process-samples.jsonl",
+          "profiler": "process-sampler",
+          "sha256": "1435bcce210ff1a11be6abd47983598832e67f8ac3d692b0c551cf76cd92a778",
+          "size": 49454,
+          "status": "observed",
+          "tool_version": "built-in"
+        },
+        {
+          "detail": "",
+          "format": "json",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\a7b0cf58033a44289b836e955960be2d\\tracemalloc.json",
+          "profiler": "tracemalloc",
+          "sha256": "1dee5ca1b3729bc3652cc16cf305cbc3b77d22dba7e2e938957987078a19ccf0",
+          "size": 3468,
+          "status": "observed",
+          "tool_version": "3.14.6"
+        }
+      ],
+      "configuration_fingerprint": "e0de9338043de335897015dd4bb07495e0c69123564def01f8190bc9f0a1eb8e",
+      "duration_seconds": 44.48003270001209,
+      "git_dirty": true,
+      "git_revision": "6d6676315634057aeb60e01fc7a0e62aea7e0f91",
+      "machine_profile": "Windows:AMD64:AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+      "manifest_path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\warm-rlayout\\a7b0cf58033a44289b836e955960be2d\\manifest.json",
+      "method_metrics": [
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 747199592,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\elf\\elffile.py:904",
+          "profiler": "tracemalloc",
+          "rank": 1,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 49357888,
+          "name": "<string>:1",
+          "profiler": "tracemalloc",
+          "rank": 2,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 27328584,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\compileunit.py:296",
+          "profiler": "tracemalloc",
+          "rank": 3,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 19454232,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\die.py:282",
+          "profiler": "tracemalloc",
+          "rank": 4,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 15186368,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\die.py:266",
+          "profiler": "tracemalloc",
+          "rank": 5,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 10410944,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\die.py:102",
+          "profiler": "tracemalloc",
+          "rank": 6,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 8038832,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\construct\\core.py:373",
+          "profiler": "tracemalloc",
+          "rank": 7,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 3076032,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\compileunit.py:217",
+          "profiler": "tracemalloc",
+          "rank": 8,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 2790293,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\common\\utils.py:77",
+          "profiler": "tracemalloc",
+          "rank": 9,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 1448896,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\compileunit.py:298",
+          "profiler": "tracemalloc",
+          "rank": 10,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 1448896,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\compileunit.py:297",
+          "profiler": "tracemalloc",
+          "rank": 11,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 1064288,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\compileunit.py:203",
+          "profiler": "tracemalloc",
+          "rank": 12,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 1064256,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\compileunit.py:243",
+          "profiler": "tracemalloc",
+          "rank": 13,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 952256,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\construct\\core.py:661",
+          "profiler": "tracemalloc",
+          "rank": 14,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 743520,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\construct\\core.py:663",
+          "profiler": "tracemalloc",
+          "rank": 15,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 433256,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\construct\\lib\\container.py:91",
+          "profiler": "tracemalloc",
+          "rank": 16,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 303880,
+          "name": "<frozen importlib._bootstrap_external>:511",
+          "profiler": "tracemalloc",
+          "rank": 17,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 286080,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\dwarf\\dwarfinfo.py:612",
+          "profiler": "tracemalloc",
+          "rank": 18,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 231872,
+          "name": "D:\\ddon-dwarf-reconstructor\\.venv\\Lib\\site-packages\\elftools\\construct\\core.py:439",
+          "profiler": "tracemalloc",
+          "rank": 19,
+          "self_seconds": null,
+          "total_seconds": null
+        },
+        {
+          "call_count": null,
+          "cpu_percent": null,
+          "file": null,
+          "line": null,
+          "memory_bytes": 132229,
+          "name": "C:\\Users\\morph\\AppData\\Roaming\\uv\\python\\cpython-3.14.6-windows-x86_64-none\\Lib\\logging\\__init__.py:1248",
+          "profiler": "tracemalloc",
+          "rank": 20,
+          "self_seconds": null,
+          "total_seconds": null
+        }
+      ],
+      "metrics": {
+        "cpu_system_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.671875
+        },
+        "cpu_user_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 43.453125
+        },
+        "peak_rss_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1615585280
+        },
+        "peak_vms_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 2138640384
+        },
+        "read_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1505360180
+        },
+        "read_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 1141
+        },
+        "sample_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "samples",
+          "value": 216
+        },
+        "stderr_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "stdout_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "traced_current_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 892692437
+        },
+        "traced_peak_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 2091626645
+        },
+        "wall_time_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 44.48003270001209
+        },
+        "write_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1633968
+        },
+        "write_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 2254
+        }
+      },
+      "platform": "Windows-11-10.0.26200-SP0",
+      "profiler_mode": "tracemalloc",
+      "python_version": "3.14.6",
+      "return_code": 0,
+      "run_id": "a7b0cf58033a44289b836e955960be2d",
+      "source_identity": "4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0",
+      "started_at": "2026-08-03T21:32:46.027046+00:00",
+      "state": "warm",
+      "status": "observed",
+      "workload": "warm-rlayout"
+    },
+    {
+      "artifacts": [
+        {
+          "detail": "",
+          "format": "jsonl",
+          "path": "D:\\ddon-perf-artifacts\\profiles\\cold-dump-index\\456cb3f22e9f476cb23d6ae626ef784f\\process-samples.jsonl",
+          "profiler": "process-sampler",
+          "sha256": "c13f9f5e4d34ec205e7d24d368b342a74ba87b7a2aeb982c67591eafee26280f",
+          "size": 425,
+          "status": "observed",
+          "tool_version": "built-in"
+        }
+      ],
+      "configuration_fingerprint": "98272f33f3e35b08d1c48361f8378743dfc230d9c5a077e075219ea0b288833b",
+      "duration_seconds": 2.012113999997382,
+      "git_dirty": true,
+      "git_revision": "6d6676315634057aeb60e01fc7a0e62aea7e0f91",
+      "machine_profile": "Windows:AMD64:AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+      "manifest_path": "D:\\ddon-perf-artifacts\\profiles\\cold-dump-index\\456cb3f22e9f476cb23d6ae626ef784f\\manifest.json",
+      "method_metrics": [],
+      "metrics": {
+        "cpu_system_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.40625
+        },
+        "cpu_user_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.578125
+        },
+        "peak_rss_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 848371712
+        },
+        "peak_vms_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 834895872
+        },
+        "read_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 1504416082
+        },
+        "read_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 1121
+        },
+        "sample_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "samples",
+          "value": 2
+        },
+        "stderr_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "stdout_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "wall_time_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 2.012113999997382
+        },
+        "write_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 20128
+        },
+        "write_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 38
+        }
+      },
+      "platform": "Windows-11-10.0.26200-SP0",
+      "profiler_mode": "process-sampler",
+      "python_version": "3.14.6",
+      "return_code": 0,
+      "run_id": "456cb3f22e9f476cb23d6ae626ef784f",
+      "source_identity": "4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0",
+      "started_at": "2026-08-03T21:37:08.244556+00:00",
+      "state": "cold",
+      "status": "not_observed",
+      "workload": "cold-dump-index"
+    },
+    {
+      "artifacts": [
+        {
+          "detail": "",
+          "format": "jsonl",
+          "path": "D:\\ddon-perf-artifacts\\profiles\\cold-dump-index-rebuild\\1ecd2a0afc7d4755a65d036876d0d8bf\\process-samples.jsonl",
+          "profiler": "process-sampler",
+          "sha256": "8dc04a926cc3b38108d16f371fe120180e5b073a5dfc1e34c23ff746ab29c287",
+          "size": 62898,
+          "status": "observed",
+          "tool_version": "built-in"
+        }
+      ],
+      "configuration_fingerprint": "27b47c9bcfa6611aa3c4b05d55b9c8f4ab4f1fb63cbdf2836d164c95b42a0b7a",
+      "duration_seconds": 275.1390964999882,
+      "git_dirty": true,
+      "git_revision": "6d6676315634057aeb60e01fc7a0e62aea7e0f91",
+      "machine_profile": "Windows:AMD64:AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+      "manifest_path": "D:\\ddon-perf-artifacts\\profiles\\cold-dump-index-rebuild\\1ecd2a0afc7d4755a65d036876d0d8bf\\manifest.json",
+      "method_metrics": [],
+      "metrics": {
+        "cpu_system_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 16.421875
+        },
+        "cpu_user_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 256.6875
+        },
+        "peak_rss_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 807493632
+        },
+        "peak_vms_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 793939968
+        },
+        "read_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 11437217487
+        },
+        "read_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 2534280
+        },
+        "sample_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "samples",
+          "value": 274
+        },
+        "stderr_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "stdout_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "wall_time_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 275.1390964999882
+        },
+        "write_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 9569041641
+        },
+        "write_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 2336107
+        }
+      },
+      "platform": "Windows-11-10.0.26200-SP0",
+      "profiler_mode": "process-sampler",
+      "python_version": "3.14.6",
+      "return_code": 0,
+      "run_id": "1ecd2a0afc7d4755a65d036876d0d8bf",
+      "source_identity": "21def1c1dac96f578826c489c40178865afbfdc5754e534035ef9a1097acd2e8",
+      "started_at": "2026-08-03T21:41:37.689664+00:00",
+      "state": "cold",
+      "status": "observed",
+      "workload": "cold-dump-index-rebuild"
+    },
+    {
+      "artifacts": [
+        {
+          "detail": "",
+          "format": "jsonl",
+          "path": "D:\\ddon-perf-artifacts\\profiles\\warm-rlayout-py-spy\\8ba8e7d1fb7d43bd993e9e5b6a5cea58\\process-samples.jsonl",
+          "profiler": "process-sampler",
+          "sha256": "10f2d1670dafd137c7485897bdb3b4897ceed022650a0564d3ba16354a7eaa2f",
+          "size": 419,
+          "status": "observed",
+          "tool_version": "built-in"
+        },
+        {
+          "detail": "profiler did not publish the expected output",
+          "format": "speedscope",
+          "path": "D:\\ddon-perf-artifacts\\profiles\\warm-rlayout-py-spy\\8ba8e7d1fb7d43bd993e9e5b6a5cea58\\py-spy.speedscope.json",
+          "profiler": "py-spy",
+          "sha256": null,
+          "size": null,
+          "status": "partial",
+          "tool_version": "py-spy 0.4.2"
+        }
+      ],
+      "configuration_fingerprint": "003b14dae3b86d3870314b0361ee9cc2d173e38a57b0a96c8110289aadfd44ea",
+      "duration_seconds": 0.621380999989924,
+      "git_dirty": true,
+      "git_revision": "6d6676315634057aeb60e01fc7a0e62aea7e0f91",
+      "machine_profile": "Windows:AMD64:AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+      "manifest_path": "D:\\ddon-perf-artifacts\\profiles\\warm-rlayout-py-spy\\8ba8e7d1fb7d43bd993e9e5b6a5cea58\\manifest.json",
+      "method_metrics": [],
+      "metrics": {
+        "cpu_system_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.109375
+        },
+        "cpu_user_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.125
+        },
+        "peak_rss_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 52596736
+        },
+        "peak_vms_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 31932416
+        },
+        "read_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 5609547
+        },
+        "read_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 717
+        },
+        "sample_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "samples",
+          "value": 2
+        },
+        "stderr_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "stdout_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "wall_time_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.621380999989924
+        },
+        "write_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 0
+        },
+        "write_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 0
+        }
+      },
+      "platform": "Windows-11-10.0.26200-SP0",
+      "profiler_mode": "py-spy",
+      "python_version": "3.14.6",
+      "return_code": 1,
+      "run_id": "8ba8e7d1fb7d43bd993e9e5b6a5cea58",
+      "source_identity": "4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0",
+      "started_at": "2026-08-03T21:49:23.600696+00:00",
+      "state": "warm",
+      "status": "partial",
+      "workload": "warm-rlayout-py-spy"
+    },
+    {
+      "artifacts": [
+        {
+          "detail": "",
+          "format": "jsonl",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\fixture\\08d961b330664efd89505a1c67e0c6aa\\process-samples.jsonl",
+          "profiler": "process-sampler",
+          "sha256": "e62b2e8b25b42095975fd67e1a1e319c2b7e3d678fc2170f7a031df306aac7d9",
+          "size": 54655,
+          "status": "observed",
+          "tool_version": "built-in"
+        },
+        {
+          "detail": "",
+          "format": "json",
+          "path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\fixture\\08d961b330664efd89505a1c67e0c6aa\\pyperf.json",
+          "profiler": "pyperf",
+          "sha256": "6cbcee3d1bf03f2cbe68e5402b1d52e6ce6818f43931f6d65f59f5e47ae412a8",
+          "size": 2930,
+          "status": "observed",
+          "tool_version": "2.10.0"
+        }
+      ],
+      "configuration_fingerprint": "34fa0d5bb01eab30b65508e4b9e025b4819bf0b5df76093e307c1348b1d16ed4",
+      "duration_seconds": 13.544178100011777,
+      "git_dirty": true,
+      "git_revision": "6d6676315634057aeb60e01fc7a0e62aea7e0f91",
+      "machine_profile": "Windows:AMD64:AMD64 Family 25 Model 97 Stepping 2, AuthenticAMD",
+      "manifest_path": "C:\\Users\\morph\\AppData\\Local\\ddon-dwarf-reconstructor\\performance\\fixture\\08d961b330664efd89505a1c67e0c6aa\\manifest.json",
+      "method_metrics": [],
+      "metrics": {
+        "cpu_system_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.171875
+        },
+        "cpu_user_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.109375
+        },
+        "peak_rss_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 144166912
+        },
+        "peak_vms_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 87830528
+        },
+        "pyperf_mean_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.2910345550000784
+        },
+        "pyperf_stddev_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 0.0025836685842935084
+        },
+        "pyperf_value_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "values",
+          "value": 20
+        },
+        "read_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 6031327
+        },
+        "read_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 827
+        },
+        "sample_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "samples",
+          "value": 249
+        },
+        "stderr_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "stdout_capture": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes_truncated",
+          "value": 0
+        },
+        "wall_time_seconds": {
+          "detail": "",
+          "status": "observed",
+          "unit": "seconds",
+          "value": 13.544178100011777
+        },
+        "write_bytes": {
+          "detail": "",
+          "status": "observed",
+          "unit": "bytes",
+          "value": 530
+        },
+        "write_count": {
+          "detail": "",
+          "status": "observed",
+          "unit": "count",
+          "value": 58
+        }
+      },
+      "platform": "Windows-11-10.0.26200-SP0",
+      "profiler_mode": "pyperf",
+      "python_version": "3.14.6",
+      "return_code": 0,
+      "run_id": "08d961b330664efd89505a1c67e0c6aa",
+      "source_identity": null,
+      "started_at": "2026-08-03T21:52:05.762718+00:00",
+      "state": "warm",
+      "status": "observed",
+      "workload": "fixture"
+    }
+  ],
+  "schema_version": "1"
+}

@@ -156,6 +156,7 @@ max-complexity = 10
 
 "src/ddon_dwarf_reconstructor/cli.py" = ["B008"]
 "src/ddon_dwarf_reconstructor/artifact_cli.py" = ["B008"]
+"src/ddon_dwarf_reconstructor/performance_cli.py" = ["B008"]
 
 [dependency-groups]
 test = [
@@ -181,6 +182,12 @@ tools = [
     "nuitka>=2.7.16",
     "rust-just>=1.42,<2",
 ]
+performance = [
+    "pyperf>=2.10,<3",
+    "py-spy>=0.4,<1",
+    "pyinstrument>=5.1,<6",
+    "scalene>=2.3,<3",
+]
 docs = ["zensical>=0.0.52,<0.1"]
 dev = [
     { include-group = "test" },
@@ -188,5 +195,6 @@ dev = [
     { include-group = "type" },
     { include-group = "quality" },
     { include-group = "tools" },
+    { include-group = "performance" },
     { include-group = "docs" },
 ]

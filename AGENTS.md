@@ -43,6 +43,13 @@ unbounded in-memory intermediates. Preserve stable output ordering and source of
 - The standard non-proprietary container baseline is
   `tools/binary_toolchain/compose.yaml`. Mount explicit inputs read-only, publish outputs outside
   source control, and never copy Sony SDKs or SELF credentials into the image.
+- Opt-in profiling uses the canonical `performance` command group and `just` recipes. Use
+  `performance doctor` before selecting tools, the deterministic fixture tier before real assets,
+  and `performance history compare/export` for the tracked SQLite/static-history contract. The
+  process runner records CPU, RSS/VMS, process I/O, bounded samples, and source identity in an
+  isolated child. Raw Scalene, cProfile, pyinstrument, py-spy, tracemalloc, pyperf, stdout, stderr,
+  and sample files remain in the OS-local performance artifact directory. Profiling is never
+  enabled in normal generation; missing tools/assets are explicit unavailable or blocked evidence.
 
 ## Local acceptance artifact
 
@@ -134,6 +141,12 @@ ordering.
   `coverage-ci`. `uv run just test-without-integration` is an exceptional iteration shortcut, not
   a handoff or merge gate. Use `test-regression`, `test-non-functional`, `test-acceptance`,
   `test-real-assets`, and `test-performance` for explicit evidence slices.
+- The performance slices are `test-performance-fixtures` for deterministic budgets and
+  `test-performance-real-assets` for named local environmental evidence. Use
+  `performance-tools-install`, `performance-profile`, `performance-profile-index`, and
+  `performance-history` rather than
+  introducing a second shell benchmark wrapper. Real-asset history is report-only and thresholds
+  are never auto-learned from noisy runs.
 - The knowledge exporter integration path must continue to run without proprietary ELF inputs;
   real PS4/PS3 inputs remain explicitly qualified environmental acceptance evidence.
 - Update the Zensical source pages under `docs/`, `docs/knowledge-base/testing/`, and the active

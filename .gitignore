@@ -71,6 +71,10 @@ logs/
 *.sqlite3-*
 *.sqlite3.*
 *.sqlite3.lock
+# The performance ledger is a reviewed static-history contract.
+!/resources/performance/benchmarks.sqlite3
+!/resources/performance/benchmark-history.json
+!/resources/performance/benchmark-history.csv
 main.build/
 main.dist/
 main.onefile-build/

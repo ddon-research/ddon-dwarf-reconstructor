@@ -9,6 +9,7 @@ import typer
 
 from .artifact_cli import app as artifacts_app
 from .main import GenerationOptions, run_generation
+from .performance_cli import app as performance_app
 
 app = typer.Typer(
     name="ddon-dwarf-reconstructor",
@@ -17,6 +18,7 @@ app = typer.Typer(
     add_completion=True,
 )
 app.add_typer(artifacts_app, name="artifacts")
+app.add_typer(performance_app, name="performance")
 
 
 def _package_version() -> str:

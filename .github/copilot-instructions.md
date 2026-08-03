@@ -74,6 +74,7 @@ Always use `uv run` for project Python commands and the packaged entry point for
 uv run ddon-dwarf-reconstructor ...
 uv run just test-unit
 uv run just test-integration
+uv run just test-performance-fixtures
 uv run just test
 uv run just check
 uv run ddon-dwarf-reconstructor generate <elf> --symbol <name>
@@ -127,6 +128,12 @@ capture read-only `gh` evidence and verify action release SHAs before editing.
   `uv run just test-without-integration` only as an exceptional fast iteration shortcut; it is not
   the handoff gate. Use `test-regression`, `test-non-functional`, `test-acceptance`,
   `test-real-assets`, and `test-performance` for explicit evidence slices.
+- Use `performance-tools-install`, `performance doctor`, `performance-profile`,
+  `performance-profile-index`, and
+  `performance-history` for profiling. The runner samples only an isolated child with psutil and
+  stores summaries in the tracked SQLite/static-history contract; raw profiles, samples, logs,
+  and proprietary inputs remain external. Run `test-performance-real-assets` only with named
+  local paths. Real-asset results are report-only and unavailable tools remain explicit evidence.
 - Validate the packaged entry point and each intentional output mode in fresh-process and warm-cache
   runs, and record input identity, producer/configuration identity, and cache state.
 - Keep real-artifact baselines outside source control; commit only small deterministic manifests or

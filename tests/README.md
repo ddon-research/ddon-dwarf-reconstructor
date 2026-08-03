@@ -19,6 +19,11 @@ contract, pyramid rationale, real-asset policy, and nested specification-project
 - `tests/application/`, `tests/config/`, `tests/domain/`, and `tests/infrastructure/` mirror the
   production boundaries.
 - `tests/performance/` contains explicit non-functional budgets.
+
+The deterministic fixture performance budget uses the reusable process runner. Run it with
+`uv run just test-performance-fixtures`; use `uv run just test-performance-real-assets` only when
+the named local PS4 paths are configured. Resource and profiler artifacts are written outside the
+checkout, while summaries are recorded through the performance history workflow.
 - `tests/packaging/` contains isolated distribution acceptance.
 - `tests/quality/` contains architecture, maintainability, manifest, coverage, and taxonomy gates.
 - `tests/support/` contains typed DIE builders, regression manifest helpers, and test-policy code.

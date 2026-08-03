@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
-import sys
-import time
 from pathlib import Path
 
 import pytest
+
+from ddon_dwarf_reconstructor.domain.models.performance import ColdWarmState
+from ddon_dwarf_reconstructor.infrastructure.performance.runner import PerformanceRunner
+from ddon_dwarf_reconstructor.infrastructure.performance.workloads import (
+    build_reconstructor_workload,
+)
 
 pytestmark = [
     pytest.mark.integration,
@@ -18,11 +21,6 @@ pytestmark = [
     pytest.mark.real_asset,
     pytest.mark.slow,
 ]
-
-
-def _optional_argument(option: str, environment_name: str) -> list[str]:
-    value = os.environ.get(environment_name)
-    return [option, value] if value else []
 
 
 def test_real_rlayout_export_completes_within_warm_budget(tmp_path: Path) -> None:
@@ -35,35 +33,30 @@ def test_real_rlayout_export_completes_within_warm_budget(tmp_path: Path) -> Non
         pytest.skip(f"real ELF is unavailable: {elf_path}")
 
     output_dir = tmp_path / "rLayout-knowledge"
-    command = [
-        sys.executable,
-        "-m",
-        "ddon_dwarf_reconstructor",
-        str(elf_path),
-        "--generate",
-        "rLayout",
-        "--export-knowledge",
-        str(output_dir),
-        "--build-id",
-        "ps4-02020005",
-    ]
-    command.extend(_optional_argument("--dwarf-dump", "DDON_REAL_DWARF_DUMP"))
-    command.extend(_optional_argument("--dwarf-index", "DDON_REAL_DWARF_INDEX"))
-    orbis_objdump = os.environ.get("DDON_ORBIS_OBJDUMP")
-    command.extend(_optional_argument("--orbis-objdump", "DDON_ORBIS_OBJDUMP"))
-    started = time.perf_counter()
-    result = subprocess.run(
-        command,
-        cwd=repository_root,
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
+    dwarf_dump = _optional_path("DDON_REAL_DWARF_DUMP")
+    dwarf_index = _optional_path("DDON_REAL_DWARF_INDEX")
+    orbis_objdump = _optional_path("DDON_ORBIS_OBJDUMP")
+    workload = build_reconstructor_workload(
+        repository_root=repository_root,
+        name="real-rlayout-export",
+        elf=elf_path,
+        symbols=("rLayout",),
+        mode="export-knowledge",
+        state=ColdWarmState.WARM,
+        output_dir=output_dir,
+        dwarf_dump=dwarf_dump,
+        dwarf_index=dwarf_index,
+        build_id="ps4-02020005",
+        orbis_objdump=orbis_objdump,
+        timeout_seconds=30.0,
     )
-    elapsed = time.perf_counter() - started
+    summary = PerformanceRunner(tmp_path / "performance-artifacts").run(workload)
 
-    assert result.returncode == 0, result.stdout + result.stderr
-    assert elapsed < 15.0, f"warm rLayout export took {elapsed:.2f}s (budget: 15s)"
+    assert summary.return_code == 0, summary.to_dict()
+    assert summary.duration_seconds is not None
+    assert summary.duration_seconds < 15.0, (
+        f"warm rLayout export took {summary.duration_seconds:.2f}s (budget: 15s)"
+    )
     assert (output_dir / "manifest.json").exists()
     if orbis_objdump:
         manifest = json.loads((output_dir / "manifest.json").read_text(encoding="utf-8"))
@@ -77,3 +70,8 @@ def test_real_rlayout_export_completes_within_warm_budget(tmp_path: Path) -> Non
         assert load_instructions[0]["address"] == 0x693E60
         assert load_instructions[-1]["address"] < 0x694AE5
         assert any(item["source_file"].endswith("rLayout.cpp") for item in load_instructions)
+
+
+def _optional_path(environment_name: str) -> Path | None:
+    value = os.environ.get(environment_name)
+    return Path(value) if value else None

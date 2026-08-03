@@ -63,3 +63,23 @@ Completion requires evidence; elapsed time, token budget, or confidence is not c
 
 The OpenAI Cookbook's [goal workflow guidance](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
 is the external rationale for this contract.
+
+## Performance evidence goal
+
+For profiling work, make the evidence surface concrete before running a large asset:
+
+```text
+Outcome: a typed performance run and historical summary exist for the named workload.
+Evidence: run manifest, CPU/RSS/I/O metrics, method summaries, source identity, SQLite row,
+          deterministic exports, and the exact validation command.
+Constraints: preserve output bytes, cache identity, ordering, provenance, and normal-run overhead.
+Boundary: raw profiles, proprietary inputs, cold-index cost, and unavailable external tools remain
+          explicit environmental evidence.
+Iteration: doctor -> fixture -> warm real asset -> profiler cross-check -> cold index -> export.
+Blocker: record the prerequisite and status; after three repeated checks, stop and report it.
+```
+
+Use `performance doctor` before selecting profilers, `test-performance-fixtures` for a deterministic
+gate. Use `performance profile-index` for a separately measured cold compressed-dump rebuild, and
+use `performance history compare/export` only after checking that source, state, interpreter,
+machine, and configuration are compatible.

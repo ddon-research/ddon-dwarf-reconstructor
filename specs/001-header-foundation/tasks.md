@@ -70,7 +70,7 @@ replace the input at the same path and verify invalidation and atomic replacemen
 - [x] T025 [US2] Route generated headers through atomic publication and manifest validation in `src/ddon_dwarf_reconstructor/main.py` and `src/ddon_dwarf_reconstructor/infrastructure/header_output.py`.
 - [ ] T026 [US2] Add deterministic fresh-process and warm-cache tests in `tests/domain/repositories/cache/`, `tests/infrastructure/test_artifacts.py`, and `tests/application/generators/`.
 - [ ] T027 [US2] Add artifact status and repair regression tests for corrupt, stale, migrated, and valid indexes in `tests/test_artifact_cli.py` and `tests/infrastructure/test_zstd_dump_parser.py`.
-- [ ] T028 [US2] Benchmark cold index construction, warm lookup, negative lookup, and batch closure in `tests/performance/` without deleting durable artifacts.
+- [ ] T028 [US2] Benchmark cold index construction, warm lookup, negative lookup, and batch closure in `tests/performance/` without deleting durable artifacts; use the reusable runner/history contract in [`specs/016-performance-profiling`](../016-performance-profiling/spec.md) once the explicit cold-index evidence is retained.
 
 **Checkpoint**: Repeated valid runs are byte-identical, source replacement rejects
 stale artifacts, and repair/purge remain explicit and targeted.

@@ -19,6 +19,7 @@ def test_root_help_lists_unified_commands() -> None:
     assert "generate" in result.stdout
     assert "export-knowledge" in result.stdout
     assert "artifacts" in result.stdout
+    assert "performance" in result.stdout
 
 
 @pytest.mark.unit

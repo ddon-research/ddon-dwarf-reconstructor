@@ -64,7 +64,7 @@ through the repository's `src` directory.
 
 - Keep Typer handlers at the composition boundary. Convert CLI values into typed application
   requests; do not import Typer or Click into domain or infrastructure policy code.
-- Use the unified root command tree (`generate`, `export-knowledge`, `artifacts`) and the nested
+- Use the unified root command tree (`generate`, `export-knowledge`, `artifacts`, `performance`) and the nested
   `dwarf-spec-pipeline` command tree. Repeat `--symbol` for multiple symbols; do not reintroduce
   comma-separated parsing.
 - For one-time binary inspection, probe `--help`/`--version` first, then use a named bounded
@@ -111,6 +111,12 @@ Do not suppress the checker or add a baseline exemption.
   `just test-without-integration` only for exceptional fast iteration; use `test-regression`,
   `test-non-functional`, `test-acceptance`, `test-real-assets`, and `test-performance` for
   explicit evidence slices.
+- Performance code belongs in the infrastructure adapter boundary. Use the typed workload and
+  process runner; do not add always-on profiler hooks to parser/generator hot paths. Use
+  `test-performance-fixtures` for deterministic budgets and `test-performance-real-assets` only
+  with explicit local inputs. Use `performance profile-index` for a separately measured cold
+  compressed-dump rebuild. Keep raw profiler files external and status unavailable/partial
+  evidence rather than substituting zero values.
 - Use Hypothesis for pure type-reference, declarator, array, qualifier, pointer, and parser
   invariants. Use `pytest-regressions` only for small deterministic diagnostics and metadata.
 - Exercise missing, incomplete, conflicting, duplicate, unavailable, cyclic, malformed, and

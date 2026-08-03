@@ -21,13 +21,15 @@ tasks remain visible.
 | [013 Documentation style and governance](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/013-documentation-style-governance) | Style contract implemented; graph work moved to `KG-001` | reusable tone, page intent, arc42 mapping, evidence labels, and authoring loop |
 | [014 Architecture and developer observability docs](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/014-documentation-architecture-observability) | Implemented, merged, and publicly verified | Langfuse/SonarQube how-tos, arc42 section 8, source-backed C4/UML views, and Pages verification |
 | [015 LadybugDB knowledge graph](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/015-ladybugdb-knowledge-graph) | Draft; LadybugDB-first evaluation gate | versioned JSONL loader, import fidelity, deterministic queries, provenance, and operational evidence |
+| [016 Performance profiling](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/016-performance-profiling) | Implemented; fixture and explicit real-asset evidence recorded | source-bound CPU/RAM/I/O/method evidence, SQLite history, and static exports |
 
 ## Next best step
 
-The documentation architecture refinement is published and Pages-verified. The next technical
-integration is the LadybugDB-first `KG-001` evaluation: define a versioned loader over the existing
-JSONL bundle, verify import fidelity, and add deterministic query fixtures. Complete the deferred real-asset/compiler
-evidence in features 001, 004, 007, and 009 as separate evidence slices. Do not publish a graph
+The documentation architecture refinement and feature 016 profiling evidence are published and
+validated. The next technical integration is the LadybugDB-first `KG-001` evaluation: define a
+versioned loader over the existing JSONL bundle, verify import fidelity, and add deterministic
+query fixtures. Complete the deferred real-asset/compiler evidence in features
+001, 004, 007, and 009 as separate evidence slices. Do not publish a graph
 projection until its schema, provenance, authority, and acceptance evidence are defined.
 
 ## Status discipline

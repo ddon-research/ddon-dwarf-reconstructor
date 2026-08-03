@@ -11,6 +11,7 @@ uv run ddon-dwarf-reconstructor [OPTIONS] COMMAND [ARGS]...
 | `generate` | Generate deterministic C++ headers for one or more symbols. |
 | `export-knowledge` | Export deterministic evidence as a knowledge bundle. |
 | `artifacts` | Inspect and maintain source catalogs, indexes, caches, and tool evidence. |
+| `performance` | Collect opt-in resource/profiler evidence and maintain benchmark history. |
 
 ## Generation and export
 
@@ -44,3 +45,17 @@ purge-dump-index
 Every maintenance command has an explicit target and confirmation contract. Use
 `uv run ddon-dwarf-reconstructor artifacts --help` and the individual subcommand help before
 operating on a large or durable artifact.
+
+## Performance subcommands
+
+```text
+doctor
+profile <elf>
+profile-index <dump>
+benchmark
+history compare
+history export
+```
+
+See the [performance reference](performance.md) for profiler choices, metric status semantics,
+raw artifact boundaries, and the v1 history schema.

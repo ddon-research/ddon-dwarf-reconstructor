@@ -16,6 +16,20 @@ uv run just test
 Markdownlint, Mermaid CLI validation, and the strict documentation build. `test` includes
 deterministic integration tests but excludes performance, packaging, and real-asset qualifiers.
 
+For the explicit profiling slice, use the same source of truth:
+
+```powershell
+uv run just performance-tools-install
+uv run just test-performance-fixtures
+uv run just test-performance-real-assets  # only with named local inputs
+uv run just performance-profile-index     # only with the explicit local dump default/override
+uv run just performance-history
+```
+
+The fixture command can gate deterministic budgets. Real-asset runs are report-only and record
+cold/warm state, source identity, tool availability, and external manifest paths; a skipped or
+unavailable profiler is not replacement evidence.
+
 ## Handoff loop
 
 ```powershell
