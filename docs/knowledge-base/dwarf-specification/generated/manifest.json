@@ -23,6 +23,14 @@
     {
       "path": "dwarf4.md",
       "sha256": "b0b37876cb20539ec057f740573257cafd53f4a01f95cea730c2e837ba474526"
+    },
+    {
+      "path": "semantic-index.json",
+      "sha256": "7edfe10f27a415f697436f96bad70e4cc42126f25ccfbf668d227ab00fb1d7cc"
+    },
+    {
+      "path": "semantic-index.md",
+      "sha256": "a3b09a8b73a10f73a77d4b0905317e1719846f7843c19dcfc900ca6865fccbf7"
     }
   ],
   "parser_version": "0.1.0",

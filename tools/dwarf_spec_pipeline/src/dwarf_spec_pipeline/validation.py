@@ -12,6 +12,7 @@ from jsonschema import validate as validate_json
 
 from .models import SpecificationDocument
 from .rendering import render_json
+from .semantic import SemanticIndex
 
 
 class ArtifactValidationError(ValueError):
@@ -72,6 +73,23 @@ def validate_output_directory(output_dir: Path, schema_path: Path) -> None:
         for artifact_path in (json_path, markdown_path):
             relative_path = artifact_path.name
             expected = expected_hashes.get(relative_path)
+            actual = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
+            if expected != actual:
+                raise ArtifactValidationError(
+                    f"Artifact checksum mismatch for {artifact_path}: "
+                    f"expected {expected}, got {actual}"
+                )
+    semantic_json = output_dir / "semantic-index.json"
+    semantic_markdown = output_dir / "semantic-index.md"
+    if semantic_json.exists() or semantic_markdown.exists():
+        if not semantic_json.exists() or not semantic_markdown.exists():
+            raise ArtifactValidationError("Semantic index requires both JSON and Markdown files")
+        try:
+            SemanticIndex.model_validate(json.loads(semantic_json.read_text(encoding="utf-8")))
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
+            raise ArtifactValidationError(f"Invalid semantic index: {exc}") from exc
+        for artifact_path in (semantic_json, semantic_markdown):
+            expected = expected_hashes.get(artifact_path.name)
             actual = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
             if expected != actual:
                 raise ArtifactValidationError(

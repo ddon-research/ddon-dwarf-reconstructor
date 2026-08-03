@@ -4,6 +4,18 @@
 **Status:** ✅ IMPLEMENTED - Offset-based architecture complete  
 **Purpose:** Deep analysis of DWARF tags and pyelftools API - Implementation validated with 289/289 symbols
 
+The current producer evidence is narrower than the historical label: the external PS4
+02020005 ELF is uniformly DWARF4 (2,305 CUs, one PS4 Clang producer), while the comparison PS3
+asset is uniformly DWARF2. The parser maintains a DWARF2-4 vocabulary contract; "supported"
+means the exercised producer subset and evidence relationships are handled, not that every
+standard tag/form is reconstructed into C++.
+
+Use the generated [semantic index](knowledge-base/dwarf-specification/generated/semantic-index.md)
+when reviewing a relationship. In particular, `DW_AT_containing_type` is a reference applicable
+to `DW_TAG_ptr_to_member_type`; it is not evidence that a `DW_TAG_class_type` is the selected
+class definition. `DW_AT_specification` and `DW_AT_abstract_origin` are distinct reference
+relationships and must not be substituted for one another.
+
 **Implementation Status:**
 - ✅ Tag constants defined (tag_constants.py)
 - ✅ DIETypeClassifier with tag validation (die_type_classifier.py)

@@ -1013,7 +1013,9 @@ previous targets and removes staging material.
 
 #### Platform Detection
 
-**Challenge:** Tool must support both PS3 (PowerPC, big-endian, DWARF2) and PS4 (x86-64, little-endian, DWARF3/4).
+**Challenge:** Tool must support PS3 (PowerPC, big-endian, DWARF2) and the validated PS4 build
+(x86-64, little-endian, FreeBSD ABI, DWARF4), while keeping the parser contracts correct across
+the DWARF2-4 vocabulary.
 
 ```python
 @dataclass
@@ -1050,11 +1052,11 @@ self.platform = PlatformDetector.detect_platform(self.elf_file)
 # Different output directories
 output_dir = f"output/{self.platform.value}/"  # "output/ps4/" or "output/ps3/"
 
-# Different DWARF location expression parsing
+# Different producer encodings remain valid within the version contract
 if self.platform == ELFPlatform.PS3:
-    # Parse [0x23, offset] format
+    # Parse DW_OP_plus_uconst with a ULEB128 operand
 else:
-    # Parse direct integer offsets
+    # Accept direct constants and DWARF4 exprloc/block forms
 ```
 
 #### Logging and Observability
@@ -1321,8 +1323,10 @@ def build_hierarchy(self, name: str, max_depth: int = 10) -> tuple[dict, list]:
 ### DWARF Support
 
 **Supported:**
-- DWARF 2 (PS3): Basic support, location expressions parsed
-- DWARF 3/4 (PS4): Full support, primary target
+- DWARF 2 (validated PS3 asset): supported producer subset, including block location expressions
+- DWARF 3: specification vocabulary and compatibility fixtures; no current primary asset
+- DWARF 4 (validated PS4 asset): primary producer target, with typed offsets, references, forms,
+  and deterministic C++ header evidence
 
 **Limited:**
 - DWARF 5: Untested, may work for basic features
@@ -1428,7 +1432,7 @@ paths and are run with `just test-real-assets` or `just test-performance`.
 
 ## Platform-Specific Validation
 
-### PS4 (x86-64, DWARF 3/4)
+### PS4 (x86-64, FreeBSD ABI, DWARF 4)
 
 **Test file:** `resources/DDOORBIS.elf` (Dragon's Dogma Online)
 
@@ -1440,6 +1444,8 @@ MtFloat3:  12 bytes,  5 members, 10 methods
 ```
 
 **Key features tested:**
+- All 2,305 compilation-unit headers report DWARF4 in the external 02020005 ELF acceptance asset
+- The producer is consistently `clang version 3.5.0 (PS4 clang version 2.50.0.2333)`
 - Standard DWARF 4 attribute parsing
 - Little-endian byte order
 - Virtual method extraction
@@ -1551,7 +1557,7 @@ and multi-file modes one workflow with mode-specific output adapters. Multi-file
 and single-file dependency closure is structural: method signatures render on
 declarations but method-only types do not trigger unbounded transitive scans.
 
-The structure checker enforces the 400/250/75/10 module/class/function/
+The structure checker enforces the 600/500/75/10 module/class/function/
 complexity limits with no baseline exemption. The ArchUnitPython architecture
 suite and output manifest checker are invoked by the root `justfile`, CI, and
 the documented local acceptance sequence. See

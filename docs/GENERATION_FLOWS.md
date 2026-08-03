@@ -282,6 +282,20 @@ explicit real PS4 run uses the external ELF, compressed dump, and
 validated SQLite sidecar; fresh-process warm reruns must reproduce the same
 header manifest.
 
+Before changing parser relationships, run the explicit evidence surfaces:
+
+```text
+uv run ddon-dwarf-reconstructor artifacts inspect-elf <PS4-ELF>
+uv run ddon-dwarf-reconstructor artifacts inspect-dwarf-dump <LLVM-DWARF-DUMP.zst>
+uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
+  --output-dir docs/knowledge-base/dwarf-specification/generated --source-root src
+```
+
+The ELF inspection verifies every CU header and producer. The compressed-dump inspection streams
+the LLVM text and retains only version/producer counters. The specification audit supplies the
+versioned tag, attribute, form, operation, encoding, and applicability index used when reviewing
+parser assumptions.
+
 For a repeated-symbol CLI invocation, the application accumulates successful
 header bundles and publishes them once. This is required because the atomic
 publisher removes files absent from the incoming manifest; publishing after

@@ -171,7 +171,7 @@ Derive a plan first and refactor the code aggressively.
 DONE:
 We went through large refactoring. Clean all artifact caches and temporary and intermediate files. Also clean dot (".") folders, if any, unless it would break our setup/IDE. Then regenerate them all to ensure we have not introduced any regressions by accident. It might make sense to compare the previous results and fil.es and keep them in an archive before deleting them and until we are sure nothing is broken.
 --
-WIP:
+DONE:
 Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
 Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
 
@@ -231,7 +231,7 @@ But be careful not to be too verbose and spam logs, otherwise they will be hard 
 Afterwards, review the current copilot, codex, python instructions and revalidate the tooling loop for changes. Update documentation, specs and the knowledge base.
 Derive a plan first and refactor the code aggressively.
 --
-TODO:
+WIP:
 Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
 Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
 
@@ -243,14 +243,28 @@ Thus, getting the DWARF parsing correct is important.
 Afterwards, review the current copilot, codex, python instructions and revalidate the tooling loop for changes. Update documentation, specs and the knowledge base.
 Derive a plan first and refactor the code aggressively.
 --
+TODO:
 Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
 Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
 
-More aggressively incorporate tools from the LLVM and Orbis toolchain and other common compilation tools that would generate useful one-time exports/dumps. Since these are mostly well-established command line tools, they should all have valuable --help outputs.
-Check the Orbis tools here: D:\SCE\ORBIS SDKs\8.000\host_tools
-Check the LLVM tools in msys2: C:\msys64\ucrt64\bin
-Otherwise just build a custom Docker container with compose that includes useful debugging and probing toolchains for binary files.
-Refactor the code and adapt our ingestion/lookups with potential new metadata.
+More aggressively incorporate tools from existing LLVM and Orbis toolchains and other common binary inspection/de-/compilation tools that would generate useful one-time exports/dumps which we could integrate into our knowledge base/indexes. We just have to be careful about PS4 ABI support. Since these are mostly well-established command line tools, they should all have valuable --help outputs as a starting point. Investigate them and incorporate their knowledge/concepts.
+Building a custom Docker container with compose that includes useful debugging and probing toolchains for binary files could also be helpful.
+The goal is to find/derive new potential information sources and refactor the code and adapt our ingestion/lookups with potential new metadata.
+
+References:
+Sony official PS4 Orbis tools here 8.0: D:\SCE\ORBIS SDKs\8.000\host_tools
+Sony official PS4 Orbis toolchain source code 4.5: E:\HackingEmulation\PlayStation4\ps4-4.5-sdk\Toolchain-4.500
+Sony official PS4 Orbis SDK source code 4.5: E:\HackingEmulation\PlayStation4\ps4-4.5-sdk\SDK-4.508.001
+GNU Binutils - https://www.gnu.org/software/binutils/binutils.html, available in msys2
+LLVM Toolchain - https://llvm.org/docs/CommandGuide/index.html, installed in msys2: C:\msys64\ucrt64\bin
+Elfutils - https://github.com/roolebo/elfutils
+Libdwarf - https://github.com/davea42/libdwarf-code, available in msys2 / here: C:\msys64\home\morph\libdwarf-code-code-2025-10-06-build-withelf
+Pyelftools - https://github.com/eliben/pyelftools
+LIEF - https://github.com/lief-project/LIEF
+OpenOrbis - https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain, https://github.com/OpenOrbis/readoelf
+https://github.com/ps4-payload-dev/elfldr
+https://www.psdevwiki.com/ps4/SELF_-_SPRX
+
 
 Afterwards, review the current copilot, codex, python instructions and revalidate the tooling loop for changes. Update documentation, specs and the knowledge base.
 Derive a plan first and refactor the code aggressively.

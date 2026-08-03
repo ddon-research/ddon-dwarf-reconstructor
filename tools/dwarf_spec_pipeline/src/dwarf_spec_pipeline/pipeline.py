@@ -14,6 +14,7 @@ from .models import SpecificationDocument
 from .normalize import build_document
 from .readers import read_intermediate
 from .rendering import render_json, render_markdown
+from .semantic import build_semantic_index, load_documents, write_index
 from .source_manifest import SourceManifest, acquire_source, load_manifest
 from .validation import validate_document
 
@@ -52,7 +53,9 @@ def _publish(stage: Path, output_dir: Path) -> None:
 
 
 def _artifact_manifest(
-    manifest: SourceManifest, documents: list[tuple[SpecificationDocument, str, str]]
+    manifest: SourceManifest,
+    documents: list[tuple[SpecificationDocument, str, str]],
+    extra_artifacts: list[tuple[str, bytes]] | None = None,
 ) -> str:
     artifacts = []
     for document, json_text, markdown_text in documents:
@@ -68,6 +71,8 @@ def _artifact_manifest(
                 },
             ]
         )
+    for path, content in extra_artifacts or []:
+        artifacts.append({"path": path, "sha256": _sha256_bytes(content)})
     payload = {
         "schema_version": 1,
         "parser_version": documents[0][0].parser_version if documents else "0.1.0",
@@ -116,8 +121,22 @@ def build(
             version = document.specification.version
             (stage / f"dwarf{version}.json").write_text(json_text, encoding="utf-8", newline="\n")
             (stage / f"dwarf{version}.md").write_text(markdown_text, encoding="utf-8", newline="\n")
+        selected_versions = {document.specification.version for document, _, _ in documents}
+        semantic_source_root = Path("src") if Path("src").is_dir() else None
+        semantic_index = build_semantic_index(
+            load_documents(stage, selected_versions),
+            source_root=semantic_source_root,
+            artifact_dir=stage,
+        )
+        write_index(semantic_index, stage / "semantic-index.json", stage / "semantic-index.md")
+        semantic_artifacts = [
+            (path.name, path.read_bytes())
+            for path in (stage / "semantic-index.json", stage / "semantic-index.md")
+        ]
         selected_manifest = SourceManifest(schema_version=manifest.schema_version, sources=selected)
         (stage / "manifest.json").write_text(
-            _artifact_manifest(selected_manifest, documents), encoding="utf-8", newline="\n"
+            _artifact_manifest(selected_manifest, documents, semantic_artifacts),
+            encoding="utf-8",
+            newline="\n",
         )
         _publish(stage, output_dir)

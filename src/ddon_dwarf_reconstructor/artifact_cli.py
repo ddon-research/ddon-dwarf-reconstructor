@@ -12,7 +12,9 @@ import typer
 from .domain.repositories.cache import PersistentSymbolCache
 from .infrastructure.artifacts import SourceIdentityCatalog
 from .infrastructure.config import get_cache_file_path
+from .infrastructure.elf_evidence import inspect_elf
 from .infrastructure.logging import LoggerSetup, get_logger, log_exception
+from .infrastructure.zstd_dump_evidence import inspect_dump
 from .infrastructure.zstd_dump_parser import ZstdDumpParser
 
 logger = get_logger(__name__)
@@ -117,6 +119,22 @@ def verify_source(
         )
 
     _run_operation(operation)
+
+
+@app.command("inspect-elf")
+def inspect_elf_command(
+    elf: Path = typer.Argument(..., help="ELF path to inspect."),
+) -> None:
+    """Inspect ELF headers and all DWARF CU producer/version headers as JSON."""
+    _run_operation(lambda: _write_result(inspect_elf(elf)))
+
+
+@app.command("inspect-dwarf-dump")
+def inspect_dwarf_dump(
+    dwarf_dump: Path = typer.Argument(..., help="Compressed LLVM DWARF dump path."),
+) -> None:
+    """Stream a compressed LLVM dump and report CU versions and producers."""
+    _run_operation(lambda: _write_result(inspect_dump(dwarf_dump)))
 
 
 def _dump_operation(dwarf_dump: Path, index_path: Path | None, *, rebuild: bool) -> None:

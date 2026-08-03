@@ -6,7 +6,10 @@ Dragon's Dogma Online research and modding.
 ## Features
 
 - Complete type dependency and inheritance resolution across compilation units.
-- PS4 DWARF 3/4 and PS3 DWARF 2 platform detection.
+- Validated PS4 DWARF 4 and PS3 DWARF 2 producer detection, with parser contracts covering the
+  DWARF 2-4 vocabulary.
+- Read-only ELF and compressed-dump evidence inspection, plus a searchable DWARF 2/3/4 semantic
+  index for correctness reviews.
 - Deterministic single-file and multi-file header generation.
 - Persistent source-bound symbol caches and streaming compressed-DWARF indexes.
 - Knowledge-graph exports with explicit producer and Orbis evidence provenance.
@@ -109,6 +112,12 @@ uv run ddon-dwarf-reconstructor artifacts inspect `
   --dwarf-dump D:/research/DDON-binaries/DDOORBIS.elf.llvmdwarfdump.zst `
   --dump-index output/real-dump-index/DDOORBIS.elf.index.sqlite3
 
+uv run ddon-dwarf-reconstructor artifacts inspect-elf `
+  D:/research/DDON-binaries/IDA9.3/PS4_DDON_02020005_2016_12_21/DDOORBIS.elf
+
+uv run ddon-dwarf-reconstructor artifacts inspect-dwarf-dump `
+  D:/research/DDON-binaries/IDA9.3/PS4_DDON_02020005_2016_12_21/DDOORBIS.elf.llvmdwarfdump.zst
+
 uv run ddon-dwarf-reconstructor artifacts verify-source resources/DDOORBIS.elf
 uv run ddon-dwarf-reconstructor artifacts repair-dump-index D:/research/DDON-binaries/dump.zst
 uv run ddon-dwarf-reconstructor artifacts rebuild-dump-index D:/research/DDON-binaries/dump.zst
@@ -118,6 +127,21 @@ uv run ddon-dwarf-reconstructor artifacts repair-catalog
 `purge-dump-index` requires `--confirm-index-path` containing the exact resolved sidecar path.
 Repair, rebuild, and purge operations never broaden their target beyond the explicitly selected
 artifact. The former `ddon-dwarf-artifacts` executable is intentionally removed.
+
+`inspect-elf` performs an explicit all-CU header/producer pass. `inspect-dwarf-dump` performs an
+explicit streaming pass over the compressed LLVM text and retains only bounded counters. Neither
+command is part of ordinary generation or the default test loop.
+
+The standalone specification project builds the semantic index from the checked-in JSON/Markdown
+source artifacts:
+
+```text
+uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
+  --output-dir docs/knowledge-base/dwarf-specification/generated --source-root src
+```
+
+The index records versioned tags, attributes, forms, operations, attribute encodings, tag
+applicability, and source references. It is review evidence, not a runtime dependency.
 
 ## DWARF dump and cache behavior
 
@@ -203,6 +227,8 @@ validates dependency declarations, and focused Prospector diagnostics remain a n
 - [Testing and acceptance tiers](docs/TESTING.md)
 - [DWARF tag analysis](docs/DWARF_TAG_ANALYSIS.md)
 - [DWARF specification pipeline](tools/dwarf_spec_pipeline/README.md)
+- [Goal-oriented research workflow](docs/GOAL_WORKFLOW.md)
+- [DWARF 2-4 correctness audit](docs/knowledge-base/dwarf/dwarf2-4-correctness-audit.md)
 
 The architecture policy is executable: `uv run just architecture` runs the pinned
 ArchUnitPython rules for the `src/` hexagon and is included in both `just check` and the unit

@@ -246,9 +246,12 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
         const_attr = member_die.attributes.get("DW_AT_const_value")
         offset_attr = member_die.attributes.get("DW_AT_data_member_location")
         bit_size_attr = member_die.attributes.get("DW_AT_bit_size")
-        bit_offset_attr = member_die.attributes.get(
-            "DW_AT_data_bit_offset"
-        ) or member_die.attributes.get("DW_AT_bit_offset")
+        data_bit_offset_attr = member_die.attributes.get("DW_AT_data_bit_offset")
+        bit_offset_attr = (
+            data_bit_offset_attr
+            if data_bit_offset_attr is not None
+            else member_die.attributes.get("DW_AT_bit_offset")
+        )
         const_value = (
             const_attr.value
             if const_attr is not None and isinstance(const_attr.value, int)

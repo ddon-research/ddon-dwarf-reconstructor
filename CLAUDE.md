@@ -30,13 +30,18 @@ uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf --symbol MtObjec
 uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf --symbol MtObject --full-hierarchy
 uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf --symbols-file resources/season2-resources.txt
 uv run ddon-dwarf-reconstructor artifacts inspect --elf resources/DDOORBIS.elf
+uv run ddon-dwarf-reconstructor artifacts inspect-elf <PS4-ELF>
+uv run ddon-dwarf-reconstructor artifacts inspect-dwarf-dump <LLVM-DWARF-DUMP.zst>
 ```
 
 The standalone specification tool is run from its own project boundary:
 
 ```text
 uv run --directory tools/dwarf_spec_pipeline just check
-uv run --directory tools/dwarf_spec_pipeline dwarf-spec-pipeline validate
+uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline validate \
+  --output-dir docs/knowledge-base/dwarf-specification/generated
+uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
+  --output-dir docs/knowledge-base/dwarf-specification/generated --source-root src
 ```
 
 ## Engineering constraints
@@ -56,7 +61,12 @@ uv run --directory tools/dwarf_spec_pipeline dwarf-spec-pipeline validate
   performance, slow, real-asset, packaging, and quality work explicitly.
 - The default `just test` and coverage loop includes deterministic integration tests. Use
   `just test-without-integration` only for exceptional iteration, and run the required loop before
-  handoff. Real-asset and performance checks remain explicit local evidence.
+handoff. Real-asset and performance checks remain explicit local evidence.
+
+For a multi-turn DWARF investigation, use a thread-scoped Codex goal. Define the outcome and
+evidence surface first, inspect the validated PS4 DWARF4/PS3 DWARF2 producer facts and semantic
+index, then iterate through focused tests and the required gates. Separate confirmed facts from
+approximation, blocked prerequisites, and remaining uncertainty before declaring completion.
 
 ## Observability loop
 

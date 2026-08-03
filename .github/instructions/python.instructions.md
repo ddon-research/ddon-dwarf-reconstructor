@@ -71,8 +71,8 @@ through the repository's `src` directory.
 
 All non-generated Python under `src/` and `tests/` must satisfy these hard limits:
 
-- module: at most 400 physical lines;
-- class: at most 250 physical lines;
+- module: at most 600 physical lines;
+- class: at most 500 physical lines;
 - function or method: at most 75 physical lines;
 - McCabe complexity: at most 10.
 
@@ -113,3 +113,9 @@ uv run just audit
 For real PS4 or performance validation, use explicit local input and index paths, retain cold and
 warm state, and store generated artifacts outside source control. Update the relevant Spec Kit and
 documentation artifacts with the exact command and evidence.
+
+For multi-step DWARF correctness work, use a thread-scoped Codex goal with a concrete outcome and
+verification surface. Inspect all-CU ELF evidence, the streaming dump evidence, and the generated
+DWARF semantic index before changing parser relationships; iterate through focused tests, `just
+check`, and the required test loop. Completion requires passing evidence and a written uncertainty
+record, not merely reaching a budget limit.

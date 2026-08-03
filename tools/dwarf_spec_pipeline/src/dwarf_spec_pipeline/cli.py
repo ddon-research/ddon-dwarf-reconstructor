@@ -8,6 +8,7 @@ from pathlib import Path
 import typer
 
 from .pipeline import PipelineError, build
+from .semantic import build_semantic_index, load_documents, write_index
 from .source_manifest import SourceError, load_manifest, verify_source
 from .validation import ArtifactValidationError, validate_output_directory
 
@@ -88,6 +89,45 @@ def validate(
     def operation() -> None:
         validate_output_directory(output_dir, schema)
         typer.echo(f"Validated DWARF artifacts in {output_dir}")
+
+    _run(operation)
+
+
+@app.command("audit")
+def audit(
+    output_dir: Path = typer.Option(
+        Path("docs/knowledge-base/dwarf-specification/generated"),
+        "--output-dir",
+        help="Published canonical JSON artifact directory.",
+    ),
+    source_root: Path = typer.Option(
+        Path("src"),
+        "--source-root",
+        help="Python source tree whose DWARF vocabulary references are indexed.",
+    ),
+    output_json: Path | None = typer.Option(
+        None,
+        "--output-json",
+        help="Semantic JSON output; defaults beside the canonical artifacts.",
+    ),
+    output_markdown: Path | None = typer.Option(
+        None,
+        "--output-markdown",
+        help="Semantic Markdown output; defaults beside the canonical artifacts.",
+    ),
+) -> None:
+    """Build the searchable DWARF vocabulary and relationship audit index."""
+
+    def operation() -> None:
+        index = build_semantic_index(
+            load_documents(output_dir), source_root=source_root, artifact_dir=output_dir
+        )
+        write_index(
+            index,
+            output_json or output_dir / "semantic-index.json",
+            output_markdown or output_dir / "semantic-index.md",
+        )
+        typer.echo(f"Built DWARF semantic index in {output_dir}")
 
     _run(operation)
 

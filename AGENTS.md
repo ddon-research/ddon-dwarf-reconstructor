@@ -158,3 +158,15 @@ its `just test`, `just test-official`, and `just check` from that project bounda
   logs outside Spec Kit feature directories and source control.
 - Every task must name exact source/test paths and a validation tier; unresolved
   evidence and deferred compiler prerequisites belong in the feature artifacts.
+
+## Goal-oriented research loop
+
+- For multi-turn correctness work, create a thread-scoped goal whose objective names the outcome,
+  evidence surface, preservation constraints, scope boundary, next iteration action, and blocked
+  condition. The goal is a workflow aid, not a replacement for these repository instructions.
+- Start DWARF investigations with `artifacts inspect-elf`, `artifacts inspect-dwarf-dump`, and the
+  standalone specification `dwarf-spec-pipeline audit` command. Record confirmed, approximate,
+  blocked, and remaining-uncertainty findings separately.
+- After each parser or evidence slice, run the focused tests, `uv run just check`, and the required
+  correctness loop before advancing. Complete the goal only when the named evidence surface passes;
+  a time or token budget is never completion evidence.

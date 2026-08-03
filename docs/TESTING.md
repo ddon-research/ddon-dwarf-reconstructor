@@ -82,15 +82,15 @@ pytestmark = [
 
 ## Pyramid and current inventory
 
-The 2026-08-03 root collection baseline is 433 tests:
+The 2026-08-03 root collection baseline is 441 tests:
 
 | Layer/purpose | Current evidence |
 | --- | ---: |
-| Unit scope | 427 |
-| Deterministic integration scope | 2 required exporter tests |
+| Unit scope | 435 |
+| Integration scope | 2 required exporter tests and 1 performance integration test |
 | Acceptance scope | 2 real-asset generation tests and 1 packaging test |
 | Performance | 1 explicit real-asset budget |
-| Regression purpose | 8 output/authority/acceptance contracts |
+| Regression purpose | 14 output/authority/acceptance contracts |
 | Non-functional purpose | 28 quality/performance tests |
 
 The unit layer remains the largest. The required integration layer is deliberately small and
@@ -154,9 +154,16 @@ $env:DDON_REAL_ELF = 'D:\research\DDON-binaries\IDA9.3\PS4_DDON_02020005_2016_12
 $env:DDON_REAL_DWARF_DUMP = "$env:DDON_REAL_ELF.llvmdwarfdump.zst"
 $env:DDON_REAL_DWARF_INDEX = 'D:\ddon-dwarf-reconstructor\output\real-dump-index\DDOORBIS.elf.llvmdwarfdump.index.sqlite3'
 $env:DDON_ORBIS_OBJDUMP = 'D:\SCE\ORBIS SDKs\8.000\host_tools\bin\orbis-objdump.exe'
+uv run ddon-dwarf-reconstructor artifacts inspect-elf $env:DDON_REAL_ELF
+uv run ddon-dwarf-reconstructor artifacts inspect-dwarf-dump $env:DDON_REAL_DWARF_DUMP
 uv run just test-performance
 uv run just test-real-assets
 ```
+
+The two inspection commands are explicit read-only evidence passes. `inspect-elf` scans all CU
+headers and top-level producer/language attributes without retaining the DIE graph. The compressed
+dump command streams the text export and reports bounded CU/version/producer counters; its runtime
+is proportional to the expanded dump and should be recorded as a separate cold evidence pass.
 
 Record cold/warm state, elapsed time, source identity, producer/configuration identity, and
 manifest identity in the active Spec Kit feature. Preserve validated sidecars; do not routinely
@@ -172,10 +179,17 @@ uv run --directory tools/dwarf_spec_pipeline just test-integration
 uv run --directory tools/dwarf_spec_pipeline just test
 uv run --directory tools/dwarf_spec_pipeline just test-official
 uv run --directory tools/dwarf_spec_pipeline just check
+uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline audit `
+  --output-dir docs/knowledge-base/dwarf-specification/generated `
+  --source-root src
+uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline validate `
+  --output-dir docs/knowledge-base/dwarf-specification/generated
 ```
 
 The normal nested test excludes `official`/`real_artifact` checks. `test-official` is explicit
-because it validates generated artifacts produced by the Docker/source-conversion workflow.
+because it validates generated artifacts produced by the Docker/source-conversion workflow. The
+semantic audit consumes the checked-in canonical JSON documents, writes the searchable
+DWARF2/3/4 index, and must be followed by manifest validation.
 
 ## Writing and reviewing tests
 

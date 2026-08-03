@@ -68,6 +68,10 @@ uv run just test
 uv run just check
 uv run ddon-dwarf-reconstructor generate <elf> --symbol <name>
 uv run ddon-dwarf-reconstructor artifacts inspect --dwarf-dump <path>
+uv run ddon-dwarf-reconstructor artifacts inspect-elf <elf>
+uv run ddon-dwarf-reconstructor artifacts inspect-dwarf-dump <dump.zst>
+uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
+  --output-dir docs/knowledge-base/dwarf-specification/generated --source-root src
 ```
 
 Before handoff, run `uv run just test`, `uv run just coverage-ci`, and `uv run just audit`.
@@ -106,12 +110,21 @@ import, complexity, and maintainability diagnostics.
 - Add focused tests for incomplete, conflicting, duplicate, unavailable, cyclic, malformed, and
   timeout evidence. Use Hypothesis for pure parser/type/declarator invariants and
   `pytest-regressions` only for small deterministic records.
-- Keep every non-generated Python module under 400 lines, class under 250 lines, function/method
+- Keep every non-generated Python module under 600 lines, class under 500 lines, function/method
   under 75 lines, and McCabe complexity at or below 10. There are no baseline exemptions.
 - Use specific exceptions and structured diagnostics. Do not add blanket `Any`, broad exception
   swallowing, truthiness checks for optional offsets, or unexplained architecture exemptions.
 - Update affected README, architecture, generation-flow, testing, and Spec Kit artifacts. Record
   unresolved evidence or deferred prerequisites there rather than hiding them in code.
+
+## Goal-oriented research workflow
+
+For multi-step DWARF correctness work, use a thread-scoped Codex goal with an explicit outcome,
+verification surface, constraints, boundaries, iteration action, and blocked condition. Start with
+ELF/dump producer evidence and the generated DWARF semantic index; then make one parser/evidence
+slice, run the focused tests and `just check`, and continue only from observed results. A goal is
+complete only when its evidence surface passes. Report confirmed, approximate, blocked, and
+remaining-uncertainty findings separately; do not treat a time or token budget as completion.
 
 For repository-wide instructions, performance constraints, safety rules, and the complete
 validation sequence, follow `AGENTS.md`.

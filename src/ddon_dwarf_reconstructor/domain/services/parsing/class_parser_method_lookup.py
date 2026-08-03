@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 
-from ....core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ....core.dwarf import DwarfCompilationUnit, DwarfEntry, dwarf_reference_offset
 from ....core.observability import get_logger
 from .class_parser_context import ClassParserContext
 from .method_evidence import score_implementation
@@ -51,7 +51,11 @@ class ClassParserMethodLookupMixin:
             if die.tag != "DW_TAG_subprogram":
                 continue
             specification = die.attributes.get("DW_AT_specification")
-            if specification is None or specification.value != declaration_offset:
+            if specification is None:
+                continue
+            resolved_offset = dwarf_reference_offset(die, "DW_AT_specification")
+            raw_offset = getattr(specification, "value", None)
+            if resolved_offset != declaration_offset and raw_offset != declaration_offset:
                 continue
             score = score_implementation(die)
             if score <= best_score:

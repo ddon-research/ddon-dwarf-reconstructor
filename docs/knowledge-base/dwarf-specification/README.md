@@ -17,8 +17,15 @@ The checked-in deliverables are under [`generated/`](generated/):
 | DWARF 4 | [`dwarf4.json`](generated/dwarf4.json) | [`dwarf4.md`](generated/dwarf4.md) |
 
 [`manifest.json`](generated/manifest.json) records the source identity and
-SHA-256 of every published JSON/Markdown artifact. The JSON shape is defined
+SHA-256 of every published JSON/Markdown artifact, including the derived semantic index. The
+JSON shape is defined
 by [`tools/dwarf_spec_pipeline/schema/dwarf-specification.schema.json`](../../../tools/dwarf_spec_pipeline/schema/dwarf-specification.schema.json).
+
+The review-oriented [`semantic-index.json`](generated/semantic-index.json) and
+[`semantic-index.md`](generated/semantic-index.md) normalize the DWARF 2/3/4 vocabulary into
+versioned namespaces, attribute encodings, attribute-class descriptions, and tag applicability.
+This is especially important for DWARF2, where the converter preserves some normative tables as
+paragraph blocks rather than normalized table rows.
 
 Each JSON document preserves ordered sections, paragraphs, lists, code,
 normalized tables and merged-cell spans, structured constants, source

@@ -53,7 +53,17 @@ def test_build_is_byte_deterministic_for_locked_intermediates(
 
     files_a = sorted(path.name for path in output_a.iterdir())
     files_b = sorted(path.name for path in output_b.iterdir())
-    assert files_a == files_b == ["dwarf2.json", "dwarf2.md", "manifest.json"]
+    assert (
+        files_a
+        == files_b
+        == [
+            "dwarf2.json",
+            "dwarf2.md",
+            "manifest.json",
+            "semantic-index.json",
+            "semantic-index.md",
+        ]
+    )
     assert [
         path.read_bytes() for path in sorted(output_a.iterdir(), key=lambda path: path.name)
     ] == [path.read_bytes() for path in sorted(output_b.iterdir(), key=lambda path: path.name)]

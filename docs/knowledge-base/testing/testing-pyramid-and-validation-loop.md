@@ -7,8 +7,8 @@ many pure decision points. That suite alone cannot prove that source identity, a
 orchestration, serialization, atomic publication, and user-visible distribution behavior still
 work together. Real ELF checks are also expensive and depend on local proprietary inputs.
 
-The 2026-08-03 root baseline exposed 429 collected tests before this feature: 407 unit, 2
-integration, 1 performance, 1 packaging, and 18 without a useful scope/purpose marker. The
+The pre-audit root baseline exposed 429 collected tests: 407 unit, 2 integration, 1 performance,
+1 packaging, and 18 without a useful scope/purpose marker. The
 knowledge exporter integration module was marked unit even though it exercises real temporary-file
 publication and evidence serialization. The nested DWARF specification project had 15 collected
 tests with scope markers but no purpose markers.
@@ -41,11 +41,27 @@ This keeps the quality loop meaningful on machines and CI workers without the 80
 
 ## Validation evidence
 
-After the taxonomy refactor, collection reports 433 tests with zero unscoped and zero no-purpose
-items. The required correctness selection contains 429 tests; the remaining tests are one
-performance benchmark, one packaging acceptance, and two real-asset acceptance tests beyond the
-benchmark. The fast unit tier passes 427 tests and the deterministic exporter integration tier
-contains two tests.
+After the DWARF2-DWARF4 audit, collection reports 441 tests with zero unscoped and zero
+no-purpose items. The required correctness selection contains 437 tests; the remaining tests are
+one performance benchmark, one packaging acceptance, and two real-asset acceptance tests beyond
+the benchmark. The fast unit tier passes 435 tests, and the deterministic exporter integration
+tier contains two tests. The nested specification project contains 18 tests: 15 unit, 2
+integration, and 1 official artifact test.
+
+The evidence loop also has explicit read-only commands:
+
+```text
+uv run ddon-dwarf-reconstructor artifacts inspect-elf <absolute-ELF-path>
+uv run ddon-dwarf-reconstructor artifacts inspect-dwarf-dump <absolute-dump-path>
+uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
+  --output-dir docs/knowledge-base/dwarf-specification/generated --source-root src
+uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline validate \
+  --output-dir docs/knowledge-base/dwarf-specification/generated
+```
+
+The ELF pass is an all-CU header/top-level-attribute scan; the compressed-dump pass is a bounded
+streaming counter pass over the expanded text representation. Neither replaces the parser’s
+relationship tests or the explicit external compiler/Orbis acceptance loop.
 
 The executable contract lives in:
 

@@ -5,6 +5,25 @@ Path: `llvm/lib/DebugInfo/DWARF/`
 Language: C++
 Status: Production-quality, industry-standard
 
+## Repository-specific verification
+
+The LLVM text export is useful as a bounded, searchable producer view, but its `format =
+DWARF32` label describes the unit-length encoding and does not mean “DWARF version 3.” The
+external PS4 ELF has 2,305 CUs and every CU header reports DWARF4; every top-level producer is
+`clang version 3.5.0 (PS4 clang version 2.50.0.2333)`. Use the ELF evidence command to verify the
+binary and the streaming dump evidence command to compare the export:
+
+```text
+uv run ddon-dwarf-reconstructor artifacts inspect-elf <PS4-ELF>
+uv run ddon-dwarf-reconstructor artifacts inspect-dwarf-dump <LLVM-DWARF-DUMP.zst>
+```
+
+The reconstructor intentionally uses pyelftools for the owned session and a persistent streaming
+text index for selected lookup relationships. It does not claim LLVM's complete DWARF feature
+surface. In particular, CU-relative references must be resolved through the DIE graph, DWARF4
+`DW_AT_high_pc` may be a constant offset, and `DW_AT_abstract_origin` must not be substituted for
+`DW_AT_specification` when locating an out-of-line method definition.
+
 ## Overview
 
 LLVM's DWARF parser is the **reference implementation** used by:

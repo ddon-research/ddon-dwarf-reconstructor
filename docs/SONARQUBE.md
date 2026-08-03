@@ -52,6 +52,11 @@ Then capture the existing MSVC validation command:
 uv run just sonar-capture
 ```
 
+On 2026-08-03 this prerequisite check was unavailable in the checkout because
+`output/msvc-header-validation-20260801/compile_msvc.cmd` was absent. Restore or explicitly supply
+the generated validation command before treating a Sonar/MSVC run as compiler evidence; this
+missing external artifact does not weaken the deterministic parser or specification gates.
+
 The database is written to:
 
 ```text

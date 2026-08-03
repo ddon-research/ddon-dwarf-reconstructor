@@ -59,6 +59,27 @@ def test_pointer_resolution_preserves_qualifier(resolver: LazyTypeResolver) -> N
 
 
 @pytest.mark.unit
+@pytest.mark.regression
+@pytest.mark.parametrize(
+    ("tag", "expected"),
+    [("DW_TAG_volatile_type", "volatile int"), ("DW_TAG_restrict_type", "restrict int")],
+)
+def test_qualifier_resolution_preserves_all_specified_qualifiers(
+    resolver: LazyTypeResolver, tag: str, expected: str
+) -> None:
+    source = Mock(tag="DW_TAG_member")
+    source.attributes = {"DW_AT_type": Mock()}
+    qualifier = Mock(tag=tag, offset=0x300)
+    qualifier.attributes = {"DW_AT_type": Mock()}
+    base = Mock(tag="DW_TAG_base_type", offset=0x400)
+    base.attributes = {"DW_AT_name": Mock(value=b"int")}
+    source.get_DIE_from_attribute.return_value = qualifier
+    qualifier.get_DIE_from_attribute.return_value = base
+
+    assert resolver.resolve_type_name(source) == expected
+
+
+@pytest.mark.unit
 def test_find_typedef_uses_offset_cache(resolver: LazyTypeResolver, index: Mock) -> None:
     index.find_symbol_offset.return_value = 0x100
     typedef = Mock(tag="DW_TAG_typedef", offset=0x100)

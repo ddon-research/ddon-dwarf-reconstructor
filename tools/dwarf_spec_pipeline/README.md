@@ -19,9 +19,16 @@ uv run dwarf-spec-pipeline --help
 The command tree is typed with Typer:
 
 ```text
-uv run dwarf-spec-pipeline build --offline
-uv run dwarf-spec-pipeline validate
-uv run dwarf-spec-pipeline sources
+uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline build --offline \
+  --manifest tools/dwarf_spec_pipeline/config/sources.json \
+  --output-dir docs/knowledge-base/dwarf-specification/generated \
+  --work-dir .cache/dwarf_spec_pipeline \
+  --schema tools/dwarf_spec_pipeline/schema/dwarf-specification.schema.json
+uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline validate \
+  --output-dir docs/knowledge-base/dwarf-specification/generated
+uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline sources
+uv run --project tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
+  --output-dir docs/knowledge-base/dwarf-specification/generated --source-root src
 ```
 
 `--manifest`, `--output-dir`, `--work-dir`, `--schema`, repeated `--version 2|3|4`, and
@@ -37,7 +44,14 @@ docker compose -f compose.yaml run --rm dwarf-spec-pipeline
 - `config/sources.json` locks source URLs, filenames, formats, and SHA-256 values.
 - `schema/dwarf-specification.schema.json` defines the published JSON shape.
 - `generated/dwarf{2,3,4}.json` and `.md` are deterministic published artifacts.
-- `generated/manifest.json` records output hashes and source identity.
+- `generated/semantic-index.json` and `.md` are derived, searchable vocabulary and relationship
+  artifacts. They recover paragraph-form DWARF2 tables as well as normal tables from DWARF3/4.
+- `generated/manifest.json` records output hashes and source identity, including the semantic index.
+
+`audit` validates the canonical JSON documents, records version availability for `DW_TAG`,
+`DW_AT`, `DW_FORM`, `DW_OP`, and `DW_LANG` names, extracts attribute encodings and tag
+applicability, and inventories source-code references. It does not make the runtime import the
+specification project.
 
 The project uses Ruff, Pyrefly, deptry, and just through its frozen uv environment. Tests and
 quality checks do not download sources unless an explicit build requests it; `--offline` requires

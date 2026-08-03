@@ -84,6 +84,8 @@ class TypeResolutionMixin:
         if type_die.tag in {
             "DW_TAG_pointer_type",
             "DW_TAG_const_type",
+            "DW_TAG_volatile_type",
+            "DW_TAG_restrict_type",
             "DW_TAG_reference_type",
             "DW_TAG_rvalue_reference_type",
         }:
@@ -109,11 +111,17 @@ class TypeResolutionMixin:
         suffixes = {
             "DW_TAG_pointer_type": "*",
             "DW_TAG_const_type": "",
+            "DW_TAG_volatile_type": "",
+            "DW_TAG_restrict_type": "",
             "DW_TAG_reference_type": "&",
             "DW_TAG_rvalue_reference_type": "&&",
         }
         if type_die.tag == "DW_TAG_const_type":
             return f"const {base_type}"
+        if type_die.tag == "DW_TAG_volatile_type":
+            return f"volatile {base_type}"
+        if type_die.tag == "DW_TAG_restrict_type":
+            return f"restrict {base_type}"
         suffix = suffixes.get(str(type_die.tag))
         return f"{base_type}{suffix or ''}"
 

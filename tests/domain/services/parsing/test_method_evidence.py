@@ -28,6 +28,16 @@ def test_implementation_scoring_uses_one_child_traversal() -> None:
 
 
 @pytest.mark.unit
+@pytest.mark.regression
+def test_implementation_scoring_accepts_noncontiguous_range_evidence() -> None:
+    implementation = Mock()
+    implementation.attributes = {"DW_AT_ranges": Mock(value=0x40)}
+    implementation.iter_children.return_value = []
+
+    assert score_implementation(implementation) == 1000
+
+
+@pytest.mark.unit
 def test_parameter_merge_skips_artificial_parameters() -> None:
     artificial = Mock(tag="DW_TAG_formal_parameter")
     artificial.attributes = {"DW_AT_artificial": Mock(), "DW_AT_name": Mock(value=b"this")}

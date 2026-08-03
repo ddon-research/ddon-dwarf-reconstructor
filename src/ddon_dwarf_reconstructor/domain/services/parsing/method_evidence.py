@@ -17,8 +17,11 @@ def score_implementation(implementation: DwarfEntry) -> int:
         elif child.tag == "DW_TAG_lexical_block":
             lexical_blocks += 1
 
+    has_code_location = any(
+        attribute in implementation.attributes for attribute in ("DW_AT_low_pc", "DW_AT_ranges")
+    )
     return (
-        (1000 if "DW_AT_low_pc" in implementation.attributes else 0)
+        (1000 if has_code_location else 0)
         + named_parameters * 100
         + (50 if "DW_AT_inline" in implementation.attributes else 0)
         + lexical_blocks * 10

@@ -52,7 +52,8 @@ def test_ps4_rlayout_authority_pins_layout_mydti_and_alternative() -> None:
             "reason": "lower-completeness duplicate with one nested enum and one nested structure",
         }
     ]
-    assert any("DW_AT_containing_type" in basis for basis in manifest["selection_basis"])
+    assert any("direct DIE identity" in basis for basis in manifest["selection_basis"])
+    assert not any("DW_AT_containing_type" in basis for basis in manifest["selection_basis"])
     assert any(
         member.name == "DTI" and member.type_offset == 0x117EC472 for member in authority.members
     )

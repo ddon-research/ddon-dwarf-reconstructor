@@ -143,7 +143,7 @@ _RLAYOUT_02020005 = TypeAuthority(
     selection_basis=(
         "class definition named rLayout declared by rLayout.h",
         "direct DW_TAG_inheritance resolves to cResource",
-        "DW_AT_containing_type references identify this class definition",
+        "direct DIE identity and structural evidence distinguish this class definition",
         "static DTI member references nearby MyDTI DIE 0x117ec472",
         "candidate has two nested enums and one nested structure",
     ),

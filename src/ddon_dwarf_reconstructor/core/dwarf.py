@@ -90,3 +90,21 @@ class DwarfEntry(Protocol):
     def iter_children(self) -> Any: ...
 
     def is_null(self) -> bool: ...
+
+
+def dwarf_reference_offset(die: DwarfEntry, attribute_name: str) -> int | None:
+    """Resolve a reference attribute to the target DIE's absolute offset.
+
+    DWARF reference forms may be CU-relative (`DW_FORM_ref4`) or section-wide
+    (`DW_FORM_ref_addr`).  Comparing the raw attribute value with an absolute
+    DIE offset is therefore unsafe; the adapter's reference resolver is the
+    canonical boundary for this relationship.
+    """
+    if attribute_name not in die.attributes:
+        return None
+    try:
+        target = die.get_DIE_from_attribute(attribute_name)
+    except AttributeError, KeyError, RuntimeError, TypeError, ValueError:
+        return None
+    offset = getattr(target, "offset", None)
+    return offset if isinstance(offset, int) else None

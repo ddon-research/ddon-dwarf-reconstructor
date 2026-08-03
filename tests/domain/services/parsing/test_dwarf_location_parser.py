@@ -73,6 +73,13 @@ class TestParseLocationOffsetLocationExpressions:
         assert parse_location_offset((35, 8)) == 8
         assert parse_location_offset((4,)) == 4
 
+    @pytest.mark.unit
+    def test_parse_uleb128_operands_and_byte_blocks(self) -> None:
+        """Decode operands that cross the one-byte ULEB128 boundary."""
+        assert parse_location_offset([35, 0x80, 0x01]) == 128
+        assert parse_location_offset(bytes((35, 0xAC, 0x02))) == 300
+        assert parse_location_offset([0x10, 0x80, 0x01]) == 128
+
 
 class TestParseLocationOffsetEdgeCases:
     """Test edge cases and error conditions."""

@@ -31,11 +31,20 @@ machine-readable representation for all supported specification versions.
 - The canonical document model includes identity, source metadata, ordered
   sections/content blocks, normalized tables/spans, constants, source
   locations, omissions, and extraction statistics.
+- A deterministic semantic index is published beside the canonical documents.
+  It derives versioned DWARF vocabulary, attribute encodings, form
+  descriptions, tag applicability, and source-code references without becoming
+  a runtime dependency.
+- Paragraph-form DWARF2 attribute/applicability tables are included in the
+  semantic index even when the converter cannot represent them as normalized
+  table rows.
 - Constants retain original value text, parsed numeric value when possible,
   normalized hexadecimal value, meaning, aliases, table ID, and provenance.
 - Only generated table-of-contents/index material, repeated page furniture,
   decorative media, and converter-only control text are omitted.
 - JSON is validated against the checked-in JSON Schema before publication.
+- The semantic index is validated as a typed report and its JSON/Markdown
+  hashes are included in the artifact manifest.
 - A complete output directory is staged and atomically swapped into place.
 - No generated Rust constants or retired `pipeline.sh` output is part of the
   public contract.

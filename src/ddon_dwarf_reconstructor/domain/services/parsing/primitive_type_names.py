@@ -20,6 +20,7 @@ class PrimitiveTypeNamesMixin:
             "DW_TAG_reference_type",
             "DW_TAG_const_type",
             "DW_TAG_volatile_type",
+            "DW_TAG_restrict_type",
         }:
             return self._qualified_primitive_name(type_die)
         if tag in {
@@ -43,7 +44,11 @@ class PrimitiveTypeNamesMixin:
             return self._resolve_referenced_name(type_die, "void", "*")
         if type_die.tag == "DW_TAG_reference_type":
             return self._resolve_referenced_name(type_die, "void", "&")
-        qualifier = "const" if type_die.tag == "DW_TAG_const_type" else "volatile"
+        qualifier = {
+            "DW_TAG_const_type": "const",
+            "DW_TAG_volatile_type": "volatile",
+            "DW_TAG_restrict_type": "restrict",
+        }[type_die.tag]
         referenced_name = self._resolve_referenced_name(type_die, "unknown_type")
         return f"{qualifier} {referenced_name}"
 
@@ -101,8 +106,14 @@ class PrimitiveTypeNamesMixin:
 
     @staticmethod
     def _strip_type_qualifiers(type_name: str) -> str:
-        while type_name.startswith(("const ", "volatile ")):
-            prefix_length = 6 if type_name.startswith("const ") else 9
+        while type_name.startswith(("const ", "volatile ", "restrict ")):
+            prefix_length = (
+                6
+                if type_name.startswith("const ")
+                else 9
+                if type_name.startswith("volatile ")
+                else 8
+            )
             type_name = type_name[prefix_length:].strip()
         return type_name
 
