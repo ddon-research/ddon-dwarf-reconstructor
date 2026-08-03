@@ -64,7 +64,7 @@ python-docx = ["docx"]
 [dependency-groups]
 test = [
     "pytest>=8.4,<9",
-    "pytest-cov>=6.2,<7",
+    "pytest-cov>=6.2,<8",
 ]
 lint = ["ruff>=0.12,<1"]
 type = [
