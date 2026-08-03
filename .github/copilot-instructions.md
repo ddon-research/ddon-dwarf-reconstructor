@@ -149,6 +149,9 @@ For CI or Dependabot work, capture GitHub evidence before editing: gh auth statu
 pr diff, gh pr checks, and gh run view <run-id> --log-failed. Passing dependency-update and
 quality checks validate the proposed change surface but do not waive the required correctness
 job.
+For nested lockfile updates, run `uv lock --directory tools/dwarf_spec_pipeline --check` and
+verify the live Dependabot alert state after the dependency graph refresh; do not dismiss an
+actionable security advisory when a patched lock entry is available.
 
 For repository-wide instructions, performance constraints, safety rules, and the complete
 validation sequence, follow `AGENTS.md`.

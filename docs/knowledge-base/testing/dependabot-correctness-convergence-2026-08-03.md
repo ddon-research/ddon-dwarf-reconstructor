@@ -72,8 +72,27 @@ Focused local evidence after the refactor:
 
 Post-fix remote convergence completed. PRs #1-6, #8, and #9 merged after green correctness,
 quality, and nested-pipeline checks; the conflicted Dependabot PR #7 was closed as superseded by
-the conflict-free replacement #8. The final `main` commit `6d78943` passed the Required
-Correctness Tests and Coverage, Code Quality, Dependency Graph, and DWARF Specification Pipeline
-workflows. PR #9 synchronized `tools/dwarf_spec_pipeline/uv.lock` with the merged pytest and
-pytest-cov bounds. T025 is complete. Real PS4, compiler, and proprietary tool evidence remain
+the conflict-free replacement #8. Documentation evidence was merged in PR #10. The final
+`main` commit `6d78943` passed the Required Correctness Tests and Coverage, Code Quality,
+Dependency Graph, and DWARF Specification Pipeline workflows. PR #9 synchronized
+`tools/dwarf_spec_pipeline/uv.lock` with the merged pytest and pytest-cov bounds.
+
+## Dependabot security convergence
+
+GitHub Dependabot alert [#1](https://github.com/ddon-research/ddon-dwarf-reconstructor/security/dependabot/1)
+identified `pytest` 8.4.2 in `tools/dwarf_spec_pipeline/uv.lock` as vulnerable under
+[GHSA-6w46-j5rx-g56g](https://github.com/advisories/GHSA-6w46-j5rx-g56g) /
+[CVE-2025-71176](https://nvd.nist.gov/vuln/detail/CVE-2025-71176), with a medium severity and a
+patched-version boundary of 9.0.3. PR [#11](https://github.com/ddon-research/ddon-dwarf-reconstructor/pull/11)
+upgraded the locked version to 9.1.1 without widening the already-merged `pytest>=8.4,<10`
+requirement. The nested lock check, quality gate, and tests passed locally and remotely.
+
+After the default-branch dependency graph refresh, GitHub's SBOM reported `pytest` 9.1.1 and the
+alert transitioned to `fixed` at 2026-08-03T17:04:07Z. The final `main` commit `36eafb3` passed
+[correctness](https://github.com/ddon-research/ddon-dwarf-reconstructor/actions/runs/30834975747),
+[quality](https://github.com/ddon-research/ddon-dwarf-reconstructor/actions/runs/30834976070),
+[nested pipeline](https://github.com/ddon-research/ddon-dwarf-reconstructor/actions/runs/30834976434),
+and [dependency graph](https://github.com/ddon-research/ddon-dwarf-reconstructor/actions/runs/30834977911)
+workflows. PRs #1-6, #8-11 are merged, #7 is closed as superseded, and no pull requests remain
+open. T025 and T026 are complete. Real PS4, compiler, and proprietary tool evidence remain
 explicit environment-gated checks.

@@ -34,6 +34,11 @@ Reproduce the named failure locally with `uv run` and keep the proposed dependen
 separate from the product fix. A passing quality or nested-tool job validates that proposal's
 surface; it does not substitute for the required correctness and coverage job.
 
+For nested lockfile changes, also run `uv lock --directory tools/dwarf_spec_pipeline --check` and
+inspect the live Dependabot alert state with `gh api repos/ddon-research/ddon-dwarf-reconstructor/dependabot/alerts`.
+Merge a patched version and wait for the dependency graph to report the alert as fixed; do not
+dismiss an actionable security advisory merely to make the PR view green.
+
 Useful selections:
 
 ```text

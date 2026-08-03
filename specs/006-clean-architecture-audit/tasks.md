@@ -2,7 +2,7 @@
 
 **Input**: `spec.md`, `research.md`, and `plan.md` in this directory.
 
-**Status**: Implementation and Tier 1/2 convergence complete; Tier 3 deferred.
+**Status**: Implementation, Tier 1/2, Dependabot, and security convergence complete; Tier 3 deferred.
 
 ## Phase 1: Audit package
 
@@ -112,3 +112,7 @@
 - [x] T025 Re-run the remote PR checks after publishing the fix, resolve the stale pytest PR via
   conflict-free replacement PR #8, synchronize the nested lockfile in PR #9, and append the
   final CI evidence. **Tier 2 external handoff**.
+- [x] T026 Resolve Dependabot security alert #1 for `pytest` in
+  `tools/dwarf_spec_pipeline/uv.lock` by upgrading to patched 9.1.1, validate the nested lock,
+  quality, and test loops, and verify that GitHub reports the alert as fixed after the dependency
+  graph refresh. **Tier 2 external handoff**.
