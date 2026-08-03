@@ -2,6 +2,8 @@
 
 """Validated configuration for DWARF-specific runtime services."""
 
+from __future__ import annotations
+
 import hashlib
 import os
 from dataclasses import dataclass

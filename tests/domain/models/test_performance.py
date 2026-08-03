@@ -9,6 +9,7 @@ from ddon_dwarf_reconstructor.domain.models.performance import (
     EvidenceStatus,
     MetricRecord,
     PerformanceWorkload,
+    RuntimeDescriptor,
 )
 
 pytestmark = [pytest.mark.unit, pytest.mark.functional]
@@ -53,3 +54,25 @@ def test_metric_keeps_unavailable_evidence_explicit() -> None:
         "status": "unavailable",
         "detail": "counter denied",
     }
+
+
+def test_runtime_descriptor_participates_in_workload_identity(tmp_path: Path) -> None:
+    """GIL and compiled-runtime variants cannot be mixed in one baseline."""
+    gil = RuntimeDescriptor("cpython-3.14.6", "CPython", "3.14.6", True)
+    free = RuntimeDescriptor("cpython-3.14.6-free-threaded", "CPython", "3.14.6", False)
+    first = PerformanceWorkload(
+        "fixture",
+        ("python", "-m", "fixture"),
+        tmp_path,
+        ColdWarmState.WARM,
+        runtime=gil,
+    )
+    second = PerformanceWorkload(
+        "fixture",
+        ("python", "-m", "fixture"),
+        tmp_path,
+        ColdWarmState.WARM,
+        runtime=free,
+    )
+
+    assert first.configuration_fingerprint != second.configuration_fingerprint

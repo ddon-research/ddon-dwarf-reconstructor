@@ -19,6 +19,7 @@ from .performance import (
     PerformanceWorkload,
     ProfileArtifact,
     RunSummary,
+    RuntimeDescriptor,
     ToolAvailability,
 )
 from .tool_evidence import ToolExport, ToolExportOutput
@@ -39,6 +40,7 @@ __all__ = [
     "PerformanceRun",
     "PerformanceWorkload",
     "ProfileArtifact",
+    "RuntimeDescriptor",
     "RunSummary",
     "ToolAvailability",
 ]

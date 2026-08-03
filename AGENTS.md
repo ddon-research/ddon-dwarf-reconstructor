@@ -50,6 +50,13 @@ unbounded in-memory intermediates. Preserve stable output ordering and source of
   isolated child. Raw Scalene, cProfile, pyinstrument, py-spy, tracemalloc, pyperf, stdout, stderr,
   and sample files remain in the OS-local performance artifact directory. Profiling is never
   enabled in normal generation; missing tools/assets are explicit unavailable or blocked evidence.
+- Nuitka is an opt-in deployment/performance tool. `native-build` uses `python -m nuitka`, the
+  supported Windows MSVC compiler, onefile mode, and an external output directory. Use
+  `performance compare-runtimes` for CPython/Nuitka/free-threaded comparisons; runtime identity,
+  GIL state, output-manifest equality, onefile I/O, and build/tool blockers belong in the feature
+  evidence. The free-threaded runtime is a separate venv and is not a default or CI requirement;
+  Scalene and Nuitka free-threaded compilation are currently blocked by native/upstream support;
+  pyinstrument's current native extension enables the GIL when imported on `cp314t`.
 
 ## Local acceptance artifact
 

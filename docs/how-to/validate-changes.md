@@ -23,12 +23,19 @@ uv run just performance-tools-install
 uv run just test-performance-fixtures
 uv run just test-performance-real-assets  # only with named local inputs
 uv run just performance-profile-index     # only with the explicit local dump default/override
+uv run just performance-runtime-compare   # CPython/Nuitka/free-threaded real-asset comparison
 uv run just performance-history
 ```
 
 The fixture command can gate deterministic budgets. Real-asset runs are report-only and record
 cold/warm state, source identity, tool availability, and external manifest paths; a skipped or
 unavailable profiler is not replacement evidence.
+
+Nuitka builds are also explicit environmental evidence. `native-build` uses `python -m nuitka`,
+MSVC, onefile mode, and an external output directory. Free-threaded Python must use a separate
+project venv; a bare base interpreter can report a misleading missing-project failure. Nuitka and
+Scalene free-threaded blockers remain recorded rather than added to the normal correctness loop,
+and pyinstrument is not no-GIL evidence because its native extension enables the GIL on import.
 
 ## Handoff loop
 

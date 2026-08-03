@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from ...domain.models.performance import ColdWarmState, PerformanceWorkload
+from ...domain.models.performance import ColdWarmState, PerformanceWorkload, RuntimeDescriptor
 
 
 def build_reconstructor_workload(
@@ -27,13 +27,16 @@ def build_reconstructor_workload(
     exhaustive: bool = False,
     resolve_param_names: bool = False,
     timeout_seconds: float = 300.0,
+    python_executable: Path | None = None,
+    launcher: Path | None = None,
+    runtime: RuntimeDescriptor | None = None,
 ) -> PerformanceWorkload:
     """Build a workload that invokes the canonical Typer command tree."""
     if mode not in {"generate", "export-knowledge"}:
         raise ValueError("performance mode must be generate or export-knowledge")
     if not symbols and symbols_file is None:
         raise ValueError("performance workload requires a symbol or symbols file")
-    arguments = [sys.executable, "-m", "ddon_dwarf_reconstructor", mode, str(elf)]
+    arguments = [*_command_prefix(python_executable, launcher), mode, str(elf)]
     arguments.extend(_symbol_arguments(symbols, symbols_file))
     _append_mode_arguments(
         arguments, mode, output_dir, build_id, orbis_objdump, full_hierarchy, single_file
@@ -55,6 +58,7 @@ def build_reconstructor_workload(
         timeout_seconds=timeout_seconds,
         source_path=elf,
         configuration=configuration,
+        runtime=runtime,
     )
 
 
@@ -106,20 +110,30 @@ def _append_common_arguments(
 
 
 def build_fixture_workload(
-    *, repository_root: Path, name: str, state: ColdWarmState, timeout_seconds: float
+    *,
+    repository_root: Path,
+    name: str,
+    state: ColdWarmState,
+    timeout_seconds: float,
+    python_executable: Path | None = None,
+    launcher: Path | None = None,
+    runtime: RuntimeDescriptor | None = None,
 ) -> PerformanceWorkload:
     """Build a small deterministic workload for gated resource regression tests."""
     return PerformanceWorkload(
         name=name,
         command=(
-            sys.executable,
-            "-m",
-            "ddon_dwarf_reconstructor.infrastructure.performance.fixture_target",
+            *_command_prefix(
+                python_executable,
+                launcher,
+                module="ddon_dwarf_reconstructor.infrastructure.performance.fixture_target",
+            ),
         ),
         cwd=repository_root,
         state=state,
         timeout_seconds=timeout_seconds,
         configuration=(("fixture", "deterministic-v1"),),
+        runtime=runtime,
     )
 
 
@@ -131,12 +145,11 @@ def build_dump_index_workload(
     index_path: Path | None,
     state: ColdWarmState,
     timeout_seconds: float,
+    runtime: RuntimeDescriptor | None = None,
 ) -> PerformanceWorkload:
     """Build a workload for one explicit streaming compressed-dump index rebuild."""
     command = [
-        sys.executable,
-        "-m",
-        "ddon_dwarf_reconstructor",
+        *_command_prefix(python_executable=None, launcher=None),
         "artifacts",
         "rebuild-dump-index",
         str(dwarf_dump),
@@ -156,7 +169,21 @@ def build_dump_index_workload(
         timeout_seconds=timeout_seconds,
         source_path=dwarf_dump,
         configuration=configuration,
+        runtime=runtime,
     )
+
+
+def _command_prefix(
+    python_executable: Path | None,
+    launcher: Path | None,
+    *,
+    module: str | None = None,
+) -> list[str]:
+    if python_executable is not None and launcher is not None:
+        raise ValueError("choose either a Python executable or a compiled launcher")
+    if launcher is not None:
+        return [str(launcher)]
+    return [str(python_executable or sys.executable), "-m", module or "ddon_dwarf_reconstructor"]
 
 
 __all__ = [

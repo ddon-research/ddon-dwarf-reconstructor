@@ -17,6 +17,7 @@ nav = [
     { "Inspect durable artifacts" = "how-to/inspect-artifacts.md" },
     { "Validate changes" = "how-to/validate-changes.md" },
     { "Profile performance" = "how-to/profile-performance.md" },
+    { "Compare runtimes" = "how-to/compare-runtimes.md" },
     { "Write or update documentation" = "how-to/write-documentation.md" },
     { "Use a goal-oriented workflow" = "how-to/goal-oriented-workflow.md" },
     { "Observability" = [
@@ -78,6 +79,7 @@ nav = [
     { "Performance" = [
       { "Section index" = "knowledge-base/performance/README.md" },
       { "Benchmark history" = "knowledge-base/performance/benchmark-history.md" },
+      { "Nuitka and free-threading" = "knowledge-base/performance/nuitka-and-free-threading.md" },
     ] },
     { "Tools" = [
       { "External tool evidence" = "knowledge-base/tools/external-tool-evidence.md" },

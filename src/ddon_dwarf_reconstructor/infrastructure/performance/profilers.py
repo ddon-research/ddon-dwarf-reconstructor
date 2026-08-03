@@ -21,6 +21,7 @@ from ...domain.models.performance import (
     ToolAvailability,
 )
 from .runner import PerformanceRunner
+from .runtime import current_runtime
 from .tooling import discover_tools
 
 
@@ -514,7 +515,8 @@ def _normalise_names(names: tuple[str, ...]) -> tuple[str, ...]:
 
 
 def _unavailable_summary(workload: PerformanceWorkload, profiler: str, detail: str) -> RunSummary:
-    python_version, platform_name, _ = RunSummary.environment_defaults()
+    runtime = workload.runtime or current_runtime()
+    _, platform_name, _ = RunSummary.environment_defaults()
     return RunSummary(
         run_id=f"unavailable-{profiler}-{workload.configuration_fingerprint[:12]}",
         workload=workload,
@@ -524,10 +526,13 @@ def _unavailable_summary(workload: PerformanceWorkload, profiler: str, detail: s
         return_code=None,
         git_revision="unavailable",
         git_dirty=None,
-        python_version=python_version,
+        python_version=runtime.python_version,
         platform_name=platform_name,
         machine_profile="unavailable",
         source_identity=None,
+        runtime_name=runtime.name,
+        runtime_implementation=runtime.implementation,
+        gil_enabled=runtime.gil_enabled,
         metrics=(MetricRecord("profile", None, "run", EvidenceStatus.UNAVAILABLE, detail),),
         artifacts=(
             # A null path makes the missing prerequisite explicit without inventing an artifact.

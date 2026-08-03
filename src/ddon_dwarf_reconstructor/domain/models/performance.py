@@ -28,6 +28,36 @@ class ColdWarmState(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
+class RuntimeDescriptor:
+    """Execution runtime identity captured alongside a workload."""
+
+    name: str
+    implementation: str
+    python_version: str
+    gil_enabled: bool | None
+    executable: Path | None = None
+
+    def __post_init__(self) -> None:
+        for field_name, value in (
+            ("name", self.name),
+            ("implementation", self.implementation),
+            ("python_version", self.python_version),
+        ):
+            if not value.strip():
+                raise ValueError(f"runtime {field_name} must not be empty")
+
+    def to_dict(self) -> dict[str, object]:
+        """Return a stable runtime descriptor."""
+        return {
+            "name": self.name,
+            "implementation": self.implementation,
+            "python_version": self.python_version,
+            "gil_enabled": self.gil_enabled,
+            "executable": None if self.executable is None else str(self.executable),
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class PerformanceWorkload:
     """One bounded command invocation to measure in a child process."""
 
@@ -39,6 +69,7 @@ class PerformanceWorkload:
     environment: tuple[tuple[str, str], ...] = ()
     source_path: Path | None = None
     configuration: tuple[tuple[str, str], ...] = ()
+    runtime: RuntimeDescriptor | None = None
 
     def __post_init__(self) -> None:
         if not self.name.strip():
@@ -57,6 +88,7 @@ class PerformanceWorkload:
             "cwd": str(self.cwd.resolve()),
             "environment": list(self.environment),
             "name": self.name,
+            "runtime": None if self.runtime is None else self.runtime.to_dict(),
             "state": self.state.value,
         }
         encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -77,6 +109,7 @@ class PerformanceWorkload:
             "environment": dict(self.environment),
             "source_path": None if self.source_path is None else str(self.source_path),
             "configuration": dict(self.configuration),
+            "runtime": None if self.runtime is None else self.runtime.to_dict(),
             "configuration_fingerprint": self.configuration_fingerprint,
         }
 
@@ -203,6 +236,9 @@ class RunSummary:
     platform_name: str
     machine_profile: str
     source_identity: str | None
+    runtime_name: str = "host"
+    runtime_implementation: str = "CPython"
+    gil_enabled: bool | None = None
     profiler_mode: str = "process-sampler"
     metrics: tuple[MetricRecord, ...] = ()
     method_summaries: tuple[MethodSummary, ...] = ()
@@ -232,6 +268,9 @@ class RunSummary:
             "platform": self.platform_name,
             "machine_profile": self.machine_profile,
             "source_identity": self.source_identity,
+            "runtime_name": self.runtime_name,
+            "runtime_implementation": self.runtime_implementation,
+            "gil_enabled": self.gil_enabled,
             "profiler_mode": self.profiler_mode,
             "metrics": [metric.to_dict() for metric in self.metrics],
             "method_summaries": [item.to_dict() for item in self.method_summaries],
@@ -254,6 +293,7 @@ __all__ = [
     "PerformanceRun",
     "PerformanceWorkload",
     "ProfileArtifact",
+    "RuntimeDescriptor",
     "RunSummary",
     "ToolAvailability",
 ]

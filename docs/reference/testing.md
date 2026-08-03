@@ -33,6 +33,7 @@ and uses the canonical commands below:
 uv run just test-performance-fixtures
 uv run just test-performance-real-assets
 uv run just performance-profile-index
+uv run just performance-runtime-compare
 uv run just performance-history
 ```
 

@@ -53,3 +53,35 @@ def test_dump_index_workload_uses_force_rebuild_command(tmp_path: Path) -> None:
     )
     assert "--index-path" in workload.command
     assert workload.source_path == tmp_path / "dump.zst"
+
+
+def test_workload_can_target_alternate_python_or_compiled_launcher(tmp_path: Path) -> None:
+    """Runtime comparisons use the same command contract for both launch modes."""
+    python_workload = build_reconstructor_workload(
+        repository_root=tmp_path,
+        name="free-threaded",
+        elf=tmp_path / "source.elf",
+        symbols=("rLayout",),
+        mode="export-knowledge",
+        state=ColdWarmState.WARM,
+        output_dir=tmp_path / "output",
+        python_executable=tmp_path / "python3.14t.exe",
+    )
+    launcher_workload = build_reconstructor_workload(
+        repository_root=tmp_path,
+        name="nuitka",
+        elf=tmp_path / "source.elf",
+        symbols=("rLayout",),
+        mode="export-knowledge",
+        state=ColdWarmState.WARM,
+        output_dir=tmp_path / "output",
+        launcher=tmp_path / "reconstructor.exe",
+    )
+
+    assert python_workload.command[:3] == (
+        str(tmp_path / "python3.14t.exe"),
+        "-m",
+        "ddon_dwarf_reconstructor",
+    )
+    assert launcher_workload.command[0] == str(tmp_path / "reconstructor.exe")
+    assert launcher_workload.command[1] == "export-knowledge"

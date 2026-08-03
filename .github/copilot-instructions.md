@@ -134,6 +134,10 @@ capture read-only `gh` evidence and verify action release SHAs before editing.
   stores summaries in the tracked SQLite/static-history contract; raw profiles, samples, logs,
   and proprietary inputs remain external. Run `test-performance-real-assets` only with named
   local paths. Real-asset results are report-only and unavailable tools remain explicit evidence.
+  Use `performance compare-runtimes` for CPython/Nuitka/free-threaded comparisons. Nuitka builds
+  use `python -m nuitka`, MSVC, onefile mode, and external output; free-threaded Python requires a
+  separate project venv and is not a default or CI runtime; pyinstrument currently enables the GIL
+  while loading its native extension on `cp314t`.
 - Validate the packaged entry point and each intentional output mode in fresh-process and warm-cache
   runs, and record input identity, producer/configuration identity, and cache state.
 - Keep real-artifact baselines outside source control; commit only small deterministic manifests or

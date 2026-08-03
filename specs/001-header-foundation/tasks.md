@@ -98,7 +98,7 @@ contributing evidence identifiers and leaves the header facts traceable.
   `tests/README.md`.
 - [ ] T034 [P] Reduce duplicated policy in `CLAUDE.md` and `.github/copilot-instructions.md` so `AGENTS.md` remains canonical and remove unavailable-tool references.
 - [ ] T035 Replace destructive `clean-all` behavior with transient-only cleanup in `justfile` and retain explicit artifact maintenance recipes.
-- [ ] T036 Extend `.gitignore` for root caches, SQLite journals/temporary sidecars, Nuitka outputs, and runtime logs without hiding curated fixtures.
+- [x] T036 Extend `.gitignore` for root caches, SQLite journals/temporary sidecars, Nuitka outputs, and runtime logs without hiding curated fixtures.
 - [ ] T037 Create a canonical artifact retention manifest for `output/` and classify duplicate snapshots before deleting any historical evidence.
 - [ ] T038 Review `count_cus.py`, `test_declarations.py`, PEP 735 dependency groups, generated headers, and repeated `output/t045-*` through `output/t072-*` bundles before removal or archival.
 - [x] T039 Verify Visual Studio Community 2026 x64 MSVC `19.51.36252.0` with `vswhere.exe`, record its C++23/ABI limitations, and prepare the sample verification bundle in `output/msvc-header-validation-20260801/`.

@@ -43,6 +43,9 @@ def _csv_text(rows: tuple[HistoryRow, ...]) -> str:
         "git_revision",
         "git_dirty",
         "python_version",
+        "runtime",
+        "runtime_implementation",
+        "gil_enabled",
         "platform",
         "machine_profile",
         "source_identity",
@@ -76,24 +79,26 @@ def _markdown_text(rows: tuple[HistoryRow, ...]) -> str:
         "",
         "## Latest like-for-like baselines",
         "",
-        "| Workload | State | Profiler | Status | Wall time (s) | Peak RSS (MiB) | Read (MiB) | Write (MiB) | Started |",
-        "| --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |",
+        "| Workload | State | Runtime | Profiler | Status | Wall time (s) | Peak RSS (MiB) | Read (MiB) | Write (MiB) | Started |",
+        "| --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |",
     ]
     if latest:
         lines.extend(_markdown_row(row) for row in latest)
     else:
-        lines.append("| No runs recorded | — | — | not_observed | — | — | — | — | — |")
+        lines.append("| No runs recorded | — | — | — | not_observed | — | — | — | — | — |")
     lines.extend(
         [
             "",
             "## Latest like-for-like deltas",
             "",
-            "| Workload | State | Profiler | Status | Wall delta (s) | RSS delta (MiB) | Read delta (MiB) | Write delta (MiB) |",
-            "| --- | --- | --- | --- | ---: | ---: | ---: | ---: |",
+            "| Workload | State | Runtime | Profiler | Status | Wall delta (s) | RSS delta (MiB) | Read delta (MiB) | Write delta (MiB) |",
+            "| --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: |",
         ]
     )
     deltas = _delta_rows(rows)
-    lines.extend(deltas or ["| No compatible prior run | — | — | not_observed | — | — | — | — |"])
+    lines.extend(
+        deltas or ["| No compatible prior run | — | — | — | not_observed | — | — | — | — |"]
+    )
     lines.extend(
         [
             "",
@@ -118,9 +123,10 @@ def _markdown_text(rows: tuple[HistoryRow, ...]) -> str:
 
 
 def _markdown_row(row: HistoryRow) -> str:
-    return "| {workload} | {state} | {profiler} | {status} | {wall} | {rss} | {read} | {write} | {started} |".format(
+    return "| {workload} | {state} | {runtime} | {profiler} | {status} | {wall} | {rss} | {read} | {write} | {started} |".format(
         workload=row.workload,
         state=row.state,
+        runtime=row.runtime_name,
         profiler=row.profiler_mode,
         status=row.status,
         wall=_metric(row, "wall_time_seconds", scale=1),
@@ -139,6 +145,9 @@ def _delta_rows(rows: tuple[HistoryRow, ...]) -> list[str]:
             row.state,
             row.source_identity or "",
             row.python_version,
+            row.runtime_name,
+            row.runtime_implementation,
+            str(row.gil_enabled),
             row.platform_name,
             row.machine_profile,
             row.configuration_fingerprint,
@@ -155,9 +164,10 @@ def _delta_rows(rows: tuple[HistoryRow, ...]) -> list[str]:
             "observed" if baseline.status == candidate.status == "observed" else candidate.status
         )
         result.append(
-            "| {workload} | {state} | {profiler} | {status} | {wall} | {rss} | {read} | {write} |".format(
+            "| {workload} | {state} | {runtime} | {profiler} | {status} | {wall} | {rss} | {read} | {write} |".format(
                 workload=candidate.workload,
                 state=candidate.state,
+                runtime=candidate.runtime_name,
                 profiler=candidate.profiler_mode,
                 status=status,
                 wall=_delta_metric(baseline, candidate, "wall_time_seconds", 1),
@@ -193,6 +203,9 @@ def _latest(rows: tuple[HistoryRow, ...]) -> tuple[HistoryRow, ...]:
             row.state,
             row.source_identity or "",
             row.python_version,
+            row.runtime_name,
+            row.runtime_implementation,
+            str(row.gil_enabled),
             row.platform_name,
             row.machine_profile,
             row.configuration_fingerprint,
@@ -216,6 +229,7 @@ def _tool_rows(rows: tuple[HistoryRow, ...]) -> list[str]:
             "scalene",
             "tracemalloc",
             "psutil",
+            "nuitka",
         )
     }
     for row in rows:

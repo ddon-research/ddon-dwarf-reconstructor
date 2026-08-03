@@ -6,6 +6,11 @@ The root project is pinned to CPython `3.14.6`. Install it with:
 uv sync --python 3.14.6
 ```
 
+The optional Nuitka build uses the same regular CPython environment and publishes its onefile
+output under `D:\ddon-perf-artifacts\nuitka\` by default. Free-threaded CPython comparisons use a
+separate `UV_PROJECT_ENVIRONMENT` venv; never replace the root `.venv` or pass a bare interpreter
+that does not contain the project installation.
+
 The nested `tools/dwarf_spec_pipeline` project is independent and must be invoked with
 `uv run --directory tools/dwarf_spec_pipeline ...`.
 

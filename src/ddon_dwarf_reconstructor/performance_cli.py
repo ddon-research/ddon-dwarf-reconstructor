@@ -8,7 +8,13 @@ from pathlib import Path
 
 import typer
 
-from .domain.models.performance import ColdWarmState, PerformanceWorkload, RunSummary
+from .domain.models.performance import (
+    ColdWarmState,
+    EvidenceStatus,
+    PerformanceWorkload,
+    RunSummary,
+    RuntimeDescriptor,
+)
 from .infrastructure.performance import (
     PerformanceRunner,
     discover_tools,
@@ -18,6 +24,12 @@ from .infrastructure.performance import (
 from .infrastructure.performance.export import export_history
 from .infrastructure.performance.history import HistoryStore
 from .infrastructure.performance.profilers import PerformanceProfiler
+from .infrastructure.performance.runtime import (
+    current_runtime,
+    ensure_project_importable,
+    nuitka_runtime,
+    probe_python_runtime,
+)
 from .infrastructure.performance.workloads import (
     build_dump_index_workload,
     build_fixture_workload,
@@ -43,6 +55,7 @@ def doctor() -> None:
     payload = {
         "python": platform.python_version(),
         "platform": platform.platform(),
+        "runtime": current_runtime().to_dict(),
         "artifact_dir": str(get_performance_artifact_dir()),
         "history_db": str(get_performance_database_path()),
         "tools": [tool.to_dict() for tool in discover_tools()],
@@ -80,6 +93,12 @@ def profile(
     single_file: bool = typer.Option(False, "--single-file"),
     exhaustive: bool = typer.Option(False, "--exhaustive"),
     resolve_param_names: bool = typer.Option(False, "--resolve-param-names"),
+    python_executable: Path | None = typer.Option(
+        None, "--python-executable", help="Alternate CPython executable for the workload."
+    ),
+    launcher: Path | None = typer.Option(
+        None, "--launcher", help="Compiled application executable for the workload."
+    ),
     timeout_seconds: float = typer.Option(300.0, "--timeout-seconds", min=0.1),
     sample_interval: float = typer.Option(0.1, "--sample-interval", min=0.01),
     name: str = typer.Option("reconstructor", "--name"),
@@ -87,6 +106,7 @@ def profile(
     """Profile the canonical generate or export-knowledge command."""
     repository_root = Path.cwd()
     raw_root = (artifact_dir or get_performance_artifact_dir()).resolve()
+    runtime = _runtime_for_selection(python_executable, launcher)
     target_output = output_dir or raw_root / name / "target-output"
     workload = build_reconstructor_workload(
         repository_root=repository_root,
@@ -106,9 +126,172 @@ def profile(
         exhaustive=exhaustive,
         resolve_param_names=resolve_param_names,
         timeout_seconds=timeout_seconds,
+        python_executable=python_executable,
+        launcher=launcher,
+        runtime=runtime,
     )
     summaries = _profile_workload(workload, raw_root, history_db, sample_interval, tuple(profiler))
     typer.echo(json.dumps([summary.to_dict() for summary in summaries], indent=2, sort_keys=True))
+
+
+@app.command("compare-runtimes")
+def compare_runtimes(
+    elf: Path = typer.Argument(..., help="ELF file to analyze."),
+    nuitka_executable: Path = typer.Option(..., "--nuitka-executable"),
+    free_threaded_python: Path | None = typer.Option(None, "--free-threaded-python"),
+    symbol: list[str] = typer.Option(["rLayout"], "--symbol", "-s"),
+    dwarf_index: Path | None = typer.Option(None, "--dwarf-index"),
+    build_id: str | None = typer.Option(None, "--build-id"),
+    iterations: int = typer.Option(3, "--iterations", min=1, max=10),
+    artifact_dir: Path | None = typer.Option(None, "--artifact-dir"),
+    history_db: Path | None = typer.Option(None, "--history-db"),
+    timeout_seconds: float = typer.Option(300.0, "--timeout-seconds", min=0.1),
+    sample_interval: float = typer.Option(0.2, "--sample-interval", min=0.01),
+) -> None:
+    """Compare CPython, a Nuitka launcher, and optional free-threaded CPython."""
+    repository_root = Path.cwd()
+    raw_root = (artifact_dir or get_performance_artifact_dir()).resolve()
+    store = HistoryStore(history_db or get_performance_database_path(repository_root))
+    host = current_runtime()
+    _validate_runtime_paths(nuitka_executable, free_threaded_python)
+    selections = _runtime_selections(host, free_threaded_python, repository_root, nuitka_executable)
+    summaries = _run_runtime_selections(
+        selections=selections,
+        iterations=iterations,
+        runner=PerformanceRunner(raw_root, sample_interval_seconds=sample_interval),
+        store=store,
+        repository_root=repository_root,
+        elf=elf,
+        symbols=tuple(symbol),
+        dwarf_index=dwarf_index,
+        build_id=build_id,
+        timeout_seconds=timeout_seconds,
+        raw_root=raw_root,
+    )
+    typer.echo(_runtime_comparison_json(summaries))
+
+
+def _validate_runtime_paths(nuitka_executable: Path, free_threaded_python: Path | None) -> None:
+    if not nuitka_executable.is_file():
+        raise typer.BadParameter(f"Nuitka executable does not exist: {nuitka_executable}")
+    if free_threaded_python is not None and not free_threaded_python.is_file():
+        raise typer.BadParameter(
+            f"free-threaded Python executable does not exist: {free_threaded_python}"
+        )
+
+
+def _runtime_selections(
+    host: RuntimeDescriptor,
+    free_threaded_python: Path | None,
+    repository_root: Path,
+    nuitka_executable: Path,
+) -> list[tuple[str, Path | None, Path | None, RuntimeDescriptor]]:
+    selections: list[tuple[str, Path | None, Path | None, RuntimeDescriptor]] = [
+        ("cpython", None, None, host),
+        ("nuitka", None, nuitka_executable, nuitka_runtime(nuitka_executable, host.python_version)),
+    ]
+    if free_threaded_python is not None:
+        selections.append(
+            (
+                "free-threaded",
+                free_threaded_python,
+                None,
+                _free_threaded_runtime(free_threaded_python, repository_root),
+            )
+        )
+    return selections
+
+
+def _free_threaded_runtime(executable: Path, repository_root: Path) -> RuntimeDescriptor:
+    try:
+        ensure_project_importable(executable, repository_root)
+        return probe_python_runtime(executable)
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+
+
+def _run_runtime_selections(
+    *,
+    selections: list[tuple[str, Path | None, Path | None, RuntimeDescriptor]],
+    iterations: int,
+    runner: PerformanceRunner,
+    store: HistoryStore,
+    repository_root: Path,
+    elf: Path,
+    symbols: tuple[str, ...],
+    dwarf_index: Path | None,
+    build_id: str | None,
+    timeout_seconds: float,
+    raw_root: Path,
+) -> list[RunSummary]:
+    summaries: list[RunSummary] = []
+    for selection in selections:
+        summaries.extend(
+            _run_runtime_selection(
+                selection=selection,
+                iterations=iterations,
+                runner=runner,
+                store=store,
+                repository_root=repository_root,
+                elf=elf,
+                symbols=symbols,
+                dwarf_index=dwarf_index,
+                build_id=build_id,
+                timeout_seconds=timeout_seconds,
+                raw_root=raw_root,
+            )
+        )
+    return summaries
+
+
+def _run_runtime_selection(
+    *,
+    selection: tuple[str, Path | None, Path | None, RuntimeDescriptor],
+    iterations: int,
+    runner: PerformanceRunner,
+    store: HistoryStore,
+    repository_root: Path,
+    elf: Path,
+    symbols: tuple[str, ...],
+    dwarf_index: Path | None,
+    build_id: str | None,
+    timeout_seconds: float,
+    raw_root: Path,
+) -> list[RunSummary]:
+    label, python_executable, launcher, runtime = selection
+    summaries: list[RunSummary] = []
+    for _iteration in range(1, iterations + 1):
+        name = f"runtime-compare-{label}"
+        workload = build_reconstructor_workload(
+            repository_root=repository_root,
+            name=name,
+            elf=elf,
+            symbols=symbols,
+            mode="export-knowledge",
+            state=ColdWarmState.WARM,
+            output_dir=raw_root / name / "target-output",
+            dwarf_index=dwarf_index,
+            build_id=build_id,
+            timeout_seconds=timeout_seconds,
+            python_executable=python_executable,
+            launcher=launcher,
+            runtime=runtime,
+        )
+        summary = runner.run(workload)
+        store.record(summary)
+        summaries.append(summary)
+    return summaries
+
+
+def _runtime_comparison_json(summaries: list[RunSummary]) -> str:
+    return json.dumps(
+        {
+            "runs": [summary.to_dict() for summary in summaries],
+            "comparisons": _runtime_comparisons(summaries),
+        },
+        indent=2,
+        sort_keys=True,
+    )
 
 
 @app.command("profile-index")
@@ -219,6 +402,67 @@ def _profile_workload(
     for summary in summaries:
         store.record(summary)
     return summaries
+
+
+def _runtime_for_selection(
+    python_executable: Path | None, launcher: Path | None
+) -> RuntimeDescriptor:
+    if python_executable is not None and launcher is not None:
+        raise typer.BadParameter("choose either --python-executable or --launcher")
+    if python_executable is not None:
+        try:
+            ensure_project_importable(python_executable, Path.cwd())
+            return probe_python_runtime(python_executable)
+        except ValueError as error:
+            raise typer.BadParameter(str(error)) from error
+    if launcher is not None:
+        return nuitka_runtime(launcher, current_runtime().python_version)
+    return current_runtime()
+
+
+def _runtime_comparisons(summaries: list[RunSummary]) -> list[dict[str, object]]:
+    groups: dict[str, list[RunSummary]] = {}
+    for summary in summaries:
+        groups.setdefault(summary.runtime_name, []).append(summary)
+    baseline_name = current_runtime().name
+    baseline = groups.get(baseline_name, [])
+    if not baseline:
+        return []
+    result: list[dict[str, object]] = []
+    for runtime_name, candidates in sorted(groups.items()):
+        if runtime_name == baseline_name:
+            continue
+        metrics: dict[str, object] = {}
+        for name in ("wall_time_seconds", "peak_rss_bytes", "read_bytes", "write_bytes"):
+            baseline_mean = _mean_metric(baseline, name)
+            candidate_mean = _mean_metric(candidates, name)
+            if baseline_mean is None or candidate_mean is None:
+                continue
+            metrics[name] = {
+                "baseline_mean": baseline_mean,
+                "candidate_mean": candidate_mean,
+                "delta": candidate_mean - baseline_mean,
+            }
+        result.append(
+            {
+                "baseline": baseline_name,
+                "candidate": runtime_name,
+                "metrics": metrics,
+            }
+        )
+    return result
+
+
+def _mean_metric(summaries: list[RunSummary], name: str) -> float | None:
+    values = [
+        float(metric.value)
+        for summary in summaries
+        for metric in summary.metrics
+        if summary.status is EvidenceStatus.OBSERVED
+        and metric.name == name
+        and isinstance(metric.value, (int, float))
+    ]
+    return sum(values) / len(values) if values else None
 
 
 __all__ = ["app"]

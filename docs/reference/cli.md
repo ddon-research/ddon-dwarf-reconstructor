@@ -51,6 +51,7 @@ operating on a large or durable artifact.
 ```text
 doctor
 profile <elf>
+compare-runtimes <elf>
 profile-index <dump>
 benchmark
 history compare

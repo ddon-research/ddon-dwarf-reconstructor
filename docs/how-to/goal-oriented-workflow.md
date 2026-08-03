@@ -83,3 +83,9 @@ Use `performance doctor` before selecting profilers, `test-performance-fixtures`
 gate. Use `performance profile-index` for a separately measured cold compressed-dump rebuild, and
 use `performance history compare/export` only after checking that source, state, interpreter,
 machine, and configuration are compatible.
+
+For runtime/compiler questions, add the runtime identity and build boundary to the goal. Use
+`performance compare-runtimes` with the same source-bound workload for CPython, a validated
+Nuitka launcher, and an explicitly installed free-threaded CPython venv. Record build time,
+onefile extraction I/O, output-manifest equality, dependency failures, and upstream compiler
+blockers separately; a skipped or blocked free-threaded tool is not a replacement baseline.

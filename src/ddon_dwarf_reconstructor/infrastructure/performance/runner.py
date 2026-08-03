@@ -27,6 +27,7 @@ from ...domain.models.performance import (
 from ..artifacts import SourceIdentityCatalog
 from ..logging import get_logger, log_event
 from .paths import atomic_write_text, git_metadata, machine_profile, sha256_file
+from .runtime import current_runtime
 
 logger = get_logger(__name__)
 MAX_CAPTURE_BYTES = 1024 * 1024
@@ -217,7 +218,8 @@ class PerformanceRunner:
         source_identity = self._source_identity(workload.source_path, diagnostics)
         revision, dirty = git_metadata(workload.cwd)
         status = _execution_status(execution)
-        python_version, platform_name, _ = RunSummary.environment_defaults()
+        runtime = workload.runtime or current_runtime()
+        _, platform_name, _ = RunSummary.environment_defaults()
         return RunSummary(
             run_id=run_id,
             workload=workload,
@@ -227,10 +229,13 @@ class PerformanceRunner:
             return_code=execution.return_code,
             git_revision=revision,
             git_dirty=dirty,
-            python_version=python_version,
+            python_version=runtime.python_version,
             platform_name=platform_name,
             machine_profile=machine_profile(),
             source_identity=source_identity,
+            runtime_name=runtime.name,
+            runtime_implementation=runtime.implementation,
+            gil_enabled=runtime.gil_enabled,
             profiler_mode=profiler_name,
             metrics=tuple(metrics),
             artifacts=tuple(artifacts),

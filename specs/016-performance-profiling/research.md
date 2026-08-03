@@ -33,7 +33,8 @@ The current environment reports CPython 3.14.6 on Windows and these installed to
 
 The external educational references supplied for this feature remain useful orientation but are
 not acceptance evidence. Runtime compatibility is checked by `performance doctor` and the locked
-uv environment.
+uv environment. The later Nuitka/free-threaded runtime evaluation is recorded separately in
+[feature 017](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/017-nuitka-runtime-comparison).
 
 ## References
 

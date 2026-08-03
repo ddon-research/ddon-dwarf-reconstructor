@@ -50,6 +50,17 @@ Add `--orbis-objdump` only when its explicit local executable is part of the evi
 `--profiler py-spy` for an external/native-frame cross-check; Windows permissions may record it as
 partial. Raw profiles and samples are written under the OS-local performance artifact directory.
 
+## Runtime comparison
+
+To compare the normal interpreter with the optional Nuitka launcher and free-threaded CPython,
+follow the [runtime comparison how-to](compare-runtimes.md). Runtime identity is part of the
+workload fingerprint and history comparison key. The free-threaded environment must be a separate
+project venv; the bare uv-managed interpreter does not contain the project package.
+
+The current result is report-only: Nuitka's onefile launcher is slower for warm `rLayout` despite
+lower peak RSS, and free-threaded CPython is slower with higher peak RSS. Exact values and
+compiler/tool blockers are retained in the feature evidence and benchmark ledger.
+
 ## Cold index evidence
 
 Run compressed-dump index construction separately through `profile-index` and use `--state cold`.

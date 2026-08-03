@@ -6,6 +6,7 @@ The `performance` group is the canonical opt-in resource and profiler interface:
 | --- | --- |
 | `performance doctor` | Probe tools and report evidence paths |
 | `performance profile <elf>` | Run a named profiler around the canonical reconstruction CLI |
+| `performance compare-runtimes <elf>` | Compare regular CPython, a validated Nuitka launcher, and optional free-threaded CPython |
 | `performance profile-index <dump>` | Profile a complete compressed-dump index rebuild |
 | `performance benchmark` | Run the deterministic fixture through pyperf and psutil |
 | `performance history compare` | Compare compatible historical runs |
@@ -19,6 +20,19 @@ recorded as `unavailable`; timeout or child failures are `partial`.
 `profile-index` wraps `artifacts rebuild-dump-index` and records the compressed dump as the source
 identity. It defaults to the low-overhead process sampler; request a profiler explicitly for a
 deep index-build trace. Its sidecar and raw profile must be placed outside source control.
+
+`profile` accepts `--python-executable` for an alternate installed CPython and `--launcher` for a
+compiled application executable. `compare-runtimes` uses both forms through the same typed runner,
+records runtime implementation/version/GIL state in the manifest and SQLite row, and rejects a
+Python executable that cannot import the installed project. Use the venv interpreter for a
+free-threaded environment, not the bare uv-managed base interpreter.
+
+The current comparison is report-only. On the measured warm `rLayout` workload, regular CPython
+3.14.6 averaged 2.062 seconds, Nuitka 4.1.3 onefile 2.470 seconds, and free-threaded CPython
+2.202 seconds. Nuitka reduced peak RSS but added onefile extraction I/O; free-threaded CPython
+used more RSS. The current pyinstrument native extension also enables the GIL when imported by a
+free-threaded interpreter. See the [runtime comparison how-to](../how-to/compare-runtimes.md) for
+the exact setup and compatibility boundary.
 
 ## Metric contract
 

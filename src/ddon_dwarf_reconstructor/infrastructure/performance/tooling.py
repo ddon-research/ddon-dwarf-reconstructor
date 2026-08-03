@@ -20,6 +20,7 @@ TOOL_NAMES = (
     "pyperf",
     "tracemalloc",
     "psutil",
+    "nuitka",
 )
 _EXECUTABLES = {"scalene": "scalene", "pyinstrument": "pyinstrument", "py-spy": "py-spy"}
 
@@ -40,6 +41,8 @@ def _discover(name: str) -> ToolAvailability:
         return _module_availability(name, "tracemalloc")
     if name == "psutil":
         return _module_availability(name, "psutil")
+    if name == "nuitka":
+        return _module_executable_availability(name, (sys.executable, "-m", "nuitka"))
     if name == "pyperf":
         return _module_availability(name, "pyperf")
     executable_name = _EXECUTABLES[name]
@@ -90,6 +93,35 @@ def _executable_availability(name: str, executable: str) -> ToolAvailability:
         )
     return ToolAvailability(
         name, executable, version[0] if version else "unknown", EvidenceStatus.OBSERVED
+    )
+
+
+def _module_executable_availability(name: str, command: tuple[str, ...]) -> ToolAvailability:
+    try:
+        result = subprocess.run(
+            (*command, "--version"),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        return ToolAvailability(
+            name, command[0], "unavailable", EvidenceStatus.UNAVAILABLE, str(error)
+        )
+    lines = (result.stdout or result.stderr).strip().splitlines()
+    if result.returncode:
+        return ToolAvailability(
+            name,
+            command[0],
+            "unavailable",
+            EvidenceStatus.UNAVAILABLE,
+            lines[0] if lines else f"exit code {result.returncode}",
+        )
+    return ToolAvailability(
+        name, command[0], lines[0] if lines else "unknown", EvidenceStatus.OBSERVED
     )
 
 

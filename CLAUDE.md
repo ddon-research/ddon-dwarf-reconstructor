@@ -102,7 +102,10 @@ before changing CI.
   tree with psutil and publishes checksummed raw manifests outside Git; `performance history`
   writes the tracked SQLite/static exports. Scalene is primary, cProfile/pyinstrument/py-spy and
   tracemalloc are cross-checks, and pyperf is the repeated deterministic fixture harness. Never
-  instrument normal generation or treat unavailable/partial real-asset evidence as green.
+  instrument normal generation or treat unavailable/partial real-asset evidence as green. Nuitka
+  is an explicit MSVC/onefile deployment tool measured with `performance compare-runtimes`; keep
+  free-threaded CPython in a separate venv and record its current Scalene/Nuitka blockers and
+  pyinstrument GIL-enabling behavior rather than adding it to the normal environment.
 
 For a multi-turn DWARF investigation, use a thread-scoped Codex goal. Define the outcome and
 evidence surface first, inspect the validated PS4 DWARF4/PS3 DWARF2 producer facts and semantic

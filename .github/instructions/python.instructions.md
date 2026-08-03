@@ -116,7 +116,11 @@ Do not suppress the checker or add a baseline exemption.
   `test-performance-fixtures` for deterministic budgets and `test-performance-real-assets` only
   with explicit local inputs. Use `performance profile-index` for a separately measured cold
   compressed-dump rebuild. Keep raw profiler files external and status unavailable/partial
-  evidence rather than substituting zero values.
+  evidence rather than substituting zero values. Use `performance compare-runtimes` for
+  CPython/Nuitka/free-threaded comparisons; runtime identity and GIL state are part of the
+  workload/history contract. Nuitka is an opt-in MSVC/onefile tool, and free-threaded Python
+  belongs in a separate project venv because Scalene and Nuitka compilation are currently blocked
+  on Windows `cp314t`; pyinstrument also enables the GIL while importing its native extension.
 - Use Hypothesis for pure type-reference, declarator, array, qualifier, pointer, and parser
   invariants. Use `pytest-regressions` only for small deterministic diagnostics and metadata.
 - Exercise missing, incomplete, conflicting, duplicate, unavailable, cyclic, malformed, and

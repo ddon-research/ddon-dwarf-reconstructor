@@ -246,6 +246,7 @@ uv run just test-performance-real-assets # explicit real-asset performance
 uv run just performance-tools-install # install Scalene/pyperf/profiler tools
 uv run just performance-profile # warm rLayout profile recipe
 uv run just performance-profile-index # cold compressed-dump index profile recipe
+uv run just performance-runtime-compare # CPython/Nuitka/free-threaded comparison
 uv run just performance-history # export tracked benchmark history
 uv run just docs-tools-install # install locked Markdown/Mermaid validators
 uv run just docs-serve       # local Zensical preview
@@ -254,7 +255,8 @@ uv run just docs-diagrams    # render Mermaid fences to temporary SVGs
 uv run just docs-check       # docs-lint, docs-diagrams, and strict site build
 uv run just package         # wheel and sdist
 uv run just package-smoke   # isolated uv tool install and CLI smoke test
-uv run just native-build    # optional Nuitka executable
+uv run just native-build    # optional MSVC-backed Nuitka onefile executable
+uv run just nuitka-build    # alias for the external Nuitka build recipe
 uv run just sonar-validate  # validate local Sonar/MSVC prerequisites
 uv run just sonar-capture   # capture the MSVC compilation database
 uv run just spec-check      # nested project checks
@@ -313,7 +315,12 @@ Performance evidence is collected only through the opt-in `performance` command 
 process runner uses psutil for CPU/RAM/I/O sampling and publishes checksummed raw profiler
 manifests outside the checkout; historical summaries and static exports are tracked under
 `resources/performance/` and `docs/knowledge-base/performance/`. Profiling is never enabled in the
-normal generation path.
+normal generation path. `performance compare-runtimes` compares regular CPython, a validated
+Nuitka launcher, and an explicitly installed free-threaded CPython runtime. The current warm
+`rLayout` evidence shows no runtime-speed benefit from Nuitka's onefile launcher, while free-threaded
+CPython uses more memory and is slower for this workload. Free-threaded Nuitka and Scalene remain
+blocked by upstream/native Windows compatibility failures, and pyinstrument currently re-enables
+the GIL when its native extension is imported.
 
 ## License
 

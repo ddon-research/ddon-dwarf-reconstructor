@@ -28,6 +28,9 @@ class HistoryRow:
     python_version: str
     platform_name: str
     machine_profile: str
+    runtime_name: str
+    runtime_implementation: str
+    gil_enabled: bool | None
     source_identity: str | None
     configuration_fingerprint: str
     profiler_mode: str
@@ -51,6 +54,9 @@ class HistoryRow:
             "python_version": self.python_version,
             "platform": self.platform_name,
             "machine_profile": self.machine_profile,
+            "runtime_name": self.runtime_name,
+            "runtime_implementation": self.runtime_implementation,
+            "gil_enabled": self.gil_enabled,
             "source_identity": self.source_identity,
             "configuration_fingerprint": self.configuration_fingerprint,
             "profiler_mode": self.profiler_mode,
@@ -72,6 +78,7 @@ class HistoryStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as connection:
             self._create_schema(connection)
+            _ensure_runtime_columns(connection)
             version = connection.execute(
                 "SELECT value FROM schema_meta WHERE key = 'schema_version'"
             ).fetchone()
@@ -165,6 +172,9 @@ class HistoryStore:
                 python_version TEXT NOT NULL,
                 platform_name TEXT NOT NULL,
                 machine_profile TEXT NOT NULL,
+                runtime_name TEXT NOT NULL DEFAULT 'host',
+                runtime_implementation TEXT NOT NULL DEFAULT 'CPython',
+                gil_enabled INTEGER,
                 source_identity TEXT,
                 configuration_fingerprint TEXT NOT NULL,
                 profiler_mode TEXT NOT NULL,
@@ -228,9 +238,10 @@ class HistoryStore:
             INSERT OR REPLACE INTO runs(
                 run_id, workload, cold_warm, status, started_at, duration_seconds,
                 return_code, git_revision, git_dirty, python_version, platform_name,
-                machine_profile, source_identity, configuration_fingerprint,
+                machine_profile, runtime_name, runtime_implementation, gil_enabled,
+                source_identity, configuration_fingerprint,
                 profiler_mode, manifest_path, diagnostics_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 summary.run_id,
@@ -245,6 +256,9 @@ class HistoryStore:
                 summary.python_version,
                 summary.platform_name,
                 summary.machine_profile,
+                summary.runtime_name,
+                summary.runtime_implementation,
+                _bool_int(summary.gil_enabled),
                 summary.source_identity,
                 summary.workload.configuration_fingerprint,
                 summary.profiler_mode,
@@ -353,6 +367,9 @@ class HistoryStore:
             python_version=str(run["python_version"]),
             platform_name=str(run["platform_name"]),
             machine_profile=str(run["machine_profile"]),
+            runtime_name=str(run["runtime_name"]),
+            runtime_implementation=str(run["runtime_implementation"]),
+            gil_enabled=_restore_bool(run["gil_enabled"]),
             source_identity=run["source_identity"],
             configuration_fingerprint=str(run["configuration_fingerprint"]),
             profiler_mode=str(run["profiler_mode"]),
@@ -371,6 +388,23 @@ def _ensure_method_cpu_percent(connection: sqlite3.Connection) -> None:
     connection.execute(
         "UPDATE method_metrics SET cpu_percent = total_seconds, total_seconds = NULL "
         "WHERE profiler = 'scalene'"
+    )
+
+
+def _ensure_runtime_columns(connection: sqlite3.Connection) -> None:
+    """Add runtime identity columns without changing the v1 schema number."""
+    columns = {str(row[1]) for row in connection.execute("PRAGMA table_info(runs)")}
+    additions = {
+        "runtime_name": "TEXT NOT NULL DEFAULT 'host'",
+        "runtime_implementation": "TEXT NOT NULL DEFAULT 'CPython'",
+        "gil_enabled": "INTEGER",
+    }
+    for name, declaration in additions.items():
+        if name not in columns:
+            connection.execute(f"ALTER TABLE runs ADD COLUMN {name} {declaration}")
+    connection.execute(
+        "UPDATE runs SET runtime_name = 'cpython-' || python_version, "
+        "runtime_implementation = 'CPython', gil_enabled = 1 WHERE runtime_name = 'host'"
     )
 
 
@@ -443,6 +477,9 @@ def _comparison_key(row: HistoryRow) -> dict[str, str | None]:
         "python_version": row.python_version,
         "platform": row.platform_name,
         "machine_profile": row.machine_profile,
+        "runtime_name": row.runtime_name,
+        "runtime_implementation": row.runtime_implementation,
+        "gil_enabled": None if row.gil_enabled is None else str(row.gil_enabled),
         "configuration_fingerprint": row.configuration_fingerprint,
         "profiler_mode": row.profiler_mode,
     }

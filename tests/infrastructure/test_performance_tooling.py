@@ -17,6 +17,7 @@ def test_tool_discovery_always_reports_builtin_sampler_and_profiler() -> None:
     assert tools["process-sampler"].status == EvidenceStatus.OBSERVED
     assert tools["cprofile"].status == EvidenceStatus.OBSERVED
     assert tools["tracemalloc"].status == EvidenceStatus.OBSERVED
+    assert tools["nuitka"].status == EvidenceStatus.OBSERVED
 
 
 def test_process_values_preserves_missing_io_counters() -> None:

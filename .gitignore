@@ -75,9 +75,10 @@ logs/
 !/resources/performance/benchmarks.sqlite3
 !/resources/performance/benchmark-history.json
 !/resources/performance/benchmark-history.csv
-main.build/
-main.dist/
-main.onefile-build/
+*.build/
+*.dist/
+*.onefile-build/
+nuitka-crash-report.xml
 
 # Environment files
 .env

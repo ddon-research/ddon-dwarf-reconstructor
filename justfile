@@ -55,6 +55,9 @@ performance-profile-index dwarf_dump="D:/research/DDON-binaries/IDA9.3/PS4_DDON_
 performance-history:
     uv run ddon-dwarf-reconstructor performance history export
 
+performance-runtime-compare elf_file="resources/DDOORBIS.elf" nuitka_executable="D:/ddon-perf-artifacts/nuitka/cpython314/ddon-reconstructor-cpython314.exe" free_threaded_python="D:/ddon-perf-artifacts/venvs/ddon-3.14t/Scripts/python.exe" dwarf_index="resources/.cache/DDOORBIS.elf.llvmdwarfdump.index.sqlite3":
+    uv run ddon-dwarf-reconstructor performance compare-runtimes {{elf_file}} --symbol rLayout --nuitka-executable {{nuitka_executable}} --free-threaded-python {{free_threaded_python}} --dwarf-index {{dwarf_index}} --build-id ps4-02020005
+
 test:
     uv run pytest -m "not performance and not packaging and not real_asset"
 
@@ -131,8 +134,10 @@ sonar-validate:
 sonar-capture:
     uv run python -m tools.sonar.prepare_msvc_analysis
 
-native-build:
-    uv run python -m nuitka --clang --onefile --jobs=16 --lto=yes --static-libpython=auto --remove-output --deployment --output-dir=build main.py
+native-build output_dir="D:/ddon-perf-artifacts/nuitka/cpython314":
+    uv run python -m nuitka --msvc=latest --mode=onefile --jobs=16 --lto=yes --remove-output --deployment --output-dir={{output_dir}} --output-filename=ddon-reconstructor-cpython314.exe main.py
+
+nuitka-build: native-build
 
 run elf_file="resources/DDOORBIS.elf" symbol="MtObject":
     uv run ddon-dwarf-reconstructor generate {{elf_file}} --symbol {{symbol}}
