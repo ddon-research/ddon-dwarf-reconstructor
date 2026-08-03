@@ -125,6 +125,9 @@ For a failing Dependabot or pull-request check, inspect the remote proposal befo
 source: run gh auth status, gh pr list, gh pr diff, gh pr checks, and gh run view <run-id>
 --log-failed. Reproduce the failing test with uv run before updating code or expectations; a
 passing lint/tooling job does not replace the required correctness evidence.
+For nested lockfile updates, run `uv lock --directory tools/dwarf_spec_pipeline --check` and
+verify the live Dependabot alert state after the dependency graph refresh; do not dismiss an
+actionable security advisory when a patched lock entry is available.
 
 For real PS4 or performance validation, use explicit local input and index paths, retain cold and
 warm state, and store generated artifacts outside source control. Update the relevant Spec Kit and

@@ -1,6 +1,6 @@
 # Implementation Plan: Clean Architecture Audit and Modernization
 
-This plan records the delivered refactor and completed Tier 1/2 convergence. It
+This plan records the delivered refactor and completed Tier 1/2, Dependabot, and security convergence. It
 intentionally describes current contracts, not a request to preserve removed
 runtime shapes; Tier 3 real-asset/compiler validation remains deferred.
 
@@ -99,6 +99,20 @@ real PS4 output manifests in fresh and warm processes.
 Validation: artifact/source-bound focused tests, root `just check`, required correctness and
 coverage loops, nested specification checks, and GitHub PR status inspection all passed. The
 Dependabot set was merged as PRs #1-6, #8, and #9; conflicted PR #7 was closed as superseded.
+
+## Phase 7: Resolve Dependabot security alert — complete
+
+- Inspect Dependabot alert #1 and the default-branch dependency graph for the vulnerable nested
+  `pytest` lock entry.
+- Upgrade the locked `pytest` package from 8.4.2 to patched 9.1.1 while preserving the merged
+  `pytest>=8.4,<10` manifest bound.
+- Validate the nested lock, quality, and test loops, merge the focused PR #11, refresh the default
+  branch graph, and verify the alert transitions to `fixed`.
+
+Validation: nested `uv lock --check`, `just check`, and `just test` passed locally; the official
+external-artifact selection remained explicitly skipped. Final `main` commit `36eafb3` passed
+the correctness, quality, dependency-graph, and nested-pipeline workflows. Dependabot alert #1
+is fixed, PRs #1-6 and #8-11 are merged, PR #7 is closed as superseded, and no PRs remain open.
 
 ## Dependency order
 

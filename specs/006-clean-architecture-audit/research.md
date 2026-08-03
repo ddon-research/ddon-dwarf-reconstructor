@@ -139,3 +139,12 @@ correctness, quality, and nested-pipeline checks; conflicted PR #7 was closed as
 #8. The final `main` commit `6d78943` also passed the correctness, quality, dependency-graph, and
 specification workflows. PR #9 synchronized the nested `uv.lock` metadata with the merged
 pytest and pytest-cov bounds.
+
+The same verification found Dependabot alert #1 for `pytest` 8.4.2 in
+`tools/dwarf_spec_pipeline/uv.lock` (`GHSA-6w46-j5rx-g56g` / `CVE-2025-71176`, medium severity,
+patched at 9.0.3). PR #11 upgraded the lock to pytest 9.1.1 while preserving the
+`pytest>=8.4,<10` manifest bound. Nested lock validation, `just check`, and `just test` passed;
+`just test-official` continued to skip one test because the external artifact is unavailable.
+After the dependency graph refresh, GitHub's SBOM reported pytest 9.1.1 and the alert changed to
+`fixed` at 2026-08-03T17:04:07Z. The final main workflows passed at commit `36eafb3`; PRs #1-6
+and #8-11 are merged, #7 is superseded and closed, and the open PR list is empty.

@@ -155,6 +155,9 @@ maintainability diagnostics. Run real PS4 and performance checks only with expli
 record cold/warm state, timing, and manifest identity in the relevant Spec Kit artifact. The nested
 `tools/dwarf_spec_pipeline` project has its own uv lockfile and mirrors the marker vocabulary; run
 its `just test`, `just test-official`, and `just check` from that project boundary as applicable.
+For nested dependency-update PRs, also run `uv lock --directory tools/dwarf_spec_pipeline --check`
+and verify live Dependabot alerts after the dependency graph refresh; do not dismiss an actionable
+security advisory when a patched lock entry is available.
 
 ## Spec-driven workflow
 
