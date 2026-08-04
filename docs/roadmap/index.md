@@ -23,11 +23,14 @@ tasks remain visible.
 | [015 LadybugDB knowledge graph](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/015-ladybugdb-knowledge-graph) | Draft; LadybugDB-first evaluation gate | versioned JSONL loader, import fidelity, deterministic queries, provenance, and operational evidence |
 | [016 Performance profiling](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/016-performance-profiling) | Implemented; fixture and explicit real-asset evidence recorded | source-bound CPU/RAM/I/O/method evidence, SQLite history, and static exports |
 | [017 Nuitka and runtime comparison](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/017-nuitka-runtime-comparison) | Evaluation slice implemented; free-threaded Nuitka blocked upstream | runtime-aware CPython/Nuitka/free-threaded comparison and compiler/dependency evidence |
+| [018 Performance and algorithm audit](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/018-performance-algorithm-audit) | Evidence and implementation slice complete; repository gates pending | source-bound warm/cold traces, candidate decisions, and deterministic optimization evidence |
 
 ## Next best step
 
-The documentation architecture refinement, feature 016 profiling evidence, and feature 017
-runtime evaluation are published and validated. The next technical integration is the LadybugDB-first `KG-001` evaluation: define a
+The documentation architecture refinement, feature 016 profiling evidence, feature 017 runtime
+evaluation, and the Feature 018 audit are published as evidence slices; Feature 018's repository
+gates remain visible in its task list. The next technical integration is the LadybugDB-first
+`KG-001` evaluation: define a
 versioned loader over the existing JSONL bundle, verify import fidelity, and add deterministic
 query fixtures. Complete the deferred real-asset/compiler evidence in features
 001, 004, 007, and 009 as separate evidence slices. Do not publish a graph

@@ -75,14 +75,17 @@ Evidence: run manifest, CPU/RSS/I/O metrics, method summaries, source identity, 
 Constraints: preserve output bytes, cache identity, ordering, provenance, and normal-run overhead.
 Boundary: raw profiles, proprietary inputs, cold-index cost, and unavailable external tools remain
           explicit environmental evidence.
-Iteration: doctor -> fixture -> warm real asset -> profiler cross-check -> cold index -> export.
+Iteration: doctor -> fixture -> warm real asset -> profiler cross-check -> cold index -> function/
+line traces -> candidate matrix -> one optimization slice -> regression -> benchmark -> export.
 Blocker: record the prerequisite and status; after three repeated checks, stop and report it.
 ```
 
 Use `performance doctor` before selecting profilers, `test-performance-fixtures` for a deterministic
-gate. Use `performance profile-index` for a separately measured cold compressed-dump rebuild, and
-use `performance history compare/export` only after checking that source, state, interpreter,
-machine, and configuration are compatible.
+gate. Use `performance profile-index` for a separately measured cold compressed-dump rebuild and
+`performance-profile-index-traces` when function/line attribution is missing. Use
+`performance history compare/export` only after checking that source, state, interpreter, machine, and
+configuration are compatible. Treat profiler runs as attribution evidence, not as timing baselines,
+and keep neutral or inconclusive optimization candidates recorded rather than promoted.
 
 For runtime/compiler questions, add the runtime identity and build boundary to the goal. Use
 `performance compare-runtimes` with the same source-bound workload for CPython, a validated

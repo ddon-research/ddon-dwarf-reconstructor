@@ -52,6 +52,12 @@ performance-profile elf_file="resources/DDOORBIS.elf" symbol="rLayout" state="wa
 performance-profile-index dwarf_dump="D:/research/DDON-binaries/IDA9.3/PS4_DDON_02020005_2016_12_21/DDOORBIS.elf.llvmdwarfdump.zst" index_path="D:/ddon-perf-artifacts/cold-dump-index.sqlite3":
     uv run ddon-dwarf-reconstructor performance profile-index {{dwarf_dump}} --index-path {{index_path}} --state cold --profiler process-sampler
 
+performance-profile-index-traces dwarf_dump="D:/research/DDON-binaries/IDA9.3/PS4_DDON_02020005_2016_12_21/DDOORBIS.elf.llvmdwarfdump.zst" artifact_root="D:/ddon-perf-artifacts/algorithm-audit" history_db="D:/ddon-perf-artifacts/algorithm-audit/benchmarks.sqlite3":
+    uv run ddon-dwarf-reconstructor performance profile-index {{dwarf_dump}} --index-path {{artifact_root}}/cold-process-sampler.sqlite3 --artifact-dir {{artifact_root}}/profiles --history-db {{history_db}} --name cold-dump-index-process-sampler --state cold --profiler process-sampler --timeout-seconds 3600 --sample-interval 1
+    uv run ddon-dwarf-reconstructor performance profile-index {{dwarf_dump}} --index-path {{artifact_root}}/cold-cprofile.sqlite3 --artifact-dir {{artifact_root}}/profiles --history-db {{history_db}} --name cold-dump-index-cprofile --state cold --profiler cprofile --timeout-seconds 3600 --sample-interval 1
+    uv run ddon-dwarf-reconstructor performance profile-index {{dwarf_dump}} --index-path {{artifact_root}}/cold-scalene.sqlite3 --artifact-dir {{artifact_root}}/profiles --history-db {{history_db}} --name cold-dump-index-scalene --state cold --profiler scalene --timeout-seconds 3600 --sample-interval 1
+    uv run ddon-dwarf-reconstructor performance profile-index {{dwarf_dump}} --index-path {{artifact_root}}/cold-pyinstrument.sqlite3 --artifact-dir {{artifact_root}}/profiles --history-db {{history_db}} --name cold-dump-index-pyinstrument --state cold --profiler pyinstrument --timeout-seconds 3600 --sample-interval 1
+
 performance-history:
     uv run ddon-dwarf-reconstructor performance history export
 

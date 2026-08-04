@@ -21,6 +21,10 @@ recorded as `unavailable`; timeout or child failures are `partial`.
 identity. It defaults to the low-overhead process sampler; request a profiler explicitly for a
 deep index-build trace. Its sidecar and raw profile must be placed outside source control.
 
+The `performance-profile-index-traces` recipe runs the process sampler, cProfile, Scalene, and
+pyinstrument as separate complete cold rebuilds under an external artifact root. Use it for the
+algorithm audit; do not use profiler timings as an uninstrumented performance baseline.
+
 `profile` accepts `--python-executable` for an alternate installed CPython and `--launcher` for a
 compiled application executable. `compare-runtimes` uses both forms through the same typed runner,
 records runtime implementation/version/GIL state in the manifest and SQLite row, and rejects a

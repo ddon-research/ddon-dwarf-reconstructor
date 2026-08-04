@@ -4,6 +4,11 @@ This page is generated from `resources/performance/benchmarks.sqlite3`. Raw prof
 
 Evidence statuses are `observed`, `partial`, `unavailable`, `blocked`, or `not_observed`. Real-asset rows are report-only; deterministic fixture budgets are gated by their explicit performance command.
 
+Feature 018 adds a report-only source-bound audit with cold function/line traces, five
+alternating warm pairs, and explicit candidate decisions. Its raw manifests remain external;
+see the [algorithm audit](algorithm-audit.md) and
+[feature specification](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/018-performance-algorithm-audit).
+
 ## Latest like-for-like baselines
 
 | Workload | State | Runtime | Profiler | Status | Wall time (s) | Peak RSS (MiB) | Read (MiB) | Write (MiB) | Started |

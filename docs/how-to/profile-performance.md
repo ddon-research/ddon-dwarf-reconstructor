@@ -75,8 +75,20 @@ uv run ddon-dwarf-reconstructor performance profile-index `
 ```
 
 The compressed dump is a large environmental prerequisite. A skipped or unavailable run remains
-unavailable evidence and does not replace the deterministic fixture. Request `--profiler scalene`
-separately when line-level attribution of the index build is worth its additional cost.
+unavailable evidence and does not replace the deterministic fixture. Request `--profiler scalene`,
+`--profiler cprofile`, or `--profiler pyinstrument` separately when function/line attribution of
+the index build is worth its additional cost. The complete explicit trace sequence is:
+
+```powershell
+uv run just performance-profile-index-traces
+```
+
+This rebuilds separate source-bound sidecars so profiler overhead and output artifacts cannot be
+mixed. The process-sampler run is the comparable resource baseline; cProfile is for deterministic
+call attribution; Scalene is for Python/native line and memory attribution; and pyinstrument is
+for sampled call stacks. Tracemalloc is an allocation-only diagnostic and is intentionally not in
+the full-dump recipe because it materially changes runtime. Py-spy remains an optional Windows
+cross-check and an unavailable or partial result is retained as such.
 
 ## History and static publication
 

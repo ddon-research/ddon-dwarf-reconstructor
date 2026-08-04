@@ -54,6 +54,17 @@ class TestPlatformDetector:
             assert result == ELFPlatform.PS4
 
     @pytest.mark.unit
+    def test_detect_elf_does_not_materialize_dwarf_for_platform_classification(self) -> None:
+        """Machine and endianness classification must not scan the first DWARF CU."""
+        mock_elf = Mock()
+        mock_elf.header = {"e_machine": "EM_X86_64"}
+        mock_elf.little_endian = True
+
+        assert PlatformDetector.detect_elf(mock_elf) == ELFPlatform.PS4
+        mock_elf.has_dwarf_info.assert_not_called()
+        mock_elf.get_dwarf_info.assert_not_called()
+
+    @pytest.mark.unit
     def test_detect_ps3_elf(self) -> None:
         """Test detection of PS3 ELF (PowerPC64 big-endian)."""
         mock_elf = Mock()
