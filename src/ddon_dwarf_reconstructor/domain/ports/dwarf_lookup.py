@@ -1,4 +1,4 @@
-"""Narrow port for offset-based DWARF index access."""
+"""Compatibility lookup contract for the explicit legacy validation producer."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from ..services.search_result import SearchResult
 from .cache import SymbolCachePort
 
 
-class DwarfIndexPort(Protocol):
-    """Operations required by parsing and type-resolution services."""
+class DwarfLookupPort(Protocol):
+    """Offset lookup operations retained behind the validation/live adapter boundary."""
 
     persistent_cache: SymbolCachePort
 

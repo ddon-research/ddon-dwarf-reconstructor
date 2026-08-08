@@ -80,6 +80,16 @@ before changing CI.
   performance artifacts.
 - Use explicit local paths for real PS4 and compiler validation; retain cold/warm state and record
   the manifest identity.
+- The durable analytical store is `output/analytical-dwarf/main/`; `%TEMP%\ddon-analytical-dwarf`
+  is for disposable diagnostic artifacts only. Native Doris is the active backend. For Doris
+  clarifications, consult `D:\Apache-Doris-version-4.x-docs` in addition to the live CLI. Treat
+  `information_schema.statistics` and `information_schema.column_statistics` as empty compatibility
+  views; use Doris `SHOW` statistics commands and `__internal_schema.column_statistics` instead.
+- PyArrow is pinned at `25.0.0`. Use `D:\PyArrow-25.0-python-docs` as the local reference for
+  Arrow concepts and API questions. Keep explicit family schemas, bounded `ParquetWriter` row
+  groups and `Table.from_pylist` conversions, typed partition schemas, dataset projection/filter
+  scans, and memory-pool telemetry distinct from whole-process RSS. JSONL backfill shares the
+  bounded sink and manifest writer/layout settings with direct materialization.
 - Probe external tools before selecting an export profile. Orbis executables are authoritative for
   PS4 ABI/SCE semantics; LLVM, GNU Binutils, elfutils, libdwarf, pyelftools, LIEF, and OpenOrbis
   outputs are additive evidence. The `elfldr` reference is loader research only and is not run by
@@ -106,6 +116,10 @@ before changing CI.
   is an explicit MSVC/onefile deployment tool measured with `performance compare-runtimes`; keep
   free-threaded CPython in a separate venv and record its current Scalene/Nuitka blockers and
   pyinstrument GIL-enabling behavior rather than adding it to the normal environment.
+- Season-two generation uses the 289 roots in `resources/season2-resources.txt`, separate
+  source-derived bundles, collision-safe publication, and aggregate collision failure. Standalone MSVC checks,
+  Sonar, and IDA are separate evidence surfaces; do not merge their statuses or claim an
+  unavailable baseline is validated.
 
 For a multi-turn DWARF investigation, use a thread-scoped Codex goal. Define the outcome and
 evidence surface first, inspect the validated PS4 DWARF4/PS3 DWARF2 producer facts and semantic

@@ -7,6 +7,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from .type_reference import TypeReference
+
 if TYPE_CHECKING:
     from .struct_info import StructInfo
 
@@ -29,3 +31,4 @@ class MemberInfo:
     declared_type_offset: int | None = None  # Immediate typedef DIE offset, when present
     inline_struct: StructInfo | None = None  # Anonymous class/struct used as a member type
     opaque_storage_size: int | None = None  # Size used for an unrepresentable by-value type
+    template_arguments: tuple[TypeReference, ...] = ()

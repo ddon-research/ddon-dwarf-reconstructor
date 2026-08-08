@@ -17,7 +17,10 @@ def get_performance_artifact_dir() -> Path:
     if configured:
         return Path(configured).expanduser().resolve()
     if os.name == "nt":
-        base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+        # Keep raw profiles and child logs on the local temporary volume.  The
+        # analytical workflow can produce large, disposable evidence bundles;
+        # LOCALAPPDATA is a durable cache root and is not the requested default.
+        base = Path(os.environ.get("TEMP") or os.environ.get("TMP") or tempfile.gettempdir())
     else:
         base = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
     return (base / "ddon-dwarf-reconstructor" / "performance").resolve()

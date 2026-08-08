@@ -9,7 +9,10 @@ from typing import TYPE_CHECKING
 
 from ....core.dwarf import DwarfCompilationUnit, DwarfEntry, DwarfInfo
 from ....core.observability import get_logger
-from ...ports.dump_lookup import DumpLookupPort
+from ...models.dwarf import ClassInfo
+from ...ports.analytical_store import DwarfQueryPort
+from ...ports.dwarf_lookup import DwarfLookupPort
+from ...ports.validation_dump import ValidationDumpPort
 from .class_parser_aggregate_types import ClassParserAggregateTypesMixin
 from .class_parser_class_info import ClassParserClassInfoMixin
 from .class_parser_discovery import ClassParserDiscoveryMixin
@@ -22,7 +25,6 @@ from .parser_policy import TYPE_BLACKLIST
 from .type_chain_traverser import TypeChainTraverser
 
 if TYPE_CHECKING:
-    from ..lazy_dwarf_index_service import LazyDwarfIndexService
     from .type_resolver import LazyTypeResolver
 
 logger = get_logger(__name__)
@@ -46,13 +48,14 @@ class ClassParser(
         self,
         type_resolver: LazyTypeResolver,
         dwarf_info: DwarfInfo,
-        lazy_index: LazyDwarfIndexService | None = None,
+        lazy_index: DwarfLookupPort | None = None,
         full_scan_timeout: float = 180.0,
         exhaustive_search: bool = False,
         dwarf_dump_path: Path | None = None,
         dwarf_index_path: Path | None = None,
+        query_port: DwarfQueryPort | None = None,
         resolve_param_names: bool = False,
-        dump_parser: DumpLookupPort | None = None,
+        dump_parser: ValidationDumpPort | None = None,
     ):
         """Initialize class parser with lazy type resolver and lazy index.
 
@@ -64,6 +67,7 @@ class ClassParser(
             exhaustive_search: Enable exhaustive search mode (scan all CUs for best definition)
             dwarf_dump_path: Optional path to compressed llvm-dwarfdump .zst file for fast lookups
             dwarf_index_path: Optional explicit SQLite sidecar path for the dump index
+            query_port: Optional source-bound analytical DWARF query port
             resolve_param_names: Enable method implementation search for parameter names (expensive)
         """
         self.type_resolver = type_resolver
@@ -73,9 +77,11 @@ class ClassParser(
         self.exhaustive_search = exhaustive_search
         self.dwarf_dump_path = dwarf_dump_path
         self.dwarf_index_path = dwarf_index_path
+        self.query_port = query_port
         self.resolve_param_names = resolve_param_names
         self.dump_parser = dump_parser
         self.timed_out_symbols: set[str] = set()  # Track symbols that timed out
+        self._class_info_cache: dict[tuple[int, int], ClassInfo] = {}
         self._implementation_cache: dict[
             int, tuple[DwarfCompilationUnit, DwarfEntry] | None
         ] = {}  # Cache for method implementations
@@ -83,4 +89,4 @@ class ClassParser(
         self._dump_lookup_unavailable = False
 
         # Lazy-load dump parser to avoid loading dump multiple times
-        self._dump_parser: DumpLookupPort | None = dump_parser
+        self._dump_parser: ValidationDumpPort | None = dump_parser

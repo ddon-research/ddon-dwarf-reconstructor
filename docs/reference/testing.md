@@ -35,6 +35,8 @@ uv run just test-performance-real-assets
 uv run just performance-profile-index
 uv run just performance-runtime-compare
 uv run just performance-history
+uv run just analytical-fixture
+uv run just analytical-compose-config
 ```
 
 The fixture tier is deterministic and may enforce explicit budgets. Real-asset profiles are
@@ -44,6 +46,13 @@ history visible without committing raw profiles or proprietary inputs.
 The knowledge exporter integration path must remain runnable without proprietary ELF inputs. Real
 PS4/PS3 inputs are environmental evidence and are never silently substituted for deterministic
 tests.
+
+For the analytical store, use `uv run just analytical-materialize` and
+`uv run just analytical-benchmark` only with an external output directory. The materializer writes
+direct typed Parquet rows by default; add `--write-jsonl` only for a bounded audit fixture.
+Full real-ELF materialization, LLVM verification, and Doris loading are separate acceptance
+evidence. The local Docker daemon and the LLVM source checkout do not count as successful Doris or
+`llvm-dwarfdump --verify` observations without an executable result.
 
 ## Nested project
 

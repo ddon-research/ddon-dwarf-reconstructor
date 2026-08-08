@@ -240,7 +240,13 @@ def parse_method_summaries(
             return _parse_cprofile(path, limit), ()
         payload = json.loads(path.read_text(encoding="utf-8"))
         if profiler == "scalene":
-            return _parse_scalene(payload, limit), ()
+            summaries = _parse_scalene(payload, limit)
+            return (
+                summaries,
+                ()
+                if summaries
+                else ("scalene produced no non-zero CPU or memory line attribution",),
+            )
         if profiler == "pyinstrument":
             return _parse_pyinstrument(payload, limit), ()
         if profiler == "py-spy":
@@ -396,6 +402,8 @@ def _collect_scalene_files(files: dict[object, object], candidates: list[MethodS
     for file_name, payload in files.items():
         if not isinstance(file_name, str) or not isinstance(payload, dict):
             continue
+        if _is_scalene_wrapper(file_name):
+            continue
         lines = payload.get("lines")
         if isinstance(lines, list):
             for line in lines:
@@ -404,19 +412,27 @@ def _collect_scalene_files(files: dict[object, object], candidates: list[MethodS
                     candidates.append(summary)
 
 
+def _is_scalene_wrapper(file_name: str) -> bool:
+    """Exclude the launcher line used to execute a module under Scalene."""
+    return file_name.replace("\\", "/").rsplit("/", 1)[-1].lower() == "scalene_target.py"
+
+
 def _scalene_line_summary(file_name: str, value: object) -> MethodSummary | None:
     if not isinstance(value, dict) or not isinstance(value.get("lineno"), int):
         return None
     python_cpu = _number(value.get("n_cpu_percent_python")) or 0.0
     native_cpu = _number(value.get("n_cpu_percent_c")) or 0.0
     memory_mb = _number(value.get("n_avg_mb"))
+    memory_bytes = int(memory_mb * 1024 * 1024) if memory_mb and memory_mb > 0 else None
+    if python_cpu <= 0 and native_cpu <= 0 and memory_bytes is None:
+        return None
     return MethodSummary(
         profiler="scalene",
         name=f"line {value['lineno']}",
         file=file_name,
         line=value["lineno"],
         total_seconds=None,
-        memory_bytes=int(memory_mb * 1024 * 1024) if memory_mb is not None else None,
+        memory_bytes=memory_bytes,
         cpu_percent=python_cpu + native_cpu,
     )
 

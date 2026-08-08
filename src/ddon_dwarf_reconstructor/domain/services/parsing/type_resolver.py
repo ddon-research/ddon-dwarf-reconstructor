@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from ....core.dwarf import DwarfInfo
 from ....core.observability import get_logger
-from ..lazy_dwarf_index_service import LazyDwarfIndexService
+from ...ports.dwarf_lookup import DwarfLookupPort
 from .primitive_lookup import PrimitiveLookupMixin
 from .primitive_type_names import PrimitiveTypeNamesMixin
 from .type_resolution import TypeResolutionMixin
@@ -69,7 +69,7 @@ class LazyTypeResolver(
         }
     )
 
-    def __init__(self, dwarf_info: DwarfInfo, lazy_index: LazyDwarfIndexService):
+    def __init__(self, dwarf_info: DwarfInfo, lazy_index: DwarfLookupPort):
         """Initialize lazy type resolver.
 
         Args:

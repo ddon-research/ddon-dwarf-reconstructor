@@ -11,6 +11,8 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import (
     ClassInfo,
     MemberInfo,
     MethodInfo,
+    TypeDeclarator,
+    TypeReference,
 )
 from ddon_dwarf_reconstructor.domain.services.generation import HeaderGenerator
 
@@ -135,6 +137,49 @@ class TestHeaderGenerator:
         assert "MtTypedArray<rTutorialDialogMessage::cDialogPage> m_page_info;" in header
 
     @pytest.mark.unit
+    def test_generate_header_declares_template_argument_from_structured_evidence(
+        self, header_generator
+    ):
+        outer_class = ClassInfo(
+            name="Owner",
+            byte_size=8,
+            members=[
+                MemberInfo(
+                    "m_path",
+                    "cResPath<rAIFSM>",
+                    type_offset=0x1000,
+                    template_arguments=(
+                        TypeReference(TypeDeclarator("rAIFSM"), die_offset=0x2000),
+                    ),
+                    offset=0,
+                )
+            ],
+            methods=[],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x3000,
+        )
+        template_die = Mock(
+            tag="DW_TAG_class_type",
+            attributes={"DW_AT_name": Mock(value=b"cResPath<rAIFSM>")},
+        )
+        argument_die = Mock(
+            tag="DW_TAG_class_type",
+            attributes={"DW_AT_name": Mock(value=b"rAIFSM")},
+        )
+        header_generator.dwarf_index.get_die_by_offset.side_effect = lambda offset: {
+            0x1000: template_die,
+            0x2000: argument_die,
+        }.get(offset)
+
+        header = header_generator.generate_header(outer_class, include_metadata=False)
+
+        assert "class rAIFSM;" in header
+        assert header.index("class rAIFSM;") < header.index("cResPath<rAIFSM> m_path;")
+
+    @pytest.mark.unit
     def test_generate_header_with_inheritance(self, header_generator):
         """Test header generation with inheritance."""
         derived_class = ClassInfo(
@@ -177,6 +222,33 @@ class TestHeaderGenerator:
         # Should include the class
         assert "class TestClass" in header
         assert "TestClass();" in header
+
+    @pytest.mark.unit
+    def test_hierarchy_header_includes_external_definition_dependencies(self, header_generator):
+        derived_class = ClassInfo(
+            name="DerivedClass",
+            byte_size=16,
+            members=[],
+            methods=[],
+            base_classes=["BaseClass"],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x2000,
+        )
+
+        header = header_generator.generate_single_file_hierarchy_header(
+            {"DerivedClass": derived_class},
+            ["DerivedClass"],
+            "DerivedClass",
+            include_metadata=False,
+            dependency_headers={"BaseClass": "BaseClass.h"},
+        )
+
+        assert '#include "BaseClass.h"' in header
+        assert header.index('#include "BaseClass.h"') < header.index(
+            "class DerivedClass : public BaseClass"
+        )
 
     @pytest.mark.unit
     def test_generate_single_file_hierarchy_header_emits_valid_dependency_declarations(

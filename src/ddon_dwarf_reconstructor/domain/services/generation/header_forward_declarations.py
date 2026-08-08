@@ -6,7 +6,7 @@ import re
 from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
-from ...models.dwarf import ClassInfo, StructInfo
+from ...models.dwarf import ClassInfo, MemberInfo, StructInfo, TypeReference
 from ..parsing.die_type_classifier import DIETypeClassifier
 from .header_type_planning import HeaderTypePlanningMixin
 
@@ -77,6 +77,7 @@ class HeaderForwardDeclarationMixin:
     ) -> Iterator[tuple[str | None, int | None, bool]]:
         for member in class_info.members:
             yield member.type_name, member.type_offset, False
+            yield from HeaderForwardDeclarationMixin._template_argument_types(member)
         yield from self._nested_struct_types(class_info.nested_structs)
         yield from self._union_types(class_info)
         yield from self._method_types(class_info)
@@ -93,6 +94,7 @@ class HeaderForwardDeclarationMixin:
         for union in class_info.unions:
             for member in union.members:
                 yield member.type_name, member.type_offset, True
+                yield from HeaderForwardDeclarationMixin._template_argument_types(member)
             yield from self._nested_struct_types(union.nested_structs)
 
     @staticmethod
@@ -112,6 +114,22 @@ class HeaderForwardDeclarationMixin:
     ) -> Iterator[tuple[str | None, int | None, bool]]:
         for member in struct.members:
             yield member.type_name, member.type_offset, True
+            yield from HeaderForwardDeclarationMixin._template_argument_types(member)
+
+    @classmethod
+    def _template_argument_types(
+        cls, member: MemberInfo
+    ) -> Iterator[tuple[str | None, int | None, bool]]:
+        for reference in member.template_arguments:
+            yield from cls._template_reference_types(reference)
+
+    @classmethod
+    def _template_reference_types(
+        cls, reference: TypeReference
+    ) -> Iterator[tuple[str | None, int | None, bool]]:
+        yield reference.name, reference.die_offset, False
+        for nested_reference in reference.template_arguments:
+            yield from cls._template_reference_types(nested_reference)
 
     def _add_forward_declaration(
         self: HeaderGeneratorContext,

@@ -99,6 +99,17 @@ _PROFILES = (
         description="LLVM debug-info summary for bounded producer and scope comparison.",
     ),
     ToolExportProfile(
+        name="llvm-dwarf-verify",
+        tool_name="llvm-dwarfdump",
+        arguments=("--verify",),
+        output_format="text",
+        authority="dwarf_cross_check",
+        description=(
+            "LLVM structural DWARF verifier output; nonzero diagnostics remain additive evidence."
+        ),
+        max_output_bytes=64 * 1024 * 1024,
+    ),
+    ToolExportProfile(
         name="llvm-dwarf-statistics",
         tool_name="llvm-dwarfdump",
         arguments=("--statistics",),

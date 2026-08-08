@@ -7,7 +7,7 @@ behavior. It is an opt-in workflow: normal generation does not import or run a p
 
 - CPython 3.14.6 through uv.
 - Profiling tools installed with `uv run just performance-tools-install`.
-- A deterministic fixture for gated checks, or explicit local ELF/index/dump paths for environmental
+- A deterministic fixture for gated checks, or explicit local ELF/store/dump paths for environmental
   evidence. Proprietary inputs and raw profiles stay outside Git.
 
 Check the current environment first:
@@ -31,13 +31,14 @@ for repeated command values and stores its JSON result as an external artifact.
 
 ## Warm real-asset profile
 
-Use the explicit indexed path and record warm state. The command below profiles the current
-`export-knowledge` tree; it does not use the retired legacy CLI shape:
+Use the durable analytical-store manifest and record warm state. The command below profiles the
+current `export-knowledge` tree; it does not use the retired legacy runtime lookup shape:
 
 ```powershell
+$storeManifest = Join-Path $PWD 'output\analytical-dwarf\main\store-<source-sha16>\manifest.json'
 uv run ddon-dwarf-reconstructor performance profile resources/DDOORBIS.elf `
   --symbol rLayout `
-  --dwarf-index resources/.cache/DDOORBIS.elf.llvmdwarfdump.index.sqlite3 `
+  --dwarf-store $storeManifest `
   --build-id ps4-02020005 `
   --state warm `
   --profiler scalene `
@@ -49,6 +50,52 @@ uv run ddon-dwarf-reconstructor performance profile resources/DDOORBIS.elf `
 Add `--orbis-objdump` only when its explicit local executable is part of the evidence. Add
 `--profiler py-spy` for an external/native-frame cross-check; Windows permissions may record it as
 partial. Raw profiles and samples are written under the OS-local performance artifact directory.
+
+## Bounded analytical materializer profile
+
+Before changing Parquet batching, writer rotation, or DWARF row conversion, profile the producer
+with isolated output directories:
+
+```powershell
+uv run ddon-dwarf-reconstructor performance profile-materializer `
+  resources/DDOORBIS.elf `
+  --output-dir (Join-Path $env:TEMP 'ddon-analytical-dwarf\profiled-materializer') `
+  --max-cus 8 --max-open-writers 16 --rotate-writers-every-cus 64 `
+  --profiler cprofile --profiler scalene --profiler py-spy
+```
+
+Use a larger bounded `--max-cus` only after the small probe has published usable profiles. The
+command runs each profiler against a separate direct-Zstandard Parquet target and retains the
+process sampler, method/line artifacts, and child diagnostics in the normal performance ledger.
+Do not query or load the partial stores. cProfile and py-spy can support a producer CPU/line
+conclusion; on this Windows/CPython 3.14 setup, Scalene may provide only process/memory evidence
+and must not be used to rank a hot line in that case.
+
+## Native Python crash triage on Windows
+
+When the materializer exits with an access violation, treat the process as a native-runtime crash,
+not as an ordinary Python exception. The canonical bounded materializer profiler sets
+`PYTHONFAULTHANDLER=1`, so the captured stderr includes Python and thread traceback evidence when
+the handler can run. Python's [faulthandler documentation](https://docs.python.org/3/library/faulthandler.html)
+also documents `-X faulthandler`; the handler is supplemental and cannot replace a Windows dump.
+
+Windows Error Reporting currently retains Python dumps under
+`C:\Users\morph\AppData\Local\CrashDumps`. Analyze them with the installed Windows Debugging
+Tools and keep the output under C: Temp:
+
+```powershell
+$cdb = 'C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe'
+$dump = 'C:\Users\morph\AppData\Local\CrashDumps\python.exe.<pid>.dmp'
+$log = Join-Path $env:TEMP 'ddon-analytical-dwarf\windows-dumps\python-<pid>-cdb.log'
+New-Item -ItemType Directory -Path (Split-Path -Parent $log) -Force | Out-Null
+& $cdb -z $dump -logo $log -c '.symfix; .reload; !analyze -v; lm; q'
+```
+
+Microsoft's [`!analyze -v`](https://learn.microsoft.com/en-us/windows-hardware/drivers/debuggercmds/-analyze)
+and [CDB dump workflow](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/opening-a-crash-dump-file-using-cdb)
+are the authoritative analysis path. A WER mini-dump can establish the exception, module, address,
+and stack, but cannot prove heap corruption or the original invalid write; do not promote a partial
+Parquet prefix or start another full traversal from a mini-dump alone.
 
 ## Runtime comparison
 
@@ -70,7 +117,7 @@ explicit, longer timeout and a distinct `--name`; do not compare it to the warm 
 ```powershell
 uv run ddon-dwarf-reconstructor performance profile-index `
   D:/research/DDON-binaries/IDA9.3/PS4_DDON_02020005_2016_12_21/DDOORBIS.elf.llvmdwarfdump.zst `
-  --index-path D:/ddon-perf-artifacts/cold-dump-index.sqlite3 `
+  --index-path (Join-Path $env:TEMP 'ddon-analytical-dwarf\performance\cold-dump-index.sqlite3') `
   --state cold --name cold-dump-index --timeout-seconds 3600 --profiler process-sampler
 ```
 

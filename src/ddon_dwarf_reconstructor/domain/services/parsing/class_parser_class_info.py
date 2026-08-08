@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from ....core.dwarf import DwarfCompilationUnit, DwarfEntry, decode_dwarf_string
 from ....core.observability import get_logger, log_timing
 from ...models.dwarf import (
@@ -17,9 +15,6 @@ from .dwarf_location_parser import parse_location_offset
 from .parser_policy import DWARF_ACCESS_NAMES
 from .type_chain_traverser import TypeChainTraverser
 
-if TYPE_CHECKING:
-    pass
-
 logger = get_logger(__name__)
 
 
@@ -29,9 +24,21 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
         self: ClassParserContext, cu: DwarfCompilationUnit, class_die: DwarfEntry
     ) -> ClassInfo:
         """Parse a class DIE into a stable domain model."""
+        cu_offset = getattr(cu, "cu_offset", None)
+        die_offset = getattr(class_die, "offset", None)
+        cache_key = (
+            (cu_offset, die_offset)
+            if isinstance(cu_offset, int) and isinstance(die_offset, int)
+            else None
+        )
+        if cache_key is not None:
+            cached = self._class_info_cache.get(cache_key)
+            if cached is not None:
+                return cached
+
         header = self._class_header(cu, class_die)
         children = self._parse_class_children(cu, class_die, header[0])
-        return ClassInfo(
+        class_info = ClassInfo(
             name=header[0],
             byte_size=header[1],
             members=children.members,
@@ -55,6 +62,9 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
             is_declaration=header[8],
             containing_type=header[9],
         )
+        if cache_key is not None:
+            self._class_info_cache[cache_key] = class_info
+        return class_info
 
     def _class_header(
         self: ClassParserContext, cu: DwarfCompilationUnit, class_die: DwarfEntry
@@ -188,7 +198,10 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
             MemberInfo object if valid, None otherwise
         """
         # Resolve member type first (for display)
-        type_name = self.type_resolver.resolve_type_name(member_die)
+        resolved_type_name = self.type_resolver.resolve_type_name(member_die)
+        type_name = resolved_type_name
+        if "DW_AT_type" not in member_die.attributes:
+            type_name = "unknown_type"
 
         type_offset = TypeChainTraverser.get_terminal_type_offset(member_die)
         if type_offset is not None:
@@ -202,7 +215,8 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
         type_name = self._vtable_type(member_name, type_name)
         type_die = self._member_type_die(member_die)
         inline_struct = self._inline_struct_type(type_die)
-        opaque_storage_size = self._opaque_storage_size(member_die, type_die)
+        opaque_storage_size = self._opaque_storage_size(member_die, type_die, resolved_type_name)
+        template_arguments = self._template_argument_references(type_die)
         if inline_struct is not None:
             type_name = "anonymous_struct"
 
@@ -221,6 +235,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
             declared_type_offset=TypeChainTraverser.get_declared_type_offset(member_die),
             inline_struct=inline_struct,
             opaque_storage_size=opaque_storage_size,
+            template_arguments=template_arguments,
         )
 
     @staticmethod

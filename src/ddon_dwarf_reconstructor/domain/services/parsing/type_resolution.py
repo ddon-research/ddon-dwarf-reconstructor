@@ -9,6 +9,16 @@ from .array_parser import parse_array_type
 from .type_resolver_context import TypeResolverContext
 
 logger = get_logger(__name__)
+_NAMED_TYPE_TAGS = frozenset(
+    {
+        "DW_TAG_base_type",
+        "DW_TAG_class_type",
+        "DW_TAG_enumeration_type",
+        "DW_TAG_structure_type",
+        "DW_TAG_typedef",
+        "DW_TAG_union_type",
+    }
+)
 
 
 class TypeResolutionMixin:
@@ -50,6 +60,10 @@ class TypeResolutionMixin:
         try:
             # Check if the DIE has the type attribute
             if type_attr_name not in die.attributes:
+                if type_attr_name == "DW_AT_type" and die.tag in _NAMED_TYPE_TAGS:
+                    direct_name = self._named_type_name(die)
+                    if direct_name is not None:
+                        return direct_name
                 logger.debug(f"DIE {die.tag} has no {type_attr_name} attribute")
                 return "void"
 

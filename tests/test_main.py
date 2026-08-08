@@ -32,8 +32,7 @@ def test_run_generation_uses_export_knowledge_path(mocker) -> None:
         elf_file=Path("resources/DDOORBIS.elf"),
         symbols=("rLayout",),
         exhaustive=True,
-        dwarf_dump=Path("dump.zst"),
-        dwarf_index=Path("dump.index.sqlite3"),
+        dwarf_store_manifest=Path("store/manifest.json"),
         export_knowledge=Path("output/knowledge"),
         build_id="ps4-02020005",
         orbis_objdump=Path(r"D:\SCE\orbis-objdump.exe"),
@@ -59,10 +58,10 @@ def test_run_generation_uses_export_knowledge_path(mocker) -> None:
 
     generator_cls.assert_called_once_with(
         Path("resources/DDOORBIS.elf"),
-        session_factory=cli_main.create_dwarf_session,
+        session_factory=ANY,
         exhaustive_search=True,
-        dwarf_dump_path=Path("dump.zst"),
-        dwarf_index_path=Path("dump.index.sqlite3"),
+        dwarf_dump_path=None,
+        dwarf_index_path=None,
         resolve_param_names=False,
         dump_lookup_factory=cli_main.create_dump_lookup,
         disassembly_factory=cli_main.create_disassembly_producer,
@@ -83,12 +82,11 @@ def test_run_generation_uses_export_knowledge_path(mocker) -> None:
 
 
 @pytest.mark.unit
-def test_run_generation_uses_dump_index_as_fast_lookup_without_exhaustive_mode(mocker) -> None:
+def test_run_generation_uses_store_as_fast_lookup_without_exhaustive_mode(mocker) -> None:
     options = GenerationOptions(
         elf_file=Path("resources/DDOORBIS.elf"),
         symbols=("rLayout",),
-        dwarf_dump=Path("dump.zst"),
-        dwarf_index=Path("dump.index.sqlite3"),
+        dwarf_store_manifest=Path("store/manifest.json"),
         export_knowledge=Path("output/knowledge"),
         build_id="ps4-02020005",
     )
@@ -110,10 +108,10 @@ def test_run_generation_uses_dump_index_as_fast_lookup_without_exhaustive_mode(m
     assert cli_main.run_generation(options) == 0
     generator_cls.assert_called_once_with(
         Path("resources/DDOORBIS.elf"),
-        session_factory=cli_main.create_dwarf_session,
+        session_factory=ANY,
         exhaustive_search=False,
-        dwarf_dump_path=Path("dump.zst"),
-        dwarf_index_path=Path("dump.index.sqlite3"),
+        dwarf_dump_path=None,
+        dwarf_index_path=None,
         resolve_param_names=False,
         dump_lookup_factory=cli_main.create_dump_lookup,
         disassembly_factory=cli_main.create_disassembly_producer,

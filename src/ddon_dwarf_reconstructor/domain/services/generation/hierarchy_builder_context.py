@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from ....core.dwarf import DwarfEntry
+from ....core.dwarf import DwarfCompilationUnit, DwarfEntry
 from ...models.dwarf import ClassInfo
 from ...ports.class_parser import ClassParserPort
-from ...ports.dwarf_index import DwarfIndexPort
+from ...ports.dwarf_lookup import DwarfLookupPort
 from .dependency_extractor import DependencyExtractor
 from .hierarchy_dependencies import DependencyWork
 
@@ -16,10 +16,23 @@ class HierarchyBuilderContext(Protocol):
     """State and operations shared by hierarchy and dependency services."""
 
     class_parser: ClassParserPort
-    dwarf_index: DwarfIndexPort
+    dwarf_index: DwarfLookupPort
     dependency_extractor: DependencyExtractor
 
     def _find_base_class(self, class_die: DwarfEntry) -> str | None: ...
+
+    def _lookup_hierarchy_class(
+        self,
+        current_class: str,
+        root_class: str,
+        is_root_lookup: bool,
+        root_die_offset: int | None,
+        pending_base_offset: int | None,
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...
+
+    def _next_hierarchy_base(
+        self, class_info: ClassInfo, class_die: DwarfEntry
+    ) -> tuple[str | None, int | None]: ...
 
     def _get_base_class_chain(self, class_name: str) -> list[str]: ...
 

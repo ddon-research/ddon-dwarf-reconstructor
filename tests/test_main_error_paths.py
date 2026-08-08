@@ -47,6 +47,26 @@ def test_generation_records_per_symbol_failures_and_fatal_context_failures(
 
 
 @pytest.mark.unit
+def test_header_collision_aborts_batch_at_first_conflict(mocker) -> None:
+    config = Mock(output_dir=Path("output"), verbose=False, elf_file_path=Path("input.elf"))
+    logger = Mock()
+    generator = MagicMock()
+    generator.__enter__.return_value = generator
+    generator.lazy_index = None
+    mocker.patch.object(cli_main, "DwarfGenerator", return_value=generator)
+    build_headers = mocker.patch.object(
+        cli_main,
+        "_build_headers",
+        side_effect=[{"Shared.h": "first"}, {"Shared.h": "second"}],
+    )
+
+    with pytest.raises(RuntimeError, match="Conflicting generated header"):
+        cli_main._run_generation(_options(symbols=("A", "B")), config, ["A", "B"], logger)
+
+    assert build_headers.call_count == 2
+
+
+@pytest.mark.unit
 def test_diagnostics_cover_unknown_platform_preview_and_failed_summary(tmp_path: Path) -> None:
     config = Mock(output_dir=tmp_path, verbose=False)
     generator = Mock(platform=None)
@@ -55,7 +75,6 @@ def test_diagnostics_cover_unknown_platform_preview_and_failed_summary(tmp_path:
 
     cli_main._log_header_summary(
         _options(full_hierarchy=True, verbose=True),
-        generator,
         {"A.h": "content"},
         7,
         ["A"],
@@ -63,7 +82,6 @@ def test_diagnostics_cover_unknown_platform_preview_and_failed_summary(tmp_path:
     )
     cli_main._log_header_summary(
         _options(verbose=True),
-        generator,
         {"A.h": "\n".join(str(item) for item in range(31))},
         0,
         ["A"],

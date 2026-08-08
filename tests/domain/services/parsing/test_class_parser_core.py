@@ -227,6 +227,73 @@ class TestClassParser:
         assert result.opaque_storage_size == 32
 
     @pytest.mark.unit
+    def test_parse_member_uses_opaque_storage_for_unresolved_sized_array(self, class_parser):
+        member = Mock()
+        member.tag = "DW_TAG_member"
+        member.attributes = {
+            "DW_AT_name": Mock(value=b"m_data"),
+            "DW_AT_data_member_location": Mock(value=0),
+            "DW_AT_type": Mock(value=0x1111),
+        }
+        array_type = Mock(tag="DW_TAG_array_type", offset=0x1111)
+        array_type.attributes = {"DW_AT_byte_size": Mock(value=16)}
+        member.get_DIE_from_attribute.return_value = array_type
+        class_parser.type_resolver.resolve_type_name.return_value = "void[4]"
+
+        result = class_parser.parse_member(member)
+
+        assert result is not None
+        assert result.opaque_storage_size == 16
+
+    @pytest.mark.unit
+    def test_parse_member_preserves_unresolved_status_without_type_or_size(self, class_parser):
+        member = Mock()
+        member.tag = "DW_TAG_member"
+        member.attributes = {
+            "DW_AT_name": Mock(value=b"m_unknown"),
+            "DW_AT_data_member_location": Mock(value=0),
+        }
+        member.offset = 0x2222
+        class_parser.type_resolver.resolve_type_name.return_value = "void"
+
+        result = class_parser.parse_member(member)
+
+        assert result is not None
+        assert result.type_name == "unknown_type"
+        assert result.opaque_storage_size is None
+
+    @pytest.mark.unit
+    def test_parse_member_captures_template_argument_type_reference(self, class_parser):
+        member = Mock()
+        member.tag = "DW_TAG_member"
+        member.offset = 0x2000
+        member.attributes = {
+            "DW_AT_name": Mock(value=b"m_path"),
+            "DW_AT_data_member_location": Mock(value=0),
+            "DW_AT_type": Mock(value=0x1111),
+        }
+        template_type = Mock(tag="DW_TAG_class_type", offset=0x1111)
+        template_type.attributes = {"DW_AT_name": Mock(value=b"cResPath<rAIFSM>")}
+        template_parameter = Mock(tag="DW_TAG_template_type_param", offset=0x1122)
+        template_parameter.attributes = {"DW_AT_type": Mock(value=0x1133)}
+        argument_type = Mock(tag="DW_TAG_class_type", offset=0x1133)
+        argument_type.attributes = {"DW_AT_name": Mock(value=b"rAIFSM")}
+        argument_type.iter_children.return_value = []
+        template_parameter.get_DIE_from_attribute.return_value = argument_type
+        template_type.iter_children.return_value = [template_parameter]
+        member.get_DIE_from_attribute.return_value = template_type
+        class_parser.type_resolver.resolve_type_name.side_effect = [
+            "cResPath<rAIFSM>",
+            "rAIFSM",
+        ]
+
+        result = class_parser.parse_member(member)
+
+        assert result is not None
+        assert [reference.name for reference in result.template_arguments] == ["rAIFSM"]
+        assert result.template_arguments[0].die_offset == 0x1133
+
+    @pytest.mark.unit
     def test_parse_method_basic_function(self, class_parser):
         """Test method parsing for basic member functions."""
         # Mock method DIE

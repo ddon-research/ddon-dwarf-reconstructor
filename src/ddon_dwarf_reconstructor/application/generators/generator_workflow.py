@@ -73,6 +73,7 @@ class GeneratorWorkflow:
         classes_by_file: dict[str, list[str]],
         typedefs: dict[str, str],
         include_metadata: bool,
+        class_header_names: dict[str, str] | None = None,
     ) -> dict[str, str]:
         return MultiFileGenerationService._render_file_headers(
             self.context,
@@ -81,6 +82,7 @@ class GeneratorWorkflow:
             classes_by_file,
             typedefs,
             include_metadata,
+            class_header_names,
         )
 
     def render_uncategorized_header(
@@ -90,6 +92,7 @@ class GeneratorWorkflow:
         uncategorized: list[str],
         typedefs: dict[str, str],
         include_metadata: bool,
+        class_header_names: dict[str, str] | None = None,
     ) -> dict[str, str]:
         return MultiFileGenerationService._render_uncategorized_header(
             self.context,
@@ -98,6 +101,7 @@ class GeneratorWorkflow:
             uncategorized,
             typedefs,
             include_metadata,
+            class_header_names,
         )
 
     def generate_multi_file_hierarchy(

@@ -8,8 +8,8 @@ by parsing type strings with qualifiers (const, *, &, etc.).
 """
 
 from ....core.observability import get_logger
-from ...models.dwarf import ClassInfo, MemberInfo, MethodInfo, StructInfo, UnionInfo
-from ...ports.dwarf_index import DwarfIndexPort
+from ...models.dwarf import ClassInfo, MemberInfo, MethodInfo, StructInfo, TypeReference, UnionInfo
+from ...ports.dwarf_lookup import DwarfLookupPort
 from ..parsing.die_type_classifier import DIETypeClassifier
 
 logger = get_logger(__name__)
@@ -18,7 +18,7 @@ logger = get_logger(__name__)
 class DependencyExtractor:
     """Extract type dependencies using offset-based DWARF traversal."""
 
-    def __init__(self, dwarf_index: DwarfIndexPort):
+    def __init__(self, dwarf_index: DwarfLookupPort):
         """Initialize dependency extractor.
 
         Args:
@@ -66,9 +66,7 @@ class DependencyExtractor:
     ) -> set[int]:
         dependencies: set[int] = set()
         for member in class_info.members:
-            offset = self._get_member_type_offset(member)
-            if offset is not None:
-                dependencies.add(offset)
+            dependencies.update(self._get_member_dependency_offsets(member))
         if include_method_signatures:
             for method in class_info.methods:
                 offset = self._get_method_return_type_offset(method)
@@ -173,6 +171,23 @@ class DependencyExtractor:
 
     # Private helper methods
 
+    def _get_member_dependency_offsets(self, member: MemberInfo) -> set[int]:
+        offsets: set[int] = set()
+        type_offset = self._get_member_type_offset(member)
+        if type_offset is not None:
+            offsets.add(type_offset)
+        for reference in getattr(member, "template_arguments", ()):
+            offsets.update(self._get_template_reference_offsets(reference))
+        return offsets
+
+    def _get_template_reference_offsets(self, reference: TypeReference) -> set[int]:
+        offsets: set[int] = set()
+        if reference.die_offset is not None:
+            offsets.add(reference.die_offset)
+        for nested_reference in reference.template_arguments:
+            offsets.update(self._get_template_reference_offsets(nested_reference))
+        return offsets
+
     def _get_member_type_offset(self, member: MemberInfo) -> int | None:
         """Get type offset from a member.
 
@@ -240,9 +255,7 @@ class DependencyExtractor:
             dependencies: Set to add offsets to
         """
         for member in nested_struct.members:
-            offset = self._get_member_type_offset(member)
-            if offset is not None:
-                dependencies.add(offset)
+            dependencies.update(self._get_member_dependency_offsets(member))
 
     def _extract_union_dependencies(self, union: UnionInfo, dependencies: set[int]) -> None:
         """Extract dependencies from a union.
@@ -253,9 +266,7 @@ class DependencyExtractor:
         """
         # Extract from union members
         for member in union.members:
-            offset = self._get_member_type_offset(member)
-            if offset is not None:
-                dependencies.add(offset)
+            dependencies.update(self._get_member_dependency_offsets(member))
 
         # Extract from nested structs within union
         if hasattr(union, "nested_structs") and union.nested_structs:

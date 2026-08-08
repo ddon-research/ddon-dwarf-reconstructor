@@ -151,3 +151,21 @@ class TestClassParser:
 
         assert result.name == "TestClass"
         assert result.byte_size == 0  # Default size when missing
+
+    @pytest.mark.unit
+    def test_parse_class_info_reuses_session_cache(self, class_parser):
+        """Repeated parsing of one CU/DIE pair reuses the parsed class model."""
+        mock_class_die = Mock()
+        mock_class_die.tag = "DW_TAG_class_type"
+        mock_class_die.attributes = {
+            "DW_AT_name": Mock(value=b"CachedClass"),
+            "DW_AT_byte_size": Mock(value=16),
+        }
+        mock_class_die.offset = 0x1000
+        mock_class_die.iter_children.return_value = []
+        cu = Mock(cu_offset=0x2000)
+
+        first = class_parser.parse_class_info(cu, mock_class_die)
+        second = class_parser.parse_class_info(cu, mock_class_die)
+
+        assert second is first

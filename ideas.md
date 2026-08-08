@@ -414,7 +414,7 @@ https://blog.sentry.io/python-performance-testing-a-comprehensive-guide/
 Afterwards, review the current copilot, codex, python instructions and revalidate the tooling loop for changes. Update documentation, specs and the knowledge base.
 Derive a plan first and refactor the code aggressively.
 --
-TODO:
+DONE:
 Re-evaluate our Nuitka integration and setup. Compare the performance with and without (as tool). Do we still have a benefit with Nuitka? Also check on the free-threaded version of Python and also perform a performance comparison. Would that also still be compatible with Nuitka? Do we have any dependencies that fail due to this?
 https://nuitka.net/user-documentation/nuitka-package-config.html
 https://nuitka.net/user-documentation/performance.html
@@ -425,7 +425,7 @@ Also check for potential FFI benefits for hotpaths using Rust:
 https://github.com/pyo3/pyo3
 https://blog.serghei.pl/posts/a-quick-dive-into-ffi-in-python/
 --
-TODO:
+DONE:
 Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
 
 Evaluate based on the profiling traces ways to optimize our code. If they are missing, generate function/line traces to analyze.
@@ -459,3 +459,88 @@ https://medium.com/@jouryjc0409/ast-enables-code-rag-models-to-overcome-traditio
 https://en.wikipedia.org/wiki/Abstract_syntax_tree
 https://en.wikipedia.org/wiki/Recursive_descent_parser
 --
+DONE:
+Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
+Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
+
+Goal 1: Perform a thorough research and investigation into tooling and databases. Understand DWARF format and DWARF tools in other projects. Figure out how to map what we understand into a columnar, analytical database structure
+
+Goal 2: Perform a new performance benchmark. Traverse all CUs once, convert everything as-is into a typed Parquet projection, and load it into Apache Doris with appropriate performance optimizations like indexes. Compare runtime engines only against the prior live lookup baseline.
+
+
+
+CU traversal is the single most expensive operation but also the single most important one. Missing CUs lead to wrong/missing data. It is unavoidable. We essentially always go from Binary -> Unpack at runtime in some memory structure -> filter/stop-early with clever tricks. Instead we could just turn this into a "big data" or analytical problem with columnar storage engines. An unpacked 30GB txt dump which compresses to a few GB in zstd is a good indicator that this is very manageable for parquet file format which has zstd support as well. But it will need a good, fitting schema. Review what we know about DWARF and the structures used in our current library or in LLVM.
+
+Tool references:
+https://llvm.org/docs/CommandGuide/llvm-dwarfutil.html
+https://llvm.org/docs/CommandGuide/llvm-dwarfdump.html
+https://llvm.org/docs/CommandGuide/dsymutil.html
+[llvm/llvm-project](https://github.com/llvm/llvm-project) / D:\llvm-project
+https://github.com/llvm/llvm-project/tree/main/llvm/lib/DebugInfo/DWARF
+
+Analytical data:
+https://openmetal.io/resources/blog/building-a-modern-data-lake-using-open-source-tools/
+https://www.alation.com/blog/data-lake-architecture-guide/
+https://www.phdata.io/blog/what-are-the-best-data-modeling-methodologies-processes-for-my-data-lake/
+https://www.min.io/blog/the-architects-guide-a-modern-datalake-reference-architecture
+https://www.databricks.com/blog/data-modeling-best-practices-implementation-modern-lakehouse
+[apache/parquet-format](https://github.com/apache/parquet-format/)
+[apache/arrow](https://github.com/apache/arrow)
+[apache/doris](https://github.com/apache/doris)
+
+Our lib:
+https://github.com/eliben/pyelftools/tree/main / D:\pyelftools -> we were recently using version 0.32, since May there is now 0.33 -> it is worth re-investigating the APIs
+https://github.com/eliben/pyelftools/blob/main/elftools/dwarf/compileunit.py
+https://github.com/eliben/pyelftools/blob/main/elftools/dwarf/die.py
+
+
+Related ideas:
+https://github.com/volatilityfoundation/dwarf2json
+https://github.com/yurydelendik/dwarf-to-json
+
+
+Afterwards, review the current instructions, revalidate the tooling loop for changes.
+Derive a plan first and refactor aggressively, disregard breaking changes.
+--
+DONE:
+Investigate the following references and how they can further support our setup and ensure we are using latest versions before continuing our investigation:
+Arrow: -> v25.0.0 & Are we applying all best practices?
+https://arrow.apache.org/docs/python/index.html
+https://arrow.apache.org/cookbook/py/
+https://pypi.org/project/pyarrow/
+Doris: -> v4.1.3 SQL Alchemy+Custom DORIS client vs. Doris MySQL or Doris Arrow flight sql?
+https://pypi.org/project/PyMySQL/ PyMySQL -> v1.2.0
+https://pypi.org/project/SQLAlchemy/ SQLAlchemy -> v2.0.51
+https://pypi.org/project/pydoris/
+https://doris.apache.org/docs/4.x/connection-integration/arrow-flight-sql -> evaluate for performance
+https://doris.apache.org/docs/4.x/connection-integration/mysql-proto
+--
+TODO:
+Doris optimization techniques: Are we squeezing everything out that we can from the engine/technology?
+https://doris.apache.org/docs/4.x/query-acceleration/optimization-technology-principle/query-optimizer
+https://doris.apache.org/docs/4.x/query-acceleration/query-profile
+https://doris.apache.org/docs/4.x/query-acceleration/materialized-view/intro-link
+https://doris.apache.org/docs/4.x/query-acceleration/tuning/tuning-plan/schema-and-index-optimization
+https://doris.apache.org/docs/4.x/query-acceleration/performance-tuning-overview/tuning-overview
+https://doris.apache.org/docs/4.x/query-acceleration/optimization-technology-principle/statistics
+https://doris.apache.org/docs/4.x/table-design/overview
+https://doris.apache.org/docs/4.x/data-operate/import/load-manual
+https://doris.apache.org/docs/4.x/query-data/mysql-compatibility
+https://doris.apache.org/docs/4.x/query-acceleration/tuning/tuning-plan/dml-tuning-plan
+
+--
+TODO:
+Document my agents, mcp, skills via APM:
+https://github.com/microsoft/apm
+--
+TODO:
+Ensure we are using the right data modelling techniques:
+Data modelling:
+https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/
+Schema Model,Architecture Pattern,Normalization Level,Join Complexity,Storage Profile,ETL/Ingestion Complexity,Primary Target Use Case,Optimal Architecture Tier
+Star Schema,Fact_Table → Dim_Table,Low (Denormalized),O(1) per dimension,High redundancy,Low (Direct Inserts),"High-speed BI dashboards, ad-hoc OLAP querying",Presentation / Data Mart (Gold)
+Snowflake Schema,Fact_Table → Dim_Table → Sub_Dim,High (3NF for Dimensions),O(N) per dimension depth,Low redundancy,High (Hierarchical resolution),"Storage-constrained environments, deep hierarchies",Presentation / Data Mart (Gold)
+Galaxy Schema,Fact_A & Fact_B → Shared Dim_Table,Mixed (Conformed Dimensions),Variable (Multi-fact joins),Moderate,Very High (Cross-domain integrity),Cross-functional enterprise data warehouse correlation,Enterprise Integration / Data Mart
+Data Vault 2.0,Hubs (Keys) → Links (Relations) → Satellites (Context),Extremely High (Raw structural decoupling),O(N) (Massive join overhead for reads),Extremely High (Historical inserts),"Moderate (Parallelized, append-only)","Immutable audit trails, agile ingestion, schema drift resistance",Integration / Enterprise DW (Silver)
+Starflake Schema,Hybrid (Flat & Hierarchical mix),Mixed (Selective normalization),Variable,Moderate,Moderate to High,Systems with extreme variations in dimension cardinality,Presentation / Data Mart (Gold)
+Columnar Wide-Table,Single flattened table containing all facts and attributes,Zero (Fully Flattened),None (0 Joins),Massive redundancy,High (Pre-computation during ETL pipeline),High-throughput vectorized scans on cloud analytical engines,Presentation (Gold) / External Lakehouse

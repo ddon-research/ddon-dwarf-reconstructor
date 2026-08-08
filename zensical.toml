@@ -46,6 +46,7 @@ nav = [
     { "CLI" = "reference/cli.md" },
     { "Configuration and paths" = "reference/configuration.md" },
     { "Durable artifacts" = "reference/artifacts.md" },
+    { "Analytical DWARF store" = "reference/analytical-dwarf-store.md" },
     { "Knowledge graph contract" = "reference/knowledge-graph.md" },
     { "Testing and evidence tiers" = "reference/testing.md" },
     { "Performance commands and metrics" = "reference/performance.md" },

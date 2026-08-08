@@ -7,6 +7,8 @@ from pathlib import Path
 
 from ...core.observability import get_logger
 from ...domain.models.tool_evidence import ToolExport
+from ...domain.ports.dwarf_lookup import DwarfLookupPort
+from ...domain.services.parsing.die_type_classifier import DIETypeClassifier
 from .dwarf_generator_context import DwarfGeneratorContext
 
 logger = get_logger(__name__)
@@ -65,7 +67,14 @@ class KnowledgeExportService:
 
         if self.source_hash is None:
             raise RuntimeError("Knowledge export requires a source identity service")
-        exporter = KnowledgeExporter(self.elf_path, build_id, source_hash=self.source_hash)
+        exporter = KnowledgeExporter(
+            self.elf_path,
+            build_id,
+            source_hash=self.source_hash,
+            requires_resolution=lambda offset: KnowledgeExportService._requires_resolution(
+                getattr(self, "lazy_index", None), offset
+            ),
+        )
         return exporter.export(
             root_symbol,
             class_infos,
@@ -75,3 +84,13 @@ class KnowledgeExportService:
             disassembly_report=disassembly_report,
             tool_exports=tool_exports,
         )
+
+    @staticmethod
+    def _requires_resolution(index: DwarfLookupPort | None, offset: int) -> bool:
+        """Require graph closure only for concrete, non-transparent aggregate DIEs."""
+        if index is None:
+            return True
+        die = index.get_die_by_offset(offset)
+        if die is None:
+            return True
+        return DIETypeClassifier.requires_resolution(die)

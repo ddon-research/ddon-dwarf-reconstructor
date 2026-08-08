@@ -17,6 +17,7 @@ def _generator(tmp_path: Path) -> DwarfGenerator:
     generator.header_generator = Mock()
     generator.source_hash = Mock()
     generator.workflow = Mock()
+    generator.lazy_index = Mock()
     return generator
 
 
@@ -44,6 +45,7 @@ def test_knowledge_export_builds_reconstructed_cpp_and_delegates(tmp_path: Path,
         generator.elf_path,
         "build",
         source_hash=generator.source_hash,
+        requires_resolution=mocker.ANY,
     )
     exporter.export.assert_called_once()
 
@@ -59,3 +61,25 @@ def test_knowledge_export_rejects_empty_hierarchy(tmp_path: Path) -> None:
         KnowledgeExportService.export_knowledge_graph(
             generator, "Missing", tmp_path / "out", "build"
         )
+
+
+@pytest.mark.unit
+def test_requires_resolution_preserves_transparent_dwarf_types() -> None:
+    index = Mock()
+    index.get_die_by_offset.return_value = Mock(
+        tag="DW_TAG_structure_type",
+        attributes={
+            "DW_AT_name": Mock(value=b"pthread_mutex"),
+            "DW_AT_declaration": Mock(value=True),
+        },
+    )
+
+    assert not KnowledgeExportService._requires_resolution(index, 0x1234)
+
+
+@pytest.mark.unit
+def test_requires_resolution_fails_closed_for_missing_dwarf_types() -> None:
+    index = Mock()
+    index.get_die_by_offset.return_value = None
+
+    assert KnowledgeExportService._requires_resolution(index, 0x1234)

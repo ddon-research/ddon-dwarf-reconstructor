@@ -10,7 +10,7 @@ import sys
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from time import monotonic, sleep
 from uuid import uuid4
@@ -143,7 +143,7 @@ class PerformanceRunner:
         stderr_path = run_dir / "stderr.txt"
         samples_path = run_dir / "process-samples.jsonl"
         profile_path = run_dir / profile_filename if profile_filename else None
-        started_at = datetime.now(UTC).isoformat()
+        started_at = datetime.now().astimezone().isoformat()
         if command_factory is None:
             command = list(workload.command)
         else:

@@ -14,7 +14,6 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from ...core.dwarf import DwarfCompilationUnit, DwarfEntry
 from ...core.path_policy import create_header_filename
@@ -22,17 +21,15 @@ from ...domain.models.dwarf import ClassInfo
 from ...domain.models.tool_evidence import ToolExport
 from ...domain.ports.class_parser import ClassParserPort
 from ...domain.ports.disassembly import DisassemblyProducerFactory
-from ...domain.ports.dump_lookup import DumpLookupFactory
+from ...domain.ports.dwarf_lookup import DwarfLookupPort
 from ...domain.ports.source_identity import SourceHashPort, SourceIdentityPort
 from ...domain.ports.type_resolution import TypeResolverPort
+from ...domain.ports.validation_dump import ValidationDumpFactory
 from ...domain.services.generation import HeaderGenerator, HierarchyBuilder
 from .dwarf_generator_setup import DwarfGeneratorSetup
 from .generation_contracts import GenerationRequest, HeaderBundle
 from .generator_workflow import GeneratorWorkflow
 from .session import DwarfSessionFactory
-
-if TYPE_CHECKING:
-    from ...domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
 
 
 class DwarfGenerator:
@@ -46,7 +43,7 @@ class DwarfGenerator:
         dwarf_dump_path: Path | None = None,
         dwarf_index_path: Path | None = None,
         resolve_param_names: bool = False,
-        dump_lookup_factory: DumpLookupFactory | None = None,
+        dump_lookup_factory: ValidationDumpFactory | None = None,
         disassembly_factory: DisassemblyProducerFactory | None = None,
         cache_file: Path | None = None,
         die_cache_size: int = 10000,
@@ -86,7 +83,7 @@ class DwarfGenerator:
         self.type_resolver: TypeResolverPort | None = None
         self.class_parser: ClassParserPort | None = None
         self.header_generator: HeaderGenerator | None = None
-        self.lazy_index: LazyDwarfIndexService | None = None
+        self.lazy_index: DwarfLookupPort | None = None
         self.hierarchy_builder: HierarchyBuilder | None = None
 
     def _resolve_dwarf_dump_path(self, explicit_path: Path | None = None) -> Path | None:

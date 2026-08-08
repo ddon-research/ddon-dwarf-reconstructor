@@ -1,8 +1,11 @@
 # DDON DWARF Reconstructor contributor guidance
 
 This project extracts deterministic evidence from very large PS4 ELF/DWARF inputs. Performance is
-the first constraint: avoid repeated ELF hashing, repeated full-DIE scans, whole-dump loads, and
-unbounded in-memory intermediates. Preserve stable output ordering and source offsets.
+the first constraint for normal runtime/query work: avoid repeated ELF hashing, repeated full-DIE
+scans, whole-dump loads, and unbounded runtime intermediates. The explicit one-time analytical
+materializer may use substantial CPU/RAM on the 64 GB workstation; measure and publish that cost
+instead of imposing the former ad-hoc parser's memory bound on the producer. Preserve stable output
+ordering and source offsets.
 
 ## Development
 
@@ -36,13 +39,69 @@ unbounded in-memory intermediates. Preserve stable output ordering and source of
 - `ElfDwarfSession` owns the opened ELF/DWARF graph and one-time PS4 normalization. Generated
   headers go through `AtomicHeaderPublisher`, which writes a manifest and rolls back failed bundles.
 - External inspection is an explicit artifact workflow: use `artifacts list-tool-profiles`,
-  `probe-tool`, and `export-tool-evidence` for bounded one-time exports. Matching Orbis tools are
-  authoritative for PS4 ABI/SCE semantics; LLVM, GNU, elfutils, libdwarf, pyelftools, LIEF, and
-  OpenOrbis outputs are additive cross-checks until PS4 behavior is validated. `elfldr` is loader
+  `probe-tool`, and `export-tool-evidence` for bounded one-time exports. Use the modern LLVM
+  UCRT64 profile at `C:\msys64\ucrt64.exe` for generic DWARF parsing, statistics, and verification;
+  matching Orbis tools remain authoritative only for PS4 ABI/SCE semantics. GNU, elfutils,
+  libdwarf, pyelftools, LIEF, and OpenOrbis outputs are additive cross-checks. Preserve unknown
+  forms until the absence of a Sony extension is established by evidence; `elfldr` is loader
   research only and must not be executed by the offline ingestion path.
 - The standard non-proprietary container baseline is
   `tools/binary_toolchain/compose.yaml`. Mount explicit inputs read-only, publish outputs outside
   source control, and never copy Sony SDKs or SELF credentials into the image.
+- Analytical DWARF materialization is the normal generation boundary. Run
+  `artifacts materialize-dwarf <elf> --output-dir <external-dir>` once, validate it with
+  `artifacts inspect-dwarf-store`, and pass its source-bound manifest through `--dwarf-store` to
+  `generate`, `export-knowledge`, and `performance benchmark-dwarf-store`. The canonical typed
+  producer uses pyelftools 0.33, one CU traversal, an explicit stack DIE walk, checksummed raw
+  section/chunk references, and atomic publication. It writes typed Parquet rows directly; JSONL
+  is an opt-in audit projection. Complete
+  manifests include source/producer/schema/configuration identity, CU/family counts, and closed
+  Parquet file size, timestamp, hash, footer, compression, and row-group metadata, and validates
+  every closed row group before complete publication. Doris is a downstream load/query backend under
+  the `analytical` dependency group; keep all analytical
+  artifacts outside source control. The former compressed-text SQLite index is validation-only and
+  must not be a normal runtime fallback. A partial or stale store fails closed. For long diagnostic
+  runs, use `--checkpoint-every-cus N` to publish explicit `in_progress` Parquet snapshots; inspect
+  them only with `--allow-incomplete`, and never load them into Doris or normal generation. Use
+  `--max-cus N` only for bounded parser/schema probes; those partial stores cannot be used for
+  Doris, generation, knowledge export, or CU-completeness evidence.
+  A source-identity-bound recovery profile is allowed only when an independent LLVM dump supplies
+  guarded context and replacement evidence; it must be recorded in the manifest, preserve the
+  source raw-section bytes and hashes, and still finish with zero parser diagnostics before normal
+  runtime use. The recovery status may be `applied` for an in-memory overlay or `already_applied`
+  when all guarded replacements are already present in the source. A known source without its
+  required recovery profile is stale and fails closed.
+- Keep the promoted source-bound analytical store under
+  `output/analytical-dwarf/main/` (currently the `store-<source-sha16>` directory) for durable
+  local reuse. Use `%TEMP%\ddon-analytical-dwarf` only for bounded probes, checkpoints, profiler
+  output, crash dumps, and other explicitly disposable diagnostics. Do not purge the durable main
+  store or retained evidence as routine cleanup; inventory exact paths before any repair or purge.
+- PyArrow is pinned at `25.0.0` for the analytical dependency group. When Arrow concepts or API
+  behavior need clarification, consult the local reference at `D:\PyArrow-25.0-python-docs` first.
+  Keep one explicit Arrow schema per record family, use `ParquetWriter` for bounded row-group
+  appends, cap native `Table.from_pylist` inputs, and use `pyarrow.dataset` with the repository's
+  layout-specific typed partition schema for projection, filtering, and `to_batches()` scans.
+  `pa.total_allocated_bytes()` and the memory-pool backend are telemetry, not whole-process RSS;
+  `memory_map` is not a substitute for bounded scans. JSONL-to-Parquet backfill must reuse the
+  bounded writer sink, honor manifest `parquet_layout` and `max_open_writers`, and publish the
+  projection atomically.
+- Native Doris is the active analytical serving backend. Follow the checked-out Apache Doris 4.x
+  guidance in `D:\Apache-Doris-version-4.x-docs`, especially the POC checklist, Duplicate Key,
+  bucketing, prefix-index, load-best-practices, Stream Load, and statistics pages. Preserve
+  append-only `DUPLICATE KEY` semantics, source-first sort keys, bounded bucket counts, strict
+  Stream Load, and profile/tablet evidence. `information_schema.statistics` and
+  `information_schema.column_statistics` are compatibility views and are not Doris optimizer
+  statistics; use `SHOW TABLE STATS`, `SHOW COLUMN STATS`, `SHOW ANALYZE`, `SHOW AUTO ANALYZE`,
+  and `__internal_schema.column_statistics` for database evidence. The loader submits
+  `ANALYZE TABLE` by default and waits for terminal states only when
+  `DDON_DORIS_ANALYZE_WAIT_SECONDS` is positive.
+- The season-two corpus request is the 289 nonblank roots in
+  `resources/season2-resources.txt`. Generate separate source-derived bundles with collision-safe
+  publication and aggregate collision failure; preserve per-root status, provenance, hashes, and incomplete
+  evidence. Standalone MSVC header compilation is distinct from optional aggregate diagnostics.
+  IDA and Sonar observations are additive evidence and must not be reported as completed
+  validation without a retained result. Use the system-derived local timezone in timestamps and
+  examples; do not assume Berlin/CEST or install a tzdata dependency for local runs.
 - Opt-in profiling uses the canonical `performance` command group and `just` recipes. Use
   `performance doctor` before selecting tools, the deterministic fixture tier before real assets,
   and `performance history compare/export` for the tracked SQLite/static-history contract. The
@@ -278,6 +337,13 @@ security advisory when a patched lock entry is available.
   standalone specification `dwarf-spec-pipeline audit` command. For toolchain work, probe local
   `--help`/`--version` surfaces first, then run only named profiles and retain their manifests.
   Record confirmed, approximate, blocked, and remaining-uncertainty findings separately.
+- For analytical-store work, use the Goal 1 research/compatibility ledger before promoting a
+  dependency, then use `analytical-fixture`, `analytical-materialize`,
+  `analytical-benchmark`, and `analytical-compose-config` from `justfile`. Record CU/DIE/attribute
+  counts, unresolved references, source identity, output hashes, cold/warm resource measurements,
+  and projection/query evidence in `specs/019-analytical-dwarf-store/measured-evidence.md`.
+  Docker and LLVM-source availability are preflight facts, not Doris-load or LLVM-verification
+  observations. Do not weaken the 110%-of-baseline gate when a backend is unavailable.
 - After each parser or evidence slice, run the focused tests, `uv run just check`, and the required
   correctness loop before advancing. Complete the goal only when the named evidence surface passes;
   a time or token budget is never completion evidence.

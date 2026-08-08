@@ -56,6 +56,52 @@ class TestHeaderGenerator:
         )
 
     @pytest.mark.unit
+    def test_generate_header_renders_unresolved_sized_member_as_opaque_storage(
+        self, header_generator
+    ):
+        layout = ClassInfo(
+            name="Matrix",
+            byte_size=16,
+            members=[
+                MemberInfo(
+                    name="m_data",
+                    type_name="void[4]",
+                    opaque_storage_size=16,
+                    offset=0,
+                )
+            ],
+            methods=[],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x1100,
+        )
+
+        header = header_generator.generate_header(layout, include_metadata=False)
+
+        assert "std::uint8_t m_data[16];" in header
+        assert "void m_data[4];" not in header
+
+    @pytest.mark.unit
+    def test_generate_header_renders_empty_array_dimensions(self, header_generator):
+        layout = ClassInfo(
+            name="ArrayLayout",
+            byte_size=8,
+            members=[MemberInfo("operators", "OPERATOR_INFO[]", offset=0)],
+            methods=[],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x1110,
+        )
+
+        header = header_generator.generate_header(layout, include_metadata=False)
+
+        assert "OPERATOR_INFO operators[];" in header
+
+    @pytest.mark.unit
     def test_template_specialization_renders_as_primary_template(self, header_generator):
         """Resolved specializations must not be emitted as illegal class specializations."""
         template_class = ClassInfo(

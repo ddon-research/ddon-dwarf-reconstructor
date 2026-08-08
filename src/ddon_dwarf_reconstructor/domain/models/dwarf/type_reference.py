@@ -43,6 +43,7 @@ class TypeReference:
 
     declarator: TypeDeclarator
     die_offset: int | None = None
+    template_arguments: tuple[TypeReference, ...] = ()
 
     @property
     def name(self) -> str:

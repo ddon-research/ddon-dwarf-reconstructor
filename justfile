@@ -46,13 +46,13 @@ test-performance:
 performance-tools-install:
     uv sync --group performance
 
-performance-profile elf_file="resources/DDOORBIS.elf" symbol="rLayout" state="warm":
-    uv run ddon-dwarf-reconstructor performance profile {{elf_file}} --symbol {{symbol}} --state {{state}} --profiler scalene --profiler cprofile --profiler pyinstrument
+performance-profile elf_file="resources/DDOORBIS.elf" dwarf_store="output/analytical-dwarf/main/store-4236f598acc8f158/manifest.json" symbol="rLayout" state="warm":
+    uv run ddon-dwarf-reconstructor performance profile {{elf_file}} --dwarf-store {{dwarf_store}} --symbol {{symbol}} --state {{state}} --profiler scalene --profiler cprofile --profiler pyinstrument
 
-performance-profile-index dwarf_dump="D:/research/DDON-binaries/IDA9.3/PS4_DDON_02020005_2016_12_21/DDOORBIS.elf.llvmdwarfdump.zst" index_path="D:/ddon-perf-artifacts/cold-dump-index.sqlite3":
+performance-profile-index dwarf_dump="D:/research/DDON-binaries/IDA9.3/PS4_DDON_02020005_2016_12_21/DDOORBIS.elf.llvmdwarfdump.zst" index_path="$env:TEMP/ddon-analytical-dwarf/performance/cold-dump-index.sqlite3":
     uv run ddon-dwarf-reconstructor performance profile-index {{dwarf_dump}} --index-path {{index_path}} --state cold --profiler process-sampler
 
-performance-profile-index-traces dwarf_dump="D:/research/DDON-binaries/IDA9.3/PS4_DDON_02020005_2016_12_21/DDOORBIS.elf.llvmdwarfdump.zst" artifact_root="D:/ddon-perf-artifacts/algorithm-audit" history_db="D:/ddon-perf-artifacts/algorithm-audit/benchmarks.sqlite3":
+performance-profile-index-traces dwarf_dump="D:/research/DDON-binaries/IDA9.3/PS4_DDON_02020005_2016_12_21/DDOORBIS.elf.llvmdwarfdump.zst" artifact_root="$env:TEMP/ddon-analytical-dwarf/performance/algorithm-audit" history_db="$env:TEMP/ddon-analytical-dwarf/performance/algorithm-audit/benchmarks.sqlite3":
     uv run ddon-dwarf-reconstructor performance profile-index {{dwarf_dump}} --index-path {{artifact_root}}/cold-process-sampler.sqlite3 --artifact-dir {{artifact_root}}/profiles --history-db {{history_db}} --name cold-dump-index-process-sampler --state cold --profiler process-sampler --timeout-seconds 3600 --sample-interval 1
     uv run ddon-dwarf-reconstructor performance profile-index {{dwarf_dump}} --index-path {{artifact_root}}/cold-cprofile.sqlite3 --artifact-dir {{artifact_root}}/profiles --history-db {{history_db}} --name cold-dump-index-cprofile --state cold --profiler cprofile --timeout-seconds 3600 --sample-interval 1
     uv run ddon-dwarf-reconstructor performance profile-index {{dwarf_dump}} --index-path {{artifact_root}}/cold-scalene.sqlite3 --artifact-dir {{artifact_root}}/profiles --history-db {{history_db}} --name cold-dump-index-scalene --state cold --profiler scalene --timeout-seconds 3600 --sample-interval 1
@@ -61,8 +61,32 @@ performance-profile-index-traces dwarf_dump="D:/research/DDON-binaries/IDA9.3/PS
 performance-history:
     uv run ddon-dwarf-reconstructor performance history export
 
-performance-runtime-compare elf_file="resources/DDOORBIS.elf" nuitka_executable="D:/ddon-perf-artifacts/nuitka/cpython314/ddon-reconstructor-cpython314.exe" free_threaded_python="D:/ddon-perf-artifacts/venvs/ddon-3.14t/Scripts/python.exe" dwarf_index="resources/.cache/DDOORBIS.elf.llvmdwarfdump.index.sqlite3":
-    uv run ddon-dwarf-reconstructor performance compare-runtimes {{elf_file}} --symbol rLayout --nuitka-executable {{nuitka_executable}} --free-threaded-python {{free_threaded_python}} --dwarf-index {{dwarf_index}} --build-id ps4-02020005
+performance-runtime-compare elf_file="resources/DDOORBIS.elf" nuitka_executable="$env:TEMP/ddon-analytical-dwarf/performance/nuitka/cpython314/ddon-reconstructor-cpython314.exe" free_threaded_python="$env:TEMP/ddon-analytical-dwarf/performance/venvs/ddon-3.14t/Scripts/python.exe" dwarf_store="output/analytical-dwarf/main/store-4236f598acc8f158/manifest.json":
+    uv run ddon-dwarf-reconstructor performance compare-runtimes {{elf_file}} --symbol rLayout --nuitka-executable {{nuitka_executable}} --free-threaded-python {{free_threaded_python}} --dwarf-store {{dwarf_store}} --build-id ps4-02020005
+
+analytical-materialize elf_file="resources/DDOORBIS.elf" output_dir="output/analytical-dwarf/main":
+    uv run --group analytical ddon-dwarf-reconstructor artifacts materialize-dwarf {{elf_file}} --output-dir {{output_dir}} --write-parquet
+
+analytical-bounded elf_file="resources/DDOORBIS.elf" output_dir="$env:TEMP/ddon-analytical-dwarf/bounded" max_cus="1":
+    uv run --group analytical ddon-dwarf-reconstructor artifacts materialize-dwarf {{elf_file}} --output-dir {{output_dir}} --write-parquet --max-cus {{max_cus}}
+
+analytical-checkpoint elf_file="resources/DDOORBIS.elf" output_dir="$env:TEMP/ddon-analytical-dwarf/checkpoint" every_cus="64":
+    uv run --group analytical ddon-dwarf-reconstructor artifacts materialize-dwarf {{elf_file}} --output-dir {{output_dir}} --write-parquet --checkpoint-every-cus {{every_cus}}
+
+analytical-checkpoint-benchmark elf_file="resources/DDOORBIS.elf" checkpoint_manifest="" output_dir="$env:TEMP/ddon-analytical-dwarf/checkpoint-benchmark":
+    uv run --group analytical ddon-dwarf-reconstructor performance benchmark-dwarf-store {{elf_file}} --store-manifest {{checkpoint_manifest}} --allow-incomplete --output-dir {{output_dir}}
+
+analytical-benchmark elf_file="resources/DDOORBIS.elf" output_dir="$env:TEMP/ddon-analytical-dwarf/analytical-benchmark" dwarf_store="":
+    uv run --group analytical ddon-dwarf-reconstructor performance benchmark-dwarf-store {{elf_file}} --output-dir {{output_dir}} {{ if dwarf_store != "" { "--store-manifest " + dwarf_store } else { "" } }}
+
+analytical-profile-doris elf_file="resources/DDOORBIS.elf" store_manifest="output/analytical-dwarf/main/store-4236f598acc8f158/manifest.json" output_dir="$env:TEMP/ddon-analytical-dwarf/analytical-profile-doris":
+    uv run --group analytical ddon-dwarf-reconstructor performance profile-dwarf-store {{elf_file}} --store-manifest {{store_manifest}} --output-dir {{output_dir}} --query-existing-doris --profiler scalene --profiler cprofile
+
+analytical-fixture:
+    uv run --group analytical pytest tests/infrastructure/test_analytical_store.py tests/infrastructure/test_analytical_checkpoint.py tests/infrastructure/test_analytical_parquet_contract.py tests/infrastructure/test_analytical_benchmark_paths.py -m "unit and functional"
+
+analytical-compose-config:
+    docker compose --file ops/analytical-dwarf/compose.yaml config --quiet
 
 test:
     uv run pytest -m "not performance and not packaging and not real_asset"
@@ -96,7 +120,7 @@ type-check:
     uv run pyrefly check --min-severity warn
 
 deps:
-    uv run deptry .
+    uv run deptry . --non-dev-dependency-groups analytical --per-rule-ignores "DEP002=pyarrow|pymysql"
 
 structure:
     uv run python -m tests.support.quality.check_structure src tests tools/sonar
@@ -140,7 +164,7 @@ sonar-validate:
 sonar-capture:
     uv run python -m tools.sonar.prepare_msvc_analysis
 
-native-build output_dir="D:/ddon-perf-artifacts/nuitka/cpython314":
+native-build output_dir="$env:TEMP/ddon-analytical-dwarf/performance/nuitka/cpython314":
     uv run python -m nuitka --msvc=latest --mode=onefile --jobs=16 --lto=yes --remove-output --deployment --output-dir={{output_dir}} --output-filename=ddon-reconstructor-cpython314.exe main.py
 
 nuitka-build: native-build
@@ -154,8 +178,8 @@ run-full elf_file="resources/DDOORBIS.elf" symbol="MtPropertyList":
 run-batch symbols_file elf_file="resources/DDOORBIS.elf":
     uv run ddon-dwarf-reconstructor generate {{elf_file}} --symbols-file {{symbols_file}}
 
-run-batch-full symbols_file elf_file="resources/DDOORBIS.elf":
-    uv run ddon-dwarf-reconstructor generate {{elf_file}} --symbols-file {{symbols_file}} --full-hierarchy
+run-batch-full symbols_file elf_file="resources/DDOORBIS.elf" output_dir="output/season2" dwarf_store="output/analytical-dwarf/main/store-4236f598acc8f158/manifest.json":
+    uv run ddon-dwarf-reconstructor generate {{elf_file}} --symbols-file {{symbols_file}} --dwarf-store {{dwarf_store}} --output {{output_dir}} --full-hierarchy
 
 spec-check:
     uv run --directory tools/dwarf_spec_pipeline just check

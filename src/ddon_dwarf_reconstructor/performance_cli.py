@@ -11,10 +11,10 @@ import typer
 from .domain.models.performance import (
     ColdWarmState,
     EvidenceStatus,
-    PerformanceWorkload,
     RunSummary,
     RuntimeDescriptor,
 )
+from .infrastructure.analytical import run_store_benchmark
 from .infrastructure.performance import (
     PerformanceRunner,
     discover_tools,
@@ -35,6 +35,13 @@ from .infrastructure.performance.workloads import (
     build_fixture_workload,
     build_reconstructor_workload,
 )
+from .performance_analytical_cli import (
+    profile_dwarf_store,
+)
+from .performance_analytical_cli import (
+    profile_workload as _profile_workload,
+)
+from .performance_materializer_cli import profile_materializer
 
 app = typer.Typer(
     name="performance",
@@ -47,6 +54,8 @@ history_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(history_app, name="history")
+app.command("profile-dwarf-store")(profile_dwarf_store)
+app.command("profile-materializer")(profile_materializer)
 
 
 @app.command()
@@ -87,6 +96,7 @@ def profile(
     history_db: Path | None = typer.Option(None, "--history-db"),
     dwarf_dump: Path | None = typer.Option(None, "--dwarf-dump"),
     dwarf_index: Path | None = typer.Option(None, "--dwarf-index"),
+    dwarf_store_manifest: Path | None = typer.Option(None, "--dwarf-store"),
     build_id: str | None = typer.Option(None, "--build-id"),
     orbis_objdump: Path | None = typer.Option(None, "--orbis-objdump"),
     full_hierarchy: bool = typer.Option(False, "--full-hierarchy"),
@@ -118,6 +128,7 @@ def profile(
         output_dir=target_output,
         dwarf_dump=dwarf_dump,
         dwarf_index=dwarf_index,
+        dwarf_store_manifest=dwarf_store_manifest,
         build_id=build_id,
         orbis_objdump=orbis_objdump,
         symbols_file=symbols_file,
@@ -140,7 +151,7 @@ def compare_runtimes(
     nuitka_executable: Path = typer.Option(..., "--nuitka-executable"),
     free_threaded_python: Path | None = typer.Option(None, "--free-threaded-python"),
     symbol: list[str] = typer.Option(["rLayout"], "--symbol", "-s"),
-    dwarf_index: Path | None = typer.Option(None, "--dwarf-index"),
+    dwarf_store_manifest: Path | None = typer.Option(None, "--dwarf-store"),
     build_id: str | None = typer.Option(None, "--build-id"),
     iterations: int = typer.Option(3, "--iterations", min=1, max=10),
     artifact_dir: Path | None = typer.Option(None, "--artifact-dir"),
@@ -163,7 +174,7 @@ def compare_runtimes(
         repository_root=repository_root,
         elf=elf,
         symbols=tuple(symbol),
-        dwarf_index=dwarf_index,
+        dwarf_store_manifest=dwarf_store_manifest,
         build_id=build_id,
         timeout_seconds=timeout_seconds,
         raw_root=raw_root,
@@ -219,7 +230,7 @@ def _run_runtime_selections(
     repository_root: Path,
     elf: Path,
     symbols: tuple[str, ...],
-    dwarf_index: Path | None,
+    dwarf_store_manifest: Path | None,
     build_id: str | None,
     timeout_seconds: float,
     raw_root: Path,
@@ -235,7 +246,7 @@ def _run_runtime_selections(
                 repository_root=repository_root,
                 elf=elf,
                 symbols=symbols,
-                dwarf_index=dwarf_index,
+                dwarf_store_manifest=dwarf_store_manifest,
                 build_id=build_id,
                 timeout_seconds=timeout_seconds,
                 raw_root=raw_root,
@@ -253,7 +264,7 @@ def _run_runtime_selection(
     repository_root: Path,
     elf: Path,
     symbols: tuple[str, ...],
-    dwarf_index: Path | None,
+    dwarf_store_manifest: Path | None,
     build_id: str | None,
     timeout_seconds: float,
     raw_root: Path,
@@ -270,7 +281,7 @@ def _run_runtime_selection(
             mode="export-knowledge",
             state=ColdWarmState.WARM,
             output_dir=raw_root / name / "target-output",
-            dwarf_index=dwarf_index,
+            dwarf_store_manifest=dwarf_store_manifest,
             build_id=build_id,
             timeout_seconds=timeout_seconds,
             python_executable=python_executable,
@@ -353,6 +364,53 @@ def benchmark(
     typer.echo(json.dumps([summary.to_dict() for summary in summaries], indent=2, sort_keys=True))
 
 
+@app.command("benchmark-dwarf-store")
+def benchmark_dwarf_store(
+    elf: Path = typer.Argument(..., help="ELF file to materialize or benchmark."),
+    output_dir: Path = typer.Option(..., "--output-dir", help="External benchmark artifact root."),
+    store_manifest: Path | None = typer.Option(None, "--store-manifest"),
+    symbol: list[str] = typer.Option(
+        ["MtObject", "rLayout"], "--symbol", "-s", help="Definition query; repeat as needed."
+    ),
+    run_doris: bool = typer.Option(False, "--run-doris", help="Execute the Doris load plan."),
+    query_existing_doris: bool = typer.Option(
+        False,
+        "--query-existing-doris",
+        help="Query an already-loaded native Doris projection without reloading it.",
+    ),
+    iterations: int = typer.Option(3, "--iterations", min=1, max=20),
+    run_current_baseline: bool = typer.Option(
+        False,
+        "--run-current-baseline",
+        help="Measure the pre-store live pyelftools lookup path.",
+    ),
+    allow_incomplete: bool = typer.Option(
+        False,
+        "--allow-incomplete",
+        help="Run diagnostic file queries against an explicit checkpoint snapshot.",
+    ),
+    run_knowledge_export: bool = typer.Option(
+        False,
+        "--run-knowledge-export",
+        help="Measure complete store-backed knowledge export and hash its outputs.",
+    ),
+) -> None:
+    """Benchmark one-pass materialization and available analytical projections."""
+    report = run_store_benchmark(
+        elf,
+        output_dir,
+        store_manifest=store_manifest,
+        symbols=tuple(symbol),
+        run_doris=run_doris,
+        iterations=iterations,
+        query_existing_doris=query_existing_doris,
+        run_current_baseline=run_current_baseline,
+        allow_incomplete=allow_incomplete,
+        run_knowledge_export=run_knowledge_export,
+    )
+    typer.echo(json.dumps(report, indent=2, sort_keys=True))
+
+
 @history_app.command("compare")
 def compare_history(
     workload: str | None = typer.Option(None, "--workload"),
@@ -387,21 +445,6 @@ def export_history_command(
             {"json": str(paths[0]), "csv": str(paths[1]), "markdown": str(paths[2])}, indent=2
         )
     )
-
-
-def _profile_workload(
-    workload: PerformanceWorkload,
-    artifact_root: Path,
-    history_db: Path | None,
-    sample_interval: float,
-    profilers: tuple[str, ...],
-) -> tuple[RunSummary, ...]:
-    runner = PerformanceRunner(artifact_root, sample_interval_seconds=sample_interval)
-    summaries = PerformanceProfiler(runner).profile(workload, profilers)
-    store = HistoryStore(history_db or get_performance_database_path(workload.cwd))
-    for summary in summaries:
-        store.record(summary)
-    return summaries
 
 
 def _runtime_for_selection(

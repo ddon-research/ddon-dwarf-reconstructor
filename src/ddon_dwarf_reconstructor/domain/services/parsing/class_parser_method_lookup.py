@@ -6,6 +6,7 @@ import time
 
 from ....core.dwarf import DwarfCompilationUnit, DwarfEntry, dwarf_reference_offset
 from ....core.observability import get_logger
+from ....domain.models.analytical_dwarf import QueryStatus
 from .class_parser_context import ClassParserContext
 from .method_evidence import score_implementation
 
@@ -17,11 +18,48 @@ class ClassParserMethodLookupMixin:
         self: ClassParserContext, declaration_offset: int, method_name: str
     ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         """Find an implementation using the dump index, then bounded CU lookup."""
+        if self.query_port is not None:
+            return self._find_implementation_in_store(declaration_offset, method_name)
         if self.dwarf_dump_path:
             result = self._find_implementation_in_dump(declaration_offset, method_name)
             if result is not None:
                 return result
         return self._scan_method_implementations(declaration_offset, method_name)
+
+    def _find_implementation_in_store(
+        self: ClassParserContext, declaration_offset: int, method_name: str
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
+        """Resolve an implementation from the source-bound derived method index."""
+        query_port = self.query_port
+        if query_port is None:
+            return None
+        result = query_port.find_method_implementation(declaration_offset)
+        if result.status is QueryStatus.NOT_FOUND:
+            logger.debug("No analytical implementation found for %s", method_name)
+            return None
+        if result.status is not QueryStatus.COMPLETE or not result.items:
+            logger.warning(
+                "Analytical method lookup for %s was %s; refusing a CU-scan fallback",
+                method_name,
+                result.status.value,
+            )
+            return None
+        implementation = result.items[0]
+        implementation_offset = getattr(implementation, "offset", None)
+        if not isinstance(implementation_offset, int):
+            logger.warning("Analytical method lookup for %s returned no DIE offset", method_name)
+            return None
+        direct_lookup = getattr(self.dwarf_info, "get_DIE_from_refaddr", None)
+        implementation_die = direct_lookup(implementation_offset) if direct_lookup else None
+        implementation_cu = getattr(implementation_die, "cu", None)
+        if implementation_die is None or implementation_cu is None:
+            logger.warning(
+                "Analytical method offset 0x%x for %s did not resolve to a DIE",
+                implementation_offset,
+                method_name,
+            )
+            return None
+        return implementation_cu, implementation_die
 
     def _scan_method_implementations(
         self: ClassParserContext, declaration_offset: int, method_name: str

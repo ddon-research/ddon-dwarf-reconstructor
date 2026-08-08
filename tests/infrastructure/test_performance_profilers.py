@@ -70,6 +70,38 @@ def test_scalene_lines_are_ranked_by_cpu_and_keep_memory_evidence(tmp_path: Path
     assert summaries[0].memory_bytes == 2 * 1024 * 1024
 
 
+def test_scalene_ignores_zero_cost_lines_and_reports_missing_attribution(tmp_path: Path) -> None:
+    """A Scalene report must not fabricate hot lines from zero-filled source rows."""
+    path = tmp_path / "scalene.json"
+    path.write_text(
+        '{"files": {"fixture.py": {"lines": ['
+        '{"lineno": 1, "n_cpu_percent_python": 0.0, "n_cpu_percent_c": 0.0, "n_avg_mb": 0.0}'
+        "]}}}",
+        encoding="utf-8",
+    )
+
+    summaries, diagnostics = parse_method_summaries("scalene", path)
+
+    assert not summaries
+    assert diagnostics == ("scalene produced no non-zero CPU or memory line attribution",)
+
+
+def test_scalene_ignores_module_launcher_attribution(tmp_path: Path) -> None:
+    """The helper launcher must not be reported as an application hotspot."""
+    path = tmp_path / "scalene.json"
+    path.write_text(
+        '{"files": {"scalene_target.py": {"lines": ['
+        '{"lineno": 18, "n_cpu_percent_c": 50.0, "n_avg_mb": 0.0}'
+        "]}}}",
+        encoding="utf-8",
+    )
+
+    summaries, diagnostics = parse_method_summaries("scalene", path)
+
+    assert not summaries
+    assert diagnostics == ("scalene produced no non-zero CPU or memory line attribution",)
+
+
 def _workload(tmp_path: Path) -> PerformanceWorkload:
     return PerformanceWorkload(
         name="fixture",

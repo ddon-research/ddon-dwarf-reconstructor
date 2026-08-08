@@ -7,14 +7,14 @@ sequenceDiagram
     actor User
     participant CLI
     participant Workflow as Application workflow
-    participant Session as ElfDwarfSession
-    participant Index as Lazy DWARF index
+    participant Store as Source-bound DWARF store
+    participant Index as Analytical query/index port
     participant Parser as Class/type services
     participant Publisher as AtomicHeaderPublisher
 
     User->>CLI: generate ELF + symbol
     CLI->>Workflow: GenerationRequest
-    Workflow->>Session: open and normalize once
+    Workflow->>Store: validate manifest and source identity
     Workflow->>Index: lookup definition
     Index-->>Workflow: SearchResult + provenance
     Workflow->>Parser: resolve class, types, methods, hierarchy
@@ -34,4 +34,6 @@ C++, and a manifest. The projection is deterministic and can be loaded by a futu
 
 Source identity is checked before a cache or dump index is reused. A warm key may avoid another
 full hash when filesystem metadata proves the same object; explicit `verify` always rehashes the
-complete source. A failed atomic publication leaves the previous valid bundle available.
+complete source. The normal generation path consumes the source-bound analytical store and never
+implicitly performs the expensive CU traversal. A failed atomic materialization leaves the previous
+valid store available; the compressed-text SQLite index remains a validation-only cross-check.

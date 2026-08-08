@@ -25,6 +25,7 @@ class HierarchyHeaderGenerationMixin:
         include_metadata: bool = True,
         resolve_forward_declarations: bool = True,
         guard_suffix: str = "_HIERARCHY_H",
+        dependency_headers: dict[str, str] | None = None,
     ) -> str:
         """Generate a C++ header with the complete inheritance hierarchy in one file.
 
@@ -48,12 +49,13 @@ class HierarchyHeaderGenerationMixin:
         sanitized_target = sanitize_for_filesystem(target_class).upper()
         guard_name = f"{sanitized_target}{guard_suffix}"
         lines = self._hierarchy_header_prefix(guard_name)
+        lines.extend(self._hierarchy_dependency_include_lines(dependency_headers))
         lines.extend(self._hierarchy_typedef_block(typedefs, target_class))
         lines.extend(
             self._hierarchy_metadata(class_infos, target_class, hierarchy_order, include_metadata)
         )
         forward_decls = self._hierarchy_forward_declarations(
-            class_infos, hierarchy_order, target_class, typedefs, resolve_forward_declarations
+            class_infos, hierarchy_order, typedefs, resolve_forward_declarations
         )
         if forward_decls:
             lines.extend(["", "// Forward declarations", *sorted(forward_decls)])
@@ -72,6 +74,15 @@ class HierarchyHeaderGenerationMixin:
             "#include <cstdint>",
             "",
         ]
+
+    @staticmethod
+    def _hierarchy_dependency_include_lines(
+        dependency_headers: dict[str, str] | None,
+    ) -> list[str]:
+        if not dependency_headers:
+            return []
+        headers = sorted(set(dependency_headers.values()))
+        return ["// Dependencies", *[f'#include "{header}"' for header in headers], ""]
 
     def _hierarchy_typedef_block(
         self: HeaderGeneratorContext, typedefs: dict[str, str] | None, target_class: str
@@ -129,7 +140,6 @@ class HierarchyHeaderGenerationMixin:
         self: HeaderGeneratorContext,
         class_infos: dict[str, ClassInfo],
         hierarchy_order: list[str],
-        target_class: str,
         typedefs: dict[str, str] | None,
         resolve_forward_declarations: bool,
     ) -> set[str]:

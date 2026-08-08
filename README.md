@@ -12,6 +12,8 @@ Dragon's Dogma Online research and modding.
   index for correctness reviews.
 - Deterministic single-file and multi-file header generation.
 - Persistent source-bound symbol caches and streaming compressed-DWARF indexes.
+- Source-bound analytical DWARF stores with canonical typed Parquet rows, optional lossless
+  JSONL audit output, and Doris projections.
 - Knowledge-graph exports with explicit producer and Orbis evidence provenance.
 - Bounded one-time exports from Orbis, LLVM, GNU Binutils, elfutils, and libdwarf profiles, with
   source/tool/output hashes and authority metadata.
@@ -26,6 +28,20 @@ Dragon's Dogma Online research and modding.
 ```text
 uv sync --python 3.14.6
 uv run just test-unit
+```
+
+The analytical projection tools are an explicit optional dependency group. Install them when
+materializing Parquet output or preparing Doris evidence:
+
+```text
+uv sync --group analytical
+```
+
+The analytical runtime is pinned to `pyarrow==25.0.0`. Verify the installed Arrow, Parquet, and
+Dataset modules without loading the ELF:
+
+```powershell
+uv run python -c "import pyarrow as pa, pyarrow.dataset as ds, pyarrow.parquet as pq; print(pa.__version__, pa.default_memory_pool().backend_name, ds.__file__, pq.__file__)"
 ```
 
 To install the reconstructor as a standalone uv tool from a checkout:
@@ -57,33 +73,53 @@ The packaged `ddon-dwarf-reconstructor` command is canonical. Symbols are suppli
 `--symbol` or by using `--symbols-file`; comma-separated symbol values are no longer accepted.
 
 ```text
+# Materialize once into the ignored durable local store, then use the source-bound manifest
+uv run ddon-dwarf-reconstructor artifacts materialize-dwarf resources/DDOORBIS.elf \
+  --output-dir output/analytical-dwarf/main --write-parquet
+
+# Optional diagnostic checkpoints for a long traversal; they remain explicitly partial
+uv run ddon-dwarf-reconstructor artifacts materialize-dwarf resources/DDOORBIS.elf \
+  --output-dir $env:TEMP/ddon-analytical-dwarf/checkpoint-run --checkpoint-every-cus 64
+
+# Query the latest committed checkpoint while the producer continues; this is diagnostic only
+uv run ddon-dwarf-reconstructor performance benchmark-dwarf-store resources/DDOORBIS.elf \
+  --store-manifest $env:TEMP/ddon-analytical-dwarf/checkpoint-run/<checkpoint>.json \
+  --allow-incomplete --output-dir $env:TEMP/ddon-analytical-dwarf/checkpoint-benchmark
+
 # One or more headers
-uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf --symbol MtObject
-uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf --symbol MtObject --symbol rLayout
+uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf \
+  --dwarf-store output/analytical-dwarf/main/store-<source-sha16>/manifest.json --symbol MtObject
+uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf \
+  --dwarf-store output/analytical-dwarf/main/store-<source-sha16>/manifest.json \
+  --symbol MtObject --symbol rLayout
 
 # Full hierarchy and exhaustive root lookup
 uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf \
+  --dwarf-store output/analytical-dwarf/main/store-<source-sha16>/manifest.json \
   --symbol rLayout --full-hierarchy --exhaustive
 
 # Batch processing
 uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf \
+  --dwarf-store output/analytical-dwarf/main/store-<source-sha16>/manifest.json \
   --symbols-file resources/season2-resources.txt --full-hierarchy
-
-# Dump-assisted lookup
-uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf \
-  --symbol rLayout --exhaustive \
-  --dwarf-dump D:/research/DDON-binaries/DDOORBIS.elf.llvmdwarfdump.zst \
-  --dwarf-index output/real-dump-index/DDOORBIS.elf.index.sqlite3
 
 # Knowledge export
 uv run ddon-dwarf-reconstructor export-knowledge resources/DDOORBIS.elf \
+  --dwarf-store output/analytical-dwarf/main/store-<source-sha16>/manifest.json \
   --symbol rLayout --output-dir output/rLayout --build-id ps4-02020005 \
   --orbis-objdump 'D:/SCE/ORBIS SDKs/8.000/host_tools/bin/orbis-objdump.exe'
 ```
 
+When `--symbols-file` is combined with `--full-hierarchy` and multiple roots, generation writes
+separate source-derived bundles under `output/season2/<platform>/symbols/<index>-<safe-root>/`.
+Each bundle has its own manifest and status; aggregate publication fails closed on conflicting
+same-named headers. Validate a selected root bundle standalone before treating aggregate, Sonar,
+or IDA diagnostics as additive evidence.
+
 Use `uv run ddon-dwarf-reconstructor --help` or a command’s `--help` for the complete typed
-interface. `--output`, `--verbose`, `--full-hierarchy`, `--single-file`, `--exhaustive`,
-`--dwarf-dump`, `--dwarf-index`, and `--resolve-param-names` remain generation options.
+interface. Normal `generate` and `export-knowledge` runs require `--dwarf-store`; a missing or
+stale manifest fails closed and never performs an implicit CU traversal. `--dwarf-dump` and
+`--dwarf-index` remain explicit validation-only inputs for the legacy cross-check workflow.
 
 ## Logging and diagnostics
 
@@ -122,6 +158,12 @@ uv run ddon-dwarf-reconstructor artifacts inspect-elf `
 
 uv run ddon-dwarf-reconstructor artifacts inspect-dwarf-dump `
   D:/research/DDON-binaries/IDA9.3/PS4_DDON_02020005_2016_12_21/DDOORBIS.elf.llvmdwarfdump.zst
+
+uv run ddon-dwarf-reconstructor artifacts inspect-dwarf-store `
+  output/analytical-dwarf/main/store-<source-sha16>/manifest.json
+
+uv run ddon-dwarf-reconstructor artifacts load-doris `
+  output/analytical-dwarf/main/store-<source-sha16>/manifest.json --dry-run
 
 uv run ddon-dwarf-reconstructor artifacts verify-source resources/DDOORBIS.elf
 uv run ddon-dwarf-reconstructor artifacts repair-dump-index D:/research/DDON-binaries/dump.zst
@@ -194,11 +236,26 @@ applicability, and source references. It is review evidence, not a runtime depen
 
 ## DWARF dump and cache behavior
 
-The first dump-assisted exhaustive lookup can build a durable SQLite sidecar from the compressed
-dump in one streaming pass. Subsequent fresh processes reuse source-bound indexes and symbol
-caches. Preserve these artifacts locally; routine cleanup must not delete validated indexes or
-exports. The full PS4 dump is more than 30 GB expanded, so real-asset work is opt-in and should use
-the local acceptance paths documented in the [testing and evidence reference](docs/reference/testing.md).
+The analytical store is the normal lookup boundary. Its canonical typed row stream is written to
+family-specific Parquet tables with Zstandard and bounded row groups. Doris loads those
+source-bound files through the explicit native-table path. `records.jsonl`
+preserves the same source identity, CU/DIE traversal order, null terminators, raw and decoded tagged
+attributes, references, and checksummed raw-section/chunk artifacts only when the opt-in audit
+projection is requested. JSONL is not a mandatory intermediary. Doris loading is explicit and never
+starts Compose implicitly. All optional projections and benchmark artifacts belong outside source
+control, normally under `%TEMP%` on Disk C.
+
+The PyArrow 25 boundary is explicit: family schemas are declared before conversion, Parquet writers
+append bounded row groups, and the native `Table.from_pylist` input is capped because nested DWARF
+values can exceed a cheap byte estimate. Dataset readers use typed layout-specific Hive
+partitioning, column/filter pushdown, and `to_batches()` for large scans. Arrow memory-pool
+telemetry is not a substitute for process RSS. If a complete JSONL audit store later requests a
+Parquet projection, the backfill uses the same bounded writer sink and the manifest's layout and
+writer cap before atomically publishing `parquet/`.
+
+The former compressed-dump SQLite index remains a validation-only cross-check until parity evidence
+is complete. The full PS4 dump is more than 30 GB expanded, so real-asset work is opt-in and should
+use the local acceptance paths documented in the [testing and evidence reference](docs/reference/testing.md).
 
 This checkout also retains the regenerated PS4 dump index at
 `resources/.cache/DDOORBIS.elf.llvmdwarfdump.index.sqlite3` and source-bound symbol caches under
@@ -247,6 +304,10 @@ uv run just performance-tools-install # install Scalene/pyperf/profiler tools
 uv run just performance-profile # warm rLayout profile recipe
 uv run just performance-profile-index # cold compressed-dump index profile recipe
 uv run just performance-runtime-compare # CPython/Nuitka/free-threaded comparison
+uv run just analytical-materialize # typed Parquet materialization
+uv run just analytical-fixture # deterministic analytical-store fixture tests
+uv run just analytical-benchmark # one-pass and projection benchmark report
+uv run just analytical-compose-config # validate the local Doris Compose file
 uv run just performance-history # export tracked benchmark history
 uv run just docs-tools-install # install locked Markdown/Mermaid validators
 uv run just docs-serve       # local Zensical preview

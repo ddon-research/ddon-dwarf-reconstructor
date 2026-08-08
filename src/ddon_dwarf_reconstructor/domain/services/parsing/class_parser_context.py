@@ -16,11 +16,13 @@ from ...models.dwarf import (
     StructInfo,
     TemplateTypeParam,
     TemplateValueParam,
+    TypeReference,
     UnionInfo,
 )
-from ...ports.dump_lookup import DumpDefinitionLocation, DumpLookupPort
-from ...ports.dwarf_index import DwarfIndexPort
+from ...ports.analytical_store import DwarfQueryPort
+from ...ports.dwarf_lookup import DwarfLookupPort
 from ...ports.type_resolution import TypeNameResolver
+from ...ports.validation_dump import DumpDefinitionLocation, ValidationDumpPort
 
 if TYPE_CHECKING:
     from .class_parser_children import ParsedClassChildren
@@ -33,6 +35,10 @@ class ClassParserImplementationContext(Protocol):
     """Method-implementation lookups shared by parser responsibilities."""
 
     def _find_implementation_in_dump(
+        self, declaration_offset: int, method_name: str
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...
+
+    def _find_implementation_in_store(
         self, declaration_offset: int, method_name: str
     ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...
 
@@ -71,11 +77,19 @@ class ClassParserOperations(ClassParserImplementationContext, Protocol):
     def _inline_struct_type(self, type_die: DwarfEntry | None) -> StructInfo | None: ...
 
     def _opaque_storage_size(
-        self, member_die: DwarfEntry, type_die: DwarfEntry | None
+        self, member_die: DwarfEntry, type_die: DwarfEntry | None, type_name: str | None = None
     ) -> int | None: ...
+
+    def _template_argument_references(
+        self, type_die: DwarfEntry | None
+    ) -> tuple[TypeReference, ...]: ...
 
     def _find_class_full_scan(
         self, class_name: str, exhaustive_override: bool | None = None
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...
+
+    def _find_class_from_store(
+        self, class_name: str
     ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...
 
     def find_class(
@@ -100,7 +114,7 @@ class ClassParserOperations(ClassParserImplementationContext, Protocol):
         self, offset: int
     ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...
 
-    def _get_dump_parser(self) -> DumpLookupPort | None: ...
+    def _get_dump_parser(self) -> ValidationDumpPort | None: ...
 
     def _find_cu(self, cu_offset: int) -> DwarfCompilationUnit | None: ...
 
@@ -280,15 +294,17 @@ class ClassParserContext(ClassParserOperations, Protocol):
 
     type_resolver: TypeNameResolver
     dwarf_info: DwarfInfo
-    lazy_index: DwarfIndexPort | None
+    lazy_index: DwarfLookupPort | None
     full_scan_timeout: float
     exhaustive_search: bool
     dwarf_dump_path: Path | None
     dwarf_index_path: Path | None
+    query_port: DwarfQueryPort | None
     resolve_param_names: bool
     timed_out_symbols: set[str]
+    _class_info_cache: dict[tuple[int, int], ClassInfo]
     _implementation_cache: dict[int, tuple[DwarfCompilationUnit, DwarfEntry] | None]
-    _dump_parser: DumpLookupPort | None
+    _dump_parser: ValidationDumpPort | None
     _dump_lookup_authoritative_miss: bool
     _dump_lookup_unavailable: bool
 

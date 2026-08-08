@@ -5,7 +5,7 @@ description = "Reconstructs C/C++ header structures from DWARF debug symbols in 
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = "==3.14.6"
 dependencies = [
-    "pyelftools>=0.31",
+    "pyelftools>=0.33,<0.34",
     "python-dotenv>=1.0.0",
     "psutil>=5.9.0",
     "typer>=0.16,<1",
@@ -157,6 +157,8 @@ max-complexity = 10
 "src/ddon_dwarf_reconstructor/cli.py" = ["B008"]
 "src/ddon_dwarf_reconstructor/artifact_cli.py" = ["B008"]
 "src/ddon_dwarf_reconstructor/performance_cli.py" = ["B008"]
+"src/ddon_dwarf_reconstructor/performance_analytical_cli.py" = ["B008"]
+"src/ddon_dwarf_reconstructor/performance_materializer_cli.py" = ["B008"]
 
 [dependency-groups]
 test = [
@@ -187,6 +189,10 @@ performance = [
     "py-spy>=0.4,<1",
     "pyinstrument>=5.1,<6",
     "scalene>=2.3,<3",
+]
+analytical = [
+    "pyarrow>=25,<26",
+    "pymysql>=1.2,<1.3",
 ]
 docs = ["zensical>=0.0.52,<0.1"]
 dev = [

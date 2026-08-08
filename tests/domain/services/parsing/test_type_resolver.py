@@ -32,6 +32,7 @@ def test_initialization_and_hierarchy_expansion(resolver: LazyTypeResolver) -> N
 
 
 @pytest.mark.unit
+@pytest.mark.functional
 def test_named_type_resolution_is_cached(resolver: LazyTypeResolver) -> None:
     source = Mock(tag="DW_TAG_member")
     source.attributes = {"DW_AT_type": Mock()}
@@ -45,6 +46,16 @@ def test_named_type_resolution_is_cached(resolver: LazyTypeResolver) -> None:
 
 
 @pytest.mark.unit
+@pytest.mark.functional
+def test_named_type_die_can_be_resolved_without_type_attribute(resolver: LazyTypeResolver) -> None:
+    type_die = Mock(tag="DW_TAG_class_type", offset=0x100)
+    type_die.attributes = {"DW_AT_name": Mock(value=b"MtVector4")}
+
+    assert resolver.resolve_type_name(type_die) == "MtVector4"
+
+
+@pytest.mark.unit
+@pytest.mark.functional
 def test_pointer_resolution_preserves_qualifier(resolver: LazyTypeResolver) -> None:
     source = Mock(tag="DW_TAG_member")
     source.attributes = {"DW_AT_type": Mock()}

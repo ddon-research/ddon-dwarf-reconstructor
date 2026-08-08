@@ -153,7 +153,7 @@ def test_prepare_validation_inputs_generates_sources_command_and_manifest(tmp_pa
     script = paths.validation_script.read_text(encoding="utf-8")
     assert "/std:c++latest /EHsc /W4 /Zc:__cplusplus" in script
     assert "compile_tutorial.cpp" in script
-    assert "compile_all.cpp" not in script
+    assert "compile_all.cpp" in script
     manifest = json.loads(inputs.manifest_path.read_text(encoding="utf-8"))
     assert manifest["translation_units"] == [
         "compile_rTexture.cpp",

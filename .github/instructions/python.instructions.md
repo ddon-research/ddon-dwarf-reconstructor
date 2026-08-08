@@ -73,6 +73,12 @@ through the repository's `src` directory.
 - Declare runtime dependencies in `[project.dependencies]` and development tools in PEP 735
   `[dependency-groups]`. Run tools through `uv run`; use `deptry` to detect missing or misplaced
   dependencies and keep module-name mappings explicit for packages such as `pyelftools`.
+- The analytical dependency pins `pyarrow==25.0.0`. Consult `D:\PyArrow-25.0-python-docs` before
+  making Arrow design decisions. Use explicit per-family schemas and `ParquetWriter` for bounded
+  row-group appends; cap `Table.from_pylist` conversion inputs; use typed Hive partition schemas
+  with `pyarrow.dataset` for projection, filters, and `to_batches()`; and treat Arrow memory-pool
+  counters as telemetry rather than process RSS. JSONL projection backfill must share the direct
+  sink's writer bound and layout policy and retain atomic publication.
 - The root documentation tool is Zensical in the `docs` dependency group. Keep site source under
   `docs/`, follow [the Markdown documentation instructions](documentation.instructions.md) and
   [the documentation style reference](../../docs/reference/documentation-style.md), use one

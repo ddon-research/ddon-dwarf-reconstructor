@@ -64,6 +64,30 @@ Completion requires evidence; elapsed time, token budget, or confidence is not c
 The OpenAI Cookbook's [goal workflow guidance](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
 is the external rationale for this contract.
 
+## Analytical DWARF store example
+
+The analytical store work uses two goals with the same six-field contract. Goal 1 is research and
+design: its evidence includes the current parser, DWARF/LLVM/pyelftools behavior, and the primary
+Parquet, Arrow, and Doris contracts. It may produce a claim ledger, compatibility matrix,
+schema, and fixture round-trip, but it cannot approve a production dependency or runtime replacement
+by itself. Goal 2 is materialization and migration: its evidence includes one-pass CU counters,
+canonical row-store hashes, optional JSONL audit hashes, Parquet/Doris observations, query parity, generated-output hashes,
+and cold/warm resource measurements.
+
+The iteration is explicit:
+
+```text
+preflight -> deterministic fixture -> real-ELF subset -> full real ELF
+  -> storage comparison -> query parity -> runtime migration -> repository gates
+```
+
+Each unavailable executable or service is recorded as `unavailable`, `blocked`, or
+`not_observed`. In particular, a present LLVM source checkout is not LLVM verification evidence,
+and a Compose file is not Doris load evidence without a healthy daemon and query/profile output.
+Do not lower the correctness or 110%-of-baseline acceptance bar to make a goal complete; after the
+same external blocker fails three consecutive goal turns, report it as blocked and preserve the
+unfinished evidence boundary in the feature artifacts.
+
 ## Performance evidence goal
 
 For profiling work, make the evidence surface concrete before running a large asset:

@@ -5,8 +5,13 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from ....core.dwarf import DwarfEntry
-from ...models.dwarf import StructInfo
+from ....core.observability import get_logger
+from ...models.dwarf import StructInfo, TypeDeclarator, TypeReference
+from ...ports.type_resolution import TypeNameResolver
 from .class_parser_context import ClassParserContext
+from .type_chain_traverser import TypeChainTraverser
+
+logger = get_logger(__name__)
 
 
 class ClassParserMemberTypesMixin:
@@ -28,21 +33,91 @@ class ClassParserMemberTypesMixin:
         return self.parse_nested_structure(type_die)
 
     @staticmethod
-    def _opaque_storage_size(member_die: DwarfEntry, type_die: DwarfEntry | None) -> int | None:
+    def _opaque_storage_size(
+        member_die: DwarfEntry,
+        type_die: DwarfEntry | None,
+        type_name: str | None = None,
+    ) -> int | None:
         """Use byte storage when flattening would make an alternate type recursive."""
         aggregate = ClassParserMemberTypesMixin._named_aggregate(type_die)
-        if aggregate is None:
+        if aggregate is not None:
+            try:
+                parent = member_die.get_parent()
+            except AttributeError, RuntimeError:
+                return None
+            if ClassParserMemberTypesMixin._has_same_name(parent, aggregate):
+                return ClassParserMemberTypesMixin._byte_size(aggregate)
+
+        if not ClassParserMemberTypesMixin._is_unresolved_type_name(type_name):
             return None
+        return ClassParserMemberTypesMixin._byte_size(type_die) or (
+            ClassParserMemberTypesMixin._byte_size(member_die)
+        )
+
+    @staticmethod
+    def _byte_size(die: DwarfEntry | None) -> int | None:
+        if die is None:
+            return None
+        size_attr = die.attributes.get("DW_AT_byte_size")
+        size = getattr(size_attr, "value", None)
+        return size if isinstance(size, int) and size > 0 else None
+
+    @staticmethod
+    def _is_unresolved_type_name(type_name: str | None) -> bool:
+        if type_name is None:
+            return True
+        clean_name = type_name.strip()
+        return clean_name in {"void", "unknown_type"} or clean_name.startswith(
+            ("void[", "unknown_type[")
+        )
+
+    def _template_argument_references(
+        self: ClassParserContext, type_die: DwarfEntry | None
+    ) -> tuple[TypeReference, ...]:
+        return ClassParserMemberTypesMixin._template_argument_references_from_die(
+            self.type_resolver, type_die, set()
+        )
+
+    @staticmethod
+    def _template_argument_references_from_die(
+        type_resolver: TypeNameResolver,
+        type_die: DwarfEntry | None,
+        visited_offsets: set[int],
+    ) -> tuple[TypeReference, ...]:
+        terminal_die = (
+            TypeChainTraverser.follow_to_terminal_type(type_die) if type_die is not None else None
+        )
+        if terminal_die is None:
+            return ()
+        if terminal_die.offset in visited_offsets:
+            return ()
+        visited_offsets = visited_offsets | {terminal_die.offset}
+
+        references: list[TypeReference] = []
         try:
-            parent = member_die.get_parent()
-        except AttributeError, RuntimeError:
-            return None
-        if not ClassParserMemberTypesMixin._has_same_name(parent, aggregate):
-            return None
-        size_attr = aggregate.attributes.get("DW_AT_byte_size")
-        if size_attr is None or not isinstance(size_attr.value, int):
-            return None
-        return size_attr.value
+            for child in terminal_die.iter_children():
+                if child.tag != "DW_TAG_template_type_param":
+                    continue
+                argument_name = type_resolver.resolve_type_name(child)
+                if not argument_name:
+                    continue
+                argument_offset = TypeChainTraverser.get_terminal_type_offset(child)
+                argument_type_die = child.get_DIE_from_attribute("DW_AT_type")
+                references.append(
+                    TypeReference(
+                        declarator=TypeDeclarator(
+                            base_name=argument_name,
+                            unresolved=argument_name in {"void", "unknown_type"},
+                        ),
+                        die_offset=argument_offset,
+                        template_arguments=ClassParserMemberTypesMixin._template_argument_references_from_die(
+                            type_resolver, argument_type_die, visited_offsets
+                        ),
+                    )
+                )
+        except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
+            logger.debug("Failed to resolve template arguments: %s", error, exc_info=error)
+        return tuple(references)
 
     @staticmethod
     def _named_aggregate(type_die: DwarfEntry | None) -> DwarfEntry | None:

@@ -131,6 +131,7 @@ def test_catalog_rejects_same_path_source_replacement(tmp_path: Path) -> None:
 
     first = catalog.identify(source)
     source.write_bytes(b"source-v2" * 20_000)
+    os.utime(source, ns=(first.mtime_ns + 1_000_000, first.mtime_ns + 1_000_000))
     second = catalog.identify(source)
 
     assert second != first

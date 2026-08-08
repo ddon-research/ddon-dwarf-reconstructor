@@ -16,9 +16,9 @@ uv run just native-build
 Create a separate free-threaded environment. Do not replace the root `.venv`:
 
 ```powershell
-$env:UV_PROJECT_ENVIRONMENT = "D:\ddon-perf-artifacts\venvs\ddon-3.14t"
+$env:UV_PROJECT_ENVIRONMENT = (Join-Path $env:TEMP 'ddon-analytical-dwarf\performance\venvs\ddon-3.14t')
 uv sync --frozen --no-dev --python C:\Users\morph\AppData\Roaming\uv\python\cpython-3.14.6+freethreaded-windows-x86_64-none\python.exe
-uv pip install --python D:\ddon-perf-artifacts\venvs\ddon-3.14t\Scripts\python.exe pyperf==2.10.0 py-spy==0.4.2 pyinstrument==5.1.3
+uv pip install --python (Join-Path $env:UV_PROJECT_ENVIRONMENT 'Scripts\python.exe') pyperf==2.10.0 py-spy==0.4.2 pyinstrument==5.1.3
 ```
 
 Use the venv's `Scripts\python.exe`, not the bare uv-managed base interpreter. The project must be
@@ -26,18 +26,18 @@ installed in the selected runtime so the comparison command can validate its imp
 
 ## Run the comparison
 
-Use the same ELF, source-bound index, symbol, and warm state for all variants:
+Use the same ELF, source-bound analytical-store manifest, symbol, and warm state for all variants:
 
 ```powershell
 uv run ddon-dwarf-reconstructor performance compare-runtimes `
   resources/DDOORBIS.elf `
   --symbol rLayout `
-  --nuitka-executable D:/ddon-perf-artifacts/nuitka/cpython314/ddon-reconstructor-cpython314.exe `
-  --free-threaded-python D:/ddon-perf-artifacts/venvs/ddon-3.14t/Scripts/python.exe `
-  --dwarf-index resources/.cache/DDOORBIS.elf.llvmdwarfdump.index.sqlite3 `
+  --nuitka-executable (Join-Path $env:TEMP 'ddon-analytical-dwarf\performance\nuitka\cpython314\ddon-reconstructor-cpython314.exe') `
+  --free-threaded-python (Join-Path $env:TEMP 'ddon-analytical-dwarf\performance\venvs\ddon-3.14t\Scripts\python.exe') `
+  --dwarf-store (Join-Path $PWD 'output\analytical-dwarf\main\store-<source-sha16>\manifest.json') `
   --build-id ps4-02020005 `
   --iterations 3 `
-  --artifact-dir D:/ddon-perf-artifacts/profiles/runtime-compare
+  --artifact-dir (Join-Path $env:TEMP 'ddon-analytical-dwarf\performance\profiles\runtime-compare')
 ```
 
 The command records each run in `resources/performance/benchmarks.sqlite3` and prints mean

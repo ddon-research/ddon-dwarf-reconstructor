@@ -7,14 +7,14 @@ from typing import Protocol
 
 from ....core.dwarf import DwarfEntry, DwarfInfo
 from ...models.dwarf import MemberInfo, MethodInfo, StructInfo, UnionInfo
-from ...ports.dwarf_index import DwarfIndexPort
+from ...ports.dwarf_lookup import DwarfLookupPort
 
 
 class TypeResolverContext(Protocol):
     """State and operations shared by the type-resolution responsibilities."""
 
     dwarf_info: DwarfInfo
-    index: DwarfIndexPort
+    index: DwarfLookupPort
     _typedef_cache: dict[int, str]
     _type_name_cache: dict[int, str]
     _typedef_chains: dict[str, str]

@@ -6,12 +6,14 @@ The domain stays independent of pyelftools, SQLite, zstd, Rich, structlog, and s
 makes policy testable and lets infrastructure adapters be replaced without changing evidence
 semantics. Architecture tests enforce the dependency direction.
 
-## Persistent, source-bound artifacts
+## Persistent, source-bound analytical artifacts
 
 Hashing and full-DIE scans are too expensive to repeat for every lookup. The identity catalog and
-SQLite dump index therefore use validated metadata and source fingerprints, publish atomically,
-and retain warm artifacts. A forced verification path remains available when evidence must be
-re-established.
+one-pass analytical store therefore use validated source fingerprints, typed offset records,
+checksummed raw references, and atomic publication. The typed row stream is the canonical
+production contract; Parquet is the durable typed output, JSONL is an opt-in audit
+projection, and Doris is a measured query/load backend. The former SQLite dump index remains
+available only for explicit cross-check evidence while query parity is established.
 
 ## Evidence over inference
 

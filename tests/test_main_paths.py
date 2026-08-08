@@ -57,18 +57,37 @@ def test_read_symbols_accepts_repeated_options_and_rejects_invalid_combinations(
         "A",
         "B",
     ]
+    conflicting_options = _options(symbols=("A",), symbols_file=symbols_file)
     with pytest.raises(ValueError, match="both"):
-        cli_main._read_symbols(_options(symbols=("A",), symbols_file=symbols_file), logger)
+        cli_main._read_symbols(conflicting_options, logger)
+    missing_source_options = _options(symbols=(), symbols_file=None)
     with pytest.raises(ValueError, match="either"):
-        cli_main._read_symbols(_options(symbols=(), symbols_file=None), logger)
+        cli_main._read_symbols(missing_source_options, logger)
+    empty_symbol_options = _options(symbols=("",), symbols_file=None)
     with pytest.raises(ValueError, match="No symbols"):
-        cli_main._read_symbols(_options(symbols=("",), symbols_file=None), logger)
+        cli_main._read_symbols(empty_symbol_options, logger)
+
+    duplicate_options = _options(symbols=("A", "A"), symbols_file=None)
+    with pytest.raises(ValueError, match="Duplicate symbol"):
+        cli_main._read_symbols(duplicate_options, logger)
+
+
+@pytest.mark.unit
+def test_season2_resource_corpus_has_289_unique_roots() -> None:
+    symbols = cli_main._read_symbols(
+        _options(symbols=(), symbols_file=Path("resources/season2-resources.txt")), Mock()
+    )
+
+    assert len(symbols) == 289
+    assert len(set(symbols)) == 289
 
 
 @pytest.mark.unit
 def test_read_symbols_reports_missing_files(tmp_path: Path) -> None:
+    options = _options(symbols=(), symbols_file=tmp_path / "missing")
+    logger = Mock()
     with pytest.raises(ValueError, match="not found"):
-        cli_main._read_symbols(_options(symbols=(), symbols_file=tmp_path / "missing"), Mock())
+        cli_main._read_symbols(options, logger)
 
 
 @pytest.mark.unit
@@ -117,10 +136,9 @@ def test_write_headers_does_not_publish_partial_bundle(tmp_path: Path, monkeypat
         return real_replace(source, destination)
 
     monkeypatch.setattr(header_output.os, "replace", fail_second_header)
+    publisher = header_output.AtomicHeaderPublisher()
     with pytest.raises(OSError, match="interrupted publication"):
-        header_output.AtomicHeaderPublisher().publish(
-            tmp_path, ELFPlatform.PS4, {"A.h": "a", "B.h": "b"}
-        )
+        publisher.publish(tmp_path, ELFPlatform.PS4, {"A.h": "a", "B.h": "b"})
 
     platform_dir = tmp_path / "ps4"
     assert not (platform_dir / "A.h").exists()
@@ -139,6 +157,32 @@ def test_header_publisher_removes_files_from_previous_manifest(tmp_path: Path) -
     platform_dir = tmp_path / "ps4"
     assert (platform_dir / "A.h").read_text(encoding="utf-8") == "new"
     assert not (platform_dir / "B.h").exists()
+
+
+@pytest.mark.unit
+def test_header_publisher_persists_generation_metadata(tmp_path: Path) -> None:
+    import json
+
+    from ddon_dwarf_reconstructor.infrastructure.header_output import AtomicHeaderPublisher
+
+    AtomicHeaderPublisher().publish(
+        tmp_path,
+        ELFPlatform.PS4,
+        {"A.h": "a"},
+        metadata={
+            "generation": {
+                "requested_symbols": ["A"],
+                "outcomes": [{"symbol": "A", "status": "success", "headers": ["A.h"]}],
+                "published": True,
+            }
+        },
+    )
+
+    manifest = json.loads(
+        (tmp_path / "ps4" / "header-bundle.manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["metadata"]["generation"]["requested_symbols"] == ["A"]
+    assert manifest["metadata"]["generation"]["published"] is True
 
 
 @pytest.mark.unit
@@ -180,11 +224,83 @@ def test_run_generation_publishes_one_bundle_for_all_symbols(tmp_path: Path, moc
         side_effect=[{"A.h": "a"}, {"B.h": "bb"}],
     )
     publisher = mocker.patch.object(cli_main, "_write_headers", return_value=3)
+    logger = Mock()
 
     success, failures = cli_main._run_generation(
-        _options(symbols=("A", "B")), config, ["A", "B"], Mock()
+        _options(symbols=("A", "B")), config, ["A", "B"], logger
     )
 
     assert success == 2
     assert failures == []
-    publisher.assert_called_once_with(config, generator, {"A.h": "a", "B.h": "bb"}, mocker.ANY)
+    publisher.assert_called_once_with(
+        config,
+        generator,
+        {"A.h": "a", "B.h": "bb"},
+        mocker.ANY,
+        metadata=mocker.ANY,
+    )
+    report_calls = [
+        call for call in logger.log.call_args_list if call.args[1] == "generation_report"
+    ]
+    assert len(report_calls) == 1
+    fields = report_calls[0].kwargs["extra"]["ddon_fields"]
+    assert fields["published"] is True
+    assert fields["outcomes"] == [
+        {"symbol": "A", "status": "success", "headers": ["A.h"]},
+        {"symbol": "B", "status": "success", "headers": ["B.h"]},
+    ]
+
+
+@pytest.mark.unit
+def test_run_generation_publishes_separate_bundles_for_full_hierarchy_roots(
+    tmp_path: Path, mocker
+) -> None:
+    config = Mock(
+        output_dir=tmp_path,
+        elf_file_path=Path("input.elf"),
+        verbose=False,
+    )
+    generator = mocker.MagicMock(platform=ELFPlatform.PS4)
+    generator.__enter__.return_value = generator
+    generator.lazy_index = Mock()
+    mocker.patch.object(
+        cli_main.DwarfRuntimeConfig,
+        "from_environment",
+        return_value=Mock(die_cache_size=1, type_cache_size=1, search_timeout_seconds=1.0),
+    )
+    mocker.patch.object(cli_main, "SourceIdentityCatalog", return_value=Mock(sha256=Mock()))
+    mocker.patch.object(cli_main, "get_cache_file_path", return_value=tmp_path / "cache.json")
+    mocker.patch.object(cli_main, "DwarfGenerator", return_value=generator)
+    mocker.patch.object(
+        cli_main,
+        "_build_headers",
+        side_effect=[
+            {"MtAllocator.h": "root A context"},
+            {"MtAllocator.h": "root B context"},
+        ],
+    )
+    publisher = mocker.patch.object(cli_main, "_write_headers", return_value=3)
+    logger = Mock()
+
+    success, failures = cli_main._run_generation(
+        _options(symbols=("rAIFSM", "rZone"), full_hierarchy=True),
+        config,
+        ["rAIFSM", "rZone"],
+        logger,
+    )
+
+    assert success == 2
+    assert failures == []
+    assert publisher.call_count == 2
+    assert publisher.call_args_list[0].kwargs["output_dir"] == (
+        tmp_path / "symbols" / "0001-rAIFSM"
+    )
+    assert publisher.call_args_list[1].kwargs["output_dir"] == tmp_path / "symbols" / "0002-rZone"
+    assert publisher.call_args_list[0].args[2] == {"MtAllocator.h": "root A context"}
+    assert publisher.call_args_list[1].args[2] == {"MtAllocator.h": "root B context"}
+    report_calls = [
+        call for call in logger.log.call_args_list if call.args[1] == "generation_report"
+    ]
+    assert len(report_calls) == 1
+    fields = report_calls[0].kwargs["extra"]["ddon_fields"]
+    assert fields["published"] is True
