@@ -5,11 +5,13 @@ from __future__ import annotations
 import json
 import os
 import platform
+from collections.abc import Callable
 from pathlib import Path
 from time import perf_counter
 from typing import Any
 
 from ...domain.models.analytical_dwarf import DwarfMaterializationRequest
+from .artifact_store import load_analytical_store
 from .benchmark_baselines import current_runtime_baseline
 from .benchmark_doris_queries import doris_queries
 from .benchmark_metrics import measure
@@ -18,7 +20,6 @@ from .doris import DorisConfig, DorisLoader, build_doris_plan
 from .manifest import declared_parquet_files, load_manifest
 from .materializer import DwarfMaterializer
 from .optional import AnalyticalDependencyError
-from .session import load_analytical_store
 
 
 def run_store_benchmark(
@@ -164,6 +165,8 @@ def _knowledge_export_measurement(
     store: Any,
     symbols: tuple[str, ...],
     iterations: int,
+    *,
+    session_factory: Callable[[Path], Any] | None = None,
 ) -> dict[str, Any]:
     del iterations
     try:
@@ -183,12 +186,12 @@ def _knowledge_export_measurement(
         def operation() -> tuple[list[Path], int]:
             exported: list[Path] = []
 
-            def session_factory(_path: Path) -> AnalyticalDwarfSession:
+            def default_session_factory(_path: Path) -> AnalyticalDwarfSession:
                 return AnalyticalDwarfSession(store_path, expected_source_path=source_path)
 
             with DwarfGenerator(
                 source_path,
-                session_factory=session_factory,
+                session_factory=session_factory or default_session_factory,
                 dump_lookup_factory=create_dump_lookup,
                 disassembly_factory=create_disassembly_producer,
                 cache_file=output_root / "dwarf-cache.json",

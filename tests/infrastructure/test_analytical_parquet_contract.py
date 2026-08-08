@@ -10,13 +10,14 @@ from unittest.mock import patch
 import pytest
 
 from ddon_dwarf_reconstructor.application.generators import DwarfGenerator
+from ddon_dwarf_reconstructor.core.platform import ELFPlatform
 from ddon_dwarf_reconstructor.domain.models.analytical_dwarf import (
     DwarfMaterializationRequest,
     MaterializationManifest,
 )
 from ddon_dwarf_reconstructor.infrastructure.analytical import (
-    AnalyticalDwarfSession,
     JsonlDwarfStore,
+    MaterializedDwarfIndex,
     ParquetDwarfStore,
 )
 from ddon_dwarf_reconstructor.infrastructure.analytical.manifest import (
@@ -397,13 +398,37 @@ def test_jsonl_and_parquet_stores_generate_byte_identical_headers(tmp_path: Path
     assert jsonl_manifest is not None
     assert parquet_manifest is not None
 
+    class _ArtifactSession:
+        legacy_lookup_allowed = True
+
+        def __init__(self, manifest: Path) -> None:
+            self.manifest = manifest
+            self.store = None
+            self.dwarf_info = None
+            self.query_port = None
+            self.query_index = None
+            self.platform = ELFPlatform.PS4
+
+        def __enter__(self) -> _ArtifactSession:
+            self.store = load_analytical_store(self.manifest)
+            self.dwarf_info = self.store.as_dwarf_info()
+            self.query_port = self.store
+            self.query_index = MaterializedDwarfIndex(self.store)
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            self.close()
+
+        def close(self) -> None:
+            self.store = None
+            self.dwarf_info = None
+            self.query_port = None
+            self.query_index = None
+
     def generate(manifest: Path, cache_file: Path) -> str:
         with DwarfGenerator(
             source,
-            session_factory=lambda _path: AnalyticalDwarfSession(
-                manifest,
-                expected_source_path=source,
-            ),
+            session_factory=lambda _path: _ArtifactSession(manifest),
             cache_file=cache_file,
         ) as generator:
             return generator.generate("Thing")

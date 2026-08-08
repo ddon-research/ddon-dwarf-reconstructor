@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ...core.dwarf import DwarfInfo
 from ...core.platform import ELFPlatform
 from ...domain.ports.dwarf_lookup import DwarfLookupPort
 from ..artifacts import SourceIdentityCatalog
-from .jsonl_store import JsonlDwarfStore
-from .manifest import load_manifest
+from .doris import DorisConfig
+from .doris_store import DorisDwarfIndex, DorisDwarfStore
 
 if TYPE_CHECKING:
     from ...domain.ports.analytical_store import DwarfQueryPort
@@ -20,7 +20,7 @@ class AnalyticalDwarfSession:
     """Own one materialized store for the duration of a generation request."""
 
     # A store-backed runtime must never discover or consult the legacy dump
-    # adapter implicitly.  Validation producers remain available only through
+    # adapter implicitly. Validation producers remain available only through
     # an explicit non-analytical session.
     legacy_lookup_allowed = False
 
@@ -31,6 +31,7 @@ class AnalyticalDwarfSession:
         expected_source_path: Path | None = None,
         verify_source: bool = True,
         selection_cache_path: Path | None = None,
+        doris_config: DorisConfig | None = None,
     ) -> None:
         self.manifest_path = manifest_path.resolve()
         self.expected_source_path = expected_source_path.resolve() if expected_source_path else None
@@ -39,7 +40,8 @@ class AnalyticalDwarfSession:
             selection_cache_path.resolve() if selection_cache_path is not None else None
         )
         self.selection_source_fingerprint: dict[str, int | str] | None = None
-        self.store: JsonlDwarfStore | None = None
+        self.doris_config = doris_config or DorisConfig.from_environment()
+        self.store: DorisDwarfStore | None = None
         self.query_port: DwarfQueryPort | None = None
         self.query_index: DwarfLookupPort | None = None
         self.dwarf_info: DwarfInfo | None = None
@@ -50,8 +52,9 @@ class AnalyticalDwarfSession:
         if self.expected_source_path is not None and self.verify_source:
             source_identity = SourceIdentityCatalog().identify(self.expected_source_path)
             self.selection_source_fingerprint = source_identity.as_fingerprint()
-        self.store = load_analytical_store(
+        self.store = DorisDwarfStore.load(
             self.manifest_path,
+            config=self.doris_config,
             verify_source=self.verify_source,
             source_path=self.expected_source_path,
             selection_cache_path=self.selection_cache_path,
@@ -66,9 +69,7 @@ class AnalyticalDwarfSession:
                     f"{self.expected_source_path}"
                 )
         self.query_port = self.store
-        from .jsonl_store import MaterializedDwarfIndex
-
-        self.query_index = MaterializedDwarfIndex(self.store)
+        self.query_index = DorisDwarfIndex(self.store)
         self.dwarf_info = self.store.as_dwarf_info()
         self.platform = _platform(self.store.manifest.platform)
         return self
@@ -83,10 +84,24 @@ class AnalyticalDwarfSession:
         self.close()
 
     def close(self) -> None:
+        if self.store is not None:
+            self.store.close()
         self.dwarf_info = None
         self.query_port = None
         self.query_index = None
         self.store = None
+
+
+def load_analytical_store(*args: Any, **kwargs: Any) -> Any:
+    """Load an artifact store for explicit inspection compatibility only.
+
+    Generation never calls this wrapper; it opens :class:`DorisDwarfStore`
+    directly. Keeping the old import location lazy preserves diagnostic and
+    validation callers without reintroducing a file-backed runtime path.
+    """
+    from .artifact_store import load_analytical_store as load_artifact_store
+
+    return load_artifact_store(*args, **kwargs)
 
 
 def _platform(value: str) -> ELFPlatform:
@@ -94,31 +109,3 @@ def _platform(value: str) -> ELFPlatform:
         return ELFPlatform(value.lower())
     except ValueError:
         return ELFPlatform.UNKNOWN
-
-
-def load_analytical_store(
-    manifest_path: Path,
-    *,
-    verify_source: bool = True,
-    source_path: Path | None = None,
-    allow_incomplete: bool = False,
-    verify_artifacts: bool = False,
-    selection_cache_path: Path | None = None,
-    selection_source_fingerprint: dict[str, int | str] | None = None,
-) -> JsonlDwarfStore:
-    """Load the selected backend, requiring complete publication by default."""
-    manifest = load_manifest(manifest_path.resolve())
-    store_type: type[JsonlDwarfStore] = JsonlDwarfStore
-    if "parquet" in manifest.files:
-        from .parquet_store import ParquetDwarfStore
-
-        store_type = ParquetDwarfStore
-    return store_type.load(
-        manifest_path,
-        verify_source=verify_source,
-        source_path=source_path,
-        allow_incomplete=allow_incomplete,
-        verify_artifacts=verify_artifacts,
-        selection_cache_path=selection_cache_path,
-        selection_source_fingerprint=selection_source_fingerprint,
-    )

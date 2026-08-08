@@ -20,6 +20,19 @@ needed. Checkpoints rotate Parquet parts and preserve `checkpoint.json` after an
 inspect them with `artifacts inspect-dwarf-store <checkpoint.json> --allow-incomplete`. They are
 partial evidence and are not valid Doris load or runtime-generation inputs.
 
+For a serving publication, inspect a complete manifest, load it into Doris, and wait for the
+command to report a `complete` source registry with reconciled family counts. `--dry-run` only
+plans DDL/load operations and does not make the manifest available to generation:
+
+```powershell
+uv run ddon-dwarf-reconstructor artifacts inspect-dwarf-store <manifest.json>
+uv run ddon-dwarf-reconstructor artifacts load-doris <manifest.json>
+```
+
+After publication, `generate` and `export-knowledge` query Doris only. They do not read the
+Parquet files or JSONL audit rows directly, and they fail closed if the registry is missing,
+stale, incomplete, or count-mismatched.
+
 ```powershell
 docker compose --file ops/analytical-dwarf/compose.yaml config --quiet
 docker compose --file ops/analytical-dwarf/compose.yaml up -d

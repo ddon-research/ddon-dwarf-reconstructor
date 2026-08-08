@@ -48,13 +48,15 @@ ordering and source offsets.
 - The standard non-proprietary container baseline is
   `tools/binary_toolchain/compose.yaml`. Mount explicit inputs read-only, publish outputs outside
   source control, and never copy Sony SDKs or SELF credentials into the image.
-- Analytical DWARF materialization is the normal generation boundary. Run
+- Analytical DWARF materialization is the producer boundary. Run
   `artifacts materialize-dwarf <elf> --output-dir <external-dir>` once, validate it with
-  `artifacts inspect-dwarf-store`, and pass its source-bound manifest through `--dwarf-store` to
-  `generate`, `export-knowledge`, and `performance benchmark-dwarf-store`. The canonical typed
+  `artifacts inspect-dwarf-store`, load the complete manifest with `artifacts load-doris`, and
+  pass its source-bound manifest through `--dwarf-store` to `generate` and `export-knowledge`.
+  Normal generation and knowledge export query Doris only; `performance benchmark-dwarf-store`
+  remains the explicit backend-comparison workflow. The canonical typed
   producer uses pyelftools 0.33, one CU traversal, an explicit stack DIE walk, checksummed raw
   section/chunk references, and atomic publication. It writes typed Parquet rows directly; JSONL
-  is an opt-in audit projection. Complete
+  is an opt-in audit projection. Doris is the normal serving backend and complete
   manifests include source/producer/schema/configuration identity, CU/family counts, and closed
   Parquet file size, timestamp, hash, footer, compression, and row-group metadata, and validates
   every closed row group before complete publication. Doris is a downstream load/query backend under

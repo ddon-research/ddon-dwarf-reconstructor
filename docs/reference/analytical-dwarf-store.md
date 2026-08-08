@@ -20,9 +20,9 @@ The derived families are also typed and source-bound: `range`, `location`, `line
 are published as `raw_only` rows with a checksum when the installed pyelftools API does not expose
 a decoder; the raw section remains available for a later decoder or external LLVM cross-check.
 
-The file-runtime facade consumes the typed `line` family directly. It reconstructs the CU file
-list and line-state entries needed by declaration-file resolution, so generation does not reopen
-the ELF merely to recover line-program metadata.
+The Doris runtime facade consumes the typed `line` family through the serving projection. It
+reconstructs the CU file list and line-state entries needed by declaration-file resolution, so
+generation does not reopen the ELF or read Parquet merely to recover line-program metadata.
 
 Raw sections are copied with bounded I/O into checksummed files. Large byte attributes are external
 checksummed chunks referenced by typed value columns (and, when enabled, by the JSONL audit row).
@@ -59,14 +59,14 @@ flowchart LR
     ROWS --> PARQUET["Arrow + Parquet\nZstandard"]
     ROWS -. opt-in audit .-> JSONL["JSONL audit"]
     PARQUET --> DORIS["Doris native\nstream load"]
-    PARQUET --> RUNTIME["source-bound query port"]
+    DORIS --> RUNTIME["source-bound query port"]
     PARQUET --> BENCH["benchmark evidence"]
     DORIS --> BENCH
 ```
 
 The production path deliberately does not serialize JSON and then reload it into Doris. Arrow
 rows are normalized once during the CU pass, Parquet is the replayable physical input format, and
-Doris is loaded through the native-table path. JSONL remains useful
+Doris is loaded through the native-table path and is the sole normal serving backend. JSONL remains useful
 when a person needs a line-oriented audit artifact or a small fixture, but it is not a required
 intermediary or a runtime dependency.
 
@@ -94,13 +94,16 @@ uv run ddon-dwarf-reconstructor performance benchmark-dwarf-store <ELF> `
   --baseline-dwarf-dump <external-dump.zst> --baseline-dwarf-index <external-index.sqlite3>
 uv run ddon-dwarf-reconstructor artifacts load-doris <manifest.json> `
   --dry-run
+uv run ddon-dwarf-reconstructor artifacts load-doris <manifest.json>
 ```
 
 `generate` and `export-knowledge` require the same source-bound manifest through `--dwarf-store`.
-They do not implicitly materialize, open the ELF for a fallback traversal, or consult the old
-compressed-text SQLite index. Store-backed session setup also disables automatic sibling and
-environment dump discovery. The old index remains available only for explicitly labeled parity
-and cross-check evidence while the migration gate is incomplete.
+Before either command, the complete manifest must be loaded successfully into Doris; the loader
+publishes a source registry only after the observed family counts reconcile with the manifest.
+They do not implicitly materialize, open the ELF for a fallback traversal, read Parquet/JSONL, or
+consult the old compressed-text SQLite index. Store-backed session setup also disables automatic
+sibling and environment dump discovery. The old index remains available only for explicitly
+labeled parity and cross-check evidence.
 
 For durable local reuse, place the complete store under
 `output/analytical-dwarf/main/store-<source-sha16>/`. Use `%TEMP%\ddon-analytical-dwarf` for

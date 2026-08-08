@@ -72,7 +72,10 @@ def _load_config(options: GenerationOptions) -> Config:
 def _validate_store_options(options: GenerationOptions) -> None:
     """Require a pre-materialized store for normal generation commands."""
     if options.dwarf_store_manifest is None:
-        raise ValueError("Generation requires --dwarf-store; run artifacts materialize-dwarf first")
+        raise ValueError(
+            "Generation requires --dwarf-store; materialize the ELF and load the complete "
+            "manifest with artifacts load-doris first"
+        )
     if options.dwarf_dump is not None or options.dwarf_index is not None:
         raise ValueError(
             "--dwarf-dump and --dwarf-index are validation-only and cannot drive generation"

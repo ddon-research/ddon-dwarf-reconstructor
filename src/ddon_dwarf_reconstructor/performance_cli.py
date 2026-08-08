@@ -14,7 +14,6 @@ from .domain.models.performance import (
     RunSummary,
     RuntimeDescriptor,
 )
-from .infrastructure.analytical import run_store_benchmark
 from .infrastructure.performance import (
     PerformanceRunner,
     discover_tools,
@@ -396,6 +395,8 @@ def benchmark_dwarf_store(
     ),
 ) -> None:
     """Benchmark one-pass materialization and available analytical projections."""
+    from .infrastructure.analytical import run_store_benchmark
+
     report = run_store_benchmark(
         elf,
         output_dir,

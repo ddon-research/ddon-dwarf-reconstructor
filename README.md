@@ -73,9 +73,12 @@ The packaged `ddon-dwarf-reconstructor` command is canonical. Symbols are suppli
 `--symbol` or by using `--symbols-file`; comma-separated symbol values are no longer accepted.
 
 ```text
-# Materialize once into the ignored durable local store, then use the source-bound manifest
+# Materialize once into the ignored durable local store, publish it into Doris, then use the
+# source-bound manifest for Doris-backed generation
 uv run ddon-dwarf-reconstructor artifacts materialize-dwarf resources/DDOORBIS.elf \
   --output-dir output/analytical-dwarf/main --write-parquet
+uv run ddon-dwarf-reconstructor artifacts load-doris \
+  output/analytical-dwarf/main/store-<source-sha16>/manifest.json
 
 # Optional diagnostic checkpoints for a long traversal; they remain explicitly partial
 uv run ddon-dwarf-reconstructor artifacts materialize-dwarf resources/DDOORBIS.elf \
@@ -117,9 +120,11 @@ same-named headers. Validate a selected root bundle standalone before treating a
 or IDA diagnostics as additive evidence.
 
 Use `uv run ddon-dwarf-reconstructor --help` or a command’s `--help` for the complete typed
-interface. Normal `generate` and `export-knowledge` runs require `--dwarf-store`; a missing or
-stale manifest fails closed and never performs an implicit CU traversal. `--dwarf-dump` and
-`--dwarf-index` remain explicit validation-only inputs for the legacy cross-check workflow.
+interface. Normal `generate` and `export-knowledge` runs require `--dwarf-store` and a matching
+complete source publication in Doris; a missing, stale, incomplete, unavailable, or
+count-mismatched publication fails closed. They never perform an implicit CU traversal or read
+Parquet/JSONL at runtime. `--dwarf-dump` and `--dwarf-index` remain explicit validation-only
+inputs for the legacy cross-check workflow.
 
 ## Logging and diagnostics
 

@@ -25,11 +25,14 @@ from ddon_dwarf_reconstructor.domain.services.parsing.class_parser_scan import (
     ClassParserScanMixin,
 )
 from ddon_dwarf_reconstructor.infrastructure.analytical import (
-    AnalyticalDwarfSession,
     DwarfMaterializer,
     JsonlDwarfStore,
+    MaterializedDwarfIndex,
     ParquetDwarfStore,
     run_store_benchmark,
+)
+from ddon_dwarf_reconstructor.infrastructure.analytical.artifact_store import (
+    load_analytical_store,
 )
 from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark import (
     _knowledge_export_measurement,
@@ -126,6 +129,36 @@ class _Session:
 
     def __exit__(self, *_args: object) -> None:
         self.file_handle.close()
+
+
+class _ArtifactSession:
+    """Test-only generator session for explicit artifact compatibility."""
+
+    legacy_lookup_allowed = True
+
+    def __init__(self, manifest: Path) -> None:
+        self.manifest = manifest
+        self.store = None
+        self.dwarf_info = None
+        self.query_port = None
+        self.query_index = None
+        self.platform = ELFPlatform.PS4
+
+    def __enter__(self) -> _ArtifactSession:
+        self.store = load_analytical_store(self.manifest)
+        self.dwarf_info = self.store.as_dwarf_info()
+        self.query_port = self.store
+        self.query_index = MaterializedDwarfIndex(self.store)
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        self.close()
+
+    def close(self) -> None:
+        self.store = None
+        self.dwarf_info = None
+        self.query_port = None
+        self.query_index = None
 
 
 def _fixture_dwarf() -> _DwarfInfo:
@@ -312,10 +345,7 @@ def test_generator_can_use_materialized_store_without_live_elf_session(tmp_path:
     assert materializer.last_manifest_path is not None
     with DwarfGenerator(
         source,
-        session_factory=lambda _path: AnalyticalDwarfSession(
-            materializer.last_manifest_path,
-            expected_source_path=source,
-        ),
+        session_factory=lambda _path: _ArtifactSession(materializer.last_manifest_path),
         cache_file=tmp_path / "dwarf-cache.json",
     ) as generator:
         result = generator.find_class("Thing")
@@ -374,10 +404,8 @@ def test_direct_parquet_materialization_does_not_require_jsonl(tmp_path: Path) -
     assert all(artifact.format == "parquet" for artifact in manifest.artifacts)
     assert all(artifact.row_group_count == 1 for artifact in manifest.artifacts)
     assert not (materializer.last_manifest_path.parent / "records.jsonl").exists()
-    with AnalyticalDwarfSession(
-        materializer.last_manifest_path, expected_source_path=source
-    ) as session:
-        result = session.store.find_definitions("Thing")
+    store = load_analytical_store(materializer.last_manifest_path)
+    result = store.find_definitions("Thing")
     assert result.status is QueryStatus.COMPLETE
     assert result.items[0].offset == 0x20
 
@@ -395,12 +423,9 @@ def test_parquet_store_queries_without_loading_jsonl_records(tmp_path: Path) -> 
         )
 
     assert materializer.last_manifest_path is not None
-    with AnalyticalDwarfSession(
-        materializer.last_manifest_path,
-        expected_source_path=source,
-    ) as session:
-        assert isinstance(session.store, ParquetDwarfStore)
-        result = session.store.find_definitions("Thing")
+    store = load_analytical_store(materializer.last_manifest_path)
+    assert isinstance(store, ParquetDwarfStore)
+    result = store.find_definitions("Thing")
 
     assert result.status is QueryStatus.COMPLETE
     assert result.items[0].offset == 0x20
@@ -419,16 +444,15 @@ def test_store_benchmark_can_hash_complete_knowledge_export(tmp_path: Path) -> N
         )
 
     assert materializer.last_manifest_path is not None
-    with AnalyticalDwarfSession(
-        materializer.last_manifest_path,
-        expected_source_path=source,
-    ) as session:
-        result = _knowledge_export_measurement(
-            materializer.last_manifest_path,
-            session.store,
-            ("Thing",),
-            1,
-        )
+    manifest_path = materializer.last_manifest_path
+    store = load_analytical_store(materializer.last_manifest_path)
+    result = _knowledge_export_measurement(
+        manifest_path,
+        store,
+        ("Thing",),
+        1,
+        session_factory=lambda _path: _ArtifactSession(manifest_path),
+    )
 
     assert result["status"] == "observed"
     assert result["files"] == 4

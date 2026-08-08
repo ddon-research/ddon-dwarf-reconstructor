@@ -140,7 +140,7 @@ def generate(
         None,
         "--dwarf-store",
         metavar="MANIFEST",
-        help="Validated analytical DWARF store manifest; avoids runtime CU traversal.",
+        help="Complete source-bound manifest whose projection is already published in Doris.",
     ),
     resolve_param_names: bool = typer.Option(
         False,
@@ -199,7 +199,7 @@ def export_knowledge(
         None,
         "--dwarf-store",
         metavar="MANIFEST",
-        help="Validated analytical DWARF store manifest; avoids runtime CU traversal.",
+        help="Complete source-bound manifest whose projection is already published in Doris.",
     ),
     build_id: str | None = typer.Option(None, "--build-id", help="Stable build identifier."),
     orbis_objdump: Path | None = typer.Option(

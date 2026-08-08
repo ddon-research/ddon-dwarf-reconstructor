@@ -15,6 +15,7 @@ from urllib.parse import urljoin, urlparse
 
 from ...domain.models.analytical_dwarf import MaterializationManifest
 from .doris_layout import _FAMILIES, _family_table, _identifier
+from .doris_registry import publish_registry, registry_sql
 from .doris_schema import _FAMILY_COLUMNS
 from .doris_statistics import analyze_tables
 from .manifest import (
@@ -150,11 +151,25 @@ class DorisLoader:
             self._execute_sql(connection, plan)
             loaded = self._load_native_files(plan, config)
             analysis = analyze_tables(connection, plan, config)
+            manifest = _load_manifest(plan.manifest_path)
+            registry = publish_registry(
+                connection,
+                config.database,
+                config.table,
+                plan.manifest_path,
+                manifest,
+            )
             result: dict[str, object] = {
                 "status": "observed",
                 "plan": plan.to_dict(),
                 "loads": loaded,
                 "analysis": analysis,
+                "registry": {
+                    "source_id": registry.source_id,
+                    "status": registry.status,
+                    "expected_counts": registry.expected_counts,
+                    "observed_counts": registry.observed_counts,
+                },
             }
             return result
         finally:
@@ -292,6 +307,7 @@ DUPLICATE KEY({keys})
 DISTRIBUTED BY {distribution}
 PROPERTIES ("replication_num" = "1", "compression" = "zstd", "bloom_filter_columns" = "{bloom}")"""
         )
+    statements.append(registry_sql(config.database, config.table))
     statements.append(
         f"ALTER TABLE {database}.{_identifier(_family_table(config.table, 'index'))} "
         "ADD INDEX IF NOT EXISTS idx_name (name) USING INVERTED"

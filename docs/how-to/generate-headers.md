@@ -12,11 +12,16 @@ repository output area so subsequent runs reuse the source-bound manifest:
 $storeRoot = Join-Path $PWD 'output\analytical-dwarf\main'
 uv run ddon-dwarf-reconstructor artifacts materialize-dwarf `
   resources/DDOORBIS.elf `
-  --output-dir $storeRoot
+  --output-dir $storeRoot --write-parquet
+$storeManifest = Join-Path $storeRoot 'store-<source-sha16>\manifest.json'
+uv run ddon-dwarf-reconstructor artifacts load-doris $storeManifest
 ```
 
+The load must complete successfully before generation. It publishes a source-bound registry row
+after all Doris family counts reconcile; `--dry-run`, an incomplete checkpoint, or a stale
+manifest is not a serving publication.
+
 ```powershell
-$storeManifest = Join-Path $storeRoot 'store-<source-sha16>\manifest.json'
 uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf `
   --dwarf-store $storeManifest `
   --symbol MtObject
@@ -42,9 +47,10 @@ as a complete corpus.
 
 ## What happens inside
 
-1. `DwarfGeneratorSetup` opens the validated source-bound store session and its query/index ports.
+1. `DwarfGeneratorSetup` opens a source-bound Doris session and its query/index ports.
 2. `DwarfGenerator` resolves definitions, types, methods, members, and hierarchy information
-   from materialized records; it does not implicitly traverse the ELF.
+  from the Doris serving projection; it does not implicitly traverse the ELF or read the
+  Parquet/JSONL materialization directly.
 3. `HeaderGenerator` renders deterministic declarations with stable ordering and forward
    declarations where required.
 4. `AtomicHeaderPublisher` stages the bundle, writes its manifest, and commits or rolls back as a
@@ -62,10 +68,13 @@ repository does not accept game binaries, generated headers, or runtime caches a
 
 ## Troubleshooting order
 
-1. Run `artifacts inspect-dwarf-store <manifest>` to validate the store and source binding.
-2. Run `artifacts inspect-elf <path>` to confirm the ELF/DWARF producer facts.
-3. Check the run JSONL logs for the `run_id`, symbol, stage, and query evidence status.
-4. If a compressed dump is involved, use `artifacts inspect-dwarf-dump <path>` only for an
+1. Run `artifacts inspect-dwarf-store <manifest>` to validate the materialized Parquet store and
+  source binding.
+2. Run `artifacts load-doris <manifest>` and confirm that the registry reports `complete` with
+  reconciled family counts.
+3. Run `artifacts inspect-elf <path>` to confirm the ELF/DWARF producer facts.
+4. Check the run JSONL logs for the `run_id`, symbol, stage, and query evidence status.
+5. If a compressed dump is involved, use `artifacts inspect-dwarf-dump <path>` only for an
    explicitly labeled validation cross-check.
 
 Do not delete a warm source-bound cache as routine cleanup. Repair and purge commands are

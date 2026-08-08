@@ -25,9 +25,11 @@ Common inputs are an ELF path, one or more `--symbol` values or a `--symbols-fil
 the complete option list; this page intentionally documents stable commands rather than copying
 Typer's formatting.
 
-Normal generation and knowledge export require a source-bound `--dwarf-store` manifest. The
-manifest is produced explicitly before lookup; missing, stale, incomplete, or source-mismatched
-stores fail closed.
+Normal generation and knowledge export require a source-bound `--dwarf-store` manifest whose
+complete projection has been loaded into Doris with `artifacts load-doris`. The manifest is
+produced and published explicitly before lookup; missing, stale, incomplete, unavailable, or
+source/count-mismatched stores fail closed. These commands query Doris only; Parquet remains the
+canonical materializer output and JSONL remains an opt-in audit/interchange projection.
 
 For a complete local store, the repository convention is
 `output/analytical-dwarf/main/store-<source-sha16>/manifest.json`. Checkpoints and bounded probes

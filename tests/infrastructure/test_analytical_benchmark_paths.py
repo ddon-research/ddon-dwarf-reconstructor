@@ -51,6 +51,12 @@ def test_loader_executes_native_plan_and_submits_statistics(tmp_path: Path) -> N
     pymysql = MagicMock(connect=MagicMock(return_value=connection))
     plan = _plan(tmp_path)
     config = DorisConfig(database="test_db", table="dwarf", analyze_after_load=True)
+    registry = SimpleNamespace(
+        source_id="a" * 64,
+        status="complete",
+        expected_counts={},
+        observed_counts={},
+    )
     with (
         patch(
             "ddon_dwarf_reconstructor.infrastructure.analytical.doris.import_optional",
@@ -58,6 +64,14 @@ def test_loader_executes_native_plan_and_submits_statistics(tmp_path: Path) -> N
         ),
         patch.object(DorisLoader, "_validate_plan"),
         patch.object(DorisLoader, "_load_native_files", return_value=[{"status": "ok"}]),
+        patch(
+            "ddon_dwarf_reconstructor.infrastructure.analytical.doris._load_manifest",
+            return_value=SimpleNamespace(),
+        ),
+        patch(
+            "ddon_dwarf_reconstructor.infrastructure.analytical.doris.publish_registry",
+            return_value=registry,
+        ),
     ):
         result = DorisLoader().execute(plan, config)
 

@@ -14,7 +14,6 @@ import typer
 from .domain.models.analytical_dwarf import DwarfMaterializationRequest
 from .domain.models.tool_evidence import TOOL_EXPORT_SCHEMA_VERSION
 from .domain.repositories.cache import PersistentSymbolCache
-from .infrastructure.analytical import DwarfMaterializer, load_analytical_store
 from .infrastructure.analytical.doris import (
     DorisConfig,
     DorisLoader,
@@ -225,6 +224,8 @@ def materialize_dwarf(
 
 
 def _run_materialization(request: DwarfMaterializationRequest) -> None:
+    from .infrastructure.analytical import DwarfMaterializer
+
     materializer = DwarfMaterializer()
     manifest = materializer.materialize(request)
     _write_result(
@@ -258,6 +259,8 @@ def inspect_dwarf_store(
     """Validate and summarize a source-bound analytical store."""
 
     def operation() -> None:
+        from .infrastructure.analytical import load_analytical_store
+
         store = load_analytical_store(
             manifest,
             verify_source=verify_source,
