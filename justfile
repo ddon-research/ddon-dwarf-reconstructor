@@ -7,8 +7,12 @@ default:
     @just --list
 
 sync:
-    uv sync --python 3.14.6
+    uv sync --python 3.14.7 --locked
     npm ci --prefix tools/documentation --no-audit --no-fund
+
+lock-check:
+    uv lock --check
+    uv lock --directory tools/dwarf_spec_pipeline --check
 
 test-unit:
     uv run pytest -m unit -o addopts='-q --strict-markers'
@@ -44,7 +48,7 @@ test-performance:
     uv run pytest -m performance
 
 performance-tools-install:
-    uv sync --group performance
+    uv sync --locked --group performance
 
 performance-profile elf_file="resources/DDOORBIS.elf" dwarf_store="output/analytical-dwarf/main/store-4236f598acc8f158/manifest.json" symbol="rLayout" state="warm":
     uv run ddon-dwarf-reconstructor performance profile {{elf_file}} --dwarf-store {{dwarf_store}} --symbol {{symbol}} --state {{state}} --profiler scalene --profiler cprofile --profiler pyinstrument
@@ -65,25 +69,25 @@ performance-runtime-compare elf_file="resources/DDOORBIS.elf" nuitka_executable=
     uv run ddon-dwarf-reconstructor performance compare-runtimes {{elf_file}} --symbol rLayout --nuitka-executable {{nuitka_executable}} --free-threaded-python {{free_threaded_python}} --dwarf-store {{dwarf_store}} --build-id ps4-02020005
 
 analytical-materialize elf_file="resources/DDOORBIS.elf" output_dir="output/analytical-dwarf/main":
-    uv run --group analytical ddon-dwarf-reconstructor artifacts materialize-dwarf {{elf_file}} --output-dir {{output_dir}} --write-parquet
+    uv run ddon-dwarf-reconstructor artifacts materialize-dwarf {{elf_file}} --output-dir {{output_dir}} --write-parquet
 
 analytical-bounded elf_file="resources/DDOORBIS.elf" output_dir="$env:TEMP/ddon-analytical-dwarf/bounded" max_cus="1":
-    uv run --group analytical ddon-dwarf-reconstructor artifacts materialize-dwarf {{elf_file}} --output-dir {{output_dir}} --write-parquet --max-cus {{max_cus}}
+    uv run ddon-dwarf-reconstructor artifacts materialize-dwarf {{elf_file}} --output-dir {{output_dir}} --write-parquet --max-cus {{max_cus}}
 
 analytical-checkpoint elf_file="resources/DDOORBIS.elf" output_dir="$env:TEMP/ddon-analytical-dwarf/checkpoint" every_cus="64":
-    uv run --group analytical ddon-dwarf-reconstructor artifacts materialize-dwarf {{elf_file}} --output-dir {{output_dir}} --write-parquet --checkpoint-every-cus {{every_cus}}
+    uv run ddon-dwarf-reconstructor artifacts materialize-dwarf {{elf_file}} --output-dir {{output_dir}} --write-parquet --checkpoint-every-cus {{every_cus}}
 
 analytical-checkpoint-benchmark elf_file="resources/DDOORBIS.elf" checkpoint_manifest="" output_dir="$env:TEMP/ddon-analytical-dwarf/checkpoint-benchmark":
-    uv run --group analytical ddon-dwarf-reconstructor performance benchmark-dwarf-store {{elf_file}} --store-manifest {{checkpoint_manifest}} --allow-incomplete --output-dir {{output_dir}}
+    uv run ddon-dwarf-reconstructor performance benchmark-dwarf-store {{elf_file}} --store-manifest {{checkpoint_manifest}} --allow-incomplete --output-dir {{output_dir}}
 
 analytical-benchmark elf_file="resources/DDOORBIS.elf" output_dir="$env:TEMP/ddon-analytical-dwarf/analytical-benchmark" dwarf_store="":
-    uv run --group analytical ddon-dwarf-reconstructor performance benchmark-dwarf-store {{elf_file}} --output-dir {{output_dir}} {{ if dwarf_store != "" { "--store-manifest " + dwarf_store } else { "" } }}
+    uv run ddon-dwarf-reconstructor performance benchmark-dwarf-store {{elf_file}} --output-dir {{output_dir}} {{ if dwarf_store != "" { "--store-manifest " + dwarf_store } else { "" } }}
 
 analytical-profile-doris elf_file="resources/DDOORBIS.elf" store_manifest="output/analytical-dwarf/main/store-4236f598acc8f158/manifest.json" output_dir="$env:TEMP/ddon-analytical-dwarf/analytical-profile-doris":
-    uv run --group analytical ddon-dwarf-reconstructor performance profile-dwarf-store {{elf_file}} --store-manifest {{store_manifest}} --output-dir {{output_dir}} --query-existing-doris --profiler scalene --profiler cprofile
+    uv run ddon-dwarf-reconstructor performance profile-dwarf-store {{elf_file}} --store-manifest {{store_manifest}} --output-dir {{output_dir}} --query-existing-doris --profiler scalene --profiler cprofile
 
 analytical-fixture:
-    uv run --group analytical pytest tests/infrastructure/test_analytical_store.py tests/infrastructure/test_analytical_checkpoint.py tests/infrastructure/test_analytical_parquet_contract.py tests/infrastructure/test_analytical_benchmark_paths.py -m "unit and functional"
+    uv run pytest tests/infrastructure/test_analytical_store.py tests/infrastructure/test_analytical_checkpoint.py tests/infrastructure/test_analytical_parquet_contract.py tests/infrastructure/test_analytical_benchmark_paths.py -m "unit and functional"
 
 analytical-compose-config:
     docker compose --file ops/analytical-dwarf/compose.yaml config --quiet
@@ -126,7 +130,7 @@ type-check:
     uv run pyrefly check --min-severity warn
 
 deps:
-    uv run deptry . --non-dev-dependency-groups analytical --per-rule-ignores "DEP002=pyarrow|pymysql"
+    uv run deptry . --per-rule-ignores "DEP002=pyarrow|pymysql"
 
 structure:
     uv run python -m tests.support.quality.check_structure src tests tools/sonar
@@ -154,7 +158,7 @@ docs-check: docs-lint docs-diagrams docs-build
 audit:
     uv run prospector --profile .prospector.yml --tool pylint --tool pyflakes --tool mccabe src
 
-check: lint format-check actionlint type-check deps structure architecture docs-check
+check: lock-check lint format-check actionlint type-check deps structure architecture docs-check
 
 ci: check test-unit package-smoke
 

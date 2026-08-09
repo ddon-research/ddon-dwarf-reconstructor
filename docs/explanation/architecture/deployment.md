@@ -14,7 +14,7 @@ into the container.
 ## Linux compatibility and profiling deployment
 
 `ops/reconstructor/compose.yaml` is a separate developer-only image for Linux compatibility checks
-and opt-in performance evidence. It uses pinned CPython 3.14.6 and uv dependencies, mounts the
+and opt-in performance evidence. It uses pinned CPython 3.14.7 and uv 0.12.3 dependencies, mounts the
 checkout read-only at `/workspace`, and publishes application logs, generated output, source-bound
 caches, raw profiler files, and an external history database through explicit host mounts. The
 image does not contain ELF files, compressed DWARF dumps, Doris, Sony SDKs, credentials, or generated

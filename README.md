@@ -21,23 +21,17 @@ Dragon's Dogma Online research and modding.
 
 ## Requirements and setup
 
-- Regular CPython 3.14.6.
-- `uv`.
+- Regular CPython 3.14.7.
+- uv 0.12.3.
 - An ELF file with DWARF debug information for generation.
 
 ```text
-uv sync --python 3.14.6
+uv sync --python 3.14.7 --locked
 uv run just test-unit
 ```
 
-The analytical projection tools are an explicit optional dependency group. Install them when
-materializing Parquet output or preparing Doris evidence:
-
-```text
-uv sync --group analytical
-```
-
-The analytical runtime is pinned to `pyarrow==25.0.0`. Verify the installed Arrow, Parquet, and
+The analytical projection and serving runtime is part of the default project environment. Its
+locked contract pins `pyarrow==25.0.0`. Verify the installed Arrow, Parquet, and
 Dataset modules without loading the ELF:
 
 ```powershell
@@ -47,7 +41,7 @@ uv run python -c "import pyarrow as pa, pyarrow.dataset as ds, pyarrow.parquet a
 To install the reconstructor as a standalone uv tool from a checkout:
 
 ```text
-uv tool install . --python 3.14.6
+uv tool install . --python 3.14.7
 ddon-dwarf-reconstructor --version
 ddon-dwarf-reconstructor --help
 ```
@@ -63,7 +57,7 @@ validation is `uv run just type-check`.
 The standalone specification pipeline has its own dependency boundary:
 
 ```text
-uv sync --directory tools/dwarf_spec_pipeline --python 3.14.6
+uv sync --directory tools/dwarf_spec_pipeline --python 3.14.7 --locked
 uv run --directory tools/dwarf_spec_pipeline just check
 ```
 
@@ -225,7 +219,7 @@ decryption. Mount explicit input directories read-only and keep raw outputs unde
 paths.
 
 The Linux compatibility and profiler image is documented in
-[`ops/reconstructor/README.md`](ops/reconstructor/README.md). It pins CPython 3.14.6 and uv,
+[`ops/reconstructor/README.md`](ops/reconstructor/README.md). It pins CPython 3.14.7 and uv 0.12.3,
 mounts the checkout read-only, publishes logs/output/profiler artifacts to host paths, and enables
 the `SYS_PTRACE` capability only for the opt-in py-spy service:
 

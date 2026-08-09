@@ -1,9 +1,9 @@
 # Configuration and paths
 
-The root project is pinned to CPython `3.14.6`. Install it with:
+The root project is pinned to CPython `3.14.7` and uv `0.12.3`. Install it with:
 
 ```powershell
-uv sync --python 3.14.6
+uv sync --python 3.14.7 --locked
 ```
 
 The optional Nuitka build uses the same regular CPython environment and publishes its onefile

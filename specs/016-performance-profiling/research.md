@@ -98,7 +98,7 @@ boundary. Memray is not selected because the supported project environment is Wi
 
 ## Revalidation record
 
-The current environment reports CPython 3.14.6 on Windows and these installed tools:
+The prior Windows revalidation record captured CPython 3.14.6 and these installed tools:
 
 | Tool | Observed version |
 | --- | --- |

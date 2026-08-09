@@ -5,7 +5,7 @@ behavior. It is an opt-in workflow: normal generation does not import or run a p
 
 ## Prerequisites
 
-- CPython 3.14.6 through uv.
+- CPython 3.14.7 through uv 0.12.3.
 - Profiling tools installed with `uv run just performance-tools-install`.
 - A deterministic fixture for gated checks, or explicit local ELF/store/dump paths for environmental
   evidence. Proprietary inputs and raw profiles stay outside Git.
@@ -34,8 +34,8 @@ docker compose --file ops/reconstructor/compose.yaml run --rm reconstructor `
   --history-db /artifacts/history/fixture.sqlite3
 ```
 
-The image reports the exact project CPython version and installs the `test`, `performance`, and
-`analytical` uv groups from `uv.lock` with `uv sync --frozen`. Use `DDON_RECONSTRUCTOR_INPUT_DIR` for an explicit external
+The image reports the exact project CPython version and installs the default analytical runtime
+plus the `test` and `performance` groups from `uv.lock` with `uv sync --locked`. Use `DDON_RECONSTRUCTOR_INPUT_DIR` for an explicit external
 asset directory; never copy a proprietary ELF or compressed dump into the image. Full mount and
 override details are in the [container operator guide](https://github.com/ddon-research/ddon-dwarf-reconstructor/blob/main/ops/reconstructor/README.md).
 

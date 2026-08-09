@@ -9,8 +9,9 @@ ordering and source offsets.
 
 ## Development
 
-- Use regular CPython 3.14.6 and install the complete development environment with
-  `uv sync --python 3.14.6`.
+- Use regular CPython 3.14.7 with uv 0.12.3 and install the complete development environment with
+  `uv sync --python 3.14.7 --locked`. The analytical runtime is part of the default project
+  dependencies.
 - Install Node.js 24.14.1 and the locked documentation validators with `uv run just
   docs-tools-install` after a fresh checkout or a change to `tools/documentation/package-lock.json`.
 - Install actionlint v1.7.12 with the platform package manager and ensure it is on `PATH`; the
@@ -59,8 +60,8 @@ ordering and source offsets.
   is an opt-in audit projection. Doris is the normal serving backend and complete
   manifests include source/producer/schema/configuration identity, CU/family counts, and closed
   Parquet file size, timestamp, hash, footer, compression, and row-group metadata, and validates
-  every closed row group before complete publication. Doris is a downstream load/query backend under
-  the `analytical` dependency group; keep all analytical
+  every closed row group before complete publication. Doris is a downstream load/query backend in
+  the default project runtime; keep all analytical
   artifacts outside source control. The former compressed-text SQLite index is validation-only and
   must not be a normal runtime fallback. A partial or stale store fails closed. For long diagnostic
   runs, use `--checkpoint-every-cus N` to publish explicit `in_progress` Parquet snapshots; inspect
@@ -78,7 +79,7 @@ ordering and source offsets.
   local reuse. Use `%TEMP%\ddon-analytical-dwarf` only for bounded probes, checkpoints, profiler
   output, crash dumps, and other explicitly disposable diagnostics. Do not purge the durable main
   store or retained evidence as routine cleanup; inventory exact paths before any repair or purge.
-- PyArrow is pinned at `25.0.0` for the analytical dependency group. When Arrow concepts or API
+- PyArrow is pinned at `25.0.0` for the default project runtime. When Arrow concepts or API
   behavior need clarification, consult the local reference at `D:\PyArrow-25.0-python-docs` first.
   Keep one explicit Arrow schema per record family, use `ParquetWriter` for bounded row-group
   appends, cap native `Table.from_pylist` inputs, and use `pyarrow.dataset` with the repository's

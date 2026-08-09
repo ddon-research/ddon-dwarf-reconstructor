@@ -21,6 +21,7 @@ from .application.generators.session import DwarfSessionFactory
 from .core.observability import bind_context, get_logger, log_event, log_exception
 from .core.platform import ELFPlatform
 from .domain.models.tool_evidence import ToolExport
+from .generation_state import GenerationState as _GenerationState
 from .infrastructure.artifacts import SourceIdentityCatalog
 from .infrastructure.composition import (
     create_disassembly_producer,
@@ -163,13 +164,7 @@ def _run_generation(
 def _run_generation_impl(
     options: GenerationOptions, config: Config, symbols: list[str], logger: Logger
 ) -> tuple[int, list[tuple[str, str]]]:
-    success_count = 0
-    failed_symbols: list[tuple[str, str]] = []
-    outcomes: list[GenerationOutcome] = []
-    pending_headers: dict[str, str] = {}
-    pending_header_sources: dict[str, str] = {}
-    pending_bundles: list[tuple[int, str, dict[str, str]]] = []
-    separate_symbol_bundles = _uses_separate_symbol_bundles(options, symbols)
+    state = _GenerationState(_uses_separate_symbol_bundles(options, symbols))
     dwarf_config = DwarfRuntimeConfig.from_environment()
     identity_catalog = SourceIdentityCatalog()
     tool_exports = load_tool_exports(
@@ -196,70 +191,9 @@ def _run_generation_impl(
         source_hash=identity_catalog.sha256,
         source_identity=identity_catalog,
     ) as generator:
-        for index, symbol_name in enumerate(symbols, 1):
-            with bind_context(symbol=symbol_name, symbol_index=index, symbol_count=len(symbols)):
-                started_at = perf_counter()
-                log_event(logger, 20, "symbol_started", symbol=symbol_name)
-                try:
-                    if options.export_knowledge:
-                        _process_symbol(
-                            options,
-                            config,
-                            generator,
-                            symbol_name,
-                            symbols,
-                            logger,
-                            tool_exports,
-                        )
-                        generated_headers: dict[str, str] = {}
-                    else:
-                        generated_headers = _build_headers(options, generator, symbol_name)
-                        if separate_symbol_bundles:
-                            pending_bundles.append((index, symbol_name, generated_headers))
-                        else:
-                            _merge_headers(
-                                pending_headers,
-                                pending_header_sources,
-                                generated_headers,
-                                symbol_name,
-                            )
-                        if generator.lazy_index is not None:
-                            generator.lazy_index.save_cache()
-                    outcomes.append(
-                        GenerationOutcome(
-                            symbol=symbol_name,
-                            status="success",
-                            headers=tuple(sorted(generated_headers)),
-                        )
-                    )
-                    success_count += 1
-                    log_event(
-                        logger,
-                        20,
-                        "symbol_completed",
-                        symbol=symbol_name,
-                        duration_ms=round((perf_counter() - started_at) * 1000, 3),
-                    )
-                except HeaderCollisionError:
-                    raise
-                except (OSError, RuntimeError, ValueError) as error:
-                    _record_failure(symbol_name, error, failed_symbols, logger)
-                    outcomes.append(
-                        GenerationOutcome(
-                            symbol=symbol_name,
-                            status="error",
-                            error=str(error),
-                        )
-                    )
-        should_publish = _has_publishable_headers(
-            separate_symbol_bundles, pending_headers, pending_bundles, failed_symbols
-        )
-        report = GenerationReport(
-            requested_symbols=tuple(symbols),
-            outcomes=tuple(outcomes),
-            published=should_publish,
-        )
-        if should_publish:
+        _generate_symbols(options, config, generator, symbols, logger, tool_exports, state)
+        report = _generation_report(symbols, state)
+        if report.published:
             _publish_pending_headers(
                 options,
                 config,
@@ -267,17 +201,117 @@ def _run_generation_impl(
                 logger,
                 symbols,
                 report,
-                pending_headers,
-                pending_bundles,
-                separate_symbol_bundles,
+                state.pending_headers,
+                state.pending_bundles,
+                state.separate_symbol_bundles,
             )
         log_event(
             logger,
-            20 if not failed_symbols else 30,
+            20 if not state.failed_symbols else 30,
             "generation_report",
             fields=report.to_dict(),
         )
-        return success_count, failed_symbols
+        return state.success_count, state.failed_symbols
+
+
+def _generate_symbols(
+    options: GenerationOptions,
+    config: Config,
+    generator: DwarfGenerator,
+    symbols: list[str],
+    logger: Logger,
+    tool_exports: Sequence[ToolExport],
+    state: _GenerationState,
+) -> None:
+    for index, symbol_name in enumerate(symbols, 1):
+        with bind_context(symbol=symbol_name, symbol_index=index, symbol_count=len(symbols)):
+            _generate_symbol(
+                options, config, generator, symbols, logger, tool_exports, state, index, symbol_name
+            )
+
+
+def _generate_symbol(
+    options: GenerationOptions,
+    config: Config,
+    generator: DwarfGenerator,
+    symbols: list[str],
+    logger: Logger,
+    tool_exports: Sequence[ToolExport],
+    state: _GenerationState,
+    index: int,
+    symbol_name: str,
+) -> None:
+    started_at = perf_counter()
+    log_event(logger, 20, "symbol_started", symbol=symbol_name)
+    try:
+        generated_headers = _generate_symbol_headers(
+            options, config, generator, symbols, logger, tool_exports, state, index, symbol_name
+        )
+        state.outcomes.append(
+            GenerationOutcome(
+                symbol=symbol_name,
+                status="success",
+                headers=tuple(sorted(generated_headers)),
+            )
+        )
+        state.success_count += 1
+        log_event(
+            logger,
+            20,
+            "symbol_completed",
+            symbol=symbol_name,
+            duration_ms=round((perf_counter() - started_at) * 1000, 3),
+        )
+    except HeaderCollisionError:
+        raise
+    except (OSError, RuntimeError, ValueError) as error:
+        _record_failure(symbol_name, error, state.failed_symbols, logger)
+        state.outcomes.append(
+            GenerationOutcome(symbol=symbol_name, status="error", error=str(error))
+        )
+
+
+def _generate_symbol_headers(
+    options: GenerationOptions,
+    config: Config,
+    generator: DwarfGenerator,
+    symbols: list[str],
+    logger: Logger,
+    tool_exports: Sequence[ToolExport],
+    state: _GenerationState,
+    index: int,
+    symbol_name: str,
+) -> dict[str, str]:
+    if options.export_knowledge:
+        _process_symbol(options, config, generator, symbol_name, symbols, logger, tool_exports)
+        return {}
+    generated_headers = _build_headers(options, generator, symbol_name)
+    if state.separate_symbol_bundles:
+        state.pending_bundles.append((index, symbol_name, generated_headers))
+    else:
+        _merge_headers(
+            state.pending_headers,
+            state.pending_header_sources,
+            generated_headers,
+            symbol_name,
+        )
+    if generator.lazy_index is not None:
+        generator.lazy_index.save_cache()
+    return generated_headers
+
+
+def _generation_report(symbols: list[str], state: _GenerationState) -> GenerationReport:
+    published = _has_publishable_headers(
+        state.separate_symbol_bundles,
+        state.pending_headers,
+        state.pending_bundles,
+        state.failed_symbols,
+    )
+    return GenerationReport(
+        requested_symbols=tuple(symbols),
+        outcomes=tuple(state.outcomes),
+        published=published,
+    )
 
 
 def _session_factory(

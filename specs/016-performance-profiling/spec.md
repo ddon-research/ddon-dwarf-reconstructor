@@ -62,7 +62,7 @@ repeated exports and label missing evidence explicitly.
 ### Scenario 6: Linux container boundary
 
 Given the pinned Compose image and explicit read-only input mounts, when the Linux smoke workflow
-runs, it reports CPython 3.14.6, the locked profiler availability, and durable host-mounted logs,
+runs, it reports CPython 3.14.7 and uv 0.12.3, the locked profiler availability, and durable host-mounted logs,
 outputs, raw profiles, caches, and external history. The default service has no profiling
 capability; the py-spy profile adds `SYS_PTRACE` only for the requested child-process trace.
 

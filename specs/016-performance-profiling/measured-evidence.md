@@ -67,6 +67,18 @@ machine profile differ.
 | canonical `profile-dwarf-store`, `scalene-libraries` alias | observed | 134.331 s wall, 0.56 s process CPU, 462,946,304 B peak RSS, 1,336 samples, 20 normalized library/application summaries, `scalene_leak_records=0`; top external rows remained `threading.py:1024` at 6.05% and `pathlib:938` at 1.03% | `D:\ddon-dwarf-reconstructor\output\reconstructor-linux\profiles\scalene-libraries-canonical\analytical-dwarf-store-profile\5bd5676f33944fa7864dc653da32959f\manifest.json` |
 | py-spy at its 100 Hz default | partial | profiler consumed approximately one CPU for nearly eight minutes and did not finalize a speedscope file; the disposable container was stopped | no finalized artifact |
 
+### Toolchain upgrade revalidation (2026-08-09)
+
+These additive rows validate the upgraded container; the 3.14.6/uv 0.12.1 rows above remain
+historical evidence. The no-cache build used the pinned Linux/amd64 Python and uv digests in
+`ops/reconstructor/images.lock.json`.
+
+| Surface | Status | Observation | Raw artifact |
+| --- | --- | --- | --- |
+| image and smoke checks | observed | Python 3.14.7, uv 0.12.3, CLI help, and `performance doctor` passed; Scalene 2.3.0, cProfile, pyinstrument 5.1.3, py-spy 0.4.2, pyperf 2.10.0, and psutil 7.2.2 were observed | `D:\ddon-dwarf-reconstructor\ops\reconstructor\images.lock.json` |
+| deterministic fixture | observed | 88.168 s wall, 128,794,624 B peak RSS, 1,738 samples, return code 0; pyperf mean 2.388 s under CPython 3.14.7 | `D:\ddon-dwarf-reconstructor\output\reconstructor-linux\profiles\fixture\fixture\59a6da41c732495782e8e7356e8b1723\manifest.json` |
+| final fixture after analytical runtime promotion | observed | 89.446 s wall, 127,766,528 B peak RSS, 1,763 samples, return code 0; pyperf mean 2.428 s under CPython 3.14.7 with the default analytical runtime installed | `D:\ddon-dwarf-reconstructor\output\reconstructor-linux\profiles\fixture-final\fixture\72ffa9a564b248a5a8d625f4dc9eb3a6\manifest.json` |
+
 ## Linux observations and action items
 
 | Priority | Action | Evidence boundary and acceptance condition |

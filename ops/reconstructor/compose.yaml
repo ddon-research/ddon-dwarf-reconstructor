@@ -25,7 +25,7 @@ x-reconstructor-defaults: &reconstructor-defaults
     args:
       DDON_UID: ${DDON_UID:-1000}
       DDON_GID: ${DDON_GID:-1000}
-  image: ddon-reconstructor:py3.14.6-uv0.12.1
+  image: ddon-reconstructor:py3.14.7-uv0.12.3
   platform: linux/amd64
   working_dir: /workspace
   user: "${DDON_UID:-1000}:${DDON_GID:-1000}"

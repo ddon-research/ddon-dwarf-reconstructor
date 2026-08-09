@@ -13,10 +13,10 @@ same tool loop for Claude-compatible clients. Markdown changes also follow
 
 ## Development loop
 
-Use regular CPython 3.14.6 and the locked uv environment:
+Use regular CPython 3.14.7 and uv 0.12.3 in the locked environment:
 
 ```text
-uv sync --python 3.14.6
+uv sync --python 3.14.7 --locked
 uv run just test-unit
 uv run just test-integration
 uv run just check

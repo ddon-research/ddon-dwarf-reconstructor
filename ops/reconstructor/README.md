@@ -1,13 +1,13 @@
 # Linux profiling container
 
-This Compose project runs the reconstructor under pinned Linux/amd64 CPython 3.14.6 with the
-locked uv environment. It is an explicit compatibility and profiling workflow; it is not the
+This Compose project runs the reconstructor under pinned Linux/amd64 CPython 3.14.7 with uv 0.12.3
+and the locked environment. It is an explicit compatibility and profiling workflow; it is not the
 normal generation path and it does not include Doris, proprietary inputs, Sony SDKs, credentials,
 ELF files, DWARF dumps, or generated artifacts in the image.
 
 The image uses the exact Python digest recorded in [`images.lock.json`](images.lock.json) and copies
-uv 0.12.1 from Astral's pinned image. The dependency groups required for tests, analytical-store
-queries, and profiling are installed with `uv sync --frozen` into `/opt/venv`. The checkout is
+uv 0.12.3 from Astral's pinned image. The default analytical runtime and the dependency groups
+required for tests and profiling are installed with `uv sync --locked` into `/opt/venv`. The checkout is
 mounted read-only at `/workspace`, so the image's environment remains separate from the host
 checkout and every writable artifact has an explicit mount.
 

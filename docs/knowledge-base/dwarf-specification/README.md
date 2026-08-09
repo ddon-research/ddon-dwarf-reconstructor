@@ -49,7 +49,7 @@ conversion intermediates are stored in the ignored
 For local parser work on pre-converted fixtures:
 
 ```text
-uv sync --directory tools/dwarf_spec_pipeline --python 3.14.6
+uv sync --directory tools/dwarf_spec_pipeline --python 3.14.7 --locked
 uv run --directory tools/dwarf_spec_pipeline just test
 uv run --directory tools/dwarf_spec_pipeline just check
 ```

@@ -24,8 +24,8 @@ recorded as `unavailable`; timeout or child failures are `partial`.
 ## Linux container contract
 
 `ops/reconstructor/compose.yaml` provides the explicit Linux/amd64 profiling environment. It pins
-CPython 3.14.6 and uv, installs the locked `test`, `performance`, and `analytical` groups into an
-image-local `/opt/venv`, and bind-mounts the source read-only. `/workspace/output` and
+CPython 3.14.7 and uv 0.12.3, installs the default analytical runtime plus the locked `test` and
+`performance` groups into an image-local `/opt/venv`, and bind-mounts the source read-only. `/workspace/output` and
 `/workspace/logs` publish normal application artifacts; `/artifacts` publishes profiler output,
 DWARF cache files, history databases, and exported reports. Use a separate history database under
 `/artifacts/history` so container runs cannot mutate the tracked ledger.
@@ -149,11 +149,11 @@ records runtime implementation/version/GIL state in the manifest and SQLite row,
 Python executable that cannot import the installed project. Use the venv interpreter for a
 free-threaded environment, not the bare uv-managed base interpreter.
 
-The current comparison is report-only. On the measured warm `rLayout` workload, regular CPython
-3.14.6 averaged 2.062 seconds, Nuitka 4.1.3 onefile 2.470 seconds, and free-threaded CPython
-2.202 seconds. Nuitka reduced peak RSS but added onefile extraction I/O; free-threaded CPython
-used more RSS. The current pyinstrument native extension also enables the GIL when imported by a
-free-threaded interpreter. See the [runtime comparison how-to](../how-to/compare-runtimes.md) for
+The historical comparison is report-only. On the measured warm `rLayout` workload, the regular
+CPython 3.14.6 run averaged 2.062 seconds, the Nuitka 4.1.3 onefile run 2.470 seconds, and
+free-threaded CPython 2.202 seconds. Nuitka reduced peak RSS but added onefile extraction I/O;
+free-threaded CPython used more RSS. The current pyinstrument native extension also enables the GIL
+when imported by a free-threaded interpreter. See the [runtime comparison how-to](../how-to/compare-runtimes.md) for
 the exact setup and compatibility boundary.
 
 ## Metric contract

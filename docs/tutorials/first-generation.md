@@ -1,13 +1,13 @@
 # First generation
 
 This tutorial walks through the smallest useful reconstruction run. It assumes the repository
-has been synchronized with CPython 3.14.6 and that the local ELF is available. Real inputs are
+has been synchronized with CPython 3.14.7 and that the local ELF is available. Real inputs are
 large and proprietary; keep their paths local and do not commit generated outputs.
 
 ## 1. Install the locked environment
 
 ```powershell
-uv sync --python 3.14.6
+uv sync --python 3.14.7 --locked
 ```
 
 ## 2. Inspect the command tree

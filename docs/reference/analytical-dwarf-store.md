@@ -73,7 +73,7 @@ intermediary or a runtime dependency.
 ## Commands
 
 ```powershell
-uv sync --group analytical
+uv sync --locked
 uv run ddon-dwarf-reconstructor artifacts materialize-dwarf <ELF> `
   --output-dir <external-store-root> --write-parquet
 uv run ddon-dwarf-reconstructor artifacts materialize-dwarf <ELF> `
@@ -135,14 +135,14 @@ lookups, and inverted indexes on names and attribute names. JSON escape columns 
 indexes. Arrow dataset consumers must use the repository's layout-specific typed Hive partition
 schema: family stores declare `source_id: string`, while historical bucketed stores additionally
 declare `unit_bucket: int64`; automatic directory inference is not authoritative. The analytical
-dependency baseline is `pyarrow==25.0.0`, `PyMySQL==1.2.0`, and `SQLAlchemy==2.0.51`. The local Doris benchmark uses
+default runtime analytical baseline is `pyarrow==25.0.0`, `PyMySQL==1.2.0`, and `SQLAlchemy==2.0.51`. The local Doris benchmark uses
 pinned 4.1.3 FE/BE images. MySQL/PyMySQL remains the default connection and load path; Doris
 documents Arrow Flight SQL as experimental, so it is an opt-in benchmark profile with separate
 FE/BE ports rather than the default runtime.
 
 ### PyArrow 25 design boundary
 
-The analytical dependency is pinned at `pyarrow==25.0.0`. The local PyArrow reference checkout at
+The default project runtime pins `pyarrow==25.0.0`. The local PyArrow reference checkout at
 `D:\PyArrow-25.0-python-docs` is the first source for Arrow concept and API questions. Its schema,
 Parquet, Dataset, and memory/IO sections support the implementation choices here:
 

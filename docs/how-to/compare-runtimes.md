@@ -6,7 +6,7 @@ and deterministic integration loop unchanged.
 
 ## Prepare the runtimes
 
-The root environment uses regular CPython 3.14.6. Build the optional onefile launcher with the
+The root environment uses regular CPython 3.14.7 and uv 0.12.3. Build the optional onefile launcher with the
 supported Windows MSVC toolchain; the output goes outside the checkout:
 
 ```powershell
@@ -17,7 +17,7 @@ Create a separate free-threaded environment. Do not replace the root `.venv`:
 
 ```powershell
 $env:UV_PROJECT_ENVIRONMENT = (Join-Path $env:TEMP 'ddon-analytical-dwarf\performance\venvs\ddon-3.14t')
-uv sync --frozen --no-dev --python C:\Users\morph\AppData\Roaming\uv\python\cpython-3.14.6+freethreaded-windows-x86_64-none\python.exe
+uv sync --locked --no-dev --python C:\Users\morph\AppData\Roaming\uv\python\cpython-3.14.7+freethreaded-windows-x86_64-none\python.exe
 uv pip install --python (Join-Path $env:UV_PROJECT_ENVIRONMENT 'Scripts\python.exe') pyperf==2.10.0 py-spy==0.4.2 pyinstrument==5.1.3
 ```
 
@@ -58,7 +58,7 @@ like-for-like runtime, source identity, state, machine, and configuration rows.
 
 ## Compatibility boundary
 
-Regular CPython 3.14.6 compiles and launches with Nuitka 4.1.3 after the application uses deferred
+The historical CPython 3.14.6 compatibility run compiled and launched with Nuitka 4.1.3 after the application uses deferred
 annotations in the two modules that exposed compiler failures. No custom Nuitka package
 configuration file is currently needed: the onefile smoke test and output comparison pass without
 data-file or implicit-import overrides.

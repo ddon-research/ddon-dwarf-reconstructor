@@ -35,7 +35,7 @@ def test_history_round_trips_typed_metrics_and_method_summaries(tmp_path: Path) 
     assert len(rows) == 2
     assert rows[-1].metrics["wall_time_seconds"]["value"] == 2.0
     assert rows[-1].method_metrics[0]["name"] == "fixture_method"
-    assert rows[-1].runtime_name == "cpython-3.14.6"
+    assert rows[-1].runtime_name == "cpython-3.14.7"
     assert rows[-1].gil_enabled is True
     assert comparison["status"] == "observed"
     assert comparison["deltas"]["wall_time_seconds"] == 1.0
@@ -68,7 +68,7 @@ def _summary(tmp_path: Path, run_id: str, wall_seconds: float) -> RunSummary:
         tmp_path,
         ColdWarmState.WARM,
         configuration=(("fixture", "v1"),),
-        runtime=RuntimeDescriptor("cpython-3.14.6", "CPython", "3.14.6", True),
+        runtime=RuntimeDescriptor("cpython-3.14.7", "CPython", "3.14.7", True),
     )
     return RunSummary(
         run_id=run_id,
@@ -79,11 +79,11 @@ def _summary(tmp_path: Path, run_id: str, wall_seconds: float) -> RunSummary:
         return_code=0,
         git_revision="abc",
         git_dirty=False,
-        python_version="3.14.6",
+        python_version="3.14.7",
         platform_name="test",
         machine_profile="test-machine",
         source_identity="source-sha",
-        runtime_name="cpython-3.14.6",
+        runtime_name="cpython-3.14.7",
         runtime_implementation="CPython",
         gil_enabled=True,
         profiler_mode="cprofile",

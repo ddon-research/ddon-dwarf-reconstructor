@@ -34,7 +34,7 @@ DWARF specification pipeline without changing generated evidence or durable-arti
 
 ## Acceptance
 
-The feature is complete when `uv lock --check`, `uv sync --frozen`, `uv run just check`, the
+The feature is complete when `uv lock --check`, `uv sync --locked`, `uv run just check`, the
 non-performance test suite, coverage gates, root and nested deptry/Pyrefly checks, and package
 builds pass. Focused CLI tests MUST cover help, version, command mapping, invalid option
 combinations, artifact JSON, and exact-path purge protection.

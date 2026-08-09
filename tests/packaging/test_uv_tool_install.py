@@ -42,7 +42,7 @@ def test_uv_tool_install_exposes_standalone_cli(tmp_path: Path) -> None:
             "install",
             str(repository_root),
             "--python",
-            "3.14.6",
+            "3.14.7",
         ],
         cwd=tmp_path,
         env=environment,

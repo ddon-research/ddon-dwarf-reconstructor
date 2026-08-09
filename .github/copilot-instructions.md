@@ -14,8 +14,9 @@ sources.
 ## Project constraints
 
 - The project reconstructs deterministic C++ headers from very large PS4 ELF/DWARF inputs.
-- Use regular CPython 3.14.6 and `uv`; install the development environment with
-  `uv sync --python 3.14.6`.
+- Use regular CPython 3.14.7 and uv 0.12.3; install the development environment with
+  `uv sync --python 3.14.7 --locked`. The analytical runtime is part of the default project
+  dependencies.
 - Treat inputs for a named DDON build as immutable. Preserve validated source-bound indexes and
   caches locally, and never commit ELF files, compressed dumps, generated headers, caches, logs, or
   credentials.

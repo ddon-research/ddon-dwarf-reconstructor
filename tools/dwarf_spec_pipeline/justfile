@@ -7,7 +7,7 @@ default:
     @just --list
 
 sync:
-    uv sync --python 3.14.6
+    uv sync --python 3.14.7 --locked
 
 test:
     uv run pytest -m "not official and not real_artifact"

@@ -32,7 +32,7 @@ confused with the per-header database used by Sonar.
 - SonarQube for VS Code installed and enabled.
 - Visual Studio with the MSVC x64 build tools and `VsDevCmd.bat`.
 - `vswhere.exe` at the standard Visual Studio Installer location.
-- The root uv environment installed with `uv sync --python 3.14.6`.
+- The root uv environment installed with `uv sync --python 3.14.7 --locked`.
 - SonarSource's Windows Build Wrapper downloaded outside the repository.
 
 Sonar's supported C/C++ setup is described in [Analyze C and C++ code](https://docs.sonarsource.com/sonarqube-for-vs-code/getting-started/running-an-analysis#analyze-c-and-cpp-code).

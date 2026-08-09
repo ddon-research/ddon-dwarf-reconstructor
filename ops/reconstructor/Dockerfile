@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1.7
 
-ARG PYTHON_IMAGE=python:3.14.6-slim-bookworm@sha256:4c92ffcde4dd6f1ff72a24518f49fd4990b27134987dfa31a733badde66df9f8
+ARG PYTHON_IMAGE=python:3.14.7-slim-trixie@sha256:d6e0850f13fda0e2305d4c3c1c2f7930fe1042d34ddd958e49bba6ef685d0bb2
 
 FROM ${PYTHON_IMAGE} AS python-runtime
-FROM ghcr.io/astral-sh/uv:0.12.1@sha256:cf4eedcaa81655197f625739489effcbe71b61ceb1506f332c3facae5deceded AS uv-runtime
+FROM ghcr.io/astral-sh/uv:0.12.3@sha256:dfd1e6972e100ca2fbf1f391effc3dd4aa57f319bf03c3e321e0a3f3341ed5af AS uv-runtime
 
 FROM python-runtime
 
@@ -38,12 +38,12 @@ WORKDIR /workspace
 COPY pyproject.toml uv.lock README.md .python-version ./
 
 RUN --mount=type=cache,target=/root/.cache/uv,sharing=locked \
-    uv sync --frozen --no-dev --group test --group performance --group analytical --no-install-project
+    uv sync --locked --no-dev --group test --group performance --no-install-project
 
 COPY src ./src
 
 RUN --mount=type=cache,target=/root/.cache/uv,sharing=locked \
-    uv sync --frozen --no-dev --group test --group performance --group analytical \
+    uv sync --locked --no-dev --group test --group performance \
     && mkdir --parents /artifacts /inputs /workspace/logs /workspace/output \
     && chown --recursive ddon:ddon /artifacts /inputs /opt/venv /workspace
 

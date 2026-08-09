@@ -58,8 +58,8 @@ def test_metric_keeps_unavailable_evidence_explicit() -> None:
 
 def test_runtime_descriptor_participates_in_workload_identity(tmp_path: Path) -> None:
     """GIL and compiled-runtime variants cannot be mixed in one baseline."""
-    gil = RuntimeDescriptor("cpython-3.14.6", "CPython", "3.14.6", True)
-    free = RuntimeDescriptor("cpython-3.14.6-free-threaded", "CPython", "3.14.6", False)
+    gil = RuntimeDescriptor("cpython-3.14.7", "CPython", "3.14.7", True)
+    free = RuntimeDescriptor("cpython-3.14.7-free-threaded", "CPython", "3.14.7", False)
     first = PerformanceWorkload(
         "fixture",
         ("python", "-m", "fixture"),
