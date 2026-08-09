@@ -89,6 +89,9 @@ analytical-profile-doris elf_file="resources/DDOORBIS.elf" store_manifest="outpu
 analytical-benchmark-current-doris elf_file="resources/DDOORBIS.elf" store_manifest="output/analytical-dwarf/main/store-4236f598acc8f158/manifest.json" output_dir="$env:TEMP/ddon-analytical-dwarf/current-doris-benchmark":
     uv run ddon-dwarf-reconstructor performance benchmark-doris-current {{elf_file}} --store-manifest {{store_manifest}} --output-dir {{output_dir}} --control-iterations 1 --query-iterations 3 --aifsm-iterations 1 --control-timeout-seconds 900 --aifsm-timeout-seconds 7200
 
+analytical-benchmark-doris-optimization elf_file="resources/DDOORBIS.elf" store_manifest="output/analytical-dwarf/main/store-4236f598acc8f158/manifest.json" output_dir="$env:TEMP/ddon-analytical-dwarf/doris-optimization":
+    uv run ddon-dwarf-reconstructor performance benchmark-doris-optimization {{elf_file}} --store-manifest {{store_manifest}} --output-dir {{output_dir}} --control-cold-iterations 3 --control-warm-iterations 5 --query-iterations 5 --aifsm-cold-iterations 1 --aifsm-iterations 3 --control-timeout-seconds 900 --aifsm-timeout-seconds 7200
+
 analytical-fixture:
     uv run pytest tests/infrastructure/test_analytical_store.py tests/infrastructure/test_analytical_checkpoint.py tests/infrastructure/test_analytical_parquet_contract.py tests/infrastructure/test_analytical_benchmark_paths.py -m "unit and functional"
 

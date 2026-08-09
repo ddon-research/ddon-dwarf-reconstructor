@@ -7,3 +7,6 @@
    Arrow Flight SQL comparison profile with explicit FE/BE preflight evidence.
 5. Wire `generate` and `export-knowledge` to a source-bound store manifest; remove normal dump-index and lazy-scan lookup after parity.
 6. Add fixture, integration, real-asset, performance, and acceptance evidence; synchronize docs and `just` recipes.
+7. Evaluate the native Doris serving boundary with an opt-in baseline/candidate matrix, actual
+   generation query tracing, source-bound lookup tables, selective statistics, and explicit
+   cold/warm promotion evidence; preserve the canonical fourteen-family contract until all gates pass.

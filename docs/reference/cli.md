@@ -67,6 +67,8 @@ profile <elf>
 compare-runtimes <elf>
 profile-index <dump>
 benchmark-dwarf-store <elf>
+benchmark-doris-current <elf>
+benchmark-doris-optimization <elf>
 benchmark-doris-flight
 check-doris-flight
 profile-dwarf-store <elf>
@@ -90,6 +92,21 @@ evidence before changing Doris keys, indexes, buckets, or materialized views. Ad
 `--profiler scalene-libraries` for an optional standard-library/site-package comparison; it is a
 broad diagnostic and is not included in `--profiler all`. The child benchmark report remains
 separate from the profiler manifests.
+
+`benchmark-doris-current` reuses a complete source-bound publication. The opt-in
+`benchmark-doris-optimization` command adds redacted generation query tracing, typed serving-variant
+identity, selective-statistics policy, and one-factor lookup/physical candidates. Candidate DDL and
+population are isolated and require `--provision-candidate`; no candidate changes the canonical
+fourteen-family contract. Use the command's `--help` surface for the cold/warm repetition and
+profile-budget controls.
+
+The 2026-08-09 complete-store run also measured the live generator path. Bounded source/unit-aware
+hydration produced exact exhaustive `rAIFSM` output in `32.123 s` fresh and `31.683/31.653 s`
+repeated, versus the earlier `361.004 s` warm sample. The serving algorithm was retained; the
+canonical schema, keys, indexes, storage, and registry were unchanged. The source/name table was
+rejected for latency, while MV, index, bucket, storage-format, session, and Stream Load variants
+remain `not_observed`. This command is a reusable one-shot regression/promotion tool, not a
+continuous service.
 
 `check-doris-flight` is the explicit preflight for the optional Flight SQL overlay. It records
 Compose-file and rendered-configuration hashes, FE/BE endpoint reachability, and bounded startup

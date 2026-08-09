@@ -1,0 +1,459 @@
+"""Tests for typed Doris optimization identities and generation traces."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+import ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.doris.optimization as benchmark_optimization_module
+import ddon_dwarf_reconstructor.infrastructure.analytical.doris_optimization as optimization_module
+import ddon_dwarf_reconstructor.infrastructure.analytical.doris_validation as validation_module
+from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.doris import (
+    current_generation as generation_module,
+)
+from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.doris.optimization import (
+    build_optimization_matrix,
+    lookup_candidate_sql,
+    run_doris_optimization_benchmark,
+)
+from ddon_dwarf_reconstructor.infrastructure.analytical.doris import DorisConfig
+from ddon_dwarf_reconstructor.infrastructure.analytical.doris_diagnostics_transport import (
+    DiagnosticTransportResult,
+    DorisDiagnosticTransport,
+)
+from ddon_dwarf_reconstructor.infrastructure.analytical.doris_optimization import (
+    DorisOptimizationReport,
+    DorisQueryTraceConfig,
+    DorisServingVariant,
+)
+from ddon_dwarf_reconstructor.infrastructure.analytical.doris_optimization_utils import (
+    configured_ddl_sha256,
+    int_mapping,
+    mapping_sequence,
+    profile_metrics,
+    query_shape,
+)
+from ddon_dwarf_reconstructor.infrastructure.analytical.doris_queries import DorisQueryExecutor
+from ddon_dwarf_reconstructor.infrastructure.analytical.doris_statistics import analyze_tables
+
+pytestmark = [pytest.mark.unit, pytest.mark.functional]
+
+
+class _Cursor:
+    def __init__(self, connection: _Connection) -> None:
+        self.connection = connection
+        self.description = (("name",),)
+        self.rows: list[tuple[object, ...]] = [("value",)]
+
+    def __enter__(self) -> _Cursor:
+        return self
+
+    def __exit__(self, exc_type: object, exc_value: object, traceback: object) -> None:
+        del exc_type, exc_value, traceback
+
+    def execute(self, statement: str, params: object = ()) -> None:
+        del params
+        self.connection.statements.append(statement)
+        if "last_query_id" in statement.lower():
+            self.rows = [(f"query-{self.connection.query_count}",)]
+            self.description = (("query_id",),)
+        else:
+            self.connection.query_count += 1
+
+    def fetchall(self) -> list[tuple[object, ...]]:
+        return self.rows
+
+
+class _Connection:
+    def __init__(self) -> None:
+        self.query_count = 0
+        self.statements: list[str] = []
+
+    def cursor(self) -> _Cursor:
+        return _Cursor(self)
+
+
+def test_query_trace_records_actual_query_without_parameter_values(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def profile(_self: object, query_id: str, *, full: bool) -> DiagnosticTransportResult:
+        assert full is True
+        return DiagnosticTransportResult(
+            "observed",
+            "fake-fe",
+            f"Query ID: {query_id}",
+            {"query_id": query_id, "profile": {"summary": {"scan_bytes": 12}}},
+        )
+
+    monkeypatch.setattr(DorisDiagnosticTransport, "profile", profile)
+    trace_path = tmp_path / "generation" / "queries.jsonl"
+    config = DorisConfig(query_trace=DorisQueryTraceConfig(trace_path, max_profile_instances=1))
+    connection = _Connection()
+    executor = DorisQueryExecutor(connection, config, "a" * 64)
+
+    rows = executor.family_rows(
+        "index",
+        {"name": "secret symbol"},
+        columns=("name",),
+    )
+    executor.family_rows("index", {"name": "secret symbol"}, columns=("name",))
+    executor.close()
+
+    assert rows == ({"name": "value"},)
+    record = json.loads(trace_path.read_text(encoding="utf-8").splitlines()[0])
+    assert record["family"] == "index"
+    assert record["profile_status"] == "observed"
+    assert record["scan_bytes"] == 12
+    assert record["scan_rows"] is None
+    assert "secret symbol" not in trace_path.read_text(encoding="utf-8")
+    assert Path(record["profile_artifact"]["path"]).is_file()
+    summary = json.loads(trace_path.with_suffix(".json").read_text(encoding="utf-8"))
+    assert summary["counts"] == {
+        "observed_count": 2,
+        "partial_count": 0,
+        "profile_count": 1,
+        "query_count": 2,
+        "shape_count": 1,
+    }
+
+
+def test_query_trace_marks_profile_id_mismatch_partial(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def profile(_self: object, _query_id: str, *, full: bool) -> DiagnosticTransportResult:
+        assert full is True
+        return DiagnosticTransportResult(
+            "observed",
+            "fake-fe",
+            "Query ID: stale-query",
+            {"query_id": "stale-query", "profile": {}},
+        )
+
+    monkeypatch.setattr(DorisDiagnosticTransport, "profile", profile)
+    trace_path = tmp_path / "mismatch" / "queries.jsonl"
+    config = DorisConfig(query_trace=DorisQueryTraceConfig(trace_path))
+    executor = DorisQueryExecutor(_Connection(), config, "b" * 64)
+    executor.family_rows("index", {"name": "symbol"}, columns=("name",))
+    executor.close()
+
+    record = json.loads(trace_path.read_text(encoding="utf-8").splitlines()[0])
+    assert record["status"] == "partial"
+    assert record["profile_status"] == "partial"
+    assert "requested query ID" in record["error"]
+
+
+def test_query_trace_marks_missing_query_id_partial(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(optimization_module, "_last_query_id", lambda _connection: (None, None))
+    trace_path = tmp_path / "missing" / "queries.jsonl"
+    config = DorisConfig(query_trace=DorisQueryTraceConfig(trace_path))
+    executor = DorisQueryExecutor(_Connection(), config, "c" * 64)
+    executor.family_rows("index", {"name": "symbol"}, columns=("name",))
+    executor.close()
+
+    record = json.loads(trace_path.read_text(encoding="utf-8").splitlines()[0])
+    assert record["status"] == "partial"
+    assert record["profile_status"] == "partial"
+
+
+def test_query_trace_marks_evicted_or_unavailable_profile_partial(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def unavailable(_self: object, _query_id: str, *, full: bool) -> DiagnosticTransportResult:
+        assert full is True
+        return DiagnosticTransportResult("unavailable", "fake-fe", error="profile evicted")
+
+    monkeypatch.setattr(DorisDiagnosticTransport, "profile", unavailable)
+    trace_path = tmp_path / "evicted" / "queries.jsonl"
+    config = DorisConfig(query_trace=DorisQueryTraceConfig(trace_path))
+    executor = DorisQueryExecutor(_Connection(), config, "d" * 64)
+    executor.family_rows("index", {"name": "symbol"}, columns=("name",))
+    executor.close()
+
+    record = json.loads(trace_path.read_text(encoding="utf-8").splitlines()[0])
+    assert record["status"] == "partial"
+    assert record["profile_status"] == "unavailable"
+
+
+def test_serving_variant_fingerprint_includes_lookup_tables() -> None:
+    canonical = DorisServingVariant.from_config(DorisConfig())
+    candidate = DorisServingVariant.from_config(
+        DorisConfig(name_lookup_table="dwarf_records_opt_name_b4"),
+        variant_id="name-lookup-b4",
+    )
+
+    assert canonical.variant_id == "canonical"
+    assert candidate.variant_id == "name-lookup-b4"
+    assert candidate.configuration_sha256 != canonical.configuration_sha256
+
+
+def test_optimization_matrix_keeps_canonical_and_rejects_inapplicable_paths() -> None:
+    candidates = {item.candidate_id: item for item in build_optimization_matrix(DorisConfig())}
+
+    assert candidates["canonical"].status == "observed"
+    assert candidates["name-lookup-b4"].settings["distribution"] == "HASH(source_id,name)"
+    assert candidates["row-store"].status == "not_applicable"
+    assert candidates["async-materialized-view"].status == "not_applicable"
+
+
+def test_lookup_candidate_sql_is_source_bound_and_isolated() -> None:
+    statements = lookup_candidate_sql(DorisConfig(), "name-lookup-b4")
+
+    assert "dwarf_records_opt_name_b4" in statements[0]
+    assert "HASH(source_id, name)" in statements[0]
+    assert "WHERE source_id = %s" in statements[2]
+    assert "dwarf_records_index" in statements[2]
+    assert "DROP TABLE" not in " ".join(statements)
+
+
+def test_query_trace_config_rejects_unbounded_profile_settings(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="max_profile_instances"):
+        DorisQueryTraceConfig(tmp_path / "trace.jsonl", max_profile_instances=0)
+
+
+def test_selective_statistics_policy_targets_filter_columns() -> None:
+    connection = _StatisticsConnection()
+    config = DorisConfig(statistics_policy="selective")
+    plan = SimpleNamespace(database="dwarf", table="dwarf_records")
+
+    statements = analyze_tables(connection, plan, config)
+
+    assert len(statements) == 14
+    assert "WITH SAMPLE ROWS 4194304" in connection.statements[0]
+    assert "`source_id`" in connection.statements[0]
+    assert "`details_json`" not in connection.statements[0]
+
+
+def test_optimization_report_serializes_cold_warm_traces_and_rejections() -> None:
+    current = {
+        "status": "observed",
+        "source_identity": {"sha256": "a" * 64},
+        "store_manifest": "manifest.json",
+        "serving_variant": {"variant_id": "canonical"},
+        "serving_validation": {"observed_counts": {"die": 3}},
+        "backend": {"type": "native_doris"},
+        "runs": [
+            {
+                "symbol": "rLayout",
+                "state": "cold",
+                "iteration": 1,
+                "query_trace": {"status": "observed", "counts": {"query_count": 2}},
+                "output": {"files": [{"path": "rLayout.h", "sha256": "b" * 64}]},
+            },
+            {
+                "symbol": "rLayout",
+                "state": "long",
+                "iteration": 1,
+                "query_trace": {"status": "not_observed"},
+                "output": {"files": []},
+            },
+        ],
+    }
+    matrix = [
+        {"candidate_id": "canonical", "category": "baseline", "status": "observed"},
+        {"candidate_id": "row-store", "category": "rejected", "status": "not_applicable"},
+    ]
+
+    report = DorisOptimizationReport.from_current_report(
+        current,
+        selected_candidate=matrix[0],
+        matrix=matrix,
+        promotion_gate={"minimum_improvement_percent": 10},
+    ).to_dict()
+
+    assert report["complete_row_counts"] == {"die": 3}
+    assert len(report["cold_samples"]) == 1
+    assert len(report["warm_samples"]) == 1
+    assert len(report["query_traces"]) == 1
+    assert report["rejected_optimizations"][0]["candidate_id"] == "row-store"
+    assert json.loads(json.dumps(report, sort_keys=True))["schema_version"] == "1.0"
+
+
+def test_query_trace_helpers_normalize_shapes_and_profile_metrics() -> None:
+    assert query_shape("SELECT 12  FROM t WHERE id = 42") == "SELECT ? FROM t WHERE id = ?"
+    assert profile_metrics({"fragment": {"scan_bytes": 12, "memory": 8}})["scan_bytes"] == 12
+    assert mapping_sequence("not-a-sequence") == ()
+    assert int_mapping({"zero": 0, "negative": "-2", "ignored": "x"}) == {
+        "zero": 0,
+        "negative": -2,
+    }
+    fallback = configured_ddl_sha256(SimpleNamespace(database="dwarf", table="records"))
+    assert len(fallback) == 64
+
+
+def test_doris_load_plan_validation_is_source_bound_and_terminal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest = SimpleNamespace(status="complete", configuration={})
+    path = tmp_path / "manifest.json"
+    plan_path = tmp_path / "part-index.parquet"
+    plan = SimpleNamespace(
+        parquet_files=(plan_path,),
+        database="dwarf",
+        table="records",
+        statistics_policy="selective",
+        serving_variant_id="canonical",
+        stream_load_workers=1,
+    )
+    config = SimpleNamespace(
+        database="dwarf",
+        table="records",
+        statistics_policy="selective",
+        serving_variant_id="canonical",
+        stream_load_workers=1,
+    )
+    monkeypatch.setattr(validation_module, "has_parser_diagnostics", lambda _manifest: False)
+    monkeypatch.setattr(validation_module, "has_unapplied_source_recovery", lambda _manifest: False)
+    monkeypatch.setattr(
+        validation_module, "declared_parquet_files", lambda _path, _manifest: (plan_path,)
+    )
+    validation_module.validate_manifest_for_load(manifest, path)
+    validation_module.validate_plan_files(plan, path, manifest)
+    validation_module.validate_plan_settings(plan, config)
+
+    observed: list[tuple[Path, object, bool, bool]] = []
+    monkeypatch.setattr(
+        validation_module,
+        "validate_manifest_files",
+        lambda *args, **kwargs: observed.append(
+            (args[0], args[1], kwargs["verify_hashes"], kwargs["verify_payload"])
+        ),
+    )
+    validation_module.validate_plan_manifest_files(path, manifest)
+    assert observed == [(path, manifest, True, True)]
+    with pytest.raises(ValueError, match="connection table"):
+        validation_module.validate_plan_settings(
+            plan, config.__class__(**{**vars(config), "table": "other"})
+        )
+    with pytest.raises(ValueError, match="Parquet"):
+        validation_module.validate_plan_files(
+            SimpleNamespace(**{**vars(plan), "parquet_files": ()}), path, manifest
+        )
+
+
+def test_doris_optimization_noncanonical_candidate_is_explicitly_unobserved(tmp_path: Path) -> None:
+    report = run_doris_optimization_benchmark(
+        Path("source.elf"),
+        Path("manifest.json"),
+        tmp_path,
+        candidate_id="name-lookup-b4",
+        provision_candidate=False,
+    )
+
+    assert report["status"] == "not_observed"
+    assert report["optimization"]["selected_candidate"]["candidate_id"] == "name-lookup-b4"
+    assert report["optimization_report"]["status"] == "not_observed"
+
+
+def test_lookup_candidate_routes_and_environment_are_isolated() -> None:
+    method = benchmark_optimization_module.lookup_candidate_sql(DorisConfig(), "method-target-b4")
+    die = benchmark_optimization_module.lookup_candidate_sql(DorisConfig(), "die-offset-b4")
+    assert "target_offset" in method[0] and "method_implementation" in method[2]
+    assert "dwarf_records_die" in die[2]
+    candidates = {item.candidate_id: item for item in build_optimization_matrix(DorisConfig())}
+    assert benchmark_optimization_module._candidate_environment(
+        DorisConfig(), candidates["name-lookup-b4"]
+    )["DDON_DORIS_NAME_LOOKUP_TABLE"].endswith("_b4")
+    assert benchmark_optimization_module._candidate_environment(
+        DorisConfig(), candidates["method-target-b4"]
+    )["DDON_DORIS_METHOD_LOOKUP_TABLE"].endswith("_b4")
+
+
+class _GenerationRunner:
+    def __init__(self, *, fail: bool = False) -> None:
+        self.fail = fail
+        self.workloads: list[object] = []
+
+    def run(self, workload: object) -> SimpleNamespace:
+        self.workloads.append(workload)
+        if self.fail:
+            raise RuntimeError("generation child failed")
+        return SimpleNamespace(status=SimpleNamespace(value="observed"), to_dict=lambda: {})
+
+
+def test_generation_child_runner_records_states_and_failures(tmp_path: Path) -> None:
+    runner = _GenerationRunner()
+    runs = generation_module.run_generation_workloads(
+        runner,
+        Path("source.elf"),
+        Path("manifest.json"),
+        tmp_path,
+        ("rLayout",),
+        1,
+        30.0,
+        1,
+        30.0,
+        1,
+        1,
+        1,
+        True,
+        500.0,
+        2,
+    )
+    assert len(runs) == 4
+    assert {run["state"] for run in runs} == {"cold", "warm", "long"}
+    assert all(run["status"] == "partial" for run in runs)
+    assert all(
+        "DDON_DORIS_QUERY_TRACE_PATH" in dict(workload.environment) for workload in runner.workloads
+    )
+
+    workload = generation_module._generation_workload(
+        Path("source.elf"),
+        Path("manifest.json"),
+        tmp_path / "failed",
+        name="failed",
+        symbol="rLayout",
+        state=SimpleNamespace(value="cold"),
+        timeout_seconds=30.0,
+    )
+    blocked = generation_module._run_one(
+        _GenerationRunner(fail=True), workload, tmp_path / "failed", "rLayout", "cold", 1
+    )
+    assert blocked["status"] == "blocked"
+
+
+def test_generation_query_trace_loading_distinguishes_missing_invalid_and_non_object(
+    tmp_path: Path,
+) -> None:
+    missing = generation_module._load_query_trace(tmp_path / "missing.json")
+    invalid_path = tmp_path / "invalid.json"
+    invalid_path.write_text("not-json", encoding="utf-8")
+    invalid = generation_module._load_query_trace(invalid_path)
+    list_path = tmp_path / "list.json"
+    list_path.write_text("[]", encoding="utf-8")
+    non_object = generation_module._load_query_trace(list_path)
+    assert missing["status"] == "not_observed"
+    assert invalid["status"] == "partial"
+    assert non_object["status"] == "partial"
+
+
+class _StatisticsCursor:
+    description: tuple[tuple[str], ...] = ()
+
+    def __init__(self, connection: _StatisticsConnection) -> None:
+        self.connection = connection
+
+    def __enter__(self) -> _StatisticsCursor:
+        return self
+
+    def __exit__(self, exc_type: object, exc_value: object, traceback: object) -> None:
+        del exc_type, exc_value, traceback
+
+    def execute(self, statement: str, params: object = ()) -> None:
+        del params
+        self.connection.statements.append(statement)
+
+    def fetchall(self) -> list[tuple[object, ...]]:
+        return []
+
+
+class _StatisticsConnection:
+    def __init__(self) -> None:
+        self.statements: list[str] = []
+
+    def cursor(self) -> _StatisticsCursor:
+        return _StatisticsCursor(self)

@@ -41,6 +41,7 @@ from .performance_analytical_cli import (
     profile_workload as _profile_workload,
 )
 from .performance_current_doris_cli import benchmark_doris_current
+from .performance_doris_optimization_cli import benchmark_doris_optimization
 from .performance_materializer_cli import profile_materializer
 
 app = typer.Typer(
@@ -57,6 +58,7 @@ app.add_typer(history_app, name="history")
 app.command("profile-dwarf-store")(profile_dwarf_store)
 app.command("profile-materializer")(profile_materializer)
 app.command("benchmark-doris-current")(benchmark_doris_current)
+app.command("benchmark-doris-optimization")(benchmark_doris_optimization)
 
 
 @app.command()

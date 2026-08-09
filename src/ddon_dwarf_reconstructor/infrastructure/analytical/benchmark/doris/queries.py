@@ -63,7 +63,10 @@ def _doris_symbol_queries(
             return list(cursor.fetchall())
 
         measurements: list[dict[str, Any]] = []
-        definition_table = _definition_lookup_table(config, tables["index"])
+        definition_table = _lookup_table(config, tables["index"], config.definition_lookup_table)
+        method_table = _lookup_table(config, tables["index"], config.method_lookup_table)
+        if config.die_lookup_table is not None:
+            tables["die"] = _lookup_table(config, tables["die"], config.die_lookup_table)
         for symbol in symbols:
             rows, measurement = _doris_definition_query(
                 definition_table,
@@ -85,20 +88,18 @@ def _doris_symbol_queries(
                             die_offset,
                             run,
                             iterations,
+                            method_table=method_table,
                             diagnostics=diagnostics,
                         )
                     )
         return measurements
 
 
-def _definition_lookup_table(config: DorisConfig, default: str) -> str:
-    """Return an optional native serving projection for global name lookup."""
-    if config.definition_lookup_table is None:
+def _lookup_table(config: DorisConfig, default: str, configured: str | None) -> str:
+    """Return an optional native serving projection for one lookup family."""
+    if configured is None:
         return default
-    return (
-        f"{quote_doris_identifier(config.database)}."
-        f"{quote_doris_identifier(config.definition_lookup_table)}"
-    )
+    return f"{quote_doris_identifier(config.database)}.{quote_doris_identifier(configured)}"
 
 
 def _doris_definition_query(
@@ -135,11 +136,14 @@ def _doris_related_queries(
     run: Callable[[str], list[tuple[Any, ...]]],
     iterations: int,
     *,
+    method_table: str,
     diagnostics: DorisDiagnosticRecorder | None = None,
 ) -> list[dict[str, Any]]:
     measurements: list[dict[str, Any]] = []
     field_rows: list[tuple[Any, ...]] = []
-    for name, sql, metadata in _doris_query_specs(tables, source_id, unit_offset, die_offset):
+    for name, sql, metadata in _doris_query_specs(
+        tables, source_id, unit_offset, die_offset, method_table=method_table
+    ):
         measurement, rows = run_query_with_metrics(
             name,
             lambda sql=sql: run(sql),
@@ -204,6 +208,8 @@ def _doris_query_specs(
     source_id: str,
     unit_offset: int,
     die_offset: int,
+    *,
+    method_table: str,
 ) -> tuple[tuple[str, str, dict[str, int]], ...]:
     source = f"source_id = '{source_id}'"
     unit = f"{source} AND unit_offset = {unit_offset}"
@@ -211,7 +217,7 @@ def _doris_query_specs(
     specs = _unit_and_hierarchy_specs(tables, unit, die_key, unit_offset, die_offset)
     specs += _attribute_and_reference_specs(tables, die_key, unit_offset, die_offset)
     specs += _source_evidence_specs(tables, source, unit, die_key, unit_offset, die_offset)
-    specs += _method_specs(tables, source, die_offset)
+    specs += _method_specs(method_table, source, die_offset)
     return tuple(specs)
 
 
@@ -363,6 +369,15 @@ def _source_evidence_specs(
     _add_query_spec(
         specs,
         tables,
+        "global_die_offset",
+        "die",
+        f"SELECT unit_offset, die_offset, tag, parent_offset FROM {tables.get('die', '')} "
+        f"WHERE {source} AND die_offset = {die_offset} ORDER BY unit_offset LIMIT 1001",
+        {"die_offset": die_offset},
+    )
+    _add_query_spec(
+        specs,
+        tables,
         "ranges",
         "range",
         f"SELECT ordinal, start_address, end_address, parser_status FROM {tables.get('range', '')} "
@@ -411,14 +426,14 @@ def _source_evidence_specs(
     return specs
 
 
-def _method_specs(tables: dict[str, str], source: str, die_offset: int) -> list[QuerySpec]:
+def _method_specs(method_table: str, source: str, die_offset: int) -> list[QuerySpec]:
     specs: list[QuerySpec] = []
     _add_query_spec(
         specs,
-        tables,
+        {"index": method_table},
         "method_implementation_by_declaration",
         "index",
-        f"SELECT unit_offset, die_offset FROM {tables.get('index', '')} WHERE {source} "
+        f"SELECT unit_offset, die_offset FROM {method_table} WHERE {source} "
         "AND index_type = 'method_implementation' "
         f"AND target_offset = {die_offset} ORDER BY unit_offset, die_offset LIMIT 1001",
         {"declaration_offset": die_offset},

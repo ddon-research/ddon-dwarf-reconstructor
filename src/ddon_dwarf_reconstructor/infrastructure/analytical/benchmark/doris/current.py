@@ -5,14 +5,15 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
-from .....domain.models.performance import ColdWarmState, EvidenceStatus, PerformanceWorkload
 from ....artifacts import SourceIdentityCatalog
 from ....performance import PerformanceRunner
-from ....performance.workloads import build_reconstructor_workload
 from ...doris import DorisConfig
 from ...doris_diagnostics import DorisDiagnosticRecorder
+from ...doris_optimization import DorisServingVariant
+from ...doris_statistics import collect_statistics_evidence
 from ...doris_store import DorisDwarfStore
 from ...manifest import (
     has_parser_diagnostics,
@@ -20,8 +21,7 @@ from ...manifest import (
     load_manifest,
 )
 from ..common.metrics import measure
-from ..common.output import safe_output_name
-from .current_outputs import generation_output as _generation_output
+from .current_generation import run_generation_workloads as _run_generation_workloads
 from .queries import doris_queries
 
 
@@ -38,8 +38,135 @@ def run_current_doris_benchmark(
     aifsm_timeout_seconds: float = 7200.0,
     sample_interval: float = 1.0,
     doris_cli: Path | None = None,
+    control_cold_iterations: int | None = None,
+    control_warm_iterations: int | None = None,
+    aifsm_cold_iterations: int = 0,
+    trace_generation_queries: bool = False,
+    trace_profile_threshold_ms: float = 500.0,
+    trace_max_profiles: int = 20,
 ) -> dict[str, Any]:
     """Benchmark the existing source-bound Doris publication without loading it."""
+    output_dir = output_dir.resolve()
+    elf, manifest_path, manifest, config = _prepare_inputs(elf, store_manifest, output_dir)
+
+    serving_validation = _validate_doris_serving(manifest_path, elf, config)
+    query_contract, doris_diagnostics, runs = _collect_benchmark_evidence(
+        elf,
+        manifest_path,
+        output_dir,
+        config,
+        control_symbols,
+        query_iterations,
+        control_iterations,
+        control_timeout_seconds,
+        aifsm_iterations,
+        aifsm_timeout_seconds,
+        sample_interval,
+        doris_cli,
+        control_cold_iterations,
+        control_warm_iterations,
+        aifsm_cold_iterations,
+        trace_generation_queries,
+        trace_profile_threshold_ms,
+        trace_max_profiles,
+    )
+    return _publish_current_report(
+        manifest,
+        manifest_path,
+        config,
+        serving_validation,
+        query_contract,
+        doris_diagnostics,
+        runs,
+        control_symbols,
+        control_iterations,
+        query_iterations,
+        control_timeout_seconds,
+        aifsm_iterations,
+        aifsm_timeout_seconds,
+        sample_interval,
+        doris_cli,
+        control_cold_iterations,
+        control_warm_iterations,
+        aifsm_cold_iterations,
+        trace_generation_queries,
+        trace_profile_threshold_ms,
+        trace_max_profiles,
+        output_dir,
+    )
+
+
+def _publish_current_report(
+    manifest: Any,
+    manifest_path: Path,
+    config: DorisConfig,
+    serving_validation: dict[str, Any],
+    query_contract: dict[str, Any],
+    doris_diagnostics: dict[str, Any],
+    runs: list[dict[str, Any]],
+    control_symbols: tuple[str, ...],
+    control_iterations: int,
+    query_iterations: int,
+    control_timeout_seconds: float,
+    aifsm_iterations: int,
+    aifsm_timeout_seconds: float,
+    sample_interval: float,
+    doris_cli: Path | None,
+    control_cold_iterations: int | None,
+    control_warm_iterations: int | None,
+    aifsm_cold_iterations: int,
+    trace_generation_queries: bool,
+    trace_profile_threshold_ms: float,
+    trace_max_profiles: int,
+    output_dir: Path,
+) -> dict[str, Any]:
+    report = _build_report(
+        manifest,
+        manifest_path,
+        config,
+        serving_validation,
+        query_contract,
+        doris_diagnostics,
+        runs,
+        control_symbols,
+        control_iterations,
+        query_iterations,
+        control_timeout_seconds,
+        aifsm_iterations,
+        aifsm_timeout_seconds,
+        sample_interval,
+        doris_cli,
+        control_cold_iterations,
+        control_warm_iterations,
+        aifsm_cold_iterations,
+        trace_generation_queries,
+        trace_profile_threshold_ms,
+        trace_max_profiles,
+    )
+    _write_report(output_dir / "current-doris-benchmark.json", report)
+    return report
+
+
+def _collect_benchmark_evidence(
+    elf: Path,
+    manifest_path: Path,
+    output_dir: Path,
+    config: DorisConfig,
+    control_symbols: tuple[str, ...],
+    query_iterations: int,
+    control_iterations: int,
+    control_timeout_seconds: float,
+    aifsm_iterations: int,
+    aifsm_timeout_seconds: float,
+    sample_interval: float,
+    doris_cli: Path | None,
+    control_cold_iterations: int | None,
+    control_warm_iterations: int | None,
+    aifsm_cold_iterations: int,
+    trace_generation_queries: bool,
+    trace_profile_threshold_ms: float,
+    trace_max_profiles: int,
+) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
     _validate_options(
         control_symbols,
         control_iterations,
@@ -48,11 +175,12 @@ def run_current_doris_benchmark(
         control_timeout_seconds,
         aifsm_timeout_seconds,
         sample_interval,
+        control_cold_iterations,
+        control_warm_iterations,
+        aifsm_cold_iterations,
+        trace_profile_threshold_ms,
+        trace_max_profiles,
     )
-    output_dir = output_dir.resolve()
-    elf, manifest_path, manifest, config = _prepare_inputs(elf, store_manifest, output_dir)
-
-    serving_validation = _validate_doris_serving(manifest_path, elf, config)
     query_contract = _bounded_query_contract(
         manifest_path,
         config,
@@ -73,26 +201,14 @@ def run_current_doris_benchmark(
         control_timeout_seconds,
         aifsm_iterations,
         aifsm_timeout_seconds,
+        control_cold_iterations,
+        control_warm_iterations,
+        aifsm_cold_iterations,
+        trace_generation_queries,
+        trace_profile_threshold_ms,
+        trace_max_profiles,
     )
-    report = _build_report(
-        manifest,
-        manifest_path,
-        config,
-        serving_validation,
-        query_contract,
-        doris_diagnostics,
-        runs,
-        control_symbols,
-        control_iterations,
-        query_iterations,
-        control_timeout_seconds,
-        aifsm_iterations,
-        aifsm_timeout_seconds,
-        sample_interval,
-        doris_cli,
-    )
-    _write_report(output_dir / "current-doris-benchmark.json", report)
-    return report
+    return query_contract, doris_diagnostics, runs
 
 
 def _prepare_inputs(
@@ -122,12 +238,23 @@ def _build_report(
     aifsm_timeout_seconds: float,
     sample_interval: float,
     doris_cli: Path | None,
+    control_cold_iterations: int | None = None,
+    control_warm_iterations: int | None = None,
+    aifsm_cold_iterations: int = 0,
+    trace_generation_queries: bool = False,
+    trace_profile_threshold_ms: float = 500.0,
+    trace_max_profiles: int = 20,
 ) -> dict[str, Any]:
     return {
-        "schema_version": "1.1",
+        "schema_version": "1.2",
         "status": _overall_status(serving_validation, query_contract, doris_diagnostics, runs),
         "workload": "current-doris",
         "backend": _backend_report(config),
+        "serving_variant": DorisServingVariant.from_config(
+            config,
+            source_id=manifest.source_identity.sha256,
+            schema_version=manifest.schema_version,
+        ).to_dict(),
         "source_identity": manifest.source_identity.as_fingerprint(),
         "source_path": manifest.source_path,
         "store_manifest": str(manifest_path),
@@ -144,6 +271,12 @@ def _build_report(
             aifsm_timeout_seconds,
             sample_interval,
             doris_cli,
+            control_cold_iterations,
+            control_warm_iterations,
+            aifsm_cold_iterations,
+            trace_generation_queries,
+            trace_profile_threshold_ms,
+            trace_max_profiles,
         ),
         "runs": runs,
     }
@@ -169,20 +302,32 @@ def _workload_configuration(
     aifsm_timeout_seconds: float,
     sample_interval: float,
     doris_cli: Path | None = None,
+    control_cold_iterations: int | None = None,
+    control_warm_iterations: int | None = None,
+    aifsm_cold_iterations: int = 0,
+    trace_generation_queries: bool = False,
+    trace_profile_threshold_ms: float = 500.0,
+    trace_max_profiles: int = 20,
 ) -> dict[str, Any]:
     return {
         "control_symbols": list(control_symbols),
         "control_iterations": control_iterations,
+        "control_cold_iterations": control_cold_iterations,
+        "control_warm_iterations": control_warm_iterations,
         "control_timeout_seconds": control_timeout_seconds,
         "query_iterations": query_iterations,
         "aifsm_symbol": "rAIFSM",
         "aifsm_iterations": aifsm_iterations,
+        "aifsm_cold_iterations": aifsm_cold_iterations,
         "aifsm_timeout_seconds": aifsm_timeout_seconds,
         "aifsm_full_hierarchy": True,
         "aifsm_exhaustive": True,
         "sample_interval_seconds": sample_interval,
         "doris_cli": None if doris_cli is None else str(doris_cli.resolve()),
         "diagnostic_scope": "benchmark_suite",
+        "trace_generation_queries": trace_generation_queries,
+        "trace_profile_threshold_ms": trace_profile_threshold_ms,
+        "trace_max_profiles": trace_max_profiles,
     }
 
 
@@ -194,6 +339,11 @@ def _validate_options(
     control_timeout_seconds: float,
     aifsm_timeout_seconds: float,
     sample_interval: float,
+    control_cold_iterations: int | None = None,
+    control_warm_iterations: int | None = None,
+    aifsm_cold_iterations: int = 0,
+    trace_profile_threshold_ms: float = 500.0,
+    trace_max_profiles: int = 20,
 ) -> None:
     if not control_symbols:
         raise ValueError("at least one control symbol is required")
@@ -210,9 +360,32 @@ def _validate_options(
         ("control_timeout_seconds", control_timeout_seconds),
         ("aifsm_timeout_seconds", aifsm_timeout_seconds),
         ("sample_interval", sample_interval),
+        ("trace_profile_threshold_ms", trace_profile_threshold_ms),
     ):
         if value <= 0:
             raise ValueError(f"{name} must be positive")
+    _validate_optional_options(
+        control_cold_iterations,
+        control_warm_iterations,
+        aifsm_cold_iterations,
+        trace_max_profiles,
+    )
+
+
+def _validate_optional_options(
+    control_cold_iterations: int | None,
+    control_warm_iterations: int | None,
+    aifsm_cold_iterations: int,
+    trace_max_profiles: int,
+) -> None:
+    if control_cold_iterations is not None and control_cold_iterations < 1:
+        raise ValueError("control_cold_iterations must be positive when provided")
+    if control_warm_iterations is not None and control_warm_iterations < 1:
+        raise ValueError("control_warm_iterations must be positive when provided")
+    if aifsm_cold_iterations < 0:
+        raise ValueError("aifsm_cold_iterations must not be negative")
+    if trace_max_profiles < 1:
+        raise ValueError("trace_max_profiles must be positive")
 
 
 def _validate_manifest(elf: Path, manifest_path: Path) -> Any:
@@ -238,17 +411,34 @@ def _validate_doris_serving(manifest_path: Path, elf: Path, config: DorisConfig)
         )
         store, metrics = started
         registry = store.registry
+        statistics_evidence: dict[str, object] = {
+            "status": "not_observed",
+            "reason": "statistics capture is disabled for this serving run",
+        }
+        tablet_evidence: dict[str, object] = {
+            "status": "not_observed",
+            "reason": "tablet capture is disabled for this serving run",
+        }
+        if config.capture_statistics_evidence:
+            statistics_evidence = collect_statistics_evidence(
+                store._connection,
+                SimpleNamespace(database=config.database, table=config.table),
+            )
+            tablet_evidence = _tablet_evidence(statistics_evidence)
         store.close()
         if registry is None:
             return {"status": "blocked", "reason": "Doris registry validation returned no snapshot"}
+        evidence_statuses = {statistics_evidence.get("status"), tablet_evidence.get("status")}
         return {
-            "status": "observed",
+            "status": "partial" if "partial" in evidence_statuses else "observed",
             **metrics,
             "source_id": registry.source_id,
             "schema_version": registry.schema_version,
             "registry_status": registry.status,
             "expected_counts": registry.expected_counts,
             "observed_counts": registry.observed_counts,
+            "statistics_evidence": statistics_evidence,
+            "tablet_evidence": tablet_evidence,
         }
     except (OSError, RuntimeError, ValueError) as error:
         return {"status": "blocked", "reason": str(error)}
@@ -333,120 +523,22 @@ def _load_diagnostics_report(directory: Path) -> dict[str, Any]:
     )
 
 
-def _run_generation_workloads(
-    runner: PerformanceRunner,
-    elf: Path,
-    manifest_path: Path,
-    output_dir: Path,
-    control_symbols: tuple[str, ...],
-    control_iterations: int,
-    control_timeout_seconds: float,
-    aifsm_iterations: int,
-    aifsm_timeout_seconds: float,
-) -> list[dict[str, Any]]:
-    runs: list[dict[str, Any]] = []
-    for symbol in control_symbols:
-        for state in (ColdWarmState.COLD, ColdWarmState.WARM):
-            for iteration in range(1, control_iterations + 1):
-                target = (
-                    output_dir
-                    / "outputs"
-                    / safe_output_name(symbol)
-                    / state.value
-                    / f"{iteration:03d}"
-                )
-                workload = _generation_workload(
-                    elf,
-                    manifest_path,
-                    target,
-                    name=f"current-doris-control-{safe_output_name(symbol)}-{state.value}",
-                    symbol=symbol,
-                    state=state,
-                    timeout_seconds=control_timeout_seconds,
-                )
-                runs.append(_run_one(runner, workload, target, symbol, state.value, iteration))
-    for iteration in range(1, aifsm_iterations + 1):
-        target = output_dir / "outputs" / "rAIFSM" / "long" / f"{iteration:03d}"
-        workload = _generation_workload(
-            elf,
-            manifest_path,
-            target,
-            name="current-doris-raifsm-long",
-            symbol="rAIFSM",
-            state=ColdWarmState.WARM,
-            timeout_seconds=aifsm_timeout_seconds,
-            full_hierarchy=True,
-            exhaustive=True,
-        )
-        runs.append(_run_one(runner, workload, target, "rAIFSM", "long", iteration))
-    return runs
-
-
-def _generation_workload(
-    elf: Path,
-    manifest_path: Path,
-    target: Path,
-    *,
-    name: str,
-    symbol: str,
-    state: ColdWarmState,
-    timeout_seconds: float,
-    full_hierarchy: bool = False,
-    exhaustive: bool = False,
-) -> PerformanceWorkload:
-    return build_reconstructor_workload(
-        repository_root=Path.cwd(),
-        name=name,
-        elf=elf,
-        symbols=(symbol,),
-        mode="generate",
-        state=state,
-        output_dir=target,
-        dwarf_store_manifest=manifest_path,
-        full_hierarchy=full_hierarchy,
-        exhaustive=exhaustive,
-        timeout_seconds=timeout_seconds,
-    )
-
-
-def _run_one(
-    runner: PerformanceRunner,
-    workload: PerformanceWorkload,
-    target: Path,
-    symbol: str,
-    state: str,
-    iteration: int,
-) -> dict[str, Any]:
-    try:
-        summary = runner.run(workload)
-    except (OSError, RuntimeError, ValueError) as error:
-        return {
-            "status": "blocked",
-            "symbol": symbol,
-            "state": state,
-            "iteration": iteration,
-            "workload": workload.to_dict(),
-            "reason": str(error),
-        }
-    output = _generation_output(target)
-    status = _run_status(summary.status.value, output["status"])
-    return {
-        "status": status,
-        "symbol": symbol,
-        "state": state,
-        "iteration": iteration,
-        "workload": workload.to_dict(),
-        "run": summary.to_dict(),
-        "output": output,
+def _tablet_evidence(statistics_evidence: dict[str, object]) -> dict[str, object]:
+    tables = statistics_evidence.get("tables")
+    if not isinstance(tables, dict):
+        return {"status": "partial", "reason": "statistics report has no table evidence"}
+    tablet_tables = {
+        str(family): item.get("tablet_stats")
+        for family, item in tables.items()
+        if isinstance(item, dict)
     }
-
-
-def _run_status(summary_status: str, output_status: str) -> str:
-    if summary_status == EvidenceStatus.OBSERVED.value and output_status == "observed":
-        return "observed"
-    if summary_status == EvidenceStatus.BLOCKED.value:
-        return "blocked"
-    return "partial"
+    statuses = [value.get("status") for value in tablet_tables.values() if isinstance(value, dict)]
+    return {
+        "status": "observed"
+        if statuses and all(item == "observed" for item in statuses)
+        else "partial",
+        "tables": tablet_tables,
+    }
 
 
 def _overall_status(*sections: dict[str, Any] | list[dict[str, Any]]) -> str:

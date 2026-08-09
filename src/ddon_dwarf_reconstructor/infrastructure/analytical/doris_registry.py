@@ -20,6 +20,8 @@ class DorisRegistrySnapshot:
     status: str
     expected_counts: dict[str, int]
     observed_counts: dict[str, int]
+    serving_variant_id: str | None = None
+    serving_variant_configuration_sha256: str | None = None
 
 
 def registry_table(base: str) -> str:
@@ -38,6 +40,8 @@ def registry_sql(database: str, base: str) -> str:
     expected_counts_json STRING,
     observed_counts_json STRING,
     status VARCHAR(32) NOT NULL,
+    serving_variant_id VARCHAR(128),
+    serving_variant_configuration_sha256 CHAR(64),
     published_at DATETIME
 ) ENGINE=OLAP
 DUPLICATE KEY(source_id)
@@ -51,6 +55,9 @@ def publish_registry(
     base: str,
     manifest_path: Path,
     manifest: MaterializationManifest,
+    *,
+    serving_variant_id: str | None = None,
+    serving_variant_configuration_sha256: str | None = None,
 ) -> DorisRegistrySnapshot:
     """Count every source family and publish only a complete reconciliation."""
     expected = _expected_counts(manifest)
@@ -73,13 +80,32 @@ def publish_registry(
     )
     _delete_registry_row(connection, database, base, source_id)
     with connection.cursor() as cursor:
-        cursor.execute(
-            f"INSERT INTO {table} (source_id, schema_version, source_path, manifest_path, "
-            "expected_counts_json, observed_counts_json, status, published_at) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())",
-            payload,
-        )
-    return DorisRegistrySnapshot(source_id, manifest.schema_version, "complete", expected, observed)
+        try:
+            cursor.execute(
+                f"INSERT INTO {table} (source_id, schema_version, source_path, manifest_path, "
+                "expected_counts_json, observed_counts_json, status, serving_variant_id, "
+                "serving_variant_configuration_sha256, published_at) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())",
+                (*payload[:7], serving_variant_id, serving_variant_configuration_sha256),
+            )
+        except Exception:
+            if serving_variant_id not in {None, "canonical"}:
+                raise
+            cursor.execute(
+                f"INSERT INTO {table} (source_id, schema_version, source_path, manifest_path, "
+                "expected_counts_json, observed_counts_json, status, published_at) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())",
+                payload,
+            )
+    return DorisRegistrySnapshot(
+        source_id,
+        manifest.schema_version,
+        "complete",
+        expected,
+        observed,
+        serving_variant_id,
+        serving_variant_configuration_sha256,
+    )
 
 
 def validate_registry(
@@ -87,39 +113,89 @@ def validate_registry(
     database: str,
     base: str,
     manifest: MaterializationManifest,
+    *,
+    serving_variant_id: str | None = None,
+    serving_variant_configuration_sha256: str | None = None,
 ) -> DorisRegistrySnapshot:
     """Require a complete, source-matching and count-matching publication."""
     table = f"{_identifier(database)}.{_identifier(registry_table(base))}"
-    with connection.cursor() as cursor:
-        cursor.execute(
-            f"SELECT source_id, schema_version, expected_counts_json, observed_counts_json, status "
-            f"FROM {table} WHERE source_id = %s LIMIT 1",
-            (manifest.source_identity.sha256,),
-        )
-        rows = cursor.fetchall()
-        columns = tuple(str(column[0]) for column in cursor.description)
-    if not rows:
-        raise RuntimeError(
-            "Doris serving projection is unavailable: no complete registry row for source "
-            f"{manifest.source_identity.sha256}"
-        )
-    row = dict(zip(columns, rows[0], strict=True))
+    row = _fetch_registry_row(connection, table, manifest.source_identity.sha256)
     expected = _decode_counts(row.get("expected_counts_json"))
     observed = _decode_counts(row.get("observed_counts_json"))
-    manifest_counts = _expected_counts(manifest)
-    if row.get("status") != "complete" or row.get("schema_version") != manifest.schema_version:
-        raise RuntimeError("Doris serving projection is stale or incomplete")
-    if expected != manifest_counts or observed != expected:
-        raise RuntimeError(
-            "Doris serving projection is stale: registry counts do not match the manifest"
-        )
+    _validate_registry_identity(row, expected, observed, manifest)
+    _validate_registry_variant(
+        row,
+        serving_variant_id,
+        serving_variant_configuration_sha256,
+    )
+    actual_variant = row.get("serving_variant_id")
+    actual_configuration = row.get("serving_variant_configuration_sha256")
     return DorisRegistrySnapshot(
         str(row["source_id"]),
         str(row["schema_version"]),
         str(row["status"]),
         expected,
         observed,
+        None if actual_variant is None else str(actual_variant),
+        None if actual_configuration is None else str(actual_configuration),
     )
+
+
+def _fetch_registry_row(connection: Any, table: str, source_id: str) -> dict[str, object]:
+    with connection.cursor() as cursor:
+        try:
+            cursor.execute(
+                f"SELECT source_id, schema_version, expected_counts_json, observed_counts_json, "
+                f"status, serving_variant_id, serving_variant_configuration_sha256 FROM {table} "
+                "WHERE source_id = %s LIMIT 1",
+                (source_id,),
+            )
+        except Exception:
+            cursor.execute(
+                f"SELECT source_id, schema_version, expected_counts_json, observed_counts_json, status "
+                f"FROM {table} WHERE source_id = %s LIMIT 1",
+                (source_id,),
+            )
+        rows = cursor.fetchall()
+        columns = tuple(str(column[0]) for column in cursor.description)
+    if not rows:
+        raise RuntimeError(
+            "Doris serving projection is unavailable: no complete registry row for source "
+            f"{source_id}"
+        )
+    return dict(zip(columns, rows[0], strict=True))
+
+
+def _validate_registry_identity(
+    row: dict[str, object],
+    expected: dict[str, int],
+    observed: dict[str, int],
+    manifest: MaterializationManifest,
+) -> None:
+    if row.get("status") != "complete" or row.get("schema_version") != manifest.schema_version:
+        raise RuntimeError("Doris serving projection is stale or incomplete")
+    if expected != _expected_counts(manifest) or observed != expected:
+        raise RuntimeError(
+            "Doris serving projection is stale: registry counts do not match the manifest"
+        )
+
+
+def _validate_registry_variant(
+    row: dict[str, object],
+    serving_variant_id: str | None,
+    serving_variant_configuration_sha256: str | None,
+) -> None:
+    actual_variant = row.get("serving_variant_id")
+    if serving_variant_id not in {None, "canonical"} and actual_variant != serving_variant_id:
+        raise RuntimeError("Doris serving projection variant does not match the requested variant")
+    actual_configuration = row.get("serving_variant_configuration_sha256")
+    if serving_variant_configuration_sha256 is not None and actual_configuration not in {
+        None,
+        serving_variant_configuration_sha256,
+    }:
+        raise RuntimeError(
+            "Doris serving projection configuration does not match the requested variant"
+        )
 
 
 def _expected_counts(manifest: MaterializationManifest) -> dict[str, int]:

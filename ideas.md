@@ -460,47 +460,80 @@ https://en.wikipedia.org/wiki/Abstract_syntax_tree
 https://en.wikipedia.org/wiki/Recursive_descent_parser
 --
 DONE:
-Reference: [https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex](https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex)
+Reference: https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex
 Optimize the following activity for a /goal oriented workflow for the ddon-dwarf-reconstructor:
-
-Goal 1: Perform a thorough research and investigation into tooling and databases. Understand DWARF format and DWARF tools in other projects. Figure out how to map what we understand into a columnar, analytical database structure
-
-Goal 2: Perform a new performance benchmark. Traverse all CUs once, convert everything as-is into a typed Parquet projection, and load it into Apache Doris with appropriate performance optimizations like indexes. Compare runtime engines only against the prior live lookup baseline.
-
-
-
-CU traversal is the single most expensive operation but also the single most important one. Missing CUs lead to wrong/missing data. It is unavoidable. We essentially always go from Binary -> Unpack at runtime in some memory structure -> filter/stop-early with clever tricks. Instead we could just turn this into a "big data" or analytical problem with columnar storage engines. An unpacked 30GB txt dump which compresses to a few GB in zstd is a good indicator that this is very manageable for parquet file format which has zstd support as well. But it will need a good, fitting schema. Review what we know about DWARF and the structures used in our current library or in LLVM.
-
+Goal 1: Perform a thorough research and investigation into tooling and databases. Understand DWARF format and DWARF tools in other projects. Figure out how to map what we understand into a columnar, analytical database structure along with dimensional modelling
+Goal 2: Derive a usable data model, incrementally verify hypotheses and ensure our header files can still be generated correctly based on the data needed for rLayout.
+Goal 3: Perform a new performance benchmark. Traverse all CUs once, convert all DWARF data into table-compatible rows based on the schema we derived. Load everything into Apache Doris with appropriate performance optimizations like indexes. Use modern table formats like Apache Iceberg and storage formats like Apache Parquet via analytical modelling techniques for data lake(houses).
+CU traversal is the single most expensive operation but also the single most important one. Missing CUs lead to wrong/missing data. It is unavoidable. Turn this into a "big data" or analytical problem where looking for something like rLayout becomes a query instead. Parquet file format which has zstd support as well. Review what we know about DWARF and the structures used in our current library or in LLVM to derive useful data types, relationships, nestedness etc. derive useful technical and functional keys and decide where to fan out in the data model and what to pre-compute.
 Tool references:
 https://llvm.org/docs/CommandGuide/llvm-dwarfutil.html
 https://llvm.org/docs/CommandGuide/llvm-dwarfdump.html
 https://llvm.org/docs/CommandGuide/dsymutil.html
-[llvm/llvm-project](https://github.com/llvm/llvm-project) / D:\llvm-project
+llvm/llvm-project / D:\llvm-project
 https://github.com/llvm/llvm-project/tree/main/llvm/lib/DebugInfo/DWARF
-
 Analytical data:
 https://openmetal.io/resources/blog/building-a-modern-data-lake-using-open-source-tools/
 https://www.alation.com/blog/data-lake-architecture-guide/
 https://www.phdata.io/blog/what-are-the-best-data-modeling-methodologies-processes-for-my-data-lake/
 https://www.min.io/blog/the-architects-guide-a-modern-datalake-reference-architecture
 https://www.databricks.com/blog/data-modeling-best-practices-implementation-modern-lakehouse
-[apache/parquet-format](https://github.com/apache/parquet-format/)
-[apache/arrow](https://github.com/apache/arrow)
-[apache/doris](https://github.com/apache/doris)
-
+apache/parquet-format
+apache/arrow
+apache/iceberg
+apache/doris
 Our lib:
 https://github.com/eliben/pyelftools/tree/main / D:\pyelftools -> we were recently using version 0.32, since May there is now 0.33 -> it is worth re-investigating the APIs
 https://github.com/eliben/pyelftools/blob/main/elftools/dwarf/compileunit.py
 https://github.com/eliben/pyelftools/blob/main/elftools/dwarf/die.py
-
-
-Related ideas:
+Related ideas but mostly for structural reference for the data model:
 https://github.com/volatilityfoundation/dwarf2json
 https://github.com/yurydelendik/dwarf-to-json
-
-
 Afterwards, review the current instructions, revalidate the tooling loop for changes.
 Derive a plan first and refactor aggressively, disregard breaking changes.
+Make sure to use llvm-dwarfdump via msys2 UCRT profile C:\msys64\ucrt64.exe
+As far as I can tell sony doesn't have custom DWARF extensions and LLVM is more reliable. THe original PS4 Clang toolchain is old and not as good at parsing DWARF.
+I don't care about initial RAM usage, I have 64GB of RAM. It's acceptable for initial dumping to take up resources. The memory boundedness was valid for the previous architecture where we would use pyelf ad-hoc. But we should get away from this and rely more on the ad-hoc Doris queries instead.
+Avoid Disk E as it is an external portable HDD.
+Stick to Disk C by utilizing AppData/Local/temp the default temp storage
+Criticially challenge: do we really need JSON as intermediary? It helped us build a structure. But Doris requires analytical/dimensional modelling to be effective. We want to use the full extent of data lake engines, but these require properly serialized table data. Why use JSON as intermediate instead of directly inserting into the DB?
+Check out and use these Apache Doris skills, they should help in designing the tables and architecture along with apache/doris-cli
+apache/doris-skills
+https://doris.apache.org/community/source-install/compilation-win
+https://doris.apache.org/docs/3.x/table-design/data-type
+I have installed rustup and compiled the doris-cli here: D:\doris-cli\target\release
+Investigate the following references and how they can further support our setup and ensure we are using latest versions before continuing our investigation:
+Docker compose setup samples:
+https://github.com/apache/doris/tree/master/docker/runtime/docker-compose-demo
+https://github.com/apache/doris/tree/master/docker/runtime/doris-compose
+https://github.com/apache/doris/tree/master/docker/runtime
+Arrow: -> v25.0.0 & Are we applying all best practices?
+https://arrow.apache.org/docs/python/index.html
+https://arrow.apache.org/cookbook/py/
+https://pypi.org/project/pyarrow/
+Iceberg: -> v0.11.1
+https://py.iceberg.apache.org/
+https://github.com/apache/iceberg-python
+https://motherduck.com/glossary/pyiceberg/
+Doris: -> v4.1.3 SQL Alchemy+Custom DORIS client vs. Doris MySQL or Doris Arrow flight sql?
+https://pypi.org/project/PyMySQL/ PyMySQL -> v1.2.0
+https://pypi.org/project/SQLAlchemy/ SQLAlchemy -> v2.0.51
+https://pypi.org/project/pydoris/
+https://doris.apache.org/docs/4.x/connection-integration/arrow-flight-sql -> evaluate for performance
+https://doris.apache.org/docs/4.x/connection-integration/mysql-proto
+Doris optimization techniques: Are we squeezing everything out that we can from the engine/technology?
+https://doris.apache.org/docs/4.x/query-acceleration/optimization-technology-principle/query-optimizer
+https://doris.apache.org/docs/4.x/query-acceleration/query-profile
+https://doris.apache.org/docs/4.x/query-acceleration/materialized-view/intro-link
+https://doris.apache.org/docs/4.x/query-acceleration/tuning/tuning-plan/schema-and-index-optimization
+https://doris.apache.org/docs/4.x/query-acceleration/performance-tuning-overview/tuning-overview
+https://doris.apache.org/docs/4.x/query-acceleration/optimization-technology-principle/statistics
+https://doris.apache.org/docs/4.x/lakehouse/best-practices/doris-iceberg
+https://doris.apache.org/docs/4.x/table-design/overview
+https://doris.apache.org/docs/4.x/data-operate/import/load-manual
+https://doris.apache.org/docs/4.x/query-data/mysql-compatibility
+https://doris.apache.org/docs/4.x/query-acceleration/tuning/tuning-plan/dml-tuning-plan
+We know that the full traversal technically works. But it has been running for hours. Are we sure the schema is correct and useful and usable and will help us in improving performance? We should not attempt to loop this potential 12h process unless we are sure the schema is what we need, because then checking back on improvements will also be a very long process. Is it possible to run some queries right now and perform simple performance sanity checks while it is continuing to write?
 --
 DONE:
 Investigate the following references and how they can further support our setup and ensure we are using latest versions before continuing our investigation:
@@ -515,18 +548,166 @@ https://pypi.org/project/pydoris/
 https://doris.apache.org/docs/4.x/connection-integration/arrow-flight-sql -> evaluate for performance
 https://doris.apache.org/docs/4.x/connection-integration/mysql-proto
 --
+DONE:
+Make sure our DB is fully optimized using Doris skills and CLI
+https://github.com/apache/doris-skills
+https://github.com/apache/doris-cli
+Use our benchmarking tooling with Scalene and trace methods/lines for CPU usage before drawing any conclusions what to optimize.
+--
+DONE:
+Goal: Create a new very simple Python Docker container to run the reconstructor and local volume mount the output and other logging/debugging files. This should allow us to verify Linux compatibility and make Scalene hopefully work with line output - as this seems to be a CPython Windows bug.
+And afterwards profile the runtime and derive action items based on the observations via py-spy and other tools.
+Check: https://hub.docker.com/_/python
+Since we are using uv for everything, there seem to be specific Docker instructions for that. Consider this as well: https://docs.astral.sh/uv/guides/integration/docker/#getting-started
+https://hub.docker.com/r/astral/uv
+https://github.com/astral-sh/uv-docker-example
+Explore the scalene command line and compare if a certain set of configurations would help with the issue of missing data. Optimize the setup. Check the source code and readme here:
+https://github.com/plasma-umass/scalene
+% scalene --help
+Scalene: a high-precision CPU and memory profiler, version 1.5.51 (2025.01.29)
+https://github.com/plasma-umass/scalene
+Consider that maybe we want an optional view on our libraries in case we want to look for faster alternatives or want to change/reimplement an algorithm from a library ourselves. Especially when it seems like from absolute numbers that our code is not at fault. Additionally, I want to check the experimental memory leak detector. Activate it and see what it says.
+Also challenge whether we should still keep cProfile if scalene is working now properly. As far as I understand py-spy is useful as it can capture in-process snapshots.
+--
+DONE:
+Upgrade uv to 0.12.3 everywhere, update Python to 3.14.7 everywhere and use the 3.14.7-slim-trixie image for the new container.
+https://blog.python.org/2026/08/python-3147-31315/
+https://github.com/astral-sh/uv/releases
+Also in general check if any other of our dependencies can be upgraded.
+Check out these resources if we can improve our uv setup:
+https://docs.astral.sh/uv/concepts/projects/sync/#checking-the-lockfile
+https://docs.astral.sh/uv/concepts/projects/workspaces/#getting-started
+https://docs.astral.sh/uv/concepts/projects/dependencies/#git
+https://docs.astral.sh/uv/concepts/build-backend/#choosing-a-build-backend
+https://docs.astral.sh/uv/reference/settings/#conflicts
+--
+DONE:
+Evaluate usage of Arrow Flight SQL instead of the MySQL pathway to access Doris. Thoroughly analyze and understand the source material:
+https://doris.apache.org/docs/4.x/connection-integration/arrow-flight-sql
+https://github.com/apache/doris/issues/25514
+https://arrow.apache.org/docs/format/FlightSql.html
+https://arrow.apache.org/docs/format/Flight.html
+https://arrow.apache.org/blog/2019/10/13/introducing-arrow-flight/
+https://arrow.apache.org/cookbook/py/flight.html
+https://arrow.apache.org/docs/python/flight.html
+https://arrow.apache.org/adbc/main/python/driver_manager.html
+https://arrow.apache.org/adbc/main/python/api/adbc_driver_flightsql.html
+https://arrow.apache.org/adbc/main/python/recipe/flight_sql.html
+https://arrow.apache.org/adbc/main/python/recipe/driver_manager.html
+In our case we are just a client while Doris is the SQL Flight Server. I think it would be beneficial to avoid the unnecessary translation layer of MySQL. But it needs to be checked/verified/benchmarked since we are ultimately interested in single records / arrays of records. Maybe this path would only be useful if we also adapted our logic with some map/reduce patterns or other aggregations when deduplicating valid usages of a DIE.
+Goal: Get the benchmark working.
+Debug the container setup. I currently only see port 8030 + 9030 on FE and 8040 on BE being exposed and the containers are 14h old.
+Check back again with these resources:
+https://doris.apache.org/docs/4.x/connection-integration/arrow-flight-sql
+https://doris.apache.org/blog/arrow-flight-sql-in-apache-doris-for-10x-faster-data-transfer
+https://github.com/apache/doris/blob/master/samples/arrow-flight-sql/python/test.py
+https://dzone.com/articles/arrow-flight-sql-data-transfer
+https://alexmerced.blog/blog/2026-08-06-arrow-flight-adbc-explained.html
+--
 TODO:
-Doris optimization techniques: Are we squeezing everything out that we can from the engine/technology?
+Evaluate Doris optimization techniques: Are we squeezing everything out that we can from the engine/technology?
 https://doris.apache.org/docs/4.x/query-acceleration/optimization-technology-principle/query-optimizer
+https://doris.apache.org/docs/4.x/table-design/index/index-overview
 https://doris.apache.org/docs/4.x/query-acceleration/query-profile
 https://doris.apache.org/docs/4.x/query-acceleration/materialized-view/intro-link
 https://doris.apache.org/docs/4.x/query-acceleration/tuning/tuning-plan/schema-and-index-optimization
 https://doris.apache.org/docs/4.x/query-acceleration/performance-tuning-overview/tuning-overview
 https://doris.apache.org/docs/4.x/query-acceleration/optimization-technology-principle/statistics
 https://doris.apache.org/docs/4.x/table-design/overview
+https://doris.apache.org/docs/4.x/query-data/complex-type
+https://doris.apache.org/docs/4.x/query-data/lateral-view
+https://doris.apache.org/docs/4.x/query-data/subquery
+https://doris.apache.org/docs/4.x/query-data/multi-dimensional-analytics
+https://doris.apache.org/docs/4.x/query-data/cte
+https://doris.apache.org/docs/4.x/table-design/data-model/tips
 https://doris.apache.org/docs/4.x/data-operate/import/load-manual
 https://doris.apache.org/docs/4.x/query-data/mysql-compatibility
 https://doris.apache.org/docs/4.x/query-acceleration/tuning/tuning-plan/dml-tuning-plan
+
+Here is the plan outlining the approach, incorporate our new benchmarking pathways including rAIFSM which is one of the most heavy workloads:
+# Doris 4.x Optimization Evaluation
+
+## Summary
+
+Verdict: the canonical DWARF serving path is well-designed, but Doris is not fully exhausted.
+
+Already strong:
+
+- `DUPLICATE KEY` preserves exact DWARF evidence.
+- Source/unit-first keys and hash distribution prune source-scoped queries to 1/16 tablets.
+- Inverted indexes, Bloom filters, predicate pushdown, column pruning, and lazy materialization are working.
+- Nereids is active; profiled queries show no spills and healthy tablet skew.
+- `rLayout` returned 145 rows from a 35.7M-row index in a warm 51 ms profile.
+
+The main remaining opportunity is global lookup fan-out: name and method lookups still touch all tablets. The current `rLayout` and method queries use 8/8 tablets despite returning very few rows. The optimizer is therefore reducing row work, but not tablet scheduling/fan-out. This aligns with Doris guidance to evaluate schema, indexes, and profiles together rather than relying on `EXPLAIN` alone ([optimizer](https://doris.apache.org/docs/4.x/query-acceleration/optimization-technology-principle/query-optimizer), [indexes](https://doris.apache.org/docs/4.x/table-design/index/index-overview), [profiles](https://doris.apache.org/docs/4.x/query-acceleration/query-profile)).
+
+## Key decisions
+
+| Area | Decision |
+|---|---|
+| Canonical table model | Keep `DUPLICATE KEY`, source-first keys, current distribution, and one-partition design. Do not globally reorder the base tables or use Unique/Aggregate models. |
+| Global lookups | Benchmark an explicit source-bound name lookup table sorted by `(source_id, name, unit_offset, die_offset)`. Add a target-offset method table only if the query trace justifies it. Do not alter the canonical tables. |
+| Materialized views | Do not add an asynchronous MV to the canonical path. An explicit auxiliary table is easier to bind to the immutable manifest and validate exactly. Test a synchronous MV only as a comparison variant ([materialized views](https://doris.apache.org/docs/4.x/query-acceleration/materialized-view/overview/)). |
+| Statistics | Replace broad all-column analysis on wide tables with selective analysis of key/filter columns, then wait for terminal `SHOW ANALYZE` states. Current automatic analysis history contains memory-limit failures even though manual statistics later succeeded ([statistics](https://doris.apache.org/docs/4.x/query-acceleration/optimization-technology-principle/statistics)). |
+| Index budget | Measure whether the attribute/name-table inverted indexes and Bloom filters on already-keyed or constant columns justify their storage and load cost. Retain them only when profiles demonstrate value. |
+| Storage format | Keep V2/ZSTD initially. V3 and row store are low-priority variants: V3 targets very wide tables, while row store targets high-concurrency `SELECT *` workloads ([storage format](https://doris.apache.org/docs/4.x/table-design/storage-format/), [row store](https://doris.apache.org/docs/4.x/table-design/row-store/)). |
+| Loading | Benchmark Stream Load with 1/2/4/8 workers and Doris Streamloader. Do not enable group commit blindly; it primarily targets frequent small batches, not this immutable bulk publication ([load manual](https://doris.apache.org/docs/4.x/data-operate/import/load-manual/), [group commit](https://doris.apache.org/docs/4.x/data-operate/import/group-commit-manual/)). |
+| SQL/query features | CTEs, subqueries, lateral views, complex types, multidimensional aggregation, and MySQL compatibility are not current bottlenecks. The runtime workload is predominantly single-table, parameterized point lookup. |
+| Parallelism/cache | Benchmark `parallel_pipeline_task_num` and SQL result cache only against representative traces. Do not change global defaults without profile evidence ([parallelism](https://doris.apache.org/docs/4.x/query-acceleration/tuning/tuning-execution/parallelism-tuning), [SQL cache](https://doris.apache.org/docs/4.x/query-acceleration/sql-cache-manual/)). |
+
+## Implementation and evidence changes
+
+1. Extend the analytical evidence ledger with:
+
+   - complete per-family row counts and source identity;
+   - `SHOW TABLE STATS`, `SHOW COLUMN STATS`, `SHOW ANALYZE`, `SHOW AUTO ANALYZE`;
+   - tablet count, size, health, and skew;
+   - cold/warm p50 and p95 profiles containing scan bytes, scan rows, tablet count, schedule time, operator time, memory, and spills.
+
+2. Benchmark the canonical schema against the name and method lookup candidates. Require exact ordered-result parity, manifest/source binding, and no parser or load diagnostics. Promote a candidate only when it improves representative application latency or scan cost without unacceptable storage/load overhead.
+
+3. Add optional serving-variant identity to the existing registry/manifest evidence. The canonical 14-family row contract remains unchanged.
+
+4. Run controlled physical variants for:
+
+   - Bloom/inverted-index removal;
+   - bucket counts on tiny tables;
+   - V2 versus V3 on the widest family;
+   - ZSTD versus LZ4 only if profiles show CPU-bound scans;
+   - Stream Load concurrency.
+
+5. Update the analytical-store specification, measured-evidence ledger, operational README, and architecture/reference documentation with measured results and explicit rejected/not-applicable optimizations.
+
+## Acceptance tests
+
+- Exact row counts, source identity, ordering, and query-result hashes remain unchanged.
+- No required analysis job remains failed, cancelled, or unobserved.
+- All loaded tablets are `NORMAL`; large-table skew remains acceptable.
+- Candidate lookup tables demonstrate measured benefit in the representative query trace, not merely improved `EXPLAIN` output.
+- Cold and warm results are reported separately; `--no-cache` is not treated as a full storage-cache eviction.
+- Existing repository gates remain required after implementation: `uv run just test-unit`, `uv run just check`, `uv run just test`, `uv run just coverage-ci`, and `uv run just audit`.
+
+## Assumptions
+
+- The current single-FE/single-BE, replication-1 deployment is diagnostic evidence, not proof of production-scale distributed performance.
+- No representative production query-volume trace has been supplied; therefore auxiliary tables remain candidates until measured.
+- Exact source-bound DWARF evidence takes precedence over convenience features or eventual-consistency optimizations.
+- Existing 110%-of-baseline acceptance rules remain unchanged wherever an approved baseline exists.
+
+--
+TODO:
+Check and optimize the Doris configurations:
+[https://doris.apache.org/docs/4.x/admin-manual/workload-management/concurrency-control-and-queuing](https://doris.apache.org/docs/4.x/admin-manual/workload-management/concurrency-control-and-queuing)
+[https://doris.apache.org/docs/4.x/admin-manual/config/be-config](https://doris.apache.org/docs/4.x/admin-manual/config/be-config)
+[https://doris.apache.org/docs/4.x/admin-manual/config/fe-config](https://doris.apache.org/docs/4.x/admin-manual/config/fe-config)
+https://doris.apache.org/docs/4.x/query-acceleration/tuning/tuning-execution/parallelism-tuning
+--
+DONE:
+As part of the benchmarks you should also run explain plans on the queries we send to Doris & profile them. This is especially important in case we change our schema and approach later down the line. Check the following resources:
+[https://doris.apache.org/docs/4.x/sql-manual/sql-statements/data-query/EXPLAIN](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/data-query/EXPLAIN)
+[https://doris.apache.org/docs/4.x/admin-manual/workload-management/analysis-diagnosis](https://doris.apache.org/docs/4.x/admin-manual/workload-management/analysis-diagnosis)
+[https://doris.apache.org/docs/4.x/query-acceleration/query-profile](https://doris.apache.org/docs/4.x/query-acceleration/query-profile)
+
 
 --
 TODO:
@@ -544,3 +725,4 @@ Galaxy Schema,Fact_A & Fact_B → Shared Dim_Table,Mixed (Conformed Dimensions),
 Data Vault 2.0,Hubs (Keys) → Links (Relations) → Satellites (Context),Extremely High (Raw structural decoupling),O(N) (Massive join overhead for reads),Extremely High (Historical inserts),"Moderate (Parallelized, append-only)","Immutable audit trails, agile ingestion, schema drift resistance",Integration / Enterprise DW (Silver)
 Starflake Schema,Hybrid (Flat & Hierarchical mix),Mixed (Selective normalization),Variable,Moderate,Moderate to High,Systems with extreme variations in dimension cardinality,Presentation / Data Mart (Gold)
 Columnar Wide-Table,Single flattened table containing all facts and attributes,Zero (Fully Flattened),None (0 Joins),Massive redundancy,High (Pre-computation during ETL pipeline),High-throughput vectorized scans on cloud analytical engines,Presentation (Gold) / External Lakehouse
+What is the closest to what we are doing right now? Why did we choose to take that direction? Should we invest in a different modelling scheme considering the capabilites of Dora?

@@ -10,6 +10,7 @@ The `performance` group is the canonical opt-in resource and profiler interface:
 | `performance profile-index <dump>` | Profile a complete compressed-dump index rebuild |
 | `performance benchmark-dwarf-store <elf>` | Materialize typed Parquet and collect native Doris evidence |
 | `performance benchmark-doris-current <elf>` | Benchmark the existing complete manifest and live Doris path without materializing or loading |
+| `performance benchmark-doris-optimization <elf>` | Run the source-bound Doris baseline and one isolated optimization candidate |
 | `performance check-doris-flight` | Check the opt-in Flight overlay, endpoints, hashes, and startup logs |
 | `performance benchmark-doris-flight` | Compare PyMySQL rows with ADBC Flight SQL consumption modes |
 | `performance profile-dwarf-store <elf>` | Run the analytical-store benchmark through Scalene, cProfile, or another supported profiler |
@@ -74,7 +75,8 @@ uv run ddon-dwarf-reconstructor performance benchmark-doris-current <ELF> `
   --store-manifest <complete-manifest.json> `
   --output-dir $env:TEMP/ddon-analytical-dwarf/current-doris-benchmark `
   --control-symbol MtObject --control-symbol rLayout `
-  --control-iterations 1 --query-iterations 3 --aifsm-iterations 1 `
+  --control-cold-iterations 1 --control-warm-iterations 1 --query-iterations 3 `
+  --aifsm-cold-iterations 0 --aifsm-iterations 1 `
   --control-timeout-seconds 900 --aifsm-timeout-seconds 7200 `
   --doris-cli D:\doris-cli\target\release\doriscli.exe
 ```
@@ -82,7 +84,7 @@ uv run ddon-dwarf-reconstructor performance benchmark-doris-current <ELF> `
 The report retains separate cold/warm controls for `MtObject` and `rLayout`, plus the independent
 long-running `rAIFSM --full-hierarchy --exhaustive` workload. Its bounded Doris query contract is
 explicitly first-definition behavior (`LIMIT 1001`) and must not be described as a complete
-`rAIFSM` hierarchy benchmark. The report schema is `1.1`; its external
+`rAIFSM` hierarchy benchmark. The report schema is `1.2`; its external
 `doris-diagnostics/doris-diagnostics.json` records one `EXPLAIN` and one `EXPLAIN VERBOSE` per
 distinct exact SQL statement, plus a raw and full server profile for every cold and warm
 execution. Raw plans and profiles are stored below the same external directory with SHA-256,
@@ -92,11 +94,70 @@ profile endpoints are recorded fallbacks. A missing, evicted, timeout, or FE-mis
 keeps the query result but marks `doris_diagnostics` and the overall report incomplete; no stale
 profile is reused.
 
-The benchmark intentionally limits Doris explain/profile capture to the explicit suite. Generate
-children are not instrumented; the independent process workload record still retains the
-`MtObject`, `rLayout`, and exhaustive/full-hierarchy `rAIFSM` generation measurements. Profiling
-does not implicitly enable `--no-cache` or other session tuning; cache/session state is captured
-as evidence.
+The default benchmark intentionally limits Doris explain/profile capture to the explicit suite.
+Use `--trace-generation-queries` to opt in to tracing the actual PyMySQL boundary inside every
+generation child. Each child writes an external `doris-query-trace.jsonl` and compact summary;
+parameter values are never retained. The tracer captures one profile per query shape and then
+slow executions up to the configured bounded profile budget (`--trace-profile-threshold-ms` and
+`--trace-max-profiles`). A missing, mismatched, evicted, or timed-out FE-local profile is `partial`.
+Tracing is paired with an untraced run; if it adds more than 5% wall time, use it for attribution
+only and exclude traced timings from performance conclusions. Profiling does not implicitly enable
+`--no-cache` or other session tuning; cache/session state is captured as evidence.
+
+### Doris optimization evaluation
+
+Use the optimization command for the controlled one-factor matrix. It keeps the canonical
+`DUPLICATE KEY`, source-first, V2/ZSTD tables in place and provisions lookup candidates only when
+`--provision-candidate` is explicit. The default controls are three cold and five warm repetitions;
+the heavy `rAIFSM --full-hierarchy --exhaustive` screening path is one cold and three warm runs.
+
+```powershell
+uv run ddon-dwarf-reconstructor performance benchmark-doris-optimization <ELF> `
+  --store-manifest <complete-manifest.json> `
+  --output-dir $env:TEMP/ddon-analytical-dwarf/doris-optimization `
+  --candidate canonical `
+  --control-symbol MtObject --control-symbol rLayout `
+  --doris-cli D:\doris-cli\target\release\doriscli.exe
+```
+
+The matrix includes explicit projections, bounded hydration (512 keys), source/name lookup
+tables with buckets 2/4/8, trace-gated method/DIE locator tables, index/Bloom removal, tiny-table
+buckets, V2/V3, ZSTD/LZ4, pipeline parallelism, SQL-cache state, and Stream Load workers 1/2/4/8.
+Row store, asynchronous MV, group commit, and unrelated complex-SQL features are retained as
+`not_applicable`/rejected evidence for this append-only single-table workload. Every report carries
+the typed serving variant, complete row-count evidence, cold/warm samples, query traces, output
+hashes, DDL/configuration hashes, and a promotion gate. EXPLAIN-only or scan-only improvements do
+not promote a candidate; confirmatory warm p50/p95 must improve a representative rAIFSM or hot
+lookup by at least 10% with exact parity and no more than the existing 110% regression bound.
+
+#### 2026-08-09 evaluation and serving-path result
+
+The first complete-store evaluation ran against Doris 4.1.3 and identified the dominant cost as
+generation round trips rather than scan CPU. The source/unit-bound 512-key batch screen was `34.1x`
+faster than sequential attribute queries with exact row parity. The serving runtime now consumes
+bounded batches for DIE metadata, attributes, reference targets, and child-tag counts.
+
+The optimized path produced exact output from the complete source-bound publication. `rLayout`
+completed in `20.464 s` and `20.198 s` (`n=2`, exploratory p50/p95 `20.198/20.464 s`). Exhaustive
+`rAIFSM` completed in `32.123 s` fresh and `31.683 s`/`31.653 s` in two repeated runs (`n=3`,
+exploratory p50/p95 `31.683/32.123 s`); all 11 header hashes matched the approved bundle. This is
+about a `91.2%` reduction from the earlier `361.004 s` warm `rAIFSM` process sample, while the
+canonical Doris schema, keys, buckets, storage format, indexes, and registry remained unchanged.
+
+A paired traced `rAIFSM` run published the same 11 headers in `83.553 s` and recorded `2,208`
+redacted observations. Every FE profile was `partial` because query IDs did not match, and tracing
+added `160.1%` wall time, so traced wall time is excluded from performance conclusions. The
+source/name auxiliary table remains rejected because it did not improve measured warm lookup
+latency; physical/index/storage/session variants remain `not_observed`.
+
+This command is a reusable regression/promotion tool, not a continuously running service. The
+2026-08-09 run is the one-time decision for the current publication; future runs are warranted only
+when the generator path, Doris image/configuration, source publication, or a candidate variant
+changes.
+
+Candidate reports and all raw traces/profiles are external artifacts. `--no-cache` disables Doris
+query cache for a session; it is not an operating-system storage-cache eviction, so cold and warm
+labels remain separate and must not be conflated.
 
 ## Flight SQL evaluation
 

@@ -165,6 +165,7 @@ max-complexity = 10
 "src/ddon_dwarf_reconstructor/performance_analytical_cli.py" = ["B008"]
 "src/ddon_dwarf_reconstructor/performance_materializer_cli.py" = ["B008"]
 "src/ddon_dwarf_reconstructor/performance_current_doris_cli.py" = ["B008"]
+"src/ddon_dwarf_reconstructor/performance_doris_optimization_cli.py" = ["B008"]
 
 [dependency-groups]
 test = [

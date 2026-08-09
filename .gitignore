@@ -97,3 +97,7 @@ ops/langfuse/.env
 # Checked-in source-bound acceptance index
 !resources/.cache/
 !resources/.cache/DDOORBIS.elf.llvmdwarfdump.index.sqlite3
+.codex-timeline/codex-investigation-timeline.json
+.codex-timeline/codex-investigation-timeline.md
+.codex-timeline/codex-investigation-timeline.mmd
+.codex-timeline/codex-investigation-turns.csv

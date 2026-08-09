@@ -294,15 +294,46 @@ large full scan. The report keeps each baseline `not_observed` or `blocked` unti
 neither state can satisfy the 110%-of-baseline gate.
 
 The current live-Doris benchmark adds schema-comparable diagnostics without changing the serving
-schema or measured PyMySQL result path. Its schema-`1.1` report writes raw artifacts outside the
+schema or measured PyMySQL result path. Its schema-`1.2` report writes raw artifacts outside the
 repository and retains source identity, schema/session context, exact SQL hashes, normalized
 `EXPLAIN`/`EXPLAIN VERBOSE`, query IDs, cold/warm result hashes, raw/full profiles, fetch duration,
 operator summaries, scan/tablet/cardinality/predicate signals, and explicit incomplete states.
 `doriscli` is preferred; PyMySQL plan capture and the FE profile HTTP endpoints are fallbacks.
-The diagnostic scope is intentionally limited to the explicit Doris suite; generate children are
-not instrumented by this route. A bounded `LIMIT 1001` first-definition query remains a bounded
-compatibility contract, not a complete `rAIFSM` hierarchy query; a stale or evicted profile is
-never accepted for another query.
+The default diagnostic scope is limited to the explicit Doris suite. `--trace-generation-queries`
+extends it to the actual query executor in each generation child, writing redacted JSONL
+observations and bounded FE-local profile artifacts outside the repository. The trace retains
+query-shape digests, timings, rows, query IDs, scan/tablet/operator/memory/spill metrics, and
+explicit profile status; it never retains parameter values. A bounded `LIMIT 1001` first-definition
+query remains a bounded compatibility contract, not a complete `rAIFSM` hierarchy query; a stale,
+evicted, mismatched, or timed-out profile is never accepted for another query.
+
+The opt-in `benchmark-doris-optimization` route evaluates one isolated candidate at a time. Its
+typed report records the source/schema/DDL/configuration-bound serving variant, complete row counts,
+load/statistics/tablet evidence, cold/warm samples, output hashes, rejected/not-applicable
+optimizations, and the 10% improvement/110% regression promotion gate. Candidate lookup tables are
+source-bound and populated from the canonical index or DIE family; the canonical fourteen-family
+contract and registry remain unchanged. The default statistics policy is selective: key, filter,
+order, name, target, parent, and resolution columns are sampled up to 4,194,304 rows per family;
+payload/raw/detail columns are excluded unless a trace proves they are predicates. A promoted load
+must wait for every requested statistics job to reach a terminal-success state and retain raw
+`SHOW TABLE STATS`, `SHOW COLUMN STATS`, `SHOW ANALYZE`, `SHOW AUTO ANALYZE`, and
+`__internal_schema.column_statistics` evidence.
+
+The first complete-store optimization evaluation ran on 2026-08-09 and identified sequential DIE
+and attribute hydration as the dominant cost. The source/unit-bound 512-key batch screen was
+`34.1x` faster with exact row parity. The generator now consumes bounded batches for DIE metadata,
+attributes, reference targets, and child-tag counts while preserving the canonical schema and
+registry.
+
+The optimized serving path completed exact short `rLayout` runs in `20.464 s` and `20.198 s`, and
+exact exhaustive `rAIFSM` runs in `32.123 s`, `31.683 s`, and `31.653 s`; all 11 headers matched
+the approved hashes. A paired traced `rAIFSM` run recorded `2,208` redacted observations and
+published the same output, but took `83.553 s` because tracing added `160.1%` wall time. Its FE
+profiles were all `partial` due query-ID mismatch, so traced wall time is attribution-only. The
+source/name auxiliary table remains rejected because it did not improve warm lookup latency. The
+canonical physical design remains the default; index removal, bucket changes, V2/V3, ZSTD/LZ4,
+pipeline/session tuning, and Stream Load worker comparisons are `not_observed` rather than inferred
+from `EXPLAIN` or partial profiles.
 
 The same fail-closed rule applies to a non-zero `parse_error_count`: the closed files and raw
 evidence may be inspected diagnostically with `--allow-incomplete`, but a runtime consumer must

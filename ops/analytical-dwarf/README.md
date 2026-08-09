@@ -125,12 +125,15 @@ uv run ddon-dwarf-reconstructor performance benchmark-doris-current <ELF> `
   --doris-cli D:\doris-cli\target\release\doriscli.exe
 ```
 
-The external `doris-diagnostics/doris-diagnostics.json` report is schema `1.1` evidence: every
+The external `doris-diagnostics/doris-diagnostics.json` report is schema `1.2` evidence: every
 distinct suite SQL has `EXPLAIN` and `EXPLAIN VERBOSE`, and every cold/warm execution has its own
 query ID plus raw/full profile paths, hashes, fetch timing, and server summary. CLI failures fall
 back to PyMySQL for plans and FE HTTP profile endpoints; attempts and missing/evicted/timeout/
-FE-mismatch states remain explicit. The diagnostic scope is limited to the explicit suite;
-generate children are not instrumented, and cache/session settings are not changed implicitly.
+FE-mismatch states remain explicit. Add `--trace-generation-queries` to capture the actual Doris
+queries made by each generation child in bounded redacted JSONL; profiles are retained for one
+query per shape and slow executions up to the configured cap. Trace profile failures are `partial`,
+and a paired untraced/traced run is required before using traced wall time. Cache/session settings
+are not changed implicitly.
 
 ## Optimization evidence
 
@@ -138,9 +141,35 @@ The Compose baseline deliberately keeps optimization variables visible. Native t
 `DUPLICATE KEY`, source-first/offset keys and unit bucketing, Bloom filters for source/offset
 equality, and inverted indexes for names across the fourteen lossless/derived families. After a
 full load, compare `EXPLAIN` and no-cache/warm profiles. The current loader submits `ANALYZE TABLE`
-by default; set `DDON_DORIS_ANALYZE_WAIT_SECONDS` when the load evidence must retain terminal
-`SHOW ANALYZE` states. Do not infer selectivity from the tiny fixture, where all tablets can be
-touched. Materialized views and alternate load methods remain measured variants only.
+by default with selective key/filter/order/name/target/parent/resolution columns and a maximum
+4,194,304-row sample per family; set `DDON_DORIS_ANALYZE_WAIT_SECONDS` to a positive value for a
+promoted build so every requested job reaches terminal success. The loader can retain raw `SHOW
+TABLE STATS`, `SHOW COLUMN STATS`, `SHOW ANALYZE`, `SHOW AUTO ANALYZE`, and
+`__internal_schema.column_statistics` evidence when `DDON_DORIS_CAPTURE_STATISTICS_EVIDENCE=1`.
+Do not infer selectivity from the tiny fixture, where all tablets can be touched. Materialized
+views and alternate load methods remain measured variants only.
+
+Run the controlled optimization matrix only against a complete source-bound publication:
+
+```powershell
+uv run ddon-dwarf-reconstructor performance benchmark-doris-optimization <ELF> `
+  --store-manifest <complete-manifest.json> `
+  --output-dir $env:TEMP/ddon-analytical-dwarf/doris-optimization `
+  --candidate canonical `
+  --control-symbol MtObject --control-symbol rLayout `
+  --doris-cli D:\doris-cli\target\release\doriscli.exe
+```
+
+The command defaults to three cold/five warm controls and one cold/three warm exhaustive
+`rAIFSM` screening repetitions. Candidate lookup tables are source-bound auxiliary tables, created
+only with `--provision-candidate`; supported candidates are source/name buckets 2/4/8, a
+trace-gated target-offset method table, and a trace-gated DIE-offset locator. Physical/runtime
+rows (indexes, buckets, V3/LZ4, pipeline parallelism, SQL cache, and Stream Load workers) are
+matrix entries until a separate provisioning path supplies their measured evidence. The report's
+typed `DorisServingVariant` and `DorisOptimizationReport` retain DDL/configuration hashes,
+complete row counts, query observations, cold/warm output hashes, load/statistics/tablet evidence,
+and rejected/not-applicable decisions. `EXPLAIN` or scan reduction alone never promotes a variant;
+exact ordered parity and confirmatory representative-workload p50/p95 improvement are required.
 
 The Parquet contract stores nonnegative DWARF integers as exact `DECIMAL(20,0)` values rather
 than `UINT64`. Native Doris maps those columns to `LARGEINT`. Keep this physical type when adding
@@ -249,3 +278,27 @@ The inverted index and Bloom filters are active and filtering rows, so adding an
 justified by this evidence alone. The automatic analyze history includes four earlier memory-limit
 failures, while all fourteen retained manual analyze jobs are `FINISHED`; inspect the raw history
 before treating statistics freshness as uniformly healthy.
+
+### Actual optimization decision
+
+The complete-store evaluation was run on 2026-08-09 under
+`$env:TEMP/ddon-analytical-dwarf/optimization-batched-20260809`. The query-level screen found a
+source/unit-bound 512-key batch was `34.1x` faster than sequential attribute calls with exact row
+parity. The generator now uses bounded batch hydration for DIE metadata, attributes, reference
+targets, and child-tag counts.
+
+The optimized path completed exact `rLayout` controls in `20.464 s` and `20.198 s`, and exact
+exhaustive/full-hierarchy `rAIFSM` in `32.123 s`, `31.683 s`, and `31.653 s`; all 11 headers
+matched the approved bundle. A paired traced `rAIFSM` run took `83.553 s`, recorded `2,208`
+redacted observations, and published the same output. Its FE profiles were all `partial` because
+query IDs did not match, and tracing added `160.1%` wall time, so traced wall time is excluded
+from performance conclusions. The result is a retained serving-path optimization, not a physical
+schema variant: canonical `DUPLICATE KEY`, source-first keys, current buckets, V2/ZSTD, indexes,
+replication, and registry remain unchanged.
+
+The measured source/name auxiliary table preserved exact ordered results but did not improve warm
+definition lookup latency, so it remains unbound and rejected. Method/DIE locator tables, index
+removal, bucket/storage/session changes, and Stream Load worker comparisons remain `not_observed`;
+they are not implied by the framework or by `EXPLAIN` alone. The benchmark command is reusable for
+future one-shot regression/promotion runs after generator, source, Doris, or variant changes; it
+is not a continuously running service.

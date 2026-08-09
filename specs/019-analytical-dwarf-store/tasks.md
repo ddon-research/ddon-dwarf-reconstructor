@@ -14,9 +14,20 @@
 - [x] Add benchmark protocol and report schema.
 - [x] Add the optional ADBC Flight SQL client, qmark benchmark matrix, Compose overlay, and
   endpoint/startup-log preflight without changing the default MySQL/Stream Load path.
+- [x] Add the typed Doris serving-variant, query-observation, and optimization-report contracts,
+  including redacted opt-in tracing through the real generation query executor.
+- [x] Add `benchmark-doris-optimization`, isolated source-bound lookup candidates, cold/warm
+  repetition controls, selective statistics, and explicit rejected/not-applicable matrix entries.
+- [x] Extend the registry/manifest evidence additively with serving-variant identity and preserve
+  the canonical fourteen-family row contract.
 - [x] Migrate generation and knowledge export to the store.
 - [x] Retire normal legacy lookup paths after parity boundary; retain legacy adapters only for explicit validation.
 - [ ] Run focused, repository, real-asset, and environmental validation.
+- [x] Run the complete-store canonical/lookup/statistics optimization evaluation and record the
+  observed N+1 hydration hotspot, exact `rAIFSM` parity, and rejected source/name candidate.
+- [x] Implement bounded source/unit-aware hydration for metadata, attributes, references, and
+  child-tag counts, then run exact traced/untraced exhaustive `rAIFSM` confirmation. The serving
+  algorithm is retained; remaining physical variants stay `not_observed` until separately measured.
 
 ## Status notes
 
@@ -51,3 +62,11 @@ the report remains `partial`: strict parity is 54/76 because PyMySQL and Arrow e
 BOOLEAN values as `int` and `bool`, respectively. Doris's current FE producer also returns
 FE-local result locations from its process-local address, so endpoint routing is not yet a clean
 runtime boundary. The default MySQL/PyMySQL and loader paths are unchanged.
+
+The 2026-08-09 complete-store optimization evaluation is now observed rather than merely planned.
+Bounded source/unit-aware hydration is part of the generator serving path. Exhaustive/full-hierarchy
+`rAIFSM` produced identical 11-header bundles in 32.123 seconds fresh and 31.683/31.653 seconds
+on repeated runs; a paired traced run also produced exact output but exceeded the 5% tracing
+overhead limit and retained only partial profile attribution. The canonical Doris physical design
+is unchanged. The benchmark remains a reusable one-shot regression/promotion tool, while index,
+bucket, storage, session, and Stream Load variants remain `not_observed`.

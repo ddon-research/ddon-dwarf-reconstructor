@@ -15,15 +15,27 @@ from urllib.parse import urljoin, urlparse
 
 from ...domain.models.analytical_dwarf import MaterializationManifest
 from .doris_layout import _FAMILIES, _family_table, _identifier
+from .doris_optimization import DorisQueryTraceConfig, DorisServingVariant
 from .doris_registry import publish_registry, registry_sql
 from .doris_schema import _FAMILY_COLUMNS
-from .doris_statistics import analyze_tables
+from .doris_statistics import analyze_tables, collect_statistics_evidence
+from .doris_validation import (
+    validate_manifest_for_load as _validate_manifest_for_load,
+)
+from .doris_validation import (
+    validate_plan_files as _validate_plan_files,
+)
+from .doris_validation import (
+    validate_plan_manifest_files as _validate_plan_manifest_files,
+)
+from .doris_validation import (
+    validate_plan_settings as _validate_plan_settings,
+)
 from .manifest import (
     declared_parquet_files,
     has_parser_diagnostics,
     has_unapplied_source_recovery,
     load_manifest,
-    validate_manifest_files,
 )
 from .optional import import_optional
 
@@ -41,6 +53,9 @@ class DorisConfig:
     password: str = ""
     table: str = "dwarf_records"
     definition_lookup_table: str | None = None
+    name_lookup_table: str | None = None
+    method_lookup_table: str | None = None
+    die_lookup_table: str | None = None
     flight_sql_host: str = "127.0.0.1"
     flight_sql_port: int = 8070
     flight_sql_uri: str | None = None
@@ -53,13 +68,26 @@ class DorisConfig:
     analyze_after_load: bool = True
     analyze_wait_seconds: float = 0.0
     stream_load_workers: int = 1
+    statistics_policy: str = "selective"
+    serving_variant_id: str = "canonical"
+    query_trace: DorisQueryTraceConfig | None = None
+    capture_statistics_evidence: bool = False
 
     def __post_init__(self) -> None:
         if self.analyze_wait_seconds < 0:
             raise ValueError("analyze_wait_seconds must not be negative")
         if self.stream_load_workers < 1:
             raise ValueError("stream_load_workers must be positive")
+        if self.statistics_policy not in {"all", "selective"}:
+            raise ValueError("statistics_policy must be all or selective")
+        if not self.serving_variant_id.strip():
+            raise ValueError("serving_variant_id must not be empty")
         self._validate_flight_settings()
+
+    def ddl_sha256(self) -> str:
+        """Return the hash of the exact canonical DDL emitted by this configuration."""
+        ddl = "\n".join(_native_sql(self))
+        return hashlib.sha256(ddl.encode("utf-8")).hexdigest()
 
     def _validate_flight_settings(self) -> None:
         if self.flight_sql_port < 1 or self.flight_sql_port > 65535:
@@ -93,6 +121,11 @@ class DorisConfig:
             definition_lookup_table=os.getenv(
                 "DDON_DORIS_DEFINITION_LOOKUP_TABLE", defaults.definition_lookup_table
             ),
+            name_lookup_table=os.getenv("DDON_DORIS_NAME_LOOKUP_TABLE", defaults.name_lookup_table),
+            method_lookup_table=os.getenv(
+                "DDON_DORIS_METHOD_LOOKUP_TABLE", defaults.method_lookup_table
+            ),
+            die_lookup_table=os.getenv("DDON_DORIS_DIE_LOOKUP_TABLE", defaults.die_lookup_table),
             flight_sql_host=os.getenv("DDON_DORIS_FLIGHT_SQL_HOST", defaults.flight_sql_host),
             flight_sql_port=int(
                 os.getenv("DDON_DORIS_FLIGHT_SQL_PORT", str(defaults.flight_sql_port))
@@ -134,6 +167,14 @@ class DorisConfig:
             stream_load_workers=_positive_environment_int(
                 "DDON_DORIS_STREAM_LOAD_WORKERS", defaults.stream_load_workers
             ),
+            statistics_policy=os.getenv("DDON_DORIS_STATISTICS_POLICY", defaults.statistics_policy),
+            serving_variant_id=os.getenv(
+                "DDON_DORIS_SERVING_VARIANT_ID", defaults.serving_variant_id
+            ),
+            query_trace=DorisQueryTraceConfig.from_environment(),
+            capture_statistics_evidence=_boolean_environment(
+                "DDON_DORIS_CAPTURE_STATISTICS_EVIDENCE", defaults.capture_statistics_evidence
+            ),
         )
 
 
@@ -147,9 +188,15 @@ class DorisLoadPlan:
     parquet_files: tuple[Path, ...]
     manifest_path: Path
     definition_lookup_table: str | None = None
+    name_lookup_table: str | None = None
+    method_lookup_table: str | None = None
+    die_lookup_table: str | None = None
     analyze_after_load: bool = False
     analyze_wait_seconds: float = 0.0
     stream_load_workers: int = 1
+    statistics_policy: str = "selective"
+    serving_variant_id: str = "canonical"
+    capture_statistics_evidence: bool = False
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -160,9 +207,15 @@ class DorisLoadPlan:
             "manifest_path": str(self.manifest_path),
             "table_families": list(_FAMILIES),
             "definition_lookup_table": self.definition_lookup_table,
+            "name_lookup_table": self.name_lookup_table,
+            "method_lookup_table": self.method_lookup_table,
+            "die_lookup_table": self.die_lookup_table,
             "analyze_after_load": self.analyze_after_load,
             "analyze_wait_seconds": self.analyze_wait_seconds,
             "stream_load_workers": self.stream_load_workers,
+            "statistics_policy": self.statistics_policy,
+            "serving_variant_id": self.serving_variant_id,
+            "capture_statistics_evidence": self.capture_statistics_evidence,
         }
 
 
@@ -186,9 +239,15 @@ def build_doris_plan(
         parquet_files,
         manifest_path,
         config.definition_lookup_table,
+        config.name_lookup_table,
+        config.method_lookup_table,
+        config.die_lookup_table,
         config.analyze_after_load,
         config.analyze_wait_seconds,
         config.stream_load_workers,
+        config.statistics_policy,
+        config.serving_variant_id,
+        config.capture_statistics_evidence,
     )
 
 
@@ -211,23 +270,39 @@ class DorisLoader:
             loaded = self._load_native_files(plan, config)
             analysis = analyze_tables(connection, plan, config)
             manifest = _load_manifest(plan.manifest_path)
+            serving_variant = DorisServingVariant.from_config(
+                config,
+                source_id=getattr(getattr(manifest, "source_identity", None), "sha256", None),
+                schema_version=getattr(manifest, "schema_version", None),
+            )
             registry = publish_registry(
                 connection,
                 config.database,
                 config.table,
                 plan.manifest_path,
                 manifest,
+                serving_variant_id=config.serving_variant_id,
+                serving_variant_configuration_sha256=serving_variant.configuration_sha256,
             )
             result: dict[str, object] = {
                 "status": "observed",
                 "plan": plan.to_dict(),
                 "loads": loaded,
                 "analysis": analysis,
+                "statistics_evidence": (
+                    collect_statistics_evidence(connection, plan)
+                    if config.capture_statistics_evidence
+                    else {"status": "not_observed", "reason": "capture disabled"}
+                ),
                 "registry": {
                     "source_id": registry.source_id,
                     "status": registry.status,
                     "expected_counts": registry.expected_counts,
                     "observed_counts": registry.observed_counts,
+                    "serving_variant_id": getattr(registry, "serving_variant_id", None),
+                    "serving_variant_configuration_sha256": getattr(
+                        registry, "serving_variant_configuration_sha256", None
+                    ),
                 },
             }
             return result
@@ -238,22 +313,10 @@ class DorisLoader:
     def _validate_plan(plan: DorisLoadPlan, config: DorisConfig) -> None:
         manifest_path = plan.manifest_path.resolve()
         manifest = load_manifest(manifest_path)
-        if manifest.status != "complete":
-            raise ValueError(f"Doris loading requires a complete analytical store: {manifest_path}")
-        if has_parser_diagnostics(manifest) or has_unapplied_source_recovery(manifest):
-            raise ValueError(f"Doris loading requires complete DWARF parsing: {manifest_path}")
-        declared = declared_parquet_files(manifest_path, manifest)
-        planned = tuple(path.resolve() for path in plan.parquet_files)
-        if planned != declared:
-            raise ValueError("Doris load plan does not match manifest Parquet files")
-        if plan.database != config.database or plan.table != config.table:
-            raise ValueError("Doris load plan does not match connection table settings")
-        validate_manifest_files(
-            manifest_path,
-            manifest,
-            verify_hashes=True,
-            verify_payload=True,
-        )
+        _validate_manifest_for_load(manifest, manifest_path)
+        _validate_plan_files(plan, manifest_path, manifest)
+        _validate_plan_settings(plan, config)
+        _validate_plan_manifest_files(manifest_path, manifest)
 
     @staticmethod
     def _execute_sql(connection: Any, plan: DorisLoadPlan) -> list[dict[str, object]]:

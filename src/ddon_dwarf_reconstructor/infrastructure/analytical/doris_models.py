@@ -108,6 +108,11 @@ class DorisDie:
     def is_null(self) -> bool:
         return self._data.is_null
 
+    @property
+    def parent_offset(self) -> int | None:
+        """Return the source-bound parent offset without another query."""
+        return self._data.parent_offset
+
 
 class DorisDieData:
     """DIE identity plus the attributes hydrated for that DIE."""

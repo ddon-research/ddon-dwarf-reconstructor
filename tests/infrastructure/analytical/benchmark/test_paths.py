@@ -265,12 +265,13 @@ def test_doris_query_suite_runs_related_queries_with_source_binding() -> None:
     ):
         measurements = doris_queries(Path("manifest.json"), config, ("Thing",), 1)
 
-    assert len(measurements) == 18
+    assert len(measurements) == 19
     assert measurements[0]["symbol"] == "Thing"
     assert measurements[5]["query"] == "inheritance"
     assert measurements[6]["query"] == "field_layout"
     assert measurements[7]["query"] == "field_layout_attributes"
     assert measurements[10]["query"] == "references"
+    assert measurements[12]["query"] == "global_die_offset"
     assert measurements[-1]["query"] == "method_implementation_by_declaration"
     first_sql = cursor.execute.call_args_list[0].args[0]
     assert "`test_db`.`dwarf_definition_lookup`" in first_sql

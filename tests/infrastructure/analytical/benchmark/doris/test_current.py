@@ -11,13 +11,17 @@ import pytest
 from ddon_dwarf_reconstructor.domain.models.performance import ColdWarmState
 from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.doris.current import (
     _backend_report,
-    _generation_output,
-    _generation_workload,
     _load_diagnostics_report,
     _overall_status,
-    _run_status,
     _validate_options,
     _workload_configuration,
+)
+from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.doris.current_generation import (
+    _generation_workload,
+    _run_status,
+)
+from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.doris.current_outputs import (
+    generation_output as _generation_output,
 )
 from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.doris.queries import (
     run_query_with_metrics,

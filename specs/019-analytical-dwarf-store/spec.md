@@ -59,7 +59,8 @@ require zero parser diagnostics before normal runtime use.
 The file-based runtime is eligible only when all critical queries and complete knowledge export match the current byte-stable output and remain within 110% of baseline p95 and 110% of baseline peak memory. Otherwise Doris is the required runtime. If neither backend satisfies the evidence gate, the replacement remains blocked.
 
 The current-data Doris benchmark is a read-only downstream evidence route. Against an existing
-complete manifest and live publication it retains schema-`1.1` diagnostic output outside source
+complete manifest and live publication it retains a schema-`1.2` report (with the nested diagnostics
+artifact retaining its own schema) outside source
 control: one `EXPLAIN` and `EXPLAIN VERBOSE` per distinct exact suite SQL, and one query-ID-bound
 raw/full profile for every cold and warm PyMySQL execution. CLI, PyMySQL, and FE HTTP attempts,
 schema/session context, normalized plan hashes, ordered-result hashes, and explicit missing,
@@ -68,6 +69,27 @@ observed when diagnostics are partial, but the diagnostic section and overall re
 incomplete. The diagnostic scope is limited to the explicit bounded Doris suite; canonical
 generate children are not instrumented by this route. No materialization, load, DDL, MV, schema,
 or implicit cache/session tuning is authorized by this benchmark route.
+
+The optimization evaluation is a separate opt-in route over the same complete manifest. It defines
+typed `DorisServingVariant`, `DorisQueryObservation`, and `DorisOptimizationReport` contracts. The
+actual generation child may enable bounded redacted query tracing; the trace records query-shape
+digests, query IDs, local execute/fetch timing, rows, scan/tablet/operator/memory/spill metrics,
+and profile status without parameter values. Profiles are retrieved immediately on the executing
+FE, and a missing, mismatched, evicted, or timed-out profile is `partial` evidence. The route
+captures all query summaries but only one representative profile per shape, slow queries over
+500 ms, and a maximum of 20 profile instances. Tracing is paired with an untraced run and adds no
+authority to the performance result when overhead exceeds 5%.
+
+The default canonical model remains unchanged: source-first `DUPLICATE KEY`, bounded distribution,
+one partition, V2/ZSTD, and replication one. One-factor candidates include explicit projections,
+512-key set hydration, source/name lookup buckets 2/4/8, trace-gated method-target and DIE-offset
+locators, index/Bloom removal, tiny-table buckets, V3/LZ4, pipeline parallelism, SQL cache, and
+Stream Load workers. Candidates are auxiliary and isolated; Unique/Aggregate models, row store,
+asynchronous MVs, group commit, and unrelated complex SQL are rejected or `not_applicable` for the
+current workload. Promotion requires source/manifest binding, exact fourteen-family counts,
+ordered-result and generated-header hashes, zero diagnostics, terminal-success statistics, healthy
+tablets, and at least 10% confirmatory warm p50/p95 improvement without exceeding the existing 110%
+regression bound.
 
 Arrow Flight SQL is an opt-in transport evaluation only. The default MySQL/PyMySQL path remains
 authoritative for semantic queries, DDL, and HTTP Stream Load. The optional ADBC benchmark must
