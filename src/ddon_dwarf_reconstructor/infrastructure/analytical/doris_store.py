@@ -21,8 +21,11 @@ from .doris_cache import DorisCache
 from .doris_hydration import (
     attributes_by_die,
     hydrate_dies_by_keys,
+    prefetch_children,
     prefetch_dies,
+    prefetch_references,
     prime_child_tag_counts,
+    reference_candidates,
 )
 from .doris_index import DorisDwarfIndex
 from .doris_models import (
@@ -71,6 +74,7 @@ class DorisDwarfStore:
         self._dies: dict[int, DorisDie] = {}
         self._die_unit_offsets: dict[int, int] = {}
         self._children: dict[int, tuple[DorisDie, ...]] = {}
+        self._line_programs: dict[int, StoreLineProgram | None] = {}
         self._child_tag_counts: dict[int, NestedTypeCounts] = {}
         self._reference_targets: dict[tuple[int | None, int, str], int | None] = {}
         self._reference_loaded: set[tuple[int, int]] = set()
@@ -216,8 +220,12 @@ class DorisDwarfStore:
     def children_for_die(self, die_offset: int) -> Iterable[DorisDie]:
         cached = self._children.get(die_offset)
         if cached is not None:
+            prefetch_children(self, cached)
             return iter(cached)
         parent = self._dies.get(die_offset)
+        if parent is not None and not parent.has_children:
+            self._children[die_offset] = ()
+            return iter(())
         unit_offset = self._die_unit_offsets.get(die_offset)
         if unit_offset is None and parent is not None:
             unit_offset = parent.cu.cu_offset
@@ -231,8 +239,9 @@ class DorisDwarfStore:
             self._die_from_record(record, attributes.get(int(record.get("die_offset", 0)), ()))
             for record in records
         )
-        prefetch_dies(self, children)
         self._children[die_offset] = children
+        prefetch_children(self, children)
+        prefetch_dies(self, children)
         return iter(children)
 
     def attribute_target(self, die_offset: int, attribute_name: str) -> int | None:
@@ -242,12 +251,13 @@ class DorisDwarfStore:
         if reference_targets is None:
             reference_targets = {}
             self._reference_targets = reference_targets
-        reference_loaded = getattr(self, "_reference_loaded", None)
-        if reference_loaded is None:
-            reference_loaded = set()
-            self._reference_loaded = reference_loaded
         if cache_key in reference_targets:
             return reference_targets[cache_key]
+        cached_die = self._dies.get(die_offset)
+        if cached_die is not None:
+            prefetch_references(self, reference_candidates(self, cached_die))
+            if cache_key in reference_targets:
+                return reference_targets[cache_key]
         filters: dict[str, object] = {
             "die_offset": die_offset,
             "attribute_name": attribute_name,
@@ -259,14 +269,17 @@ class DorisDwarfStore:
         target = rows[0].get("target_offset") if rows else None
         result = _optional_int(target)
         reference_targets[cache_key] = result
-        if unit_offset is not None:
-            reference_loaded.add((unit_offset, die_offset))
         return result
 
     def line_program_for_unit(self, unit_offset: int) -> StoreLineProgram | None:
-        return build_line_program(
+        cached = self._line_programs.get(unit_offset)
+        if unit_offset in self._line_programs:
+            return cached
+        program = build_line_program(
             self._rows("line", {"unit_offset": unit_offset}, order_by=("ordinal",))
         )
+        self._line_programs[unit_offset] = program
+        return program
 
     @property
     def unit_count(self) -> int:

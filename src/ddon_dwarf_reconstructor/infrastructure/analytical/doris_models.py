@@ -113,6 +113,11 @@ class DorisDie:
         """Return the source-bound parent offset without another query."""
         return self._data.parent_offset
 
+    @property
+    def ordinal(self) -> int:
+        """Return the source order used to preserve child ordering."""
+        return self._data.ordinal
+
 
 class DorisDieData:
     """DIE identity plus the attributes hydrated for that DIE."""

@@ -322,18 +322,17 @@ must wait for every requested statistics job to reach a terminal-success state a
 The first complete-store optimization evaluation ran on 2026-08-09 and identified sequential DIE
 and attribute hydration as the dominant cost. The source/unit-bound 512-key batch screen was
 `34.1x` faster with exact row parity. The generator now consumes bounded batches for DIE metadata,
-attributes, reference targets, and child-tag counts while preserving the canonical schema and
-registry.
+attributes, child frontiers, reference targets, and child-tag counts, and caches line programs per
+compilation unit while preserving the canonical schema and registry.
 
-The optimized serving path completed exact short `rLayout` runs in `20.464 s` and `20.198 s`, and
-exact exhaustive `rAIFSM` runs in `32.123 s`, `31.683 s`, and `31.653 s`; all 11 headers matched
-the approved hashes. A paired traced `rAIFSM` run recorded `2,208` redacted observations and
-published the same output, but took `83.553 s` because tracing added `160.1%` wall time. Its FE
-profiles were all `partial` due query-ID mismatch, so traced wall time is attribution-only. The
-source/name auxiliary table remains rejected because it did not improve warm lookup latency. The
-canonical physical design remains the default; index removal, bucket changes, V2/V3, ZSTD/LZ4,
-pipeline/session tuning, and Stream Load worker comparisons are `not_observed` rather than inferred
-from `EXPLAIN` or partial profiles.
+The current optimized serving path completed exact `rLayout` in `13.195 s` and exhaustive
+`rAIFSM` in `19.811 s`, `20.166 s`, and `20.784 s`; all 11 headers matched the approved hashes. A paired traced
+`rAIFSM` run recorded `754` redacted observations and published the same output, but took
+`39.589 s` because tracing added `96.3%` wall time. Its FE profiles were all `partial` due
+query-ID mismatch, so traced wall time is attribution-only. The source/name auxiliary table remains
+rejected because it did not improve warm lookup latency. The canonical physical design remains the
+default; index removal, bucket changes, V2/V3, ZSTD/LZ4, pipeline/session tuning, and Stream Load
+worker comparisons are `not_observed` rather than inferred from `EXPLAIN` or partial profiles.
 
 The same fail-closed rule applies to a non-zero `parse_error_count`: the closed files and raw
 evidence may be inspected diagnostically with `--allow-incomplete`, but a runtime consumer must

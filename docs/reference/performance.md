@@ -135,20 +135,22 @@ lookup by at least 10% with exact parity and no more than the existing 110% regr
 The first complete-store evaluation ran against Doris 4.1.3 and identified the dominant cost as
 generation round trips rather than scan CPU. The source/unit-bound 512-key batch screen was `34.1x`
 faster than sequential attribute queries with exact row parity. The serving runtime now consumes
-bounded batches for DIE metadata, attributes, reference targets, and child-tag counts.
+bounded batches for DIE metadata, attributes, child frontiers, reference targets, and child-tag
+counts, and caches line programs per compilation unit.
 
-The optimized path produced exact output from the complete source-bound publication. `rLayout`
-completed in `20.464 s` and `20.198 s` (`n=2`, exploratory p50/p95 `20.198/20.464 s`). Exhaustive
-`rAIFSM` completed in `32.123 s` fresh and `31.683 s`/`31.653 s` in two repeated runs (`n=3`,
-exploratory p50/p95 `31.683/32.123 s`); all 11 header hashes matched the approved bundle. This is
-about a `91.2%` reduction from the earlier `361.004 s` warm `rAIFSM` process sample, while the
-canonical Doris schema, keys, buckets, storage format, indexes, and registry remained unchanged.
+The current optimized path produced exact output from the complete source-bound publication.
+`rLayout` completed in `13.195 s`. Exhaustive `rAIFSM` completed in `19.811 s`, `20.166 s`, and
+`20.784 s` (`n=3`, exploratory p50/p95 `20.166/20.784 s`); all 11 header hashes matched the
+approved bundle. This is about a `94.5%` reduction from the earlier `361.004 s` warm `rAIFSM` process sample,
+while the canonical Doris schema, keys, buckets, storage format, indexes, and registry remained
+unchanged.
 
-A paired traced `rAIFSM` run published the same 11 headers in `83.553 s` and recorded `2,208`
-redacted observations. Every FE profile was `partial` because query IDs did not match, and tracing
-added `160.1%` wall time, so traced wall time is excluded from performance conclusions. The
-source/name auxiliary table remains rejected because it did not improve measured warm lookup
-latency; physical/index/storage/session variants remain `not_observed`.
+A paired traced `rAIFSM` run published the same 11 headers in `39.589 s` and recorded `754` redacted
+observations. Every FE profile was `partial` because query IDs did not match, and tracing added
+`96.3%` wall time, so traced wall time is excluded from performance conclusions. The source/name
+auxiliary table remains rejected because it did not improve measured warm lookup latency; the
+target-DIE prefetch screen was exact but regressed `rAIFSM` to `29.299 s` and was reverted.
+Physical/index/storage/session variants remain `not_observed`.
 
 This command is a reusable regression/promotion tool, not a continuously running service. The
 2026-08-09 run is the one-time decision for the current publication; future runs are warranted only

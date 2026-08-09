@@ -101,12 +101,12 @@ fourteen-family contract. Use the command's `--help` surface for the cold/warm r
 profile-budget controls.
 
 The 2026-08-09 complete-store run also measured the live generator path. Bounded source/unit-aware
-hydration produced exact exhaustive `rAIFSM` output in `32.123 s` fresh and `31.683/31.653 s`
-repeated, versus the earlier `361.004 s` warm sample. The serving algorithm was retained; the
-canonical schema, keys, indexes, storage, and registry were unchanged. The source/name table was
-rejected for latency, while MV, index, bucket, storage-format, session, and Stream Load variants
-remain `not_observed`. This command is a reusable one-shot regression/promotion tool, not a
-continuous service.
+hydration produced exact exhaustive `rAIFSM` output in `19.811 s`, `20.166 s`, and `20.784 s`, versus the
+earlier `361.004 s` warm sample. Child-frontier/reference prefetching and line-program caching
+are included in the serving algorithm. The canonical schema, keys, indexes, storage, and registry
+were unchanged. The source/name table was rejected for latency, while MV, index, bucket,
+storage-format, session, and Stream Load variants remain `not_observed`. This command is a reusable
+one-shot regression/promotion tool, not a continuous service.
 
 `check-doris-flight` is the explicit preflight for the optional Flight SQL overlay. It records
 Compose-file and rendered-configuration hashes, FE/BE endpoint reachability, and bounded startup

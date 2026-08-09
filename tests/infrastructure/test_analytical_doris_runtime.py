@@ -90,6 +90,7 @@ class _StoreStub(DorisDwarfStore):
         self._dies = {}
         self._die_unit_offsets = {}
         self._children = {}
+        self._line_programs = {}
         self._child_tag_counts = {}
         self._reference_targets = {}
         self._reference_loaded = set()
@@ -167,6 +168,9 @@ def test_doris_store_hydrates_attributes_children_references_and_dwarf_info() ->
     assert die.get_DIE_from_attribute("DW_AT_type") is unit.get_top_DIE()
     assert store.find_primary_definition("Thing").status is QueryStatus.COMPLETE
     assert tuple(store.dwarf_info.iter_CUs()) == (unit,)
+    assert store.line_program_for_unit(0) is None
+    assert store.line_program_for_unit(0) is None
+    assert sum(family == "line" for family, _filters in store.query_log) == 1
 
 
 @pytest.mark.unit
@@ -203,6 +207,40 @@ def test_doris_store_hydrates_known_dies_in_one_bounded_batch() -> None:
         if family == "die" and isinstance(filters, dict)
     ]
     assert die_queries == [{"die_offset": (40, 48)}]
+
+
+@pytest.mark.unit
+@pytest.mark.functional
+def test_doris_store_prefetches_child_frontier_in_one_bounded_batch() -> None:
+    rows = _prefetch_rows()
+    _make_child_frontier(rows)
+    store = _StoreStub(rows)
+
+    assert tuple(die.offset for die in store.children_for_die(0)) == (16, 24)
+    assert tuple(die.offset for die in store.children_for_die(16)) == (40,)
+    assert tuple(store.children_for_die(40)) == ()
+
+    child_queries = [
+        filters
+        for family, filters in store.query_log
+        if family == "die" and isinstance(filters, dict) and "parent_offset" in filters
+    ]
+    assert child_queries == [
+        {"parent_offset": 0},
+        {"parent_offset": (16, 24)},
+    ]
+
+
+def _make_child_frontier(rows: dict[str, list[dict[str, object]]]) -> None:
+    for row in rows["die"]:
+        if row["die_offset"] in (16, 24):
+            row["has_children"] = True
+        if row["die_offset"] == 40:
+            row["parent_offset"] = 16
+            row["depth"] = 2
+        if row["die_offset"] == 48:
+            row["parent_offset"] = 24
+            row["depth"] = 2
 
 
 def _prefetch_rows() -> dict[str, list[dict[str, object]]]:

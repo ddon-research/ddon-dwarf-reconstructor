@@ -22,6 +22,17 @@ _REFERENCE_NAMES = frozenset(
         "DW_AT_signature",
     }
 )
+_DIE_METADATA_COLUMNS = (
+    "unit_offset",
+    "die_offset",
+    "ordinal",
+    "tag",
+    "abbrev_code",
+    "has_children",
+    "depth",
+    "parent_offset",
+    "is_null",
+)
 
 
 class _DorisHydrationStore(Protocol):
@@ -30,6 +41,7 @@ class _DorisHydrationStore(Protocol):
     _dies: dict[int, DorisDie]
     _die_unit_offsets: dict[int, int]
     _units: dict[int, DorisCompilationUnit]
+    _children: dict[int, tuple[DorisDie, ...]]
     _child_tag_counts: dict[int, NestedTypeCounts]
     _reference_targets: dict[tuple[int | None, int, str], int | None]
     _reference_loaded: set[tuple[int, int]]
@@ -167,56 +179,160 @@ def prefetch_dies(store: _DorisHydrationStore, dies: Iterable[DorisDie]) -> None
             return
 
 
+def prefetch_references(
+    store: _DorisHydrationStore,
+    dies: Iterable[DorisDie],
+    *,
+    max_keys: int = HYDRATION_BATCH_SIZE,
+) -> None:
+    """Load a bounded reference frontier for already-hydrated DIEs."""
+    if max_keys < 1:
+        raise ValueError("maximum reference batch must be positive")
+    keys = _reference_keys(store, dies)
+    if len(keys) < 2:
+        return
+    _load_reference_targets(store, keys[:max_keys])
+
+
+def reference_candidates(
+    store: _DorisHydrationStore,
+    current: DorisDie,
+) -> Iterable[DorisDie]:
+    """Yield the current DIE followed by the newest cached candidates."""
+    yield current
+    for die in reversed(tuple(store._dies.values())):
+        if die.offset != current.offset:
+            yield die
+
+
+def prefetch_children(store: _DorisHydrationStore, parents: Iterable[DorisDie]) -> None:
+    """Prefetch one bounded child frontier for the supplied parent DIEs."""
+    unique_parents = _unique_dies(store, parents)
+    _cache_leaf_children(store, unique_parents)
+    parent_offsets = tuple(
+        sorted({die.offset for die in unique_parents if die.offset not in store._children})
+    )
+    if not parent_offsets:
+        return
+    for batch in batched(parent_offsets):
+        _cache_child_groups(store, batch, _hydrate_die_records(store, _child_records(store, batch)))
+
+
+def _child_records(
+    store: _DorisHydrationStore,
+    parent_offsets: Sequence[int],
+) -> tuple[dict[str, Any], ...]:
+    return tuple(
+        row
+        for row in store._rows(
+            "die",
+            {"parent_offset": parent_offsets},
+            columns=_DIE_METADATA_COLUMNS,
+            order_by=("parent_offset", "ordinal"),
+        )
+        if not row.get("is_null")
+    )
+
+
+def _cache_leaf_children(
+    store: _DorisHydrationStore,
+    parents: Iterable[DorisDie],
+) -> None:
+    for parent in parents:
+        if not parent.has_children:
+            store._children[parent.offset] = ()
+
+
+def _cache_child_groups(
+    store: _DorisHydrationStore,
+    parent_offsets: Sequence[int],
+    children: Iterable[DorisDie],
+) -> None:
+    grouped: dict[int, list[DorisDie]] = defaultdict(list)
+    for die in children:
+        if die.parent_offset is not None:
+            grouped[die.parent_offset].append(die)
+    for parent_offset in parent_offsets:
+        store._children[parent_offset] = tuple(
+            sorted(grouped.get(parent_offset, ()), key=lambda die: die.ordinal)
+        )
+
+
 def _hydrate_offsets(
     store: _DorisHydrationStore,
     offsets: Sequence[int],
 ) -> tuple[DorisDie, ...]:
     unique_offsets = tuple(dict.fromkeys(offsets))
     hydrated: list[DorisDie] = []
-    metadata_columns = (
-        "unit_offset",
-        "die_offset",
-        "ordinal",
-        "tag",
-        "abbrev_code",
-        "has_children",
-        "depth",
-        "parent_offset",
-        "is_null",
-    )
     for batch in batched(unique_offsets):
         die_rows = store._rows(
             "die",
             {"die_offset": batch},
-            columns=metadata_columns,
+            columns=_DIE_METADATA_COLUMNS,
             order_by=("unit_offset", "ordinal"),
         )
-        if not die_rows:
-            continue
-        unit_offsets = tuple(
-            sorted(
-                {int(row["unit_offset"]) for row in die_rows if row.get("unit_offset") is not None}
-            )
-        )
-        _hydrate_units(store, unit_offsets)
-        attribute_rows = store._rows(
-            "attribute",
-            {"die_offset": batch},
-            order_by=("unit_offset", "die_offset", "ordinal"),
-        )
-        attributes = _group_attributes_by_key(attribute_rows)
-        for row in die_rows:
-            unit_offset = _as_int(row.get("unit_offset"))
-            die_offset = _as_int(row.get("die_offset"))
-            if unit_offset is None or die_offset is None:
-                continue
-            if store._die_unit_offsets.get(die_offset) == unit_offset and die_offset in store._dies:
-                hydrated.append(store._dies[die_offset])
-                continue
-            hydrated.append(
-                store._die_from_record(row, attributes.get((unit_offset, die_offset), ()))
-            )
+        hydrated.extend(_hydrate_die_records(store, die_rows))
     return _unique_dies(store, hydrated)
+
+
+def _hydrate_die_records(
+    store: _DorisHydrationStore,
+    records: Iterable[Mapping[str, Any]],
+) -> tuple[DorisDie, ...]:
+    """Hydrate already-selected DIE rows and their attributes in bounded batches."""
+    rows = tuple(records)
+    if not rows:
+        return ()
+    _hydrate_units(store, _unit_offsets(rows))
+    attributes = _attributes_for_die_offsets(store, _die_offsets(rows))
+    result = _unique_dies(
+        store,
+        (_hydrate_die_record(store, row, attributes) for row in rows),
+    )
+    prefetch_references(store, result)
+    return result
+
+
+def _unit_offsets(records: Iterable[Mapping[str, Any]]) -> tuple[int, ...]:
+    return tuple(
+        sorted({int(row["unit_offset"]) for row in records if row.get("unit_offset") is not None})
+    )
+
+
+def _die_offsets(records: Iterable[Mapping[str, Any]]) -> tuple[int, ...]:
+    return tuple(int(row["die_offset"]) for row in records if row.get("die_offset") is not None)
+
+
+def _attributes_for_die_offsets(
+    store: _DorisHydrationStore,
+    die_offsets: Sequence[int],
+) -> dict[tuple[int, int], tuple[dict[str, Any], ...]]:
+    attributes: dict[tuple[int, int], tuple[dict[str, Any], ...]] = {}
+    for batch in batched(die_offsets):
+        attributes.update(
+            _group_attributes_by_key(
+                store._rows(
+                    "attribute",
+                    {"die_offset": batch},
+                    order_by=("unit_offset", "die_offset", "ordinal"),
+                )
+            )
+        )
+    return attributes
+
+
+def _hydrate_die_record(
+    store: _DorisHydrationStore,
+    row: Mapping[str, Any],
+    attributes: Mapping[tuple[int, int], tuple[dict[str, Any], ...]],
+) -> DorisDie:
+    unit_offset = _as_int(row.get("unit_offset"))
+    die_offset = _as_int(row.get("die_offset"))
+    if unit_offset is None or die_offset is None:
+        raise ValueError("DIE hydration row lacks source-bound offsets")
+    if store._die_unit_offsets.get(die_offset) == unit_offset and die_offset in store._dies:
+        return store._dies[die_offset]
+    return store._die_from_record(row, attributes.get((unit_offset, die_offset), ()))
 
 
 def _hydrate_units(store: _DorisHydrationStore, offsets: Sequence[int]) -> None:

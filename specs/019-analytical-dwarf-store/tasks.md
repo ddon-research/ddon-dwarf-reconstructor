@@ -64,9 +64,10 @@ FE-local result locations from its process-local address, so endpoint routing is
 runtime boundary. The default MySQL/PyMySQL and loader paths are unchanged.
 
 The 2026-08-09 complete-store optimization evaluation is now observed rather than merely planned.
-Bounded source/unit-aware hydration is part of the generator serving path. Exhaustive/full-hierarchy
-`rAIFSM` produced identical 11-header bundles in 32.123 seconds fresh and 31.683/31.653 seconds
-on repeated runs; a paired traced run also produced exact output but exceeded the 5% tracing
-overhead limit and retained only partial profile attribution. The canonical Doris physical design
-is unchanged. The benchmark remains a reusable one-shot regression/promotion tool, while index,
-bucket, storage, session, and Stream Load variants remain `not_observed`.
+Bounded source/unit-aware hydration, child-frontier/reference prefetching, and per-unit line-program
+caching are part of the generator serving path. Exhaustive/full-hierarchy `rAIFSM` produced
+identical 11-header bundles in 19.811, 20.166, and 20.784 seconds on current-code runs; a paired traced run
+also produced exact output but exceeded the 5% tracing overhead limit and retained only partial
+profile attribution. The canonical Doris physical design is unchanged. The benchmark remains a
+reusable one-shot regression/promotion tool, while index, bucket, storage, session, and Stream Load
+variants remain `not_observed`.

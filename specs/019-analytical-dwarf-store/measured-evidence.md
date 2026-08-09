@@ -90,13 +90,36 @@ because its source-bound selection-cache metadata differs.
 | Exhaustive `rAIFSM` optimized serving path | `observed`, exploratory | One fresh run took `32.123 s`; two repeated runs took `31.683 s` and `31.653 s`. Across `n=3`, nearest-rank p50/p95 were `31.683/32.123 s`; all 11 headers and the `rAIFSM.h` hash `0c63ec7c7267e362b344c8b9a45f6a2d850c8d941a93788cd1481661f58649b8` matched the approved bundle. | The repeated warm sample is `n=2`; compare with the earlier `361.004 s` warm process sample as strong but not fully matrixed evidence. |
 | Paired optimized `rAIFSM` trace | `partial`, exact output | The traced run took `83.553 s` and published the same 11 headers. It recorded `2,208` observations: `829` DIE, `760` attribute, `556` reference, `41` line, `13` index, and `9` unit queries. Summed execute time was `11.798 s` DIE, `16.048 s` attribute, `4.918 s` reference, `0.635 s` line, `1.215 s` index, and `0.135 s` unit. | Every retained FE profile was `partial` because query IDs did not match; tracing added `160.1%` wall time versus the fresh untraced run, so traced wall time is excluded from performance conclusions and retained only for attribution. |
 
-The bounded hydration change is therefore retained in the canonical serving runtime. It reduces
-the measured exhaustive `rAIFSM` process time by about `91.2%` against the earlier `361.004 s`
-warm sample while preserving exact ordered header output. The benchmark command remains a reusable
-one-shot regression and promotion tool: it is rerun when the generator, source publication, Doris
-image/configuration, or an isolated serving variant changes; it is not a continuously running
-service. The remaining physical matrix is still `not_observed` and must not be inferred from this
-algorithmic improvement.
+The bounded hydration change is therefore retained in the canonical serving runtime. The follow-up
+frontier pass below further reduces the measured exhaustive `rAIFSM` process time to about `20 s`,
+or `94.4%` below the earlier `361.004 s` warm sample, while preserving exact ordered header output.
+The benchmark command remains a reusable one-shot regression and promotion tool: it is rerun when
+the generator, source publication, Doris image/configuration, or an isolated serving variant
+changes; it is not a continuously running service. The remaining physical matrix is still
+`not_observed` and must not be inferred from this algorithmic improvement.
+
+## 2026-08-09 child/reference frontier follow-up
+
+The current serving runtime now also batches the direct child frontier of hydrated DIEs, skips
+child scans for source rows marked `has_children=false`, prefetches references for already-hydrated
+DIEs, and caches line programs per compilation unit. The canonical Doris schema, indexes, buckets,
+storage, registry, and source-bound manifest remain unchanged.
+
+| Surface | Status | Current observation | Evidence boundary |
+| --- | --- | --- | --- |
+| Final exhaustive `rAIFSM` | `observed`, exploratory | Three exact current-code runs completed in `19.811 s`, `20.166 s`, and `20.784 s`; nearest-rank p50/p95 `20.166/20.784 s` (`n=3`). All 11 headers matched, including `rAIFSM.h` hash `0c63ec7c7267e362b344c8b9a45f6a2d850c8d941a93788cd1481661f58649b8`. | The sample remains smaller than the planned 1-cold/3-warm screening matrix; it is sufficient to retain the exact serving optimization but is labelled exploratory. |
+| Final `rLayout` | `observed`, exploratory | One current-code run completed in `13.195 s`; the 18,346-byte header hash remained `759cf157efc5f9609966a64a8932dd5f9786e0b24f3c473f4e14d8ba8e5e46e9`. | One sample; no new p95 claim. |
+| Final optimized `rAIFSM` trace | `partial`, exact output | The traced run completed in `39.589 s` and published the same 11 headers. It recorded `754` observations: `275` DIE, `250` attribute, `206` reference, `13` index, `9` unit, and `1` line query. Summed execute time was `6.429 s` DIE, `7.873 s` attribute, `3.287 s` reference, `0.618 s` index, `0.134 s` unit, and `0.013 s` line. | All 754 FE profiles were `partial` because query IDs did not match. Tracing added `96.3%` wall time versus the current untraced sample, so traced wall time remains attribution-only. |
+| Query-fan-out reduction | `observed`, attribution | Relative to the prior bounded-hydration trace, query observations fell from `2,208` to `754` (`65.9%` fewer); DIE queries fell `829` to `275`, attribute queries `760` to `250`, reference queries `556` to `206`, and line queries `41` to `1`. Summed execute time fell from `34.749 s` to `18.355 s`. | This compares traced attribution runs and is not itself an end-to-end latency sample; output parity and untraced process measurements are the serving evidence. |
+| Target-DIE prefetch screen | `observed`, rejected | Reusing batched reference targets to prehydrate target DIEs preserved exact 11-header output but increased exhaustive `rAIFSM` to `29.299 s`, versus the retained `19.811`–`20.784 s` range. The experimental layer was removed. | This is a measured regression, not an unobserved candidate; target prehydration remains rejected unless a future trace identifies a narrower bounded form. |
+
+The child/reference frontier optimization is retained because it is exact, bounded, source-bound,
+and does not change the canonical physical design. The current complete-store serving result is
+therefore an algorithmic promotion, not a new table or Doris deployment variant. Physical/index,
+storage-format, session, and Stream Load alternatives remain `not_observed` or separately rejected.
+
+Raw follow-up artifacts are retained outside source control under
+`C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\optimization-final-20260809`.
 
 Raw artifacts are retained outside source control under
 `C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\doris-evaluation-20260809`:
@@ -307,7 +330,7 @@ infer CU completeness.
 | Surface | Status | Evidence | Boundary |
 | --- | --- | --- | --- |
 | Typed serving variant and optimization report | `observed`, deterministic | `DorisServingVariant`, `DorisQueryObservation`, and `DorisOptimizationReport` now serialize source/schema/DDL/configuration identity, complete row counts, cold/warm samples, query traces, output hashes, load/statistics/tablet evidence slots, and rejected/not-applicable decisions. The focused optimization suite passes 16 tests, including exact JSON round-trip serialization and explicit unavailable-profile handling. | No live candidate is promoted by these deterministic tests. |
-| Actual generation query tracing | `partial`, real attribution | The Doris query executor records parameter-free JSONL observations, query-shape digests, local execute/fetch timing, result rows, query IDs, and bounded FE-local profile artifacts. The optimized `rAIFSM` trace recorded 2,208 observations and published exact output; missing/mismatched FE profiles remain `partial`, and tracing is disabled by default. | Tracing added 160.1% wall time, so the traced run is attribution-only and excluded from performance conclusions. |
+| Actual generation query tracing | `partial`, real attribution | The Doris query executor records parameter-free JSONL observations, query-shape digests, local execute/fetch timing, result rows, query IDs, and bounded FE-local profile artifacts. The final optimized `rAIFSM` trace recorded 754 observations and published exact output; missing/mismatched FE profiles remain `partial`, and tracing is disabled by default. | Tracing added 96.3% wall time, so the traced run is attribution-only and excluded from performance conclusions. |
 | Selective statistics policy | `observed`, SQL and live evidence | The promoted configuration defaults to selective `ANALYZE TABLE` columns with `WITH SAMPLE ROWS 4194304`, excluding raw/detail payload columns; all 14 requested live jobs reached terminal `Finished` with zero failures. Raw `SHOW TABLE STATS`, `SHOW COLUMN STATS`, `SHOW ANALYZE`, `SHOW AUTO ANALYZE`, and internal column-statistics evidence remain retained. | Four historical automatic-analysis memory-limit failures remain context; they do not invalidate the current terminal-success jobs. |
 | Optimization command and candidate isolation | `observed`, implementation | `performance benchmark-doris-optimization` exposes 3/5 control and 1/3 rAIFSM screening defaults, canonical reuse, explicit candidate provisioning, source-bound name/method/DIE candidate SQL, and a 10%/110% promotion gate. CLI help and focused routes pass. | Auxiliary table provisioning, candidate load/tablet evidence, exact full-corpus parity, and confirmatory p50/p95 results are `not_observed`. |
 | Canonical promotion decision | `observed`, serving algorithm retained | The canonical source-first fourteen-family model, V2/ZSTD storage, one-partition layout, replication-one deployment, indexes, and registry remain unchanged. Bounded source/unit-aware hydration is retained in the canonical runtime after exact `rLayout` and exhaustive `rAIFSM` confirmation. | No physical candidate has satisfied the full promotion gate; lookup-table, MV, index, bucket, storage-format, session, and Stream Load variants remain `not_observed` or rejected as separately recorded. |

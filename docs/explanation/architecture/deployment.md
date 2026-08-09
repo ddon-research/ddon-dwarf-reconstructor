@@ -45,12 +45,13 @@ gate.
 
 The first complete-corpus evaluation on 2026-08-09 kept the canonical physical variant and found
 that sequential DIE/attribute/reference/unit hydration, rather than Doris scan CPU, dominated the
-generation path. The serving runtime now uses bounded source/unit-aware batches. Exact exhaustive
-`rAIFSM` runs completed in `32.123 s` fresh and `31.683 s`/`31.653 s` repeated, versus the earlier
-`361.004 s` warm process sample; all 11 headers matched. A paired traced run also matched all
-headers, but tracing added `160.1%` wall time and its FE profiles were `partial`, so it is
-attribution evidence only. The source/name candidate was exact but did not improve warm lookup
-latency. The canonical schema, keys, buckets, storage, indexes, and registry remain unchanged.
+generation path. The serving runtime now uses bounded source/unit-aware batches, child-frontier and
+reference prefetching, and per-unit line-program caching. Exact exhaustive `rAIFSM` runs completed
+in `19.811 s`, `20.166 s`, and `20.784 s`, versus the earlier `361.004 s` warm process sample; all 11 headers
+matched. A paired traced run also matched all headers, but tracing added `96.3%` wall time and its
+FE profiles were `partial`, so it is attribution evidence only. The source/name candidate was exact
+but did not improve warm lookup latency. The canonical schema, keys, buckets, storage, indexes, and
+registry remain unchanged.
 
 ## Documentation deployment
 

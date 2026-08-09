@@ -284,21 +284,22 @@ before treating statistics freshness as uniformly healthy.
 The complete-store evaluation was run on 2026-08-09 under
 `$env:TEMP/ddon-analytical-dwarf/optimization-batched-20260809`. The query-level screen found a
 source/unit-bound 512-key batch was `34.1x` faster than sequential attribute calls with exact row
-parity. The generator now uses bounded batch hydration for DIE metadata, attributes, reference
-targets, and child-tag counts.
+parity. The generator now uses bounded batch hydration for DIE metadata, attributes, child
+frontiers, reference targets, and child-tag counts, and caches line programs per compilation unit.
 
-The optimized path completed exact `rLayout` controls in `20.464 s` and `20.198 s`, and exact
-exhaustive/full-hierarchy `rAIFSM` in `32.123 s`, `31.683 s`, and `31.653 s`; all 11 headers
-matched the approved bundle. A paired traced `rAIFSM` run took `83.553 s`, recorded `2,208`
-redacted observations, and published the same output. Its FE profiles were all `partial` because
-query IDs did not match, and tracing added `160.1%` wall time, so traced wall time is excluded
-from performance conclusions. The result is a retained serving-path optimization, not a physical
-schema variant: canonical `DUPLICATE KEY`, source-first keys, current buckets, V2/ZSTD, indexes,
-replication, and registry remain unchanged.
+The current optimized path completed exact `rLayout` in `13.195 s` and exact
+exhaustive/full-hierarchy `rAIFSM` in `19.811 s`, `20.166 s`, and `20.784 s`; all 11 headers matched the
+approved bundle. A paired traced `rAIFSM` run took `39.589 s`, recorded `754` redacted
+observations, and published the same output. Its FE profiles were all `partial` because query IDs
+did not match, and tracing added `96.3%` wall time, so traced wall time is excluded from performance
+conclusions. The result is a retained serving-path optimization, not a physical schema variant:
+canonical `DUPLICATE KEY`, source-first keys, current buckets, V2/ZSTD, indexes, replication, and
+registry remain unchanged.
 
 The measured source/name auxiliary table preserved exact ordered results but did not improve warm
 definition lookup latency, so it remains unbound and rejected. Method/DIE locator tables, index
 removal, bucket/storage/session changes, and Stream Load worker comparisons remain `not_observed`;
-they are not implied by the framework or by `EXPLAIN` alone. The benchmark command is reusable for
+the measured target-DIE prefetch screen was exact but regressed `rAIFSM` to `29.299 s` and was
+reverted. These results are not implied by the framework or by `EXPLAIN` alone. The benchmark command is reusable for
 future one-shot regression/promotion runs after generator, source, Doris, or variant changes; it
 is not a continuously running service.
