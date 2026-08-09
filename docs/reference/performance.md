@@ -9,6 +9,7 @@ The `performance` group is the canonical opt-in resource and profiler interface:
 | `performance compare-runtimes <elf>` | Compare regular CPython, a validated Nuitka launcher, and optional free-threaded CPython |
 | `performance profile-index <dump>` | Profile a complete compressed-dump index rebuild |
 | `performance benchmark-dwarf-store <elf>` | Materialize typed Parquet and collect native Doris evidence |
+| `performance benchmark-doris-current <elf>` | Benchmark the existing complete manifest and live Doris path without materializing or loading |
 | `performance check-doris-flight` | Check the opt-in Flight overlay, endpoints, hashes, and startup logs |
 | `performance benchmark-doris-flight` | Compare PyMySQL rows with ADBC Flight SQL consumption modes |
 | `performance profile-dwarf-store <elf>` | Run the analytical-store benchmark through Scalene, cProfile, or another supported profiler |
@@ -60,6 +61,42 @@ Doris execution is opt-in with `--run-doris`. After a complete native load, use
 `--query-existing-doris` are mutually exclusive. Add `--run-knowledge-export` to run the complete
 store-backed knowledge-export workflow for the selected symbols and record output hashes; this
 also remains explicit because it writes a potentially large external bundle.
+
+### Current live-Doris benchmark
+
+Use `benchmark-doris-current` when the complete source-bound store and its Doris publication already
+exist. It validates the supplied manifest, source identity, and Doris registry, then runs the
+canonical `generate` path against the live database. It does not materialize Parquet, execute
+Stream Load, create tables, or change schema/index/session settings.
+
+```powershell
+uv run ddon-dwarf-reconstructor performance benchmark-doris-current <ELF> `
+  --store-manifest <complete-manifest.json> `
+  --output-dir $env:TEMP/ddon-analytical-dwarf/current-doris-benchmark `
+  --control-symbol MtObject --control-symbol rLayout `
+  --control-iterations 1 --query-iterations 3 --aifsm-iterations 1 `
+  --control-timeout-seconds 900 --aifsm-timeout-seconds 7200 `
+  --doris-cli D:\doris-cli\target\release\doriscli.exe
+```
+
+The report retains separate cold/warm controls for `MtObject` and `rLayout`, plus the independent
+long-running `rAIFSM --full-hierarchy --exhaustive` workload. Its bounded Doris query contract is
+explicitly first-definition behavior (`LIMIT 1001`) and must not be described as a complete
+`rAIFSM` hierarchy benchmark. The report schema is `1.1`; its external
+`doris-diagnostics/doris-diagnostics.json` records one `EXPLAIN` and one `EXPLAIN VERBOSE` per
+distinct exact SQL statement, plus a raw and full server profile for every cold and warm
+execution. Raw plans and profiles are stored below the same external directory with SHA-256,
+normalized-plan, query-ID, session/schema, scan/tablet/cardinality/predicate, timing, memory, and
+spill evidence. `doriscli` is preferred for SQL/profile retrieval; PyMySQL EXPLAIN and the FE HTTP
+profile endpoints are recorded fallbacks. A missing, evicted, timeout, or FE-mismatched profile
+keeps the query result but marks `doris_diagnostics` and the overall report incomplete; no stale
+profile is reused.
+
+The benchmark intentionally limits Doris explain/profile capture to the explicit suite. Generate
+children are not instrumented; the independent process workload record still retains the
+`MtObject`, `rLayout`, and exhaustive/full-hierarchy `rAIFSM` generation measurements. Profiling
+does not implicitly enable `--no-cache` or other session tuning; cache/session state is captured
+as evidence.
 
 ## Flight SQL evaluation
 

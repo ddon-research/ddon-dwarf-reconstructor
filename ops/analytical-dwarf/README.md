@@ -115,6 +115,23 @@ $env:DORIS_HTTP_PORT = '8030'
 The npm wrapper is not a Windows executable; build the CLI from its checked-out Rust source or
 use the repository's Python loader when the external binary is unavailable.
 
+The current-data benchmark keeps PyMySQL as the measured execution path and uses the CLI only for
+diagnostics. Run it against the already complete manifest when the live publication is present:
+
+```powershell
+uv run ddon-dwarf-reconstructor performance benchmark-doris-current <ELF> `
+  --store-manifest <complete-manifest.json> `
+  --output-dir $env:TEMP/ddon-analytical-dwarf/current-doris-benchmark `
+  --doris-cli D:\doris-cli\target\release\doriscli.exe
+```
+
+The external `doris-diagnostics/doris-diagnostics.json` report is schema `1.1` evidence: every
+distinct suite SQL has `EXPLAIN` and `EXPLAIN VERBOSE`, and every cold/warm execution has its own
+query ID plus raw/full profile paths, hashes, fetch timing, and server summary. CLI failures fall
+back to PyMySQL for plans and FE HTTP profile endpoints; attempts and missing/evicted/timeout/
+FE-mismatch states remain explicit. The diagnostic scope is limited to the explicit suite;
+generate children are not instrumented, and cache/session settings are not changed implicitly.
+
 ## Optimization evidence
 
 The Compose baseline deliberately keeps optimization variables visible. Native tables use
@@ -200,3 +217,35 @@ and no diagnostics. Its classifier-backed closure policy preserves real missing-
 failures while accepting transparent primitive, enum, and declaration-only targets. The historical
 v9/v27/v28 paths and database names remain useful evidence references, but must not be used as
 current durable-path examples.
+
+## Current live-Doris benchmark evidence
+
+The 2026-08-09 current-data run reused
+`output/analytical-dwarf/main/store-4236f598acc8f158/manifest.json` and the live `dwarf` database.
+It did not regenerate the analytical store or run Stream Load/DDL. The report is retained outside
+source control at
+`C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\current-doris-route-20260809\current-doris-benchmark.json`.
+
+Run it with the existing publication:
+
+```powershell
+uv run ddon-dwarf-reconstructor performance benchmark-doris-current <ELF> `
+  --store-manifest <complete-manifest.json> `
+  --output-dir $env:TEMP/ddon-analytical-dwarf/current-doris-benchmark `
+  --control-symbol MtObject --control-symbol rLayout `
+  --control-iterations 1 --query-iterations 3 --aifsm-iterations 1 `
+  --control-timeout-seconds 900 --aifsm-timeout-seconds 7200
+```
+
+The observed current runs were `MtObject` 111.694/79.477 s cold/warm, `rLayout` 236.416/213.274
+s cold/warm, and exhaustive/full-hierarchy `rAIFSM` 347.064 s with 11 headers. The bounded
+definition query remains first-definition behavior; it is not a complete `rAIFSM` hierarchy
+benchmark. Raw Doris profiles and the fourteen-table state sweep are in
+`C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\current-doris-route-20260809\doris-state`.
+
+The current profile evidence shows the canonical index lookup touching all eight index tablets
+and reading 145.55 MB for `rLayout` and 194.81 MB for `rAIFSM`, despite returning 145 and 343 rows.
+The inverted index and Bloom filters are active and filtering rows, so adding another index is not
+justified by this evidence alone. The automatic analyze history includes four earlier memory-limit
+failures, while all fourteen retained manual analyze jobs are `FINISHED`; inspect the raw history
+before treating statistics freshness as uniformly healthy.

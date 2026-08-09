@@ -293,6 +293,17 @@ opt-in because the live pyelftools path and a missing compressed-dump sidecar ca
 large full scan. The report keeps each baseline `not_observed` or `blocked` until explicitly run;
 neither state can satisfy the 110%-of-baseline gate.
 
+The current live-Doris benchmark adds schema-comparable diagnostics without changing the serving
+schema or measured PyMySQL result path. Its schema-`1.1` report writes raw artifacts outside the
+repository and retains source identity, schema/session context, exact SQL hashes, normalized
+`EXPLAIN`/`EXPLAIN VERBOSE`, query IDs, cold/warm result hashes, raw/full profiles, fetch duration,
+operator summaries, scan/tablet/cardinality/predicate signals, and explicit incomplete states.
+`doriscli` is preferred; PyMySQL plan capture and the FE profile HTTP endpoints are fallbacks.
+The diagnostic scope is intentionally limited to the explicit Doris suite; generate children are
+not instrumented by this route. A bounded `LIMIT 1001` first-definition query remains a bounded
+compatibility contract, not a complete `rAIFSM` hierarchy query; a stale or evicted profile is
+never accepted for another query.
+
 The same fail-closed rule applies to a non-zero `parse_error_count`: the closed files and raw
 evidence may be inspected diagnostically with `--allow-incomplete`, but a runtime consumer must
 not silently treat missing structured rows from a partial CU as complete. Applying a recovery
@@ -369,6 +380,37 @@ bounded real-ELF Scalene run completed with 147 samples and ranked only import-t
 `zstd_dump_parser.py:36`; no actionable application-file CPU hotspot is asserted. Raw profiler
 output defaults to `%TEMP%\ddon-dwarf-reconstructor\performance` on Windows, or an explicit
 `DDON_PERFORMANCE_ARTIFACT_DIR`.
+
+## 2026-08-09 current live-Doris baseline
+
+The current-data benchmark reused the promoted manifest and the existing `dwarf` database. No
+materializer, Stream Load, DDL, projection, materialized view, or schema change ran during this
+measurement. The manifest and registry both bind to source SHA-256
+`4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0`, schema `1.1`, 2,305 CUs,
+and the exact fourteen-family counts. The external report is
+`C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\current-doris-route-20260809\current-doris-benchmark.json`.
+
+| Workload | Status | Wall time | Peak RSS | Output evidence |
+| --- | --- | ---: | ---: | --- |
+| `MtObject` cold / warm | `observed` | 111.694 / 79.477 s | 90.2 / 90.3 MB | One `MtObject.h`; SHA-256 `5cd6e1b8939260ad8456d7313b15ee984e111e394c855568c3ae743e91cfde2c` |
+| `rLayout` cold / warm | `observed` | 236.416 / 213.274 s | 131.9 / 132.3 MB | `rLayout.h`; SHA-256 `759cf157efc5f9609966a64a8932dd5f9786e0b24f3c473f4e14d8ba8e5e46e9` |
+| `rAIFSM` long | `observed` | 347.064 s | 166.2 MB | 11 ordered headers, 41,236 bytes; `rAIFSM.h` SHA-256 `0c63ec7c7267e362b344c8b9a45f6a2d850c8d941a93788cd1481661f58649b` |
+
+The existing bounded SQL contract returned 1,001/145/343 rows for `MtObject`/`rLayout`/`rAIFSM`
+definition lookup and records ordered-result hashes. It remains a bounded first-definition
+contract. Separate full profiles for the current `rLayout` and `rAIFSM` name lookups show 35/40 ms
+total time, 5 ms scheduling, 145.55/194.81 MB scan bytes, 145/343 scan rows, and all 8 of 8
+`dwarf_records_index` tablets touched; no spill counter was observed. The raw and parsed profiles,
+tablet sweep, table/column statistics, DDL, and analyze history are retained under
+`C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\current-doris-route-20260809\doris-state`.
+
+All fourteen manual `SHOW ANALYZE` jobs are `FINISHED`. The retained automatic history contains
+four earlier `FAILED` jobs for `attribute`/`name` caused by backend memory limits; this is historical
+optimizer evidence, not a claim that every automatic job succeeded. Every tablet in the fourteen
+family sweep was `NORMAL`; the largest live table was `attribute` at 2,589.7 MB with skew 1.2.
+These observations establish the current serving baseline only. Candidate access paths and
+materialized views remain unevaluated until they demonstrate exact ordered parity and end-to-end
+improvement on the heavy `rAIFSM` generation workload.
 
 ## Evidence boundary
 

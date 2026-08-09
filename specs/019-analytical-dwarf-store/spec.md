@@ -58,6 +58,17 @@ require zero parser diagnostics before normal runtime use.
 
 The file-based runtime is eligible only when all critical queries and complete knowledge export match the current byte-stable output and remain within 110% of baseline p95 and 110% of baseline peak memory. Otherwise Doris is the required runtime. If neither backend satisfies the evidence gate, the replacement remains blocked.
 
+The current-data Doris benchmark is a read-only downstream evidence route. Against an existing
+complete manifest and live publication it retains schema-`1.1` diagnostic output outside source
+control: one `EXPLAIN` and `EXPLAIN VERBOSE` per distinct exact suite SQL, and one query-ID-bound
+raw/full profile for every cold and warm PyMySQL execution. CLI, PyMySQL, and FE HTTP attempts,
+schema/session context, normalized plan hashes, ordered-result hashes, and explicit missing,
+evicted, timeout, routing, and fallback states are part of the report. The query result may remain
+observed when diagnostics are partial, but the diagnostic section and overall report remain
+incomplete. The diagnostic scope is limited to the explicit bounded Doris suite; canonical
+generate children are not instrumented by this route. No materialization, load, DDL, MV, schema,
+or implicit cache/session tuning is authorized by this benchmark route.
+
 Arrow Flight SQL is an opt-in transport evaluation only. The default MySQL/PyMySQL path remains
 authoritative for semantic queries, DDL, and HTTP Stream Load. The optional ADBC benchmark must
 prove exact parameterized parity for all critical queries and types, keep point-query and complete

@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from .....domain.models.analytical_dwarf import MaterializationManifest
 from ...doris import DorisConfig
+from ...doris_diagnostics import DorisDiagnosticRecorder, ordered_result_sha256
 from ...doris_layout import _FAMILIES
 from ...manifest import load_manifest
 from ...optional import import_optional
@@ -19,6 +22,7 @@ def doris_queries(
     config: DorisConfig,
     symbols: tuple[str, ...],
     iterations: int,
+    diagnostics: DorisDiagnosticRecorder | None = None,
 ) -> list[dict[str, Any]]:
     """Run the bounded correctness and coverage suite against native Doris tables."""
     pymysql = import_optional("pymysql", "analytical")
@@ -31,8 +35,14 @@ def doris_queries(
         autocommit=True,
     )
     try:
-        return _doris_symbol_queries(connection, config, source_id, symbols, iterations)
+        if diagnostics is not None:
+            diagnostics.attach_connection(connection)
+        return _doris_symbol_queries(
+            connection, config, source_id, symbols, iterations, diagnostics=diagnostics
+        )
     finally:
+        if diagnostics is not None:
+            diagnostics.finalize()
         connection.close()
 
 
@@ -42,6 +52,8 @@ def _doris_symbol_queries(
     source_id: str,
     symbols: tuple[str, ...],
     iterations: int,
+    *,
+    diagnostics: DorisDiagnosticRecorder | None = None,
 ) -> list[dict[str, Any]]:
     with connection.cursor() as cursor:
         tables = {family: doris_table_name(config, family) for family in _FAMILIES}
@@ -54,7 +66,12 @@ def _doris_symbol_queries(
         definition_table = _definition_lookup_table(config, tables["index"])
         for symbol in symbols:
             rows, measurement = _doris_definition_query(
-                definition_table, source_id, symbol, run, iterations
+                definition_table,
+                source_id,
+                symbol,
+                run,
+                iterations,
+                diagnostics=diagnostics,
             )
             measurements.append(measurement)
             if rows:
@@ -68,6 +85,7 @@ def _doris_symbol_queries(
                             die_offset,
                             run,
                             iterations,
+                            diagnostics=diagnostics,
                         )
                     )
         return measurements
@@ -89,6 +107,8 @@ def _doris_definition_query(
     symbol: str,
     run: Callable[[str], list[tuple[Any, ...]]],
     iterations: int,
+    *,
+    diagnostics: DorisDiagnosticRecorder | None = None,
 ) -> tuple[list[tuple[Any, ...]], dict[str, Any]]:
     escaped_symbol = sql_literal_for_benchmark(symbol)
     sql = (
@@ -97,7 +117,12 @@ def _doris_definition_query(
         f"'{escaped_symbol}' ORDER BY unit_offset, die_offset LIMIT 1001"
     )
     measurement, rows = run_query_with_metrics(
-        "find_definitions", lambda: run(sql), iterations, symbol=symbol
+        "find_definitions",
+        lambda: run(sql),
+        iterations,
+        sql=sql,
+        diagnostics=diagnostics,
+        symbol=symbol,
     )
     return rows, measurement
 
@@ -109,12 +134,19 @@ def _doris_related_queries(
     die_offset: int,
     run: Callable[[str], list[tuple[Any, ...]]],
     iterations: int,
+    *,
+    diagnostics: DorisDiagnosticRecorder | None = None,
 ) -> list[dict[str, Any]]:
     measurements: list[dict[str, Any]] = []
     field_rows: list[tuple[Any, ...]] = []
     for name, sql, metadata in _doris_query_specs(tables, source_id, unit_offset, die_offset):
         measurement, rows = run_query_with_metrics(
-            name, lambda sql=sql: run(sql), iterations, **metadata
+            name,
+            lambda sql=sql: run(sql),
+            iterations,
+            sql=sql,
+            diagnostics=diagnostics,
+            **metadata,
         )
         measurements.append(measurement)
         if name == "field_layout":
@@ -126,6 +158,10 @@ def _doris_related_queries(
                 _field_layout_attribute_sql(tables["attribute"], source_id, unit_offset, field_rows)
             ),
             iterations,
+            sql=_field_layout_attribute_sql(
+                tables["attribute"], source_id, unit_offset, field_rows
+            ),
+            diagnostics=diagnostics,
             unit_offset=unit_offset,
             die_offset=die_offset,
         )
@@ -394,23 +430,75 @@ def run_query_with_metrics(
     name: str,
     operation: Callable[[], list[tuple[Any, ...]]],
     iterations: int,
+    *,
+    sql: str | None = None,
+    diagnostics: DorisDiagnosticRecorder | None = None,
     **metadata: object,
 ) -> tuple[dict[str, Any], list[tuple[Any, ...]]]:
     """Measure one Doris query and return its bounded result rows for chaining."""
+    statement_id = None
+    if diagnostics is not None and sql is not None:
+        statement_id = diagnostics.prepare_statement(name, sql, metadata)
     result, cold_metrics = measure(operation)
-    warm_samples = [measure(operation)[1] for _ in range(iterations)]
+    if diagnostics is not None and statement_id is not None:
+        diagnostics.capture_execution(
+            statement_id,
+            state="cold",
+            iteration=1,
+            result_rows=result,
+            result_hash=ordered_result_sha256(result),
+            query_duration_seconds=float(cold_metrics["wall_seconds"]),
+            measured_metrics=cold_metrics,
+        )
+    warm_samples: list[dict[str, Any]] = []
+    for iteration in range(1, iterations + 1):
+        warm_result, warm_metrics = measure(operation)
+        warm_samples.append(warm_metrics)
+        if diagnostics is not None and statement_id is not None:
+            diagnostics.capture_execution(
+                statement_id,
+                state="warm",
+                iteration=iteration,
+                result_rows=warm_result,
+                result_hash=ordered_result_sha256(warm_result),
+                query_duration_seconds=float(warm_metrics["wall_seconds"]),
+                measured_metrics=warm_metrics,
+            )
+    measurement: dict[str, Any] = {
+        "query": name,
+        **metadata,
+        "status": "complete" if result else "not_found",
+        "matches": len(result),
+        "limit": 1001,
+        "ordered_result_sha256": _ordered_result_sha256(result),
+        "cold": cold_metrics,
+        "warm": distribution(warm_samples),
+    }
+    if statement_id is not None:
+        measurement["diagnostic_statement_id"] = statement_id
     return (
-        {
-            "query": name,
-            **metadata,
-            "status": "complete" if result else "not_found",
-            "matches": len(result),
-            "limit": 1001,
-            "cold": cold_metrics,
-            "warm": distribution(warm_samples),
-        },
+        measurement,
         result,
     )
+
+
+def _ordered_result_sha256(rows: list[tuple[Any, ...]]) -> str:
+    """Hash result values in returned order without depending on repr formatting."""
+    payload = [[_digest_value(value) for value in row] for row in rows]
+    encoded = json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _digest_value(value: Any) -> dict[str, object]:
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return {"type": type(value).__name__, "value": value}
+    if isinstance(value, bytes):
+        return {"type": "bytes", "value": value.hex()}
+    value_type = type(value)
+    return {
+        "type": f"{value_type.__module__}.{value_type.__qualname__}",
+        "value": str(value),
+    }
 
 
 def doris_table_name(config: DorisConfig, family: str) -> str:

@@ -10,6 +10,7 @@ from typing import Any
 
 __all__ = [
     "run_store_benchmark",
+    "run_current_doris_benchmark",
     "run_doris_flight_benchmark",
     "run_doris_flight_preflight",
     "write_doris_flight_preflight",
@@ -18,6 +19,7 @@ __all__ = [
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "run_store_benchmark": (".common.runner", "run_store_benchmark"),
+    "run_current_doris_benchmark": (".doris.current", "run_current_doris_benchmark"),
     "run_doris_flight_benchmark": (".flight_sql.runner", "run_doris_flight_benchmark"),
     "run_doris_flight_preflight": (".flight_sql.preflight", "run_doris_flight_preflight"),
     "write_doris_flight_preflight": (

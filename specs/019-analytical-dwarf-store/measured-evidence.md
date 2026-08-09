@@ -1,6 +1,6 @@
 # Measured evidence
 
-## Active evidence boundary (2026-08-08)
+## Active evidence boundary (2026-08-09)
 
 The promoted durable v1.1 store is
 `output/analytical-dwarf/main/store-4236f598acc8f158/manifest.json`. The complete manifest records
@@ -19,6 +19,33 @@ remain pending and are not implied by this store record.
 
 Benchmark rows include source identity, producer/schema/configuration identity, runtime and Python
 identity, cold/warm state, machine metadata, resource metrics, output-manifest identity, and an
+explicit status (`observed`, `partial`, `blocked`, or `not_observed`).
+
+## 2026-08-09 current live-Doris benchmark
+
+The current-data measurement deliberately reused the promoted complete manifest and the live
+`dwarf` database. It did not regenerate Parquet, reload Doris, create a database, change the
+fourteen-family schema, add a projection/materialized view, or change session settings. The source
+identity is `4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0`; the registry is
+`complete`, schema `1.1`, and its expected and observed family counts are equal.
+
+| Surface | Status | Current observation | Evidence boundary |
+| --- | --- | --- | --- |
+| Existing Doris serving validation | `observed` | All fourteen registry family counts match the promoted manifest; all tablets in the read-only sweep are `NORMAL`; 14/14 retained manual `SHOW ANALYZE` jobs are `FINISHED` | Automatic history still contains four earlier memory-limit failures for `attribute`/`name`; those remain historical diagnostics |
+| `MtObject` generate | `observed` | Cold 111.694 s, warm 79.477 s, peak RSS 90.2/90.3 MB; output hash `5cd6e1b8939260ad8456d7313b15ee984e111e394c855568c3ae743e91cfde2c` | Existing compatibility control; one header |
+| `rLayout` generate | `observed` | Cold 236.416 s, warm 213.274 s, peak RSS 131.9/132.3 MB; output hash `759cf157efc5f9609966a64a8932dd5f9786e0b24f3c473f4e14d8ba8e5e46e9` | Short control; one header |
+| `rAIFSM` generate | `observed` | `--full-hierarchy --exhaustive`, 347.064 s, peak RSS 166.2 MB, 11 ordered headers; `rAIFSM.h` hash `0c63ec7c7267e362b344c8b9a45f6a2d850c8d941a93788cd1481661f58649b8` | Heavy current workload; one observed iteration, not averaged or truncated |
+| Existing bounded Doris query contract | `observed`, bounded | Definition lookup returned 1,001 `MtObject`, 145 `rLayout`, and 343 `rAIFSM` rows with ordered hashes | `LIMIT 1001`/first-definition behavior; not a complete `rAIFSM` hierarchy benchmark |
+| Doris query profiles | `observed`, bounded | `rLayout`: 35 ms total, 5 ms schedule, 145.55 MB/145 rows, 8/8 index tablets; `rAIFSM`: 40 ms, 5 ms, 194.81 MB/343 rows, 8/8 tablets; no spill counter observed | Profiles describe the bounded index lookup; generation hydration remains represented by the separate process measurements |
+
+The external report is
+`C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\current-doris-route-20260809\current-doris-benchmark.json`.
+The raw and parsed Doris profiles, all fourteen table/column statistic captures, analyze history,
+DDL/index metadata, and tablet details are under
+`C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\current-doris-route-20260809\doris-state`.
+This is the current serving baseline only. It does not authorize a candidate access path or MV:
+promotion still requires exact ordered output parity and end-to-end improvement on the heavy
+`rAIFSM` generate path.
 
 ## 2026-08-08 Windows crash and restart evidence
 
@@ -210,6 +237,13 @@ infer CU completeness.
 | Raw malformed-CU resynchronization probe | `partial`, ambiguous | A standalone pyelftools raw-stream overlay can reach the CU boundary `0x0812a18d` after three one-byte candidate repairs at `0x0802b28a`, `0x0802b29e`, and `0x0802b2b6`, yielding 140,712 remaining DIE records. The candidate byte `0x0f` is structurally plausible, but abbreviation codes 6 and 15 have indistinguishable encoded payloads at these sites (`DW_TAG_formal_parameter` with different semantic flags), so raw lookahead cannot establish the intended meaning. | No automatic repair is enabled. The canonical producer preserves raw bytes and publishes parser diagnostics, then fails closed for normal generation, knowledge export, Doris, Iceberg, and parity until source semantics are independently established. |
 | Parser-diagnostic fail-closed gate | `observed` | Focused recovery tests passed 10 tests after the malformed-CU contract change. A manifest with `parse_error_count > 0` is `partial`; normal Parquet/JSONL loading, Doris planning, and Iceberg publication reject it, while `--allow-incomplete` permits diagnostic inspection only. | This protects against silently promoting an apparently complete but semantically damaged store; full-corpus traversal remains deferred until a valid recovery or source correction is available. |
 
+## Current live-Doris explain/profile evidence (2026-08-09)
+
+| Surface | Status | Evidence | Boundary |
+| --- | --- | --- | --- |
+| Current benchmark diagnostic suite | `partial`, result workloads observed | The fresh report at `C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\current-doris-diagnostics-default-20260809\current-doris-benchmark.json` reused the complete source-bound manifest `store-4236f598acc8f158` and live `dwarf` publication without materialization, Stream Load, DDL, or schema changes. Report schema `1.1` records 46 distinct exact SQL statements, 92/92 `EXPLAIN` and `EXPLAIN VERBOSE` artifacts, 216 cold/warm executions, and 215 accepted profiles. | One execution returned a FE/CLI profile that did not contain its requested query ID; its raw response is retained as `partial` and was not reused. The overall report is therefore incomplete even though query results remain observed. |
+| Current generate controls | `observed` | `MtObject`, `rLayout`, and exhaustive/full-hierarchy `rAIFSM` all published ordered header bundles. The rAIFSM child retained 349.470 seconds wall, 7.094 seconds user CPU, 4.844 seconds system CPU, 166,400,000-byte peak RSS, 16,868,100 bytes read, 2,212,396 bytes written, and 347 samples. | The bounded Doris contract remains first-definition/`LIMIT 1001`; it is not a complete rAIFSM hierarchy query. |
+| Explain/profile artifact contract | `observed`, with explicit incomplete state | Raw and normalized plans plus raw/full profiles are external under `doris-diagnostics/statements/<statement-id>/`; each record retains source identity, schema/session context, SQL/hash, query ID, result hash, profile-fetch timing, fallback attempts, and plan/profile summaries. | The default run does not force `--no-cache` or session tuning. A cache/session mismatch is retained as diagnostic evidence rather than hidden. |
 ## Recovery authorization and writer-layout probes (2026-08-06)
 
 | Surface | Status | Evidence | Boundary |
