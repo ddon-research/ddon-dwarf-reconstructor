@@ -1,0 +1,45 @@
+# Explicit Arrow Flight SQL benchmark overlay.
+#
+# The base Compose file intentionally leaves Flight SQL disabled.  This
+# overlay appends only the opt-in FE/BE settings at container start and maps
+# the distinct service ports.  The BE advertises a host-reachable endpoint so
+# a client running on the workstation can complete DoGet.
+services:
+  doris-fe:
+    environment:
+      DORIS_FLIGHT_FE_PUBLIC_HOST: ${DDON_DORIS_FLIGHT_SQL_FE_PUBLIC_HOST:-}
+    ports:
+      - "8070:8070"
+    entrypoint:
+      - bash
+      - -lc
+      - >-
+        grep -q '^arrow_flight_sql_port[[:space:]]*=' /opt/apache-doris/fe/conf/fe.conf
+        || echo 'arrow_flight_sql_port = 8070' >> /opt/apache-doris/fe/conf/fe.conf;
+        if [[ -n "$$DORIS_FLIGHT_FE_PUBLIC_HOST" ]]; then
+        if grep -q '^frontend_address[[:space:]]*=' /opt/apache-doris/fe/conf/fe.conf; then
+        sed -i -E "s/^frontend_address[[:space:]]*=.*/frontend_address = $$DORIS_FLIGHT_FE_PUBLIC_HOST/" /opt/apache-doris/fe/conf/fe.conf;
+        else echo "frontend_address = $$DORIS_FLIGHT_FE_PUBLIC_HOST" >> /opt/apache-doris/fe/conf/fe.conf; fi;
+        fi;
+        exec bash /usr/local/bin/init_fe.sh
+
+  doris-be:
+    environment:
+      DORIS_FLIGHT_PUBLIC_HOST: ${DDON_DORIS_FLIGHT_SQL_PUBLIC_HOST:-127.0.0.1}
+      DORIS_FLIGHT_PUBLIC_PORT: ${DDON_DORIS_FLIGHT_SQL_PUBLIC_PORT:-8050}
+    ports:
+      - "8050:8050"
+    entrypoint:
+      - bash
+      - -lc
+      - >-
+        if grep -q '^arrow_flight_sql_port[[:space:]]*=' /opt/apache-doris/be/conf/be.conf; then
+        sed -i -E 's/^arrow_flight_sql_port[[:space:]]*=.*/arrow_flight_sql_port = 8050/' /opt/apache-doris/be/conf/be.conf;
+        else echo 'arrow_flight_sql_port = 8050' >> /opt/apache-doris/be/conf/be.conf; fi;
+        if grep -q '^public_host[[:space:]]*=' /opt/apache-doris/be/conf/be.conf; then
+        sed -i -E "s/^public_host[[:space:]]*=.*/public_host = $$DORIS_FLIGHT_PUBLIC_HOST/" /opt/apache-doris/be/conf/be.conf;
+        else echo "public_host = $$DORIS_FLIGHT_PUBLIC_HOST" >> /opt/apache-doris/be/conf/be.conf; fi;
+        if grep -q '^arrow_flight_sql_proxy_port[[:space:]]*=' /opt/apache-doris/be/conf/be.conf; then
+        sed -i -E "s/^arrow_flight_sql_proxy_port[[:space:]]*=.*/arrow_flight_sql_proxy_port = $$DORIS_FLIGHT_PUBLIC_PORT/" /opt/apache-doris/be/conf/be.conf;
+        else echo "arrow_flight_sql_proxy_port = $$DORIS_FLIGHT_PUBLIC_PORT" >> /opt/apache-doris/be/conf/be.conf; fi;
+        exec bash /usr/local/bin/entry_point.sh

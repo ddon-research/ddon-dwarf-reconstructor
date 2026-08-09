@@ -9,7 +9,7 @@ from typing import Any
 
 import psutil
 
-from .optional import import_optional
+from ...optional import import_optional
 
 
 def measure(operation: Callable[[], Any]) -> tuple[Any, dict[str, Any]]:

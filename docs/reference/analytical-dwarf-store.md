@@ -140,6 +140,62 @@ pinned 4.1.3 FE/BE images. MySQL/PyMySQL remains the default connection and load
 documents Arrow Flight SQL as experimental, so it is an opt-in benchmark profile with separate
 FE/BE ports rather than the default runtime.
 
+### Arrow Flight SQL evaluation profile
+
+Flight SQL is an optional read benchmark, not a replacement for the semantic store connection.
+Install its isolated dependency group only when the Doris Flight listener is enabled:
+
+```powershell
+uv sync --group flight-sql --locked
+docker compose --file ops/analytical-dwarf/compose.yaml --file ops/analytical-dwarf/compose.flight.yaml up -d
+uv run --group flight-sql ddon-dwarf-reconstructor performance check-doris-flight `
+  --output "$env:TEMP/ddon-analytical-dwarf/analytical-flight/doris-flight-preflight.json"
+uv run --group flight-sql ddon-dwarf-reconstructor performance benchmark-doris-flight `
+  --store-manifest output/analytical-dwarf/main/store-4236f598acc8f158/manifest.json `
+  --output-dir "$env:TEMP/ddon-analytical-dwarf/analytical-flight" `
+  --allow-unparameterized-flight-fallback --reused-connections-only
+```
+
+The base Compose file is unchanged. The benchmark overlay exposes FE Flight on `8070` and BE
+Flight on `8050`, applies the corresponding `arrow_flight_sql_port` settings, and advertises
+`public_host=127.0.0.1` for the local BE DoGet endpoint. Set `DDON_DORIS_FLIGHT_SQL_PUBLIC_HOST` and
+`DDON_DORIS_FLIGHT_SQL_PUBLIC_PORT` when a proxy or non-local deployment changes the endpoint
+returned by Doris; the overlay applies those values as the BE public host/proxy port. The preflight report hashes both Compose files and the rendered configuration,
+checks TCP reachability, and records bounded FE/BE startup-log marker results. Set
+`DDON_DORIS_FLIGHT_SQL_FE_PUBLIC_HOST` to record a host-side FE socket check for FE-local result
+sets. That check does not rewrite the FE `Location` returned by Doris 4.1.3: the current producer
+constructs it from the FE process-local address, so a reachable host-published FE port is not proof
+that a returned FE-local `DoGet` address is reachable. A successful FE connection alone is
+insufficient if the BE endpoint cannot be reached.
+
+The benchmark uses qmark (`?`) parameters and records separate execute/GetFlightInfo, fetch/DoGet,
+and Python conversion/reduction timings. Its result matrix includes PyMySQL `fetchall()`, Flight
+row conversion, `fetch_arrow_table()`, streamed `fetch_record_batch()`, and an Arrow-native batch
+reducer. Derived child-tag and name-count experiments compare that client reducer with Doris
+`GROUP BY` queries using the per-query `SET_VAR(enable_parallel_result_sink=true)` hint; this avoids
+an extra FE-local `SET` result exchange while retaining the parallel-result experiment. It preserves
+source/CU/DIE keys, duplicate multiplicity, ordering, nulls,
+`decimal128(20,0)`/`LARGEINT`, binary/JSON values, arrays, datetimes, and offsets. The benchmark
+also compares N+1 definition hydration with bounded set-based batches of 32, 128, 512, and 2,048
+candidate offsets. It does not change DDL, HTTP Stream Load, or the domain `DwarfQueryPort`.
+
+The current preflight observes FE `127.0.0.1:8070`, the configured FE public socket
+`192.168.178.81:8070`, BE `127.0.0.1:8050`, both Doris Flight startup markers, and the direct local
+BE route. The benchmark-only `--allow-unparameterized-flight-fallback` flag renders supported
+qmark values as checked SQL literals after the required probe fails; it never changes the default
+runtime path and reports Flight as `partial`. The latest complete reused-connection matrix is
+externalized at `C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\analytical-flight\full-fallback-reused-v3\doris-flight-report.json`.
+It observes 36 definition/contract reports per transport, the six array sizes, both hydration
+strategies, and the Arrow consumption modes. `fetchall()` remains an intentional negative control.
+Strict cross-transport parity is still partial: the matrix compares 76 common row-mode reports,
+with 54 exact digests and 22 mismatches; the mismatches preserve row count, order, schema, nulls,
+and values but expose Doris `BOOLEAN` as Python `int` through PyMySQL and `bool` through Arrow.
+The current source also returns FE-local result locations from its process-local address, so that
+routing/type boundary remains open even though the data queries and BE route complete. Promote
+Flight only after exact type parity, clean endpoint routing, point-query p95 within 110% of MySQL in
+cold and warm runs, and a representative Arrow-native workload demonstrates at least a 20%
+end-to-end or peak-RSS improvement.
+
 ### PyArrow 25 design boundary
 
 The default project runtime pins `pyarrow==25.0.0`. The local PyArrow reference checkout at

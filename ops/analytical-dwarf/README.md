@@ -42,7 +42,13 @@ docker compose --file ops/analytical-dwarf/compose.yaml ps --all
 
 The analytical CLI uses `DDON_DORIS_HTTP_URL`, `DDON_DORIS_STREAM_LOAD_URL`,
 `DDON_DORIS_SQL_HOST`, `DDON_DORIS_SQL_PORT`, `DDON_DORIS_DATABASE`,
-`DDON_DORIS_USER`, and `DDON_DORIS_PASSWORD` for connection settings. The local Compose
+`DDON_DORIS_USER`, and `DDON_DORIS_PASSWORD` for connection settings. The Flight benchmark additionally
+accepts `DDON_DORIS_FLIGHT_SQL_HOST`, `DDON_DORIS_FLIGHT_SQL_PORT`,
+`DDON_DORIS_FLIGHT_SQL_URI`, `DDON_DORIS_FLIGHT_SQL_FE_PUBLIC_HOST`,
+`DDON_DORIS_FLIGHT_SQL_PUBLIC_HOST`,
+`DDON_DORIS_FLIGHT_SQL_PUBLIC_PORT`, `DDON_DORIS_FLIGHT_SQL_MAX_MESSAGE_SIZE`,
+`DDON_DORIS_FLIGHT_SQL_QUERY_TIMEOUT_SECONDS`, and
+`DDON_DORIS_FLIGHT_SQL_FETCH_TIMEOUT_SECONDS`. The local Compose
 baseline maps stream load to `http://127.0.0.1:8040`; set the stream-load variable explicitly
 when using another BE endpoint. `DDON_DORIS_STREAM_LOAD_WORKERS` defaults to `1` for a
 reproducible baseline; set it explicitly (for example, `4`) when benchmarking concurrent,
@@ -51,8 +57,48 @@ or in benchmark artifacts.
 
 The Compose file does not enable Arrow Flight SQL by default. Doris documents that service as
 experimental and requires distinct FE and BE `arrow_flight_sql_port` settings; enable it only in
-an explicit benchmark configuration, with ports and logs recorded as evidence. MySQL protocol
-plus PyMySQL remains the supported DDL/Stream Load path.
+the explicit overlay, with ports, rendered-Compose hash, startup logs, and endpoint checks recorded
+as external evidence. MySQL protocol plus PyMySQL remains the supported DDL/Stream Load path.
+
+The opt-in Flight SQL loop is:
+
+```powershell
+uv sync --group flight-sql --locked
+docker compose --file ops/analytical-dwarf/compose.yaml --file ops/analytical-dwarf/compose.flight.yaml config --quiet
+docker compose --file ops/analytical-dwarf/compose.yaml --file ops/analytical-dwarf/compose.flight.yaml up -d
+uv run --group flight-sql ddon-dwarf-reconstructor performance check-doris-flight `
+  --output "$env:TEMP/ddon-analytical-dwarf/analytical-flight/doris-flight-preflight.json"
+uv run --group flight-sql ddon-dwarf-reconstructor performance benchmark-doris-flight `
+  --store-manifest output/analytical-dwarf/main/store-4236f598acc8f158/manifest.json `
+  --output-dir "$env:TEMP/ddon-analytical-dwarf/analytical-flight" `
+  --allow-unparameterized-flight-fallback --reused-connections-only
+```
+
+The overlay is `compose.flight.yaml`; the base `compose.yaml` remains unchanged. It maps FE Flight
+to host port `8070`, BE Flight to `8050`, and sets the BE `public_host` to
+`127.0.0.1` for the host-side client. For a remote deployment or proxy, set
+`DDON_DORIS_FLIGHT_SQL_PUBLIC_HOST` and `DDON_DORIS_FLIGHT_SQL_PUBLIC_PORT` to the externally
+routable BE address before running the preflight; the same values are applied to the BE
+`public_host` and `arrow_flight_sql_proxy_port` settings. The check records per-file and rendered-Compose
+SHA-256 values, tests FE and advertised BE TCP reachability, and searches the bounded FE/BE startup
+logs for Flight markers. A Flight FE connection is not sufficient when Doris returns an unreachable
+BE endpoint for `DoGet`. `DDON_DORIS_FLIGHT_SQL_FE_PUBLIC_HOST` records an additional FE socket
+check, but the current Doris producer builds FE-local result locations from the FE process-local
+address; it is therefore not a rewrite of the returned Flight `Location`.
+
+The benchmark report is written outside source control. It separates execute/GetFlightInfo,
+fetch/DoGet, and Python conversion/reduction timing, compares PyMySQL rows with ADBC rows,
+`fetch_arrow_table()`, streamed `fetch_record_batch()`, and an Arrow-native reducer, and runs the
+single-row, array, 36-query, derived-aggregation, and N+1/set-based hydration shapes. Derived
+child-tag/name counts also run Doris `GROUP BY` with the per-query
+`SET_VAR(enable_parallel_result_sink=true)` hint for a measured comparison. A missing listener or
+failed BE route remains `blocked`/`not_observed`. The explicit fallback flag is benchmark-only:
+it renders supported qmark values as checked SQL literals after Doris 4.1.3 reports
+`acceptPutPreparedStatementQuery unimplemented`, marks the report `partial`, and does not alter the
+default MySQL/DDL/Stream Load path. The current complete reused-only report is
+`$env:TEMP/ddon-analytical-dwarf/analytical-flight/full-fallback-reused-v3/doris-flight-report.json`;
+its strict parity is 54/76 because PyMySQL exposes Doris BOOLEAN values as `int` while Arrow
+exposes them as `bool`.
 
 For structured SQL, profile, and tablet evidence, use the locally compiled Apache Doris CLI
 when available. On this Windows workstation it is outside the repository at

@@ -46,6 +46,7 @@ from .parquet_store_helpers import (
     optional_int as _optional_int,
 )
 
+
 class _ParquetStoreAccess(JsonlDwarfStore):
     """Load and hydrate the partition-pruned Parquet record families."""
 

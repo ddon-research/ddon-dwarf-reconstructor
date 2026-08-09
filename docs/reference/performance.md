@@ -9,6 +9,8 @@ The `performance` group is the canonical opt-in resource and profiler interface:
 | `performance compare-runtimes <elf>` | Compare regular CPython, a validated Nuitka launcher, and optional free-threaded CPython |
 | `performance profile-index <dump>` | Profile a complete compressed-dump index rebuild |
 | `performance benchmark-dwarf-store <elf>` | Materialize typed Parquet and collect native Doris evidence |
+| `performance check-doris-flight` | Check the opt-in Flight overlay, endpoints, hashes, and startup logs |
+| `performance benchmark-doris-flight` | Compare PyMySQL rows with ADBC Flight SQL consumption modes |
 | `performance profile-dwarf-store <elf>` | Run the analytical-store benchmark through Scalene, cProfile, or another supported profiler |
 | `performance profile-materializer <elf>` | Profile an isolated bounded direct-Parquet materializer probe |
 | `performance benchmark` | Run the deterministic fixture through pyperf and psutil |
@@ -58,6 +60,41 @@ Doris execution is opt-in with `--run-doris`. After a complete native load, use
 `--query-existing-doris` are mutually exclusive. Add `--run-knowledge-export` to run the complete
 store-backed knowledge-export workflow for the selected symbols and record output hashes; this
 also remains explicit because it writes a potentially large external bundle.
+
+## Flight SQL evaluation
+
+The implementation is isolated under
+`src/ddon_dwarf_reconstructor/infrastructure/analytical/benchmark/`: shared measurement and
+baseline code is in `common/`, native-Doris query workloads are in `doris/`, and the opt-in Flight
+SQL adapter and experiments are in `flight_sql/`. The functional analytical package does not
+export benchmark entry points; the CLI imports this explicit benchmark package instead. Dedicated
+tests mirror the same hierarchy under `tests/infrastructure/analytical/benchmark/`.
+
+`check-doris-flight` and `benchmark-doris-flight` are an optional ADBC group, not part of the
+default MySQL/PyMySQL query, DDL, or Stream Load path. Install the exact candidate group with
+`uv sync --group flight-sql --locked`, enable `ops/analytical-dwarf/compose.flight.yaml`, and run
+the preflight first. It hashes the base/overlay and rendered Compose configuration, checks the FE
+port and the advertised BE endpoint, and records bounded startup-log marker evidence. Set
+`DDON_DORIS_FLIGHT_SQL_PUBLIC_HOST`/`DDON_DORIS_FLIGHT_SQL_PUBLIC_PORT` for a proxy or non-local BE
+route. Set `DDON_DORIS_FLIGHT_SQL_FE_PUBLIC_HOST` to record a host-side FE socket check; Doris
+4.1.3 still constructs FE-local result locations from its process-local address, so this socket
+check does not prove that a returned FE-local `DoGet` location is reachable.
+
+The benchmark keeps qmark parameters and separates execute/GetFlightInfo, fetch/DoGet, and Python
+conversion/reduction timings. It measures PyMySQL `fetchall()` as the baseline, Flight row
+conversion as a negative control, full Arrow tables, streamed RecordBatches, and a batch reducer.
+Derived child-tag/name counts compare that client reducer with Doris `GROUP BY` under
+`SET_VAR(enable_parallel_result_sink=true)`; the setting is measured, not presumed beneficial for
+small results. It also compares N+1 and bounded set-based hydration for 32/128/512/2,048 candidates.
+Reports are external and preserve provenance. By default the benchmark fails closed when Doris
+rejects qmark parameters. The explicit diagnostic flag
+`--allow-unparameterized-flight-fallback --reused-connections-only` renders only checked supported
+literals, marks Flight `partial`, and is not a production path. The current complete reused-only
+matrix records 54/76 strict cross-transport digest matches; the 22 mismatches are Python
+`int`/`bool` representations of Doris `BOOLEAN` columns, not row/order/value differences. Point
+lookups remain slower through Flight after connection reuse, while RecordBatch/reducer modes are
+competitive only for larger arrays; cold connection and server-profile evidence remain separate
+gates.
 
 Use `profile-dwarf-store` for CPU attribution around that same bounded command. It invokes the
 unprofiled `benchmark-dwarf-store` child through `PerformanceRunner`, so process CPU/RSS/I/O

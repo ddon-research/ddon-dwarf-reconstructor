@@ -12,6 +12,8 @@
   boundaries.
 - [x] Add Doris Compose and native loading/evidence plans.
 - [x] Add benchmark protocol and report schema.
+- [x] Add the optional ADBC Flight SQL client, qmark benchmark matrix, Compose overlay, and
+  endpoint/startup-log preflight without changing the default MySQL/Stream Load path.
 - [x] Migrate generation and knowledge export to the store.
 - [x] Retire normal legacy lookup paths after parity boundary; retain legacy adapters only for explicit validation.
 - [ ] Run focused, repository, real-asset, and environmental validation.
@@ -38,3 +40,14 @@ full-store file query harness timed out because it rescans fact families per que
 harness limitation, while native Doris is the required serving backend for the measured corpus.
 Checkpoints remain diagnostic snapshots only; their real-asset overhead remains unmeasured. These
 items are not marked complete from source inspection, a dry-run plan, or partial files.
+
+The Flight SQL evaluation harness is implemented but its full-contract gate remains open. The
+stale running containers were recreated with the opt-in overlay, publishing FE `8030`, `8070`,
+`9030` and BE `8040`, `8050`; the external preflight observes both Flight listeners, startup
+markers, the direct BE route, and a host-side FE socket. Doris 4.1.3 rejects the required qmark
+probe with `acceptPutPreparedStatementQuery unimplemented`. The explicit benchmark-only fallback
+renders supported values as checked SQL literals and completes the reused-connection matrix, but
+the report remains `partial`: strict parity is 54/76 because PyMySQL and Arrow expose Doris
+BOOLEAN values as `int` and `bool`, respectively. Doris's current FE producer also returns
+FE-local result locations from its process-local address, so endpoint routing is not yet a clean
+runtime boundary. The default MySQL/PyMySQL and loader paths are unchanged.

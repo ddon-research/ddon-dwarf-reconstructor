@@ -41,6 +41,15 @@ class DorisConfig:
     password: str = ""
     table: str = "dwarf_records"
     definition_lookup_table: str | None = None
+    flight_sql_host: str = "127.0.0.1"
+    flight_sql_port: int = 8070
+    flight_sql_uri: str | None = None
+    flight_sql_fe_public_host: str | None = None
+    flight_sql_public_host: str | None = None
+    flight_sql_public_port: int = 8050
+    flight_sql_max_message_size: int = 16 * 1024 * 1024
+    flight_sql_query_timeout_seconds: float = 30.0
+    flight_sql_fetch_timeout_seconds: float = 300.0
     analyze_after_load: bool = True
     analyze_wait_seconds: float = 0.0
     stream_load_workers: int = 1
@@ -50,6 +59,24 @@ class DorisConfig:
             raise ValueError("analyze_wait_seconds must not be negative")
         if self.stream_load_workers < 1:
             raise ValueError("stream_load_workers must be positive")
+        self._validate_flight_settings()
+
+    def _validate_flight_settings(self) -> None:
+        if self.flight_sql_port < 1 or self.flight_sql_port > 65535:
+            raise ValueError("flight_sql_port must be a valid TCP port")
+        if self.flight_sql_public_port < 1 or self.flight_sql_public_port > 65535:
+            raise ValueError("flight_sql_public_port must be a valid TCP port")
+        if (
+            self.flight_sql_fe_public_host is not None
+            and not self.flight_sql_fe_public_host.strip()
+        ):
+            raise ValueError("flight_sql_fe_public_host must not be empty")
+        if self.flight_sql_max_message_size < 1:
+            raise ValueError("flight_sql_max_message_size must be positive")
+        if self.flight_sql_query_timeout_seconds <= 0:
+            raise ValueError("flight_sql_query_timeout_seconds must be positive")
+        if self.flight_sql_fetch_timeout_seconds <= 0:
+            raise ValueError("flight_sql_fetch_timeout_seconds must be positive")
 
     @classmethod
     def from_environment(cls) -> DorisConfig:
@@ -65,6 +92,38 @@ class DorisConfig:
             table=os.getenv("DDON_DORIS_TABLE", defaults.table),
             definition_lookup_table=os.getenv(
                 "DDON_DORIS_DEFINITION_LOOKUP_TABLE", defaults.definition_lookup_table
+            ),
+            flight_sql_host=os.getenv("DDON_DORIS_FLIGHT_SQL_HOST", defaults.flight_sql_host),
+            flight_sql_port=int(
+                os.getenv("DDON_DORIS_FLIGHT_SQL_PORT", str(defaults.flight_sql_port))
+            ),
+            flight_sql_uri=os.getenv("DDON_DORIS_FLIGHT_SQL_URI", defaults.flight_sql_uri),
+            flight_sql_fe_public_host=os.getenv(
+                "DDON_DORIS_FLIGHT_SQL_FE_PUBLIC_HOST", defaults.flight_sql_fe_public_host
+            ),
+            flight_sql_public_host=os.getenv(
+                "DDON_DORIS_FLIGHT_SQL_PUBLIC_HOST", defaults.flight_sql_public_host
+            ),
+            flight_sql_public_port=int(
+                os.getenv("DDON_DORIS_FLIGHT_SQL_PUBLIC_PORT", str(defaults.flight_sql_public_port))
+            ),
+            flight_sql_max_message_size=int(
+                os.getenv(
+                    "DDON_DORIS_FLIGHT_SQL_MAX_MESSAGE_SIZE",
+                    str(defaults.flight_sql_max_message_size),
+                )
+            ),
+            flight_sql_query_timeout_seconds=float(
+                os.getenv(
+                    "DDON_DORIS_FLIGHT_SQL_QUERY_TIMEOUT_SECONDS",
+                    str(defaults.flight_sql_query_timeout_seconds),
+                )
+            ),
+            flight_sql_fetch_timeout_seconds=float(
+                os.getenv(
+                    "DDON_DORIS_FLIGHT_SQL_FETCH_TIMEOUT_SECONDS",
+                    str(defaults.flight_sql_fetch_timeout_seconds),
+                )
             ),
             analyze_after_load=_boolean_environment(
                 "DDON_DORIS_ANALYZE_AFTER_LOAD", defaults.analyze_after_load

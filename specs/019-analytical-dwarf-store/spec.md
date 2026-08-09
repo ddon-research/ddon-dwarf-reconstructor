@@ -57,3 +57,12 @@ contexts are already present in the source; mixed or unknown contexts fail close
 require zero parser diagnostics before normal runtime use.
 
 The file-based runtime is eligible only when all critical queries and complete knowledge export match the current byte-stable output and remain within 110% of baseline p95 and 110% of baseline peak memory. Otherwise Doris is the required runtime. If neither backend satisfies the evidence gate, the replacement remains blocked.
+
+Arrow Flight SQL is an opt-in transport evaluation only. The default MySQL/PyMySQL path remains
+authoritative for semantic queries, DDL, and HTTP Stream Load. The optional ADBC benchmark must
+prove exact parameterized parity for all critical queries and types, keep point-query and complete
+contract p95 within 110% of MySQL in cold and warm connection runs, and demonstrate at least one
+20% end-to-end or peak-RSS improvement on a representative Arrow-native multi-row workload. A
+missing listener, incompatible parameter protocol, unreachable BE DoGet endpoint, or unmeasured
+server cache/profile surface remains `blocked` or `not_observed`; it cannot trigger a default
+runtime migration.

@@ -10,16 +10,16 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any
 
-from ...domain.models.analytical_dwarf import DwarfMaterializationRequest
-from .artifact_store import load_analytical_store
-from .benchmark_baselines import current_runtime_baseline
-from .benchmark_doris_queries import doris_queries
-from .benchmark_metrics import measure
-from .benchmark_output import safe_output_name, tree_digest
-from .doris import DorisConfig, DorisLoader, build_doris_plan
-from .manifest import declared_parquet_files, load_manifest
-from .materializer import DwarfMaterializer
-from .optional import AnalyticalDependencyError
+from .....domain.models.analytical_dwarf import DwarfMaterializationRequest
+from ...artifact_store import load_analytical_store
+from ...doris import DorisConfig, DorisLoader, build_doris_plan
+from ...manifest import declared_parquet_files, load_manifest
+from ...materializer import DwarfMaterializer
+from ...optional import AnalyticalDependencyError
+from ..doris.queries import doris_queries
+from .baselines import current_runtime_baseline
+from .metrics import measure
+from .output import safe_output_name, tree_digest
 
 
 def run_store_benchmark(
@@ -174,11 +174,11 @@ def _knowledge_export_measurement(
 ) -> dict[str, Any]:
     del iterations
     try:
-        from ...application.generators import DwarfGenerator
-        from ...infrastructure.artifacts import SourceIdentityCatalog
-        from ...infrastructure.composition import create_disassembly_producer, create_dump_lookup
-        from ...infrastructure.config import DwarfRuntimeConfig
-        from .session import AnalyticalDwarfSession
+        from .....application.generators import DwarfGenerator
+        from .....infrastructure.artifacts import SourceIdentityCatalog
+        from .....infrastructure.composition import create_disassembly_producer, create_dump_lookup
+        from .....infrastructure.config import DwarfRuntimeConfig
+        from ...session import AnalyticalDwarfSession
 
         output_root = store_manifest.resolve().parent / "knowledge-export"
         output_root.mkdir(parents=True, exist_ok=True)

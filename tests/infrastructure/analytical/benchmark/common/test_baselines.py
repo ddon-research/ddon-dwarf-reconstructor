@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark import (
+from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.common.runner import (
     _baseline_measurements,
     _baseline_summary_status,
     _runtime_comparison,
@@ -32,7 +32,7 @@ def test_baselines_remain_unobserved_without_explicit_inputs(tmp_path: Path) -> 
 def test_explicit_baseline_failures_are_blocked_not_silent(tmp_path: Path) -> None:
     with (
         patch(
-            "ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.current_runtime_baseline",
+            "ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.common.runner.current_runtime_baseline",
             side_effect=RuntimeError("live baseline unavailable"),
         ),
     ):
@@ -50,7 +50,7 @@ def test_explicit_baseline_failures_are_blocked_not_silent(tmp_path: Path) -> No
 
 def test_explicit_live_baseline_is_observed(tmp_path: Path) -> None:
     with patch(
-        "ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.current_runtime_baseline",
+        "ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.common.runner.current_runtime_baseline",
         return_value={"status": "observed", "queries": []},
     ):
         baselines = _baseline_measurements(

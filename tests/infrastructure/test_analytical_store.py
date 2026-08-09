@@ -29,12 +29,12 @@ from ddon_dwarf_reconstructor.infrastructure.analytical import (
     JsonlDwarfStore,
     MaterializedDwarfIndex,
     ParquetDwarfStore,
-    run_store_benchmark,
 )
 from ddon_dwarf_reconstructor.infrastructure.analytical.artifact_store import (
     load_analytical_store,
 )
-from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark import (
+from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark import run_store_benchmark
+from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.common.runner import (
     _knowledge_export_measurement,
 )
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris import (
@@ -567,7 +567,7 @@ def test_benchmark_verifies_supplied_elf_against_relocated_store(tmp_path: Path)
             lambda path: _Session(path, _fixture_dwarf()),
         ),
         patch(
-            "ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.load_analytical_store",
+            "ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.common.runner.load_analytical_store",
             wraps=load_analytical_store,
         ) as load_store,
     ):

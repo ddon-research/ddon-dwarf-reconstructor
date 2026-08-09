@@ -92,6 +92,15 @@ analytical-fixture:
 analytical-compose-config:
     docker compose --file ops/analytical-dwarf/compose.yaml config --quiet
 
+analytical-compose-flight-config:
+    docker compose --file ops/analytical-dwarf/compose.yaml --file ops/analytical-dwarf/compose.flight.yaml config --quiet
+
+analytical-check-flight output="$env:TEMP/ddon-analytical-dwarf/analytical-flight/doris-flight-preflight.json":
+    uv run --group flight-sql ddon-dwarf-reconstructor performance check-doris-flight --output {{output}}
+
+analytical-benchmark-flight store_manifest="output/analytical-dwarf/main/store-4236f598acc8f158/manifest.json" output_dir="$env:TEMP/ddon-analytical-dwarf/analytical-flight":
+    uv run --group flight-sql ddon-dwarf-reconstructor performance benchmark-doris-flight --store-manifest {{store_manifest}} --output-dir {{output_dir}}
+
 reconstructor-container-config:
     docker compose --file ops/reconstructor/compose.yaml config --quiet
     docker compose --file ops/reconstructor/compose.yaml --profile py-spy config --quiet

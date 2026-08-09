@@ -40,6 +40,63 @@ or service defaults.
 
 The current dependency and service review is recorded in the matrix below. `Observed` means the local lock, executable, image, or service was inspected; upstream pages provide release metadata.
 
+### Arrow Flight SQL evaluation boundary
+
+The evaluation is deliberately transport-scoped. `DorisFlightSqlClient` owns the optional ADBC
+dependency and opens one reusable DB-API connection with qmark parameters, explicit query/fetch
+timeouts, and the configured maximum Flight message size. `fetchall()` is retained as a measured
+negative control; `fetch_arrow_table()`, `fetch_record_batch()`, and a bounded batch reducer are
+the candidates for Arrow-native use. The benchmark keeps the existing PyMySQL row path as the
+baseline and compares the source-bound 36-query contract, single-row/array shapes, and N+1 versus
+set-based hydration without changing the domain `DwarfQueryPort`.
+
+The source boundary is the [Doris Flight SQL integration guide](https://doris.apache.org/docs/4.x/connection-integration/arrow-flight-sql/)
+and [Doris issue #25514](https://github.com/apache/doris/issues/25514), read with the
+[Doris Flight SQL announcement](https://doris.apache.org/blog/arrow-flight-sql-in-apache-doris-for-10x-faster-data-transfer/),
+the [Doris Python sample](https://github.com/apache/doris/blob/master/samples/arrow-flight-sql/python/test.py), and the
+[Flight SQL specification](https://arrow.apache.org/docs/format/FlightSql.html),
+[Flight specification](https://arrow.apache.org/docs/format/Flight.html), and
+[Arrow Flight introduction](https://arrow.apache.org/blog/2019/10/13/introducing-arrow-flight/).
+Client behavior is based on the [PyArrow Flight cookbook](https://arrow.apache.org/cookbook/py/flight.html),
+[PyArrow Flight API](https://arrow.apache.org/docs/python/flight.html),
+[ADBC driver manager API](https://arrow.apache.org/adbc/main/python/driver_manager.html),
+[ADBC Flight SQL API](https://arrow.apache.org/adbc/main/python/api/adbc_driver_flightsql.html),
+[Flight SQL recipe](https://arrow.apache.org/adbc/main/python/recipe/flight_sql.html),
+[driver-manager recipe](https://arrow.apache.org/adbc/main/python/recipe/driver_manager.html), and the
+[DZone Flight SQL overview](https://dzone.com/articles/arrow-flight-sql-data-transfer). The
+[Alex Merced ADBC overview](https://alexmerced.blog/blog/2026-08-06-arrow-flight-adbc-explained.html)
+was also requested, but was unavailable to the source fetcher on 2026-08-09 and is not treated as
+authority. Together these sources establish the GetFlightInfo/DoGet execution boundary, qmark
+parameter contract, Arrow table/RecordBatch readers, and the need to measure row conversion
+separately from columnar transfer. The current [DorisFlightSqlProducer.java](https://github.com/apache/doris/blob/master/fe/fe-core/src/main/java/org/apache/doris/service/arrowflight/DorisFlightSqlProducer.java)
+source adds the implementation boundary: complete SQL is supported, while
+`acceptPutPreparedStatementQuery` throws `UNIMPLEMENTED`; its FE-local schema path returns the
+producer's FE `Location`. The companion service constructs that location from
+`FrontendOptions.getLocalHostAddress()`, so a host-published FE port does not by itself rewrite a
+container-local address returned in `FlightInfo`.
+
+The optional dependency group is installed only for an explicit evaluation environment:
+
+```text
+uv sync --group flight-sql --locked
+```
+
+The explicit install observed the locked ADBC imports. The first live preflight found that the
+running containers had been created from the base Compose file plus a temporary port override with
+`!override`, so only FE `8030`/`9030` and BE `8040` were published even though the persisted FE/BE
+configs already had Flight listeners. Recreating FE/BE with the Flight overlay published FE
+`8030`/`8070`/`9030` and BE `8040`/`8050`; the exact FE/BE startup markers and direct TCP endpoints
+were then observed. The latest preflight additionally checks FE public host `192.168.178.81:8070`
+and BE public host `127.0.0.1:8050`; its hashes and startup evidence are in
+`C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\analytical-flight\doris-flight-preflight-v2.json`.
+The required qmark probe returns `NotSupportedError: NOT_IMPLEMENTED:
+[FlightSQL] acceptPutPreparedStatementQuery unimplemented (Unimplemented; ExecuteQuery)`. The
+explicit benchmark-only fallback renders supported qmark values as checked SQL literals and
+completes the reused-connection matrix; it is recorded as `partial`, never enabled by default,
+and does not change DDL, Stream Load, or semantic query code. Doris aggregation now uses the
+documented per-query `SET_VAR(enable_parallel_result_sink=true)` hint, avoiding a separate
+FE-local `SET` result exchange.
+
 | Surface | Status | Evidence | Decision |
 | --- | --- | --- | --- |
 | Arrow/PyArrow | `confirmed`, `observed` | [Arrow Python docs](https://arrow.apache.org/docs/python/index.html), the local `D:\PyArrow-25.0-python-docs` reference, the installed Python 3.14.6 environment, and the lock resolve `pyarrow==25.0.0`; the runtime reports the `mimalloc` memory-pool backend. | Use explicit per-family schemas, `ParquetWriter` with bounded row groups, capped `Table.from_pylist` inputs, and `pyarrow.dataset` projection/filter/to-batch scans. Treat Arrow memory-pool counters as telemetry rather than whole-process RSS, and consult the local reference before changing these boundaries. |
@@ -49,7 +106,7 @@ The current dependency and service review is recorded in the matrix below. `Obse
 | Doris MySQL client | `confirmed`, `observed` | [Doris MySQL protocol](https://doris.apache.org/docs/4.x/connection-integration/mysql-proto/) and local `D:/doris-cli/target/release/doriscli.exe` connectivity; lock resolves `PyMySQL==1.2.0`. | Use PyMySQL plus HTTP Stream Load for DDL/load and the compiled CLI for SQL, `EXPLAIN`, and profiles. |
 | SQLAlchemy | `confirmed`, `observed` | [SQLAlchemy on PyPI](https://pypi.org/project/SQLAlchemy/) resolves stable `2.0.51`; prerelease 2.1 was not selected. | Retain it for PyIceberg's SQL catalog; do not add an application ORM layer. |
 | pydoris | `supported`, `uncertain` | [pydoris on PyPI](https://pypi.org/project/pydoris/) resolves `1.2.0`, but no local like-for-like benchmark exists. | Keep as an optional adapter candidate, not a production dependency. |
-| Arrow Flight SQL | `confirmed`, `rejected` for default runtime | [Doris Arrow Flight SQL docs](https://doris.apache.org/docs/4.x/connection-integration/arrow-flight-sql/) label it experimental and require separate FE/BE ports. | Keep it out of default Compose; add only as an explicit benchmark profile. |
+| Arrow Flight SQL | `partial`: preflight/transport `observed`, explicit fallback `observed`, parameterized contract `blocked`, exact parity/performance `partial` | [Doris Arrow Flight SQL docs](https://doris.apache.org/docs/4.x/connection-integration/arrow-flight-sql/) label it experimental and require separate FE/BE ports. Preflight v2 observed FE `127.0.0.1:8070`, FE public socket `192.168.178.81:8070`, BE `127.0.0.1:8050`, both startup markers, base SHA-256 `ba6a6169e7ad352e635b0fac32fe23e4af8c4073b187a1464a0691681581a127`, current overlay SHA-256 `1b328f3a81a480bc97e6af2ad64bd7874d891bfb1f5cd3d5b2c631156f50c51f`, and rendered-config SHA-256 `4b01984a8d404afa56574f0dd1d3ad9d426c428b2ddf4da119624eab333a5c0a`. The complete reused-only report is `C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\analytical-flight\full-fallback-reused-v3\doris-flight-report.json`; ADBC 1.12.0 with PyArrow 25.0.0 observes both transports, all four Flight consumption modes, and the fallback, but the qmark probe remains blocked. The current matrix compares 76 common row-mode reports: 54 strict digests match and 22 differ only in MySQL `int` versus Flight `bool` representation of Doris `BOOLEAN` columns; row counts, order, schema, nulls, and values match. The current producer's FE-local `Location` remains a routing boundary, while BE DoGet and server logs are clean for the post-hint run. | Keep it out of default Compose, DDL, Stream Load, and semantic query paths. The fallback is diagnostic only and is not a parameterization substitute. Revisit the opt-in read profile only after exact type parity, FE-local endpoint routing, cold/warm point-query gates, and server profile/message-size evidence pass. |
 | Doris Iceberg reader | `historical`, retired from active runtime | [Doris Iceberg catalog docs](https://doris.apache.org/docs/4.x/lakehouse/catalogs/iceberg-catalog/) were applied to the historical compatibility bridge and returned two index rows. | Retain as provenance and a possible future experiment only; the active loader and acceptance path are native Doris over direct Parquet. |
 
 ## Doris optimization review

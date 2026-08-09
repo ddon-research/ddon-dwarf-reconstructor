@@ -67,6 +67,8 @@ profile <elf>
 compare-runtimes <elf>
 profile-index <dump>
 benchmark-dwarf-store <elf>
+benchmark-doris-flight
+check-doris-flight
 profile-dwarf-store <elf>
 benchmark
 history compare
@@ -88,3 +90,14 @@ evidence before changing Doris keys, indexes, buckets, or materialized views. Ad
 `--profiler scalene-libraries` for an optional standard-library/site-package comparison; it is a
 broad diagnostic and is not included in `--profiler all`. The child benchmark report remains
 separate from the profiler manifests.
+
+`check-doris-flight` is the explicit preflight for the optional Flight SQL overlay. It records
+Compose-file and rendered-configuration hashes, FE/BE endpoint reachability, and bounded startup
+log markers. Run it with `uv run --group flight-sql` before
+`benchmark-doris-flight`; the latter compares the default PyMySQL row path with ADBC qmark queries,
+Arrow table/RecordBatch consumption, a reducer, and bounded hydration batches. Neither command
+changes the default MySQL/DDL/Stream Load path. Because the current Doris producer rejects prepared
+statement parameter exchange, the benchmark-only
+`--allow-unparameterized-flight-fallback` flag can be combined with
+`--reused-connections-only` to render checked literals for a diagnostic run; its report remains
+`partial` and is not a runtime fallback.

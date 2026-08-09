@@ -6,12 +6,12 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from ...domain.models.analytical_dwarf import MaterializationManifest
-from .benchmark_metrics import distribution, measure
-from .doris import DorisConfig
-from .doris_layout import _FAMILIES
-from .manifest import load_manifest
-from .optional import import_optional
+from .....domain.models.analytical_dwarf import MaterializationManifest
+from ...doris import DorisConfig
+from ...doris_layout import _FAMILIES
+from ...manifest import load_manifest
+from ...optional import import_optional
+from ..common.metrics import distribution, measure
 
 
 def doris_queries(

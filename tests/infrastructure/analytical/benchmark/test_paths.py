@@ -8,8 +8,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark import _doris_measurement
-from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark_doris_queries import (
+from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.common.runner import (
+    _doris_measurement,
+)
+from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.doris.queries import (
     doris_queries,
     doris_table_name,
     quote_doris_identifier,
@@ -253,11 +255,11 @@ def test_doris_query_suite_runs_related_queries_with_source_binding() -> None:
     )
     with (
         patch(
-            "ddon_dwarf_reconstructor.infrastructure.analytical.benchmark_doris_queries.import_optional",
+            "ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.doris.queries.import_optional",
             return_value=pymysql,
         ),
         patch(
-            "ddon_dwarf_reconstructor.infrastructure.analytical.benchmark_doris_queries._load_manifest_for_benchmark",
+            "ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.doris.queries._load_manifest_for_benchmark",
             return_value=manifest,
         ),
     ):
@@ -279,18 +281,18 @@ def test_existing_doris_measurement_queries_without_reloading(tmp_path: Path) ->
     manifest = tmp_path / "manifest.json"
     with (
         patch(
-            "ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.DorisConfig.from_environment",
+            "ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.common.runner.DorisConfig.from_environment",
             return_value=DorisConfig(database="test_db", table="dwarf"),
         ),
         patch(
-            "ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.build_doris_plan",
+            "ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.common.runner.build_doris_plan",
             return_value=_plan(tmp_path),
         ),
         patch(
-            "ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.DorisLoader.execute"
+            "ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.common.runner.DorisLoader.execute"
         ) as execute,
         patch(
-            "ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.doris_queries",
+            "ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.common.runner.doris_queries",
             return_value=[{"query": "find_definitions", "status": "complete", "matches": 1}],
         ),
     ):

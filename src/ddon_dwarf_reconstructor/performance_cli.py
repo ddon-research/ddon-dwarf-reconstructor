@@ -403,7 +403,7 @@ def benchmark_dwarf_store(
     ),
 ) -> None:
     """Benchmark one-pass materialization and available analytical projections."""
-    from .infrastructure.analytical import run_store_benchmark
+    from .infrastructure.analytical.benchmark import run_store_benchmark
 
     report = run_store_benchmark(
         elf,
@@ -417,6 +417,71 @@ def benchmark_dwarf_store(
         allow_incomplete=allow_incomplete,
         run_knowledge_export=run_knowledge_export,
     )
+    typer.echo(json.dumps(report, indent=2, sort_keys=True))
+
+
+@app.command("benchmark-doris-flight")
+def benchmark_doris_flight(
+    store_manifest: Path = typer.Option(
+        ..., "--store-manifest", help="Complete source-bound manifest already loaded in Doris."
+    ),
+    output_dir: Path = typer.Option(..., "--output-dir", help="External benchmark artifact root."),
+    symbol: list[str] = typer.Option(
+        ["MtObject", "rLayout"], "--symbol", "-s", help="Definition query; repeat as needed."
+    ),
+    iterations: int = typer.Option(3, "--iterations", min=1, max=20),
+    include_mysql: bool = typer.Option(
+        True,
+        "--include-mysql/--flight-only",
+        help="Run the PyMySQL row baseline alongside Flight SQL.",
+    ),
+    allow_unparameterized_fallback: bool = typer.Option(
+        False,
+        "--allow-unparameterized-flight-fallback/--no-unparameterized-flight-fallback",
+        help="Render checked SQL literals when Doris rejects Flight parameter upload.",
+    ),
+    include_cold_connections: bool = typer.Option(
+        True,
+        "--include-cold-connections/--reused-connections-only",
+        help="Include expensive fresh Flight connection samples in every query shape.",
+    ),
+) -> None:
+    """Compare PyMySQL rows with opt-in ADBC Flight SQL result consumption."""
+    from .infrastructure.analytical.benchmark import run_doris_flight_benchmark
+
+    report = run_doris_flight_benchmark(
+        store_manifest,
+        output_dir,
+        symbols=tuple(symbol),
+        iterations=iterations,
+        include_mysql=include_mysql,
+        allow_unparameterized_fallback=allow_unparameterized_fallback,
+        include_cold_connections=include_cold_connections,
+    )
+    typer.echo(json.dumps(report, indent=2, sort_keys=True))
+
+
+@app.command("check-doris-flight")
+def check_doris_flight(
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        help="Optional external JSON path for the preflight evidence.",
+    ),
+    timeout_seconds: float = typer.Option(3.0, "--timeout-seconds", min=0.1, max=60.0),
+) -> None:
+    """Check the Flight overlay, startup logs, FE port, and advertised BE route."""
+    from .infrastructure.analytical.benchmark import (
+        run_doris_flight_preflight,
+        write_doris_flight_preflight,
+    )
+    from .infrastructure.analytical.doris import DorisConfig
+
+    report = run_doris_flight_preflight(
+        DorisConfig.from_environment(), timeout_seconds=timeout_seconds
+    )
+    if output is not None:
+        report["report_path"] = str(write_doris_flight_preflight(output, report))
     typer.echo(json.dumps(report, indent=2, sort_keys=True))
 
 

@@ -5,6 +5,7 @@ remain available through lazy attributes for explicit inspection and migration
 commands, but are not imported while a normal generation session is composed.
 """
 
+from importlib import import_module
 from typing import Any
 
 from .doris_store import DorisDwarfIndex, DorisDwarfStore
@@ -20,37 +21,24 @@ __all__ = [
     "ParquetDwarfStore",
     "load_analytical_store",
     "materialization_manifest_path",
-    "run_store_benchmark",
 ]
+
+
+_LAZY_IMPORTS: dict[str, tuple[str, str]] = {
+    "DwarfMaterializer": ("materializer", "DwarfMaterializer"),
+    "JsonlDwarfStore": ("jsonl_store", "JsonlDwarfStore"),
+    "MaterializedDwarfIndex": ("jsonl_store", "MaterializedDwarfIndex"),
+    "ParquetDwarfStore": ("parquet_store", "ParquetDwarfStore"),
+    "load_analytical_store": ("artifact_store", "load_analytical_store"),
+    "materialization_manifest_path": ("manifest", "materialization_manifest_path"),
+}
 
 
 def __getattr__(name: str) -> Any:
     """Load explicit artifact tooling only when a caller requests it."""
-    if name == "DwarfMaterializer":
-        from .materializer import DwarfMaterializer
-
-        return DwarfMaterializer
-    if name == "load_analytical_store":
-        from .artifact_store import load_analytical_store
-
-        return load_analytical_store
-    if name == "JsonlDwarfStore" or name == "MaterializedDwarfIndex":
-        from .jsonl_store import JsonlDwarfStore, MaterializedDwarfIndex
-
-        return {
-            "JsonlDwarfStore": JsonlDwarfStore,
-            "MaterializedDwarfIndex": MaterializedDwarfIndex,
-        }[name]
-    if name == "ParquetDwarfStore":
-        from .parquet_store import ParquetDwarfStore
-
-        return ParquetDwarfStore
-    if name == "materialization_manifest_path":
-        from .manifest import materialization_manifest_path
-
-        return materialization_manifest_path
-    if name == "run_store_benchmark":
-        from .benchmark import run_store_benchmark
-
-        return run_store_benchmark
-    raise AttributeError(name)
+    try:
+        module_name, attribute_name = _LAZY_IMPORTS[name]
+    except KeyError:
+        raise AttributeError(name) from None
+    module = import_module(f".{module_name}", __name__)
+    return getattr(module, attribute_name)

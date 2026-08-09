@@ -5,13 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, cast
 
-from ...domain.ports.dwarf_lookup import DwarfLookupPort
-from ...domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
-from ...domain.services.search_result import SearchResult
-from ..artifacts import SourceIdentityCatalog
-from ..config import DwarfRuntimeConfig
-from ..elf_session import ElfDwarfSession
-from .benchmark_metrics import distribution, measure
+from .....domain.ports.dwarf_lookup import DwarfLookupPort
+from .....domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
+from .....domain.services.search_result import SearchResult
+from ....artifacts import SourceIdentityCatalog
+from ....config import DwarfRuntimeConfig
+from ....elf_session import ElfDwarfSession
+from .metrics import distribution, measure
 
 
 def current_runtime_baseline(
