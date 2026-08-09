@@ -38,6 +38,36 @@ runner = StableCliRunner()
 
 
 @pytest.mark.unit
+def test_inspect_dwarf_store_accepts_relocated_source_override(mocker, tmp_path: Path) -> None:
+    manifest = tmp_path / "manifest.json"
+    source = tmp_path / "input.elf"
+    manifest.write_text("{}", encoding="utf-8")
+    source.write_bytes(b"elf")
+
+    store = mocker.Mock()
+    store.manifest_path = manifest
+    store.manifest.to_dict.return_value = {}
+    store.unit_count = 1
+    store.die_count = 2
+    store.definition_name_count = 3
+    load_store = mocker.patch(
+        "ddon_dwarf_reconstructor.infrastructure.analytical.load_analytical_store",
+        return_value=store,
+    )
+
+    result = runner.invoke(app, ["inspect-dwarf-store", str(manifest), "--source", str(source)])
+
+    assert result.exit_code == 0, result.stdout
+    load_store.assert_called_once_with(
+        manifest,
+        verify_source=True,
+        source_path=source,
+        allow_incomplete=False,
+        verify_artifacts=True,
+    )
+
+
+@pytest.mark.unit
 def test_inspect_reports_missing_dump_index(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -26,6 +26,22 @@ Scalene is the default deep profiler. py-spy is allowed to remain partial on Win
 sampling permissions prevent attachment. pyperformance and Locust are not application harnesses:
 the former is a broad Python implementation suite and the latter is for service load testing.
 
+The normal Scalene adapter explicitly enables the experimental memory leak detector. An optional
+`scalene-libraries` profiler mode broadens tracing with `--profile-all --profile-system-libraries`
+for dependency and standard-library comparison; it is excluded from the `all` selector because
+the broad report is diagnostic and can dilute application attribution. cProfile remains an
+optional deterministic call-count cross-check because it exposes builtin/native call surfaces
+that sampled Scalene output does not reproduce exactly. py-spy `dump` is retained as an operator
+snapshot path, separate from the bounded `record` adapter.
+
+The Linux compatibility boundary is a separate pinned Compose image with read-only source/input
+mounts and external output, log, cache, profile, and history mounts. Its py-spy adapter uses
+nonblocking 5 Hz sampling on CPython 3.14; wrapper-only Scalene output remains non-actionable until
+the retained JSON contains reconstructor source-line frames. For module workloads, the Scalene
+adapter sets the package-root `--program-path` and excludes `scalene_target.py`; this preserves
+Scalene's standard-library exclusion while allowing the complete application tree to be sampled.
+`--profile-all` plus a package `--profile-only` filter remains an explicit diagnostic fallback.
+
 ## Iteration order
 
 1. Contract and taxonomy tests.

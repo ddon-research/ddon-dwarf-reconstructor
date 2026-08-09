@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from unittest.mock import Mock
 
 import pytest
@@ -24,8 +25,8 @@ def _die(tag: str, offset: int = 1, attributes: dict[str, Mock] | None = None) -
     return die
 
 
-def _attr(value: object) -> Mock:
-    return Mock(value=value)
+def _attr(value: object, form: str = "") -> Mock:
+    return Mock(value=value, form=form)
 
 
 @pytest.mark.unit
@@ -59,6 +60,92 @@ def test_parse_enum_handles_integer_bytes_and_invalid_values() -> None:
         ("Zero", 0),
         ("Minus", -1),
     ]
+
+
+@pytest.mark.unit
+def test_parse_enum_accepts_exact_decimal_values_from_analytical_rows() -> None:
+    parser = _parser()
+    enum = _die(
+        "DW_TAG_enumeration_type",
+        offset=0x100,
+        attributes={"DW_AT_name": _attr(b"ValueType"), "DW_AT_byte_size": _attr(4)},
+    )
+    enum.iter_children.return_value = [
+        _die(
+            "DW_TAG_enumerator",
+            offset=0x110,
+            attributes={
+                "DW_AT_name": _attr(b"VTYPE_F64"),
+                "DW_AT_const_value": _attr(Decimal("8"), "DW_FORM_sdata"),
+            },
+        )
+    ]
+
+    result = parser.parse_enum(enum)
+
+    assert result is not None
+    assert [(item.name, item.value) for item in result.enumerators] == [("VTYPE_F64", 8)]
+
+
+@pytest.mark.unit
+def test_parse_enum_uses_referenced_unsigned_base_type_and_width() -> None:
+    parser = _parser()
+    enum = _die(
+        "DW_TAG_enumeration_type",
+        attributes={"DW_AT_name": _attr(b"ByteValue"), "DW_AT_byte_size": _attr(1)},
+    )
+    unsigned_type = _die(
+        "DW_TAG_base_type",
+        attributes={"DW_AT_encoding": _attr(0x07)},
+    )
+    enum.attributes["DW_AT_type"] = _attr(0x200)
+    enum.get_DIE_from_attribute.return_value = unsigned_type
+    enum.iter_children.return_value = [
+        _die(
+            "DW_TAG_enumerator",
+            attributes={
+                "DW_AT_name": _attr(b"Max"),
+                "DW_AT_const_value": _attr(255, "DW_FORM_udata"),
+            },
+        ),
+        _die(
+            "DW_TAG_enumerator",
+            attributes={
+                "DW_AT_name": _attr(b"TooWide"),
+                "DW_AT_const_value": _attr(256, "DW_FORM_udata"),
+            },
+        ),
+    ]
+
+    result = parser.parse_enum(enum)
+
+    assert result is not None
+    assert [(item.name, item.value) for item in result.enumerators] == [("Max", 255)]
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("raw_value", "form", "byte_size", "expected"),
+    [
+        (-128, "DW_FORM_sdata", 1, -128),
+        (127, "DW_FORM_sdata", 1, 127),
+        (128, "DW_FORM_sdata", 1, None),
+        (-1, "DW_FORM_udata", 1, None),
+        ("42", "DW_FORM_data4", 4, 42),
+        (1.5, "DW_FORM_sdata", 4, None),
+    ],
+)
+def test_enumerator_value_respects_form_and_declared_width(
+    raw_value: object, form: str, byte_size: int, expected: int | None
+) -> None:
+    assert (
+        ClassParser._enumerator_value(
+            raw_value,
+            form=form,
+            byte_size=byte_size,
+        )
+        == expected
+    )
 
 
 @pytest.mark.unit

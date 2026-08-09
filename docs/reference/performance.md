@@ -15,10 +15,31 @@ The `performance` group is the canonical opt-in resource and profiler interface:
 | `performance history compare` | Compare compatible historical runs |
 | `performance history export` | Write deterministic JSON, CSV, and Markdown |
 
-`profile` accepts repeatable `--profiler` values: `scalene`, `cprofile`, `pyinstrument`, `py-spy`,
-and `tracemalloc`. Use `--profiler all` for the four cross-check profilers except tracemalloc;
-request tracemalloc explicitly when Python allocation snapshots are needed. Missing tools are
+`profile` accepts repeatable `--profiler` values: `scalene`, `scalene-libraries`, `cprofile`,
+`pyinstrument`, `py-spy`, and `tracemalloc`. Use `--profiler all` for the four normal cross-check
+profilers except tracemalloc. `scalene-libraries` is an explicit broad diagnostic and is not part
+of `all`; request tracemalloc explicitly when Python allocation snapshots are needed. Missing tools are
 recorded as `unavailable`; timeout or child failures are `partial`.
+
+## Linux container contract
+
+`ops/reconstructor/compose.yaml` provides the explicit Linux/amd64 profiling environment. It pins
+CPython 3.14.6 and uv, installs the locked `test`, `performance`, and `analytical` groups into an
+image-local `/opt/venv`, and bind-mounts the source read-only. `/workspace/output` and
+`/workspace/logs` publish normal application artifacts; `/artifacts` publishes profiler output,
+DWARF cache files, history databases, and exported reports. Use a separate history database under
+`/artifacts/history` so container runs cannot mutate the tracked ledger.
+
+The normal service has no additional Linux capability. The `reconstructor-py-spy` service is
+available only through the `py-spy` Compose profile and adds `SYS_PTRACE` for child-process stack
+inspection. The optional `reconstructor-doris` service joins the existing analytical Compose
+network; its `reconstructor-doris-py-spy` variant combines both profiles for serving-backend
+profiling. A permission failure must remain a blocked or partial profiler result. Do not infer
+line-level Scalene conclusions unless the retained JSON contains reconstructor source-line frames;
+wrapper-only or process-only output is non-actionable evidence.
+The py-spy adapter uses nonblocking 5 Hz sampling on CPython 3.14 container runs because the 100 Hz
+default can let the profiler dominate the workload before it writes speedscope output. Sampling
+errors remain part of the evidence and do not become exact CPU attribution.
 
 `profile-index` wraps `artifacts rebuild-dump-index` and records the compressed dump as the source
 identity. It defaults to the low-overhead process sampler; request a profiler explicitly for a
@@ -33,8 +54,7 @@ method implementation by declaration reference. Add
 opt-in because it may perform a full scan. A baseline or backend that was not actually run is marked
 `not_observed`, `unavailable`, or `blocked`; it is never silently promoted to acceptance evidence.
 Doris execution is opt-in with `--run-doris`. After a complete native load, use
-`--query-existing-doris --skip-file-queries` to run the same serving-backend
-query suite without reloading files or repeating the full Parquet scan. `--run-doris` and
+`--query-existing-doris` to run the serving-backend query suite without reloading files. `--run-doris` and
 `--query-existing-doris` are mutually exclusive. Add `--run-knowledge-export` to run the complete
 store-backed knowledge-export workflow for the selected symbols and record output hashes; this
 also remains explicit because it writes a potentially large external bundle.
@@ -48,7 +68,7 @@ separate evidence surfaces:
 uv run ddon-dwarf-reconstructor performance profile-dwarf-store <ELF> `
   --store-manifest <complete-manifest.json> `
   --output-dir $env:TEMP/ddon-analytical-dwarf/profiled-doris-query `
-  --query-existing-doris --skip-file-queries `
+  --query-existing-doris `
   --symbol rLayout --symbol MtObject --iterations 5 `
   --profiler scalene --profiler cprofile
 ```
@@ -57,6 +77,39 @@ Scalene/cProfile measure the Python client and orchestration only; Doris backend
 bytes/rows, tablet pruning, spills, and operator time must come from the matching Doris CLI
 `EXPLAIN` and `profile get --full` records. Do not infer a database index change from a Python
 hotspot or from a profiler run that failed to publish line attribution.
+
+For module workloads, the Scalene adapter passes `--program-path` for the complete package source
+tree (`/workspace/src/ddon_dwarf_reconstructor` in the Linux image) and excludes `scalene_target.py`,
+the small wrapper that preserves `python -m` execution. This recovers package line attribution without enabling
+standard-library and site-package tracing. It intentionally does not pass Scalene's
+`--profile-all`; that flag is an explicit diagnostic fallback when combined with
+`--profile-only /workspace/src/ddon_dwarf_reconstructor` and the wrapper exclusion. The CLI's
+`--profiler all` is unrelated: it expands the repository's profiler list.
+
+Every Scalene invocation explicitly passes `--memory-leak-detector`. The current upstream default is
+also enabled, but the explicit flag makes the experimental detector part of the recorded command.
+An optional `--profiler scalene-libraries` run uses `--profile-all --profile-system-libraries` with
+the wrapper excluded and no package-only filter, exposing standard-library and site-package frames.
+This broad profile is separate from `--profiler all` and is intended for library replacement or
+algorithm comparison, not for the normal application hotspot report. Empty Scalene `leaks` maps
+are reported as `scalene_leak_records=0` (“no likely leaks identified”) for that workload, not as
+proof of leak freedom.
+
+Use `--cpu-only` for a lower-size CPU-line profile. Retain the default full Scalene mode when
+per-line memory evidence is required. In either mode, wrapper-only JSON is partial evidence and
+cannot support a source-line action item.
+
+Keep cProfile as an explicit deterministic cross-check even when Scalene has usable line
+attribution. On the bounded Linux query, cProfile exposed 104,672 `posix.lstat` calls and 71.099 s
+self time through repeated `Path.resolve()` calls; Scalene identified the surrounding application
+lines and native time but did not provide the same exact call-count surface. cProfile therefore
+remains useful for validating call counts and library/builtin alternatives, while Scalene remains
+the primary CPU/native/memory/leak profiler.
+
+The py-spy adapter remains useful for external live-process evidence. Use `py-spy dump --pid` for a
+single in-process stack snapshot and `py-spy record` for bounded sampled traces; the latter is the
+repository adapter's 5 Hz nonblocking mode. These are wall-clock/frame observations, not exact
+deterministic call totals.
 
 Use `profile-materializer` before changing Parquet batching, writer rotation, or DWARF row
 conversion. It runs each requested profiler against a separate bounded target directory using the
@@ -71,7 +124,7 @@ uv run ddon-dwarf-reconstructor performance profile-materializer <ELF> `
 
 The command is diagnostic only. Its bounded outputs are not generation, Doris, or CU-completeness
 inputs; use cProfile method totals and py-spy line stacks for CPU localization, and treat Scalene
-as non-actionable when Windows/CPython reports only profiler or launcher attribution.
+as non-actionable when the retained run reports only profiler or launcher attribution.
 
 For a long traversal that was started with `--checkpoint-every-cus N`, a diagnostic benchmark can
 read the latest committed snapshot while the producer continues:

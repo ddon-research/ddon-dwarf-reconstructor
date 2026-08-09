@@ -34,7 +34,11 @@ def profile_dwarf_store(
     iterations: int = typer.Option(3, "--iterations", min=1, max=20),
     allow_incomplete: bool = typer.Option(False, "--allow-incomplete"),
     run_knowledge_export: bool = typer.Option(False, "--run-knowledge-export"),
-    profiler: list[str] = typer.Option([], "--profiler", help="Profiler; repeat or use all."),
+    profiler: list[str] = typer.Option(
+        [],
+        "--profiler",
+        help="Profiler: scalene, scalene-libraries, cprofile, pyinstrument, py-spy, or tracemalloc; repeat or use all.",
+    ),
     artifact_dir: Path | None = typer.Option(None, "--artifact-dir"),
     history_db: Path | None = typer.Option(None, "--history-db"),
     timeout_seconds: float = typer.Option(300.0, "--timeout-seconds", min=0.1),

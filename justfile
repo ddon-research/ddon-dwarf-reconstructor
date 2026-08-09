@@ -88,6 +88,12 @@ analytical-fixture:
 analytical-compose-config:
     docker compose --file ops/analytical-dwarf/compose.yaml config --quiet
 
+reconstructor-container-config:
+    docker compose --file ops/reconstructor/compose.yaml config --quiet
+    docker compose --file ops/reconstructor/compose.yaml --profile py-spy config --quiet
+    docker compose --file ops/reconstructor/compose.yaml --profile doris config --quiet
+    docker compose --file ops/reconstructor/compose.yaml --profile doris --profile py-spy config --quiet
+
 test:
     uv run pytest -m "not performance and not packaging and not real_asset"
 

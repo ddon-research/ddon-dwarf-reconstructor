@@ -11,6 +11,25 @@ The standard non-proprietary external-tool baseline is
 outside the repository. Sony SDKs, SELF credentials, and proprietary binaries are never copied
 into the container.
 
+## Linux compatibility and profiling deployment
+
+`ops/reconstructor/compose.yaml` is a separate developer-only image for Linux compatibility checks
+and opt-in performance evidence. It uses pinned CPython 3.14.6 and uv dependencies, mounts the
+checkout read-only at `/workspace`, and publishes application logs, generated output, source-bound
+caches, raw profiler files, and an external history database through explicit host mounts. The
+image does not contain ELF files, compressed DWARF dumps, Doris, Sony SDKs, credentials, or generated
+artifacts.
+
+The default service has no extra host privileges. The `py-spy` Compose profile adds only
+`SYS_PTRACE`; `pid: host` and unrestricted seccomp are not part of the normal contract. If a local
+Docker runtime requires further process-inspection permission, that is a separately labelled
+environmental blocker rather than a reason to grant the normal service broader access.
+
+The container connects to the existing Doris Compose project through `host.docker.internal` when
+the analytical store workflow needs the serving backend. Doris load, tablet, statistics, and query
+profile evidence remains owned by the analytical service and is not inferred from Python profiler
+output.
+
 ## Documentation deployment
 
 Zensical builds the checked-in `docs/` tree into `site/`. The repository's Pages workflow installs

@@ -59,9 +59,37 @@ configuration fingerprint, and profiler mode. It emits deltas without auto-learn
 When `performance history export` runs, JSON, CSV, and Markdown outputs are deterministic across
 repeated exports and label missing evidence explicitly.
 
+### Scenario 6: Linux container boundary
+
+Given the pinned Compose image and explicit read-only input mounts, when the Linux smoke workflow
+runs, it reports CPython 3.14.6, the locked profiler availability, and durable host-mounted logs,
+outputs, raw profiles, caches, and external history. The default service has no profiling
+capability; the py-spy profile adds `SYS_PTRACE` only for the requested child-process trace.
+
+Scalene line attribution is accepted as actionable only when retained Linux JSON contains
+reconstructor source-line frames. A missing artifact, permission failure, or wrapper-only result is
+recorded with its evidence status and does not replace another profiler or the process baseline.
+For canonical module workloads, the adapter scopes Scalene to the package root with
+`--program-path` and excludes `scalene_target.py`; `--profile-all` is reserved for an explicit
+diagnostic matrix run with a package `--profile-only` filter. The CPU-only mode is valid for CPU
+line evidence but does not satisfy a memory-attribution requirement.
+Every Scalene invocation explicitly passes `--memory-leak-detector`. An optional
+`--profiler scalene-libraries` mode uses `--profile-all --profile-system-libraries` with no
+package-only filter so dependency and standard-library frames can be compared; it is not included
+in `--profiler all`. Empty `leaks` maps are recorded as no likely leak identified for that run,
+with `scalene_leak_records=0`, not as proof of leak absence. cProfile remains a deterministic
+call-count cross-check, and
+`py-spy dump --pid` remains an external point-in-time snapshot path while `py-spy record` supplies
+bounded sampled frames.
+The py-spy adapter uses bounded nonblocking 5 Hz sampling so external sampling remains usable on
+CPython 3.14 under Docker/WSL2; sampling errors, profiler-only timeouts, or a missing speedscope
+file remain partial evidence.
+
 ## Non-goals
 
 - Memray on Windows, ETW/PerfView, remote dashboards, Locust load testing, or hosted real-asset CI.
 - Always-on parser/generator instrumentation or changes to generated headers.
 - Treating a real-asset or profiler skip as a replacement for deterministic evidence.
 - Auto-learning performance thresholds from environmental history.
+- Bundling Doris, proprietary ELF/DWARF inputs, SDKs, credentials, or generated artifacts into the
+  profiling image.

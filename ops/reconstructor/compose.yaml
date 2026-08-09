@@ -1,0 +1,92 @@
+name: ddon-reconstructor-linux
+
+x-reconstructor-environment: &reconstructor-environment
+  DDON_DORIS_HTTP_URL: ${DDON_DORIS_HTTP_URL:-http://host.docker.internal:8030}
+  DDON_DORIS_STREAM_LOAD_URL: ${DDON_DORIS_STREAM_LOAD_URL:-http://host.docker.internal:8040}
+  DDON_DORIS_SQL_HOST: ${DDON_DORIS_SQL_HOST:-host.docker.internal}
+  DDON_DORIS_SQL_PORT: ${DDON_DORIS_SQL_PORT:-9030}
+  DDON_PERFORMANCE_ARTIFACT_DIR: /artifacts/profiles
+  DWARF_CACHE_DIR: /artifacts/cache
+  GIT_CONFIG_COUNT: "1"
+  GIT_CONFIG_KEY_0: safe.directory
+  GIT_CONFIG_VALUE_0: /workspace
+  HOME: /home/ddon
+  PATH: /opt/venv/bin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  PYTHONFAULTHANDLER: "1"
+  PYTHONUNBUFFERED: "1"
+  UV_CACHE_DIR: /artifacts/uv-cache
+  UV_NO_SYNC: "1"
+  UV_PROJECT_ENVIRONMENT: /opt/venv
+
+x-reconstructor-defaults: &reconstructor-defaults
+  build:
+    context: ../..
+    dockerfile: ops/reconstructor/Dockerfile
+    args:
+      DDON_UID: ${DDON_UID:-1000}
+      DDON_GID: ${DDON_GID:-1000}
+  image: ddon-reconstructor:py3.14.6-uv0.12.1
+  platform: linux/amd64
+  working_dir: /workspace
+  user: "${DDON_UID:-1000}:${DDON_GID:-1000}"
+  init: true
+  restart: "no"
+  environment: *reconstructor-environment
+  volumes:
+    - type: bind
+      source: ../..
+      target: /workspace
+      read_only: true
+    - type: bind
+      source: ${DDON_RECONSTRUCTOR_OUTPUT_DIR:-../../output}
+      target: /workspace/output
+    - type: bind
+      source: ${DDON_RECONSTRUCTOR_LOG_DIR:-../../logs}
+      target: /workspace/logs
+    - type: bind
+      source: ${DDON_RECONSTRUCTOR_INPUT_DIR:-../../resources}
+      target: /inputs
+      read_only: true
+    - type: bind
+      source: ${DDON_RECONSTRUCTOR_ARTIFACT_DIR:-../../output/reconstructor-linux}
+      target: /artifacts
+  extra_hosts:
+    - host.docker.internal:host-gateway
+  command: ["--help"]
+
+services:
+  reconstructor:
+    <<: *reconstructor-defaults
+
+  reconstructor-py-spy:
+    <<: *reconstructor-defaults
+    profiles:
+      - py-spy
+    cap_add:
+      - SYS_PTRACE
+
+  reconstructor-doris: &reconstructor-doris
+    <<: *reconstructor-defaults
+    profiles:
+      - doris
+    environment:
+      <<: *reconstructor-environment
+      DDON_DORIS_HTTP_URL: http://fe:8030
+      DDON_DORIS_STREAM_LOAD_URL: http://be:8040
+      DDON_DORIS_SQL_HOST: fe
+      DDON_DORIS_SQL_PORT: "9030"
+    networks:
+      - doris
+
+  reconstructor-doris-py-spy:
+    <<: *reconstructor-doris
+    profiles:
+      - doris
+      - py-spy
+    cap_add:
+      - SYS_PTRACE
+
+networks:
+  doris:
+    name: ${DDON_DORIS_NETWORK:-ddon-analytical-dwarf_default}
+    external: true

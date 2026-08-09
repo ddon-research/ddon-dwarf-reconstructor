@@ -89,4 +89,12 @@ def _json_load(value: Any, default: Any) -> Any:
 def _integer_value(value: Any) -> int | None:
     if isinstance(value, Decimal):
         return int(value)
-    return value if isinstance(value, int) and not isinstance(value, bool) else None
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    digits = text[1:] if text.startswith(("+", "-")) else text
+    if not digits or any(character not in "0123456789" for character in digits):
+        return None
+    return int(text, 10)

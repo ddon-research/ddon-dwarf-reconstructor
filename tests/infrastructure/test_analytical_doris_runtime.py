@@ -13,6 +13,7 @@ from ddon_dwarf_reconstructor.infrastructure.analytical.doris import DorisConfig
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris_models import DorisDwarfInfo
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris_queries import DorisQueryExecutor
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris_registry import validate_registry
+from ddon_dwarf_reconstructor.infrastructure.analytical.doris_rows import restore_row
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris_store import DorisDwarfStore
 
 SOURCE_ID = "a" * 64
@@ -147,6 +148,23 @@ def test_doris_store_hydrates_attributes_children_references_and_dwarf_info() ->
     assert die.get_DIE_from_attribute("DW_AT_type") is unit.get_top_DIE()
     assert store.find_primary_definition("Thing").status is QueryStatus.COMPLETE
     assert tuple(store.dwarf_info.iter_CUs()) == (unit,)
+
+
+@pytest.mark.unit
+@pytest.mark.functional
+def test_restore_row_converts_doris_largeint_uint_strings() -> None:
+    row = {
+        "record_type": "attribute",
+        "decoded_value_kind": "uint",
+        "decoded_value_uint": "8",
+        "raw_value_kind": "uint",
+        "raw_value_uint": "8",
+    }
+
+    restored = restore_row(row)
+
+    assert restored["decoded_value"] == 8
+    assert restored["raw_value"] == 8
 
 
 def _runtime_rows() -> dict[str, list[dict[str, object]]]:

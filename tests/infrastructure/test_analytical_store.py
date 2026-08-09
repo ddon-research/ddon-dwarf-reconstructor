@@ -558,6 +558,25 @@ def test_benchmark_report_preserves_unobserved_doris_status(tmp_path: Path) -> N
     assert report["measurements"]["doris"]["status"] in {"not_observed", "blocked"}
 
 
+def test_benchmark_verifies_supplied_elf_against_relocated_store(tmp_path: Path) -> None:
+    source = tmp_path / "sample.elf"
+    source.write_bytes(b"ELF!")
+    with (
+        patch(
+            "ddon_dwarf_reconstructor.infrastructure.analytical.materializer.ElfDwarfSession",
+            lambda path: _Session(path, _fixture_dwarf()),
+        ),
+        patch(
+            "ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.load_analytical_store",
+            wraps=load_analytical_store,
+        ) as load_store,
+    ):
+        run_store_benchmark(source, tmp_path / "benchmark", symbols=("Thing",))
+
+    assert load_store.call_args is not None
+    assert load_store.call_args.kwargs["source_path"] == source
+
+
 def test_store_discovery_refuses_cu_scan_after_analytical_miss() -> None:
     query_port = Mock()
     query_port.find_primary_definition.return_value = QueryResult(QueryStatus.NOT_FOUND, ())

@@ -1,0 +1,9 @@
+{
+  "checked_at": "2026-08-08",
+  "platform": "linux/amd64",
+  "images": {
+    "docker.io/library/python:3.14.6-slim-bookworm": "sha256:4c92ffcde4dd6f1ff72a24518f49fd4990b27134987dfa31a733badde66df9f8",
+    "ghcr.io/astral-sh/uv:0.12.1": "sha256:cf4eedcaa81655197f625739489effcbe71b61ceb1506f332c3facae5deceded"
+  },
+  "status": "registry_digest_pinned"
+}

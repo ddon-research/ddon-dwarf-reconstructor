@@ -53,7 +53,11 @@ def run_store_benchmark(
         store_manifest,
     )
     store, load_metrics = measure(
-        lambda: load_analytical_store(store_manifest, allow_incomplete=allow_incomplete)
+        lambda: load_analytical_store(
+            store_manifest,
+            source_path=elf,
+            allow_incomplete=allow_incomplete,
+        )
     )
     measurements["load_store"] = {
         "status": "partial" if store.manifest.status != "complete" else "observed",

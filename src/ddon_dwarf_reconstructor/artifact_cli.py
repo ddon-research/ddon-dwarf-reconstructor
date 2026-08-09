@@ -245,6 +245,11 @@ def _run_materialization(request: DwarfMaterializationRequest) -> None:
 @app.command("inspect-dwarf-store")
 def inspect_dwarf_store(
     manifest: Path = typer.Argument(..., help="Analytical store manifest."),
+    source_path: Path | None = typer.Option(
+        None,
+        "--source",
+        help="Source ELF used to verify a manifest relocated from its recorded path.",
+    ),
     verify_source: bool = typer.Option(
         True,
         "--verify-source/--no-verify-source",
@@ -264,6 +269,7 @@ def inspect_dwarf_store(
         store = load_analytical_store(
             manifest,
             verify_source=verify_source,
+            source_path=source_path,
             allow_incomplete=allow_incomplete,
             verify_artifacts=True,
         )

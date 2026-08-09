@@ -85,7 +85,11 @@ def profile(
         "export-knowledge", help="Canonical command: generate or export-knowledge."
     ),
     state: ColdWarmState = typer.Option(ColdWarmState.WARM, help="Measured cache state."),
-    profiler: list[str] = typer.Option([], "--profiler", help="Profiler; repeat or use all."),
+    profiler: list[str] = typer.Option(
+        [],
+        "--profiler",
+        help="Profiler: scalene, scalene-libraries, cprofile, pyinstrument, py-spy, or tracemalloc; repeat or use all.",
+    ),
     output_dir: Path | None = typer.Option(
         None, "--output-dir", help="Target command output directory."
     ),
@@ -309,7 +313,11 @@ def profile_index(
     dwarf_dump: Path = typer.Argument(..., help="Compressed LLVM DWARF dump to index."),
     index_path: Path | None = typer.Option(None, "--index-path"),
     state: ColdWarmState = typer.Option(ColdWarmState.COLD, help="Measured cache state."),
-    profiler: list[str] = typer.Option([], "--profiler", help="Profiler; repeat or use all."),
+    profiler: list[str] = typer.Option(
+        [],
+        "--profiler",
+        help="Profiler: scalene, scalene-libraries, cprofile, pyinstrument, py-spy, or tracemalloc; repeat or use all.",
+    ),
     artifact_dir: Path | None = typer.Option(None, "--artifact-dir"),
     history_db: Path | None = typer.Option(None, "--history-db"),
     timeout_seconds: float = typer.Option(3600.0, "--timeout-seconds", min=0.1),

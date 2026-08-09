@@ -9,12 +9,35 @@ behavior. It is an opt-in workflow: normal generation does not import or run a p
 - Profiling tools installed with `uv run just performance-tools-install`.
 - A deterministic fixture for gated checks, or explicit local ELF/store/dump paths for environmental
   evidence. Proprietary inputs and raw profiles stay outside Git.
+- For Linux compatibility and Scalene line attribution, Docker Desktop or Docker Engine with the
+  [pinned image workflow](https://github.com/ddon-research/ddon-dwarf-reconstructor/blob/main/ops/reconstructor/README.md).
 
 Check the current environment first:
 
 ```powershell
 uv run ddon-dwarf-reconstructor performance doctor
 ```
+
+## Linux container smoke check
+
+The container workflow keeps the source and inputs read-only while mounting logs, generated output,
+DWARF caches, raw profiler files, and the performance history database separately:
+
+```powershell
+uv run just reconstructor-container-config
+docker compose --file ops/reconstructor/compose.yaml build
+docker compose --file ops/reconstructor/compose.yaml run --rm reconstructor performance doctor
+docker compose --file ops/reconstructor/compose.yaml run --rm reconstructor `
+  performance benchmark --iterations 1 `
+  --timeout-seconds 120 `
+  --artifact-dir /artifacts/profiles/fixture `
+  --history-db /artifacts/history/fixture.sqlite3
+```
+
+The image reports the exact project CPython version and installs the `test`, `performance`, and
+`analytical` uv groups from `uv.lock` with `uv sync --frozen`. Use `DDON_RECONSTRUCTOR_INPUT_DIR` for an explicit external
+asset directory; never copy a proprietary ELF or compressed dump into the image. Full mount and
+override details are in the [container operator guide](https://github.com/ddon-research/ddon-dwarf-reconstructor/blob/main/ops/reconstructor/README.md).
 
 ## Deterministic fixture
 
@@ -28,6 +51,71 @@ uv run ddon-dwarf-reconstructor performance benchmark --iterations 1
 The runner records wall time, CPU user/system time, peak RSS/VMS, process read/write counters,
 sample count, bounded stdout/stderr, and an atomic manifest. `benchmark` additionally uses pyperf
 for repeated command values and stores its JSON result as an external artifact.
+
+## Linux profiler comparison
+
+Run one unprofiled process-sampler baseline and then repeat the same workload as independent
+Scalene, cProfile, pyinstrument, and py-spy runs. The container's default service is unprivileged;
+run analytical-store profiling through the `doris` service profile, and run py-spy through the
+combined `doris`/`py-spy` profile, which adds `SYS_PTRACE`:
+
+```powershell
+docker compose --file ops/reconstructor/compose.yaml --profile doris --profile py-spy run --rm reconstructor-doris-py-spy `
+  performance profile /inputs/DDOORBIS.elf `
+  --dwarf-store /workspace/output/analytical-dwarf/main/store-<source-sha16>/manifest.json `
+  --symbol rLayout --state warm --profiler py-spy `
+  --artifact-dir /artifacts/profiles/linux-py-spy `
+  --history-db /artifacts/history/linux.sqlite3
+```
+
+Do not use a host PID namespace by default. If `SYS_PTRACE` is insufficient, one diagnostic run
+may use an explicitly recorded `seccomp=unconfined` override; the result remains an environmental
+permission observation. Scalene line evidence is actionable only when its retained JSON contains
+non-wrapper reconstructor source-line attribution. Process-only, launcher-only, missing-output,
+and permission-failed results remain partial, blocked, or unavailable.
+
+For the module-wrapper path, the adapter scopes Scalene with
+`--program-path /workspace/src/ddon_dwarf_reconstructor --profile-exclude scalene_target.py`.
+This includes the full application package and removes the wrapper's `runpy.run_module` line while
+keeping standard-library and site-package tracing disabled. `--profile-all` is not the normal
+setting; use it only as an explicit matrix fallback with
+`--profile-only /workspace/src/ddon_dwarf_reconstructor`. The repository's `--profiler all` is a
+separate multi-profiler selector. Use `--cpu-only` for a smaller CPU-only artifact, and keep full
+Scalene when memory attribution is required.
+
+The adapter explicitly enables Scalene's experimental `--memory-leak-detector`. Current Scalene
+also defaults it on. A completed run with empty per-file `leaks` maps reports no likely leaks for
+that workload and records `scalene_leak_records=0`; it is not a proof about native allocations or a
+longer-lived process.
+
+To inspect whether a dependency or standard-library implementation is contributing meaningful
+work, request a separate broad profile:
+
+```powershell
+uv run ddon-dwarf-reconstructor performance profile-dwarf-store <ELF> `
+  --store-manifest <complete-manifest.json> `
+  --output-dir $env:TEMP/ddon-analytical-dwarf/library-profile `
+  --query-existing-doris --symbol rLayout --iterations 1 `
+  --profiler scalene-libraries
+```
+
+`scalene-libraries` uses `--profile-all --profile-system-libraries`, excludes the wrapper, and is
+not part of `--profiler all`; it is deliberately an optional, broader diagnostic view.
+
+The container's py-spy adapter uses nonblocking 5 Hz sampling. Keep that rate and mode for CPython
+3.14 Docker runs: the default 100 Hz setting can spend most of the run in the profiler itself
+before a speedscope file is written. Nonblocking traces may contain sampling errors and remain
+wall-clock/frame evidence rather than exact CPU attribution.
+
+For a point-in-time snapshot of a running process, attach externally with:
+
+```powershell
+py-spy dump --pid <pid> --native --nonblocking --json
+```
+
+`dump` is useful when a process is hung or in a transient phase; `record` remains the repository's
+bounded time-series cross-check. Keep cProfile in the explicit comparison set because it reports
+deterministic call counts and cumulative builtin/library time that sampling does not replace.
 
 ## Warm real-asset profile
 
@@ -68,7 +156,7 @@ Use a larger bounded `--max-cus` only after the small probe has published usable
 command runs each profiler against a separate direct-Zstandard Parquet target and retains the
 process sampler, method/line artifacts, and child diagnostics in the normal performance ledger.
 Do not query or load the partial stores. cProfile and py-spy can support a producer CPU/line
-conclusion; on this Windows/CPython 3.14 setup, Scalene may provide only process/memory evidence
+conclusion; on a CPython 3.14 setup, Scalene may provide only process/memory or launcher evidence
 and must not be used to rank a hot line in that case.
 
 ## Native Python crash triage on Windows
@@ -149,3 +237,16 @@ uv run just performance-history
 The comparison key prevents mixing cold/warm state, source identity, interpreter, machine, config,
 or profiler modes. Real-asset results are report-only. Fixture budgets are explicit checked-in
 thresholds and are never learned from noisy history.
+
+For a container run, export the external ledger rather than the tracked repository ledger:
+
+```powershell
+docker compose --file ops/reconstructor/compose.yaml run --rm reconstructor `
+  performance history export `
+  --history-db /artifacts/history/linux.sqlite3 `
+  --output-dir /artifacts/history/export `
+  --markdown-path /artifacts/history/export/benchmark-history.md
+```
+
+Interpret Windows/Linux deltas as environmental diagnostics unless the source identity, workload,
+cold/warm state, interpreter, image, configuration, and output contract are all explicitly matched.

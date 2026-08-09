@@ -79,10 +79,12 @@ raw artifact boundaries, and the v1 history schema.
 `benchmark-dwarf-store` accepts `--run-knowledge-export` for explicit complete export evidence;
 the command writes the generated bundle and its deterministic tree hash under the external
 benchmark artifact directory. For a database already loaded from the complete manifest, combine
-`--query-existing-doris --skip-file-queries` to measure serving queries without reloading the
-canonical files or rescanning the full Parquet projection.
+`--query-existing-doris` to measure serving queries without reloading the canonical files or
+rescanning the full Parquet projection.
 
 `profile-dwarf-store` wraps that same benchmark through the shared performance runner. Use
 repeatable `--profiler scalene` and `--profiler cprofile` options for line/memory and method CPU
-evidence before changing Doris keys, indexes, buckets, or materialized views. The child benchmark
-report remains separate from the profiler manifests.
+evidence before changing Doris keys, indexes, buckets, or materialized views. Add
+`--profiler scalene-libraries` for an optional standard-library/site-package comparison; it is a
+broad diagnostic and is not included in `--profiler all`. The child benchmark report remains
+separate from the profiler manifests.

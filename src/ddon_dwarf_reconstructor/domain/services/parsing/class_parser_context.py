@@ -268,10 +268,29 @@ class ClassParserOperations(ClassParserImplementationContext, Protocol):
         self, class_name: str, state: ScanState
     ) -> tuple[DwarfCompilationUnit, DwarfEntry]: ...
 
-    def _parse_enumerator(self, enumerator_die: DwarfEntry) -> EnumeratorInfo | None: ...
+    def _parse_enumerator(
+        self,
+        enumerator_die: DwarfEntry,
+        *,
+        enum_die: DwarfEntry | None = None,
+        enum_byte_size: int | None = None,
+        signed: bool | None = None,
+    ) -> EnumeratorInfo | None: ...
 
     @staticmethod
-    def _enumerator_value(raw_value: object) -> int | None: ...
+    def _enumerator_value(
+        raw_value: object,
+        *,
+        form: str = "",
+        byte_size: int | None = None,
+        signed: bool | None = None,
+    ) -> int | None: ...
+
+    @staticmethod
+    def _exact_integer(raw_value: object) -> int | None: ...
+
+    @classmethod
+    def _enum_signedness(cls, enum_die: DwarfEntry) -> bool | None: ...
 
     def _virtual_method_info(self, method_die: DwarfEntry) -> tuple[bool, int | None]: ...
 

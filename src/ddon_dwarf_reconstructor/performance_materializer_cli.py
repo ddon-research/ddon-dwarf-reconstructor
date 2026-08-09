@@ -21,7 +21,11 @@ def profile_materializer(
     parquet_layout: str = typer.Option("family", "--parquet-layout"),
     rotate_writers_every_cus: int = typer.Option(64, "--rotate-writers-every-cus", min=0),
     checkpoint_every_cus: int | None = typer.Option(None, "--checkpoint-every-cus", min=1),
-    profiler: list[str] = typer.Option([], "--profiler", help="Profiler; repeat or use all."),
+    profiler: list[str] = typer.Option(
+        [],
+        "--profiler",
+        help="Profiler: scalene, scalene-libraries, cprofile, pyinstrument, py-spy, or tracemalloc; repeat or use all.",
+    ),
     artifact_dir: Path | None = typer.Option(None, "--artifact-dir"),
     history_db: Path | None = typer.Option(None, "--history-db"),
     timeout_seconds: float = typer.Option(1800.0, "--timeout-seconds", min=0.1),

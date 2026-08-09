@@ -224,6 +224,21 @@ The container does not include Sony SDKs, proprietary binaries, credentials, SEL
 decryption. Mount explicit input directories read-only and keep raw outputs under ignored output
 paths.
 
+The Linux compatibility and profiler image is documented in
+[`ops/reconstructor/README.md`](ops/reconstructor/README.md). It pins CPython 3.14.6 and uv,
+mounts the checkout read-only, publishes logs/output/profiler artifacts to host paths, and enables
+the `SYS_PTRACE` capability only for the opt-in py-spy service:
+
+```text
+uv run just reconstructor-container-config
+docker compose --file ops/reconstructor/compose.yaml build
+docker compose --file ops/reconstructor/compose.yaml run --rm reconstructor performance doctor
+```
+
+The image is a profiling and Linux-compatibility boundary, not a replacement for the normal host
+workflow. Doris remains the separate analytical service, and proprietary inputs stay outside image
+layers and source control.
+
 `inspect-elf` performs an explicit all-CU header/producer pass. `inspect-dwarf-dump` performs an
 explicit streaming pass over the compressed LLVM text and retains only bounded counters. Neither
 command is part of ordinary generation or the default test loop.
@@ -313,6 +328,7 @@ uv run just analytical-materialize # typed Parquet materialization
 uv run just analytical-fixture # deterministic analytical-store fixture tests
 uv run just analytical-benchmark # one-pass and projection benchmark report
 uv run just analytical-compose-config # validate the local Doris Compose file
+uv run just reconstructor-container-config # validate Linux profiling Compose files
 uv run just performance-history # export tracked benchmark history
 uv run just docs-tools-install # install locked Markdown/Mermaid validators
 uv run just docs-serve       # local Zensical preview

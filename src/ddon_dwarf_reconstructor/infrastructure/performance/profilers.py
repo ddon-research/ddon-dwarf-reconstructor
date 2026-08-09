@@ -22,7 +22,10 @@ from ...domain.models.performance import (
 )
 from .runner import PerformanceRunner
 from .runtime import current_runtime
+from .scalene import SCALENE_LIBRARY_PROFILER, scalene_command, scalene_leak_metrics
 from .tooling import discover_tools
+
+PY_SPY_RATE_HZ = 5
 
 
 class PerformanceProfiler:
@@ -47,6 +50,8 @@ class PerformanceProfiler:
         availability: dict[str, ToolAvailability],
     ) -> RunSummary:
         tool = availability.get(name)
+        if tool is None and name == SCALENE_LIBRARY_PROFILER:
+            tool = availability.get("scalene")
         if tool is None:
             return _unavailable_summary(workload, name, "unknown profiler")
         if tool.status != EvidenceStatus.OBSERVED:
@@ -93,8 +98,13 @@ def _spec(name: str, tool: ToolAvailability) -> _ProfilerSpec:
         return _ProfilerSpec(
             name, "py-spy.speedscope.json", "speedscope", _py_spy_command(executable)
         )
-    if name == "scalene":
-        return _ProfilerSpec(name, "scalene.json", "json", _scalene_command(executable))
+    if name.startswith("scalene"):
+        return _ProfilerSpec(
+            name,
+            f"{name}.json",
+            "json",
+            scalene_command(executable, name == SCALENE_LIBRARY_PROFILER),
+        )
     if name == "tracemalloc":
         return _ProfilerSpec(name, "tracemalloc.json", "json", _tracemalloc_command)
     if name == "pyperf":
@@ -112,9 +122,10 @@ def _enrich_summary(summary: RunSummary, profiler: str, path: Path | None) -> Ru
         path if profiler == "pyperf" else None
     )
     allocation_metrics, allocation_diagnostics = parse_allocation_metrics(profiler, path)
+    leak_metrics = scalene_leak_metrics(profiler, path)
     return replace(
         summary,
-        metrics=(*summary.metrics, *pyperf_metrics, *allocation_metrics),
+        metrics=(*summary.metrics, *pyperf_metrics, *allocation_metrics, *leak_metrics),
         method_summaries=method_summaries,
         diagnostics=(
             *summary.diagnostics,
@@ -159,30 +170,14 @@ def _pyinstrument_command(workload: PerformanceWorkload, path: Path) -> tuple[st
     return (sys.executable, "-m", "pyinstrument", "-r", "json", "-o", str(path), *command)
 
 
-def _scalene_command(executable: str) -> Callable[[PerformanceWorkload, Path], tuple[str, ...]]:
-    def command(workload: PerformanceWorkload, path: Path) -> tuple[str, ...]:
-        target = workload.command
-        if len(target) >= 3 and target[1] == "-m":
-            return (
-                executable,
-                "run",
-                "-o",
-                str(path),
-                str(Path(__file__).with_name("scalene_target.py")),
-                "--module",
-                target[2],
-                *target[3:],
-            )
-        return (executable, "run", "-o", str(path), *target)
-
-    return command
-
-
 def _py_spy_command(executable: str) -> Callable[[PerformanceWorkload, Path], tuple[str, ...]]:
     def command(workload: PerformanceWorkload, path: Path) -> tuple[str, ...]:
         return (
             executable,
             "record",
+            "--rate",
+            str(PY_SPY_RATE_HZ),
+            "--nonblocking",
             "--output",
             str(path),
             "--format",
@@ -236,26 +231,34 @@ def parse_method_summaries(
     if path is None or not path.exists():
         return (), (f"{profiler} method output is unavailable",)
     try:
-        if profiler == "cprofile":
-            return _parse_cprofile(path, limit), ()
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        if profiler == "scalene":
-            summaries = _parse_scalene(payload, limit)
-            return (
-                summaries,
-                ()
-                if summaries
-                else ("scalene produced no non-zero CPU or memory line attribution",),
-            )
-        if profiler == "pyinstrument":
-            return _parse_pyinstrument(payload, limit), ()
-        if profiler == "py-spy":
-            return _parse_speedscope(payload, limit), ()
-        if profiler == "tracemalloc":
-            return _parse_tracemalloc(payload, limit), ()
-        return (), ()
+        return _parse_method_file(profiler, path, limit)
     except (EOFError, OSError, ValueError, KeyError, TypeError) as error:
         return (), (f"{profiler} method output could not be parsed: {error}",)
+
+
+def _parse_method_file(
+    profiler: str, path: Path, limit: int
+) -> tuple[tuple[MethodSummary, ...], tuple[str, ...]]:
+    if profiler == "cprofile":
+        return _parse_cprofile(path, limit), ()
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if profiler.startswith("scalene"):
+        summaries = tuple(
+            replace(item, profiler=profiler) for item in _parse_scalene(payload, limit)
+        )
+        diagnostic = (
+            ()
+            if summaries
+            else (f"{profiler} produced no non-zero CPU or memory line attribution",)
+        )
+        return summaries, diagnostic
+    parsers: dict[str, Callable[[object, int], tuple[MethodSummary, ...]]] = {
+        "pyinstrument": _parse_pyinstrument,
+        "py-spy": _parse_speedscope,
+        "tracemalloc": _parse_tracemalloc,
+    }
+    parser = parsers.get(profiler)
+    return (parser(payload, limit), ()) if parser is not None else ((), ())
 
 
 def parse_pyperf_metrics(path: Path | None) -> tuple[tuple[MetricRecord, ...], tuple[str, ...]]:

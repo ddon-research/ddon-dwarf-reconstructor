@@ -9,11 +9,12 @@ native fixture load were observed on 2026-08-05. Full-corpus load, cold/warm ben
 runtime-parity evidence remain required for final service acceptance.
 
 The default bind mounts are repository-local ignored paths under
-`output/analytical-dwarf/warehouse`, while the read-only source-bound store is
-`output/analytical-dwarf/main`. Override the individual `DDON_DORIS_*` or
-`DDON_DORIS_STORE_HOST_PATH` variables only when the replacement path is on a local fixed disk;
-do not use the portable E: drive. `%TEMP%\ddon-analytical-dwarf` is reserved for disposable
-diagnostic runs and is not the default durable warehouse.
+`output/analytical-dwarf/warehouse` for Doris metadata, storage, and logs. The source-bound
+Parquet store under `output/analytical-dwarf/main` remains on the host: the loader reads it and
+uploads bounded batches through Doris Stream Load, so it does not need to be mounted into either
+container. Override the individual `DDON_DORIS_*` variables only when the replacement path is on
+a local fixed disk; do not use the portable E: drive. `%TEMP%\ddon-analytical-dwarf` is reserved
+for disposable diagnostic runs and is not the default durable warehouse.
 
 For a long producer run, use `--checkpoint-every-cus N` only when diagnostic snapshots are
 needed. Checkpoints rotate Parquet parts and preserve `checkpoint.json` after an interruption;
