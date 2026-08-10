@@ -5,7 +5,6 @@
 Detects the target platform of an ELF file (PS3, PS4, PC, etc.) based on:
 - Machine architecture (e.g., x86-64, PowerPC64)
 - Endianness (little-endian vs big-endian)
-- DWARF version in debug info
 - OS/ABI field
 """
 
@@ -74,7 +73,6 @@ class PlatformDetector:
         try:
             machine_str = elf.header["e_machine"]
             is_little_endian: bool = elf.little_endian
-            dwarf_version = PlatformDetector._get_dwarf_version(elf)
             log_event(
                 logger,
                 logging.DEBUG,
@@ -82,7 +80,6 @@ class PlatformDetector:
                 elf_path=elf_path,
                 machine=machine_str,
                 little_endian=is_little_endian,
-                dwarf_version=dwarf_version,
             )
             if machine_str == PlatformDetector.MACHINE_POWERPC64_STR and not is_little_endian:
                 log_event(

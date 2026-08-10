@@ -2,18 +2,26 @@
 
 from __future__ import annotations
 
+import re
 import sys
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from logging import Logger
 from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
 
-from .application.generators import DwarfGenerator, GenerationRequest
+from .application.generators import (
+    DwarfGenerator,
+    GenerationOutcome,
+    GenerationReport,
+    GenerationRequest,
+)
+from .application.generators.session import DwarfSessionFactory
 from .core.observability import bind_context, get_logger, log_event, log_exception
 from .core.platform import ELFPlatform
 from .domain.models.tool_evidence import ToolExport
+from .generation_state import GenerationState as _GenerationState
 from .infrastructure.artifacts import SourceIdentityCatalog
 from .infrastructure.composition import (
     create_disassembly_producer,
@@ -40,11 +48,16 @@ class GenerationOptions:
     exhaustive: bool = False
     dwarf_dump: Path | None = None
     dwarf_index: Path | None = None
+    dwarf_store_manifest: Path | None = None
     export_knowledge: Path | None = None
     build_id: str | None = None
     orbis_objdump: Path | None = None
     resolve_param_names: bool = False
     tool_export_manifests: tuple[Path, ...] = ()
+
+
+class HeaderCollisionError(ValueError):
+    """Raised when aggregate output would merge different header contents."""
 
 
 def _load_config(options: GenerationOptions) -> Config:
@@ -55,6 +68,19 @@ def _load_config(options: GenerationOptions) -> Config:
     )
     config.validate()
     return config
+
+
+def _validate_store_options(options: GenerationOptions) -> None:
+    """Require a pre-materialized store for normal generation commands."""
+    if options.dwarf_store_manifest is None:
+        raise ValueError(
+            "Generation requires --dwarf-store; materialize the ELF and load the complete "
+            "manifest with artifacts load-doris first"
+        )
+    if options.dwarf_dump is not None or options.dwarf_index is not None:
+        raise ValueError(
+            "--dwarf-dump and --dwarf-index are validation-only and cannot drive generation"
+        )
 
 
 def _read_symbols(options: GenerationOptions, logger: Logger) -> list[str]:
@@ -68,7 +94,16 @@ def _read_symbols(options: GenerationOptions, logger: Logger) -> list[str]:
         raise ValueError("Must provide either --symbol or --symbols-file option")
     if not symbols:
         raise ValueError("No symbols provided")
+    _validate_unique_symbols(symbols)
     return symbols
+
+
+def _validate_unique_symbols(symbols: list[str]) -> None:
+    seen: set[str] = set()
+    for symbol in symbols:
+        if symbol in seen:
+            raise ValueError(f"Duplicate symbol provided: {symbol}")
+        seen.add(symbol)
 
 
 def _read_symbol_file(path: Path, logger: Logger) -> list[str]:
@@ -104,6 +139,7 @@ def _log_options(
         parameter_name_resolution=options.resolve_param_names,
         dwarf_dump=options.dwarf_dump,
         dwarf_index=options.dwarf_index,
+        dwarf_store_manifest=options.dwarf_store_manifest,
         export_knowledge=options.export_knowledge,
         tool_export_manifest_count=len(options.tool_export_manifests),
         tool_export_manifests=options.tool_export_manifests,
@@ -128,9 +164,7 @@ def _run_generation(
 def _run_generation_impl(
     options: GenerationOptions, config: Config, symbols: list[str], logger: Logger
 ) -> tuple[int, list[tuple[str, str]]]:
-    success_count = 0
-    failed_symbols: list[tuple[str, str]] = []
-    pending_headers: dict[str, str] = {}
+    state = _GenerationState(_uses_separate_symbol_bundles(options, symbols))
     dwarf_config = DwarfRuntimeConfig.from_environment()
     identity_catalog = SourceIdentityCatalog()
     tool_exports = load_tool_exports(
@@ -138,9 +172,12 @@ def _run_generation_impl(
         config.elf_file_path,
         identity_catalog,
     )
+    session_factory = _session_factory(
+        options, config.elf_file_path, get_cache_file_path(str(config.elf_file_path))
+    )
     with DwarfGenerator(
         config.elf_file_path,
-        session_factory=create_dwarf_session,
+        session_factory=session_factory,
         exhaustive_search=options.exhaustive,
         dwarf_dump_path=options.dwarf_dump,
         dwarf_index_path=options.dwarf_index,
@@ -154,39 +191,145 @@ def _run_generation_impl(
         source_hash=identity_catalog.sha256,
         source_identity=identity_catalog,
     ) as generator:
-        for index, symbol_name in enumerate(symbols, 1):
-            with bind_context(symbol=symbol_name, symbol_index=index, symbol_count=len(symbols)):
-                started_at = perf_counter()
-                log_event(logger, 20, "symbol_started", symbol=symbol_name)
-                try:
-                    if options.export_knowledge:
-                        _process_symbol(
-                            options,
-                            config,
-                            generator,
-                            symbol_name,
-                            symbols,
-                            logger,
-                            tool_exports,
-                        )
-                    else:
-                        pending_headers.update(_build_headers(options, generator, symbol_name))
-                        if generator.lazy_index is not None:
-                            generator.lazy_index.save_cache()
-                    success_count += 1
-                    log_event(
-                        logger,
-                        20,
-                        "symbol_completed",
-                        symbol=symbol_name,
-                        duration_ms=round((perf_counter() - started_at) * 1000, 3),
-                    )
-                except (OSError, RuntimeError, ValueError) as error:
-                    _record_failure(symbol_name, error, failed_symbols, logger)
-        if pending_headers:
-            total_bytes = _write_headers(config, generator, pending_headers, logger)
-            _log_header_summary(options, generator, pending_headers, total_bytes, symbols, logger)
-    return success_count, failed_symbols
+        _generate_symbols(options, config, generator, symbols, logger, tool_exports, state)
+        report = _generation_report(symbols, state)
+        if report.published:
+            _publish_pending_headers(
+                options,
+                config,
+                generator,
+                logger,
+                symbols,
+                report,
+                state.pending_headers,
+                state.pending_bundles,
+                state.separate_symbol_bundles,
+            )
+        log_event(
+            logger,
+            20 if not state.failed_symbols else 30,
+            "generation_report",
+            fields=report.to_dict(),
+        )
+        return state.success_count, state.failed_symbols
+
+
+def _generate_symbols(
+    options: GenerationOptions,
+    config: Config,
+    generator: DwarfGenerator,
+    symbols: list[str],
+    logger: Logger,
+    tool_exports: Sequence[ToolExport],
+    state: _GenerationState,
+) -> None:
+    for index, symbol_name in enumerate(symbols, 1):
+        with bind_context(symbol=symbol_name, symbol_index=index, symbol_count=len(symbols)):
+            _generate_symbol(
+                options, config, generator, symbols, logger, tool_exports, state, index, symbol_name
+            )
+
+
+def _generate_symbol(
+    options: GenerationOptions,
+    config: Config,
+    generator: DwarfGenerator,
+    symbols: list[str],
+    logger: Logger,
+    tool_exports: Sequence[ToolExport],
+    state: _GenerationState,
+    index: int,
+    symbol_name: str,
+) -> None:
+    started_at = perf_counter()
+    log_event(logger, 20, "symbol_started", symbol=symbol_name)
+    try:
+        generated_headers = _generate_symbol_headers(
+            options, config, generator, symbols, logger, tool_exports, state, index, symbol_name
+        )
+        state.outcomes.append(
+            GenerationOutcome(
+                symbol=symbol_name,
+                status="success",
+                headers=tuple(sorted(generated_headers)),
+            )
+        )
+        state.success_count += 1
+        log_event(
+            logger,
+            20,
+            "symbol_completed",
+            symbol=symbol_name,
+            duration_ms=round((perf_counter() - started_at) * 1000, 3),
+        )
+    except HeaderCollisionError:
+        raise
+    except (OSError, RuntimeError, ValueError) as error:
+        _record_failure(symbol_name, error, state.failed_symbols, logger)
+        state.outcomes.append(
+            GenerationOutcome(symbol=symbol_name, status="error", error=str(error))
+        )
+
+
+def _generate_symbol_headers(
+    options: GenerationOptions,
+    config: Config,
+    generator: DwarfGenerator,
+    symbols: list[str],
+    logger: Logger,
+    tool_exports: Sequence[ToolExport],
+    state: _GenerationState,
+    index: int,
+    symbol_name: str,
+) -> dict[str, str]:
+    if options.export_knowledge:
+        _process_symbol(options, config, generator, symbol_name, symbols, logger, tool_exports)
+        return {}
+    generated_headers = _build_headers(options, generator, symbol_name)
+    if state.separate_symbol_bundles:
+        state.pending_bundles.append((index, symbol_name, generated_headers))
+    else:
+        _merge_headers(
+            state.pending_headers,
+            state.pending_header_sources,
+            generated_headers,
+            symbol_name,
+        )
+    if generator.lazy_index is not None:
+        generator.lazy_index.save_cache()
+    return generated_headers
+
+
+def _generation_report(symbols: list[str], state: _GenerationState) -> GenerationReport:
+    published = _has_publishable_headers(
+        state.separate_symbol_bundles,
+        state.pending_headers,
+        state.pending_bundles,
+        state.failed_symbols,
+    )
+    return GenerationReport(
+        requested_symbols=tuple(symbols),
+        outcomes=tuple(state.outcomes),
+        published=published,
+    )
+
+
+def _session_factory(
+    options: GenerationOptions, elf_path: Path, selection_cache_path: Path
+) -> DwarfSessionFactory:
+    """Select the infrastructure session at the composition root."""
+    if options.dwarf_store_manifest is None:
+        return create_dwarf_session
+    from .infrastructure.analytical import AnalyticalDwarfSession
+
+    def create_store_session(_requested_path: Path) -> AnalyticalDwarfSession:
+        return AnalyticalDwarfSession(
+            options.dwarf_store_manifest,
+            expected_source_path=elf_path,
+            selection_cache_path=selection_cache_path,
+        )
+
+    return create_store_session
 
 
 def _process_symbol(
@@ -212,7 +355,7 @@ def _process_symbol(
     total_bytes = _write_headers(config, generator, headers, logger)
     if generator.lazy_index is not None:
         generator.lazy_index.save_cache()
-    _log_header_summary(options, generator, headers, total_bytes, symbols, logger)
+    _log_header_summary(options, headers, total_bytes, symbols, logger)
 
 
 def _build_headers(
@@ -226,13 +369,114 @@ def _build_headers(
     return dict(generator.generate_bundle(request).headers)
 
 
+def _uses_separate_symbol_bundles(options: GenerationOptions, symbols: list[str]) -> bool:
+    return options.full_hierarchy and not options.single_file and len(symbols) > 1
+
+
+def _has_publishable_headers(
+    separate_symbol_bundles: bool,
+    pending_headers: dict[str, str],
+    pending_bundles: list[tuple[int, str, dict[str, str]]],
+    failed_symbols: list[tuple[str, str]],
+) -> bool:
+    pending = pending_bundles if separate_symbol_bundles else pending_headers
+    return bool(pending) and not failed_symbols
+
+
+def _symbol_bundle_output_dir(output_dir: Path, index: int, symbol_name: str) -> Path:
+    safe_symbol = re.sub(r"[^A-Za-z0-9_.-]+", "_", symbol_name).strip("._-") or "symbol"
+    return output_dir / "symbols" / f"{index:04d}-{safe_symbol}"
+
+
+def _publish_pending_headers(
+    options: GenerationOptions,
+    config: Config,
+    generator: DwarfGenerator,
+    logger: Logger,
+    symbols: list[str],
+    report: GenerationReport,
+    pending_headers: dict[str, str],
+    pending_bundles: list[tuple[int, str, dict[str, str]]],
+    separate_symbol_bundles: bool,
+) -> None:
+    if separate_symbol_bundles:
+        _publish_separate_symbol_bundles(config, generator, logger, report, pending_bundles)
+        return
+    total_bytes = _write_headers(
+        config,
+        generator,
+        pending_headers,
+        logger,
+        metadata={"generation": report.to_dict()},
+    )
+    _log_header_summary(options, pending_headers, total_bytes, symbols, logger)
+
+
+def _publish_separate_symbol_bundles(
+    config: Config,
+    generator: DwarfGenerator,
+    logger: Logger,
+    report: GenerationReport,
+    pending_bundles: list[tuple[int, str, dict[str, str]]],
+) -> None:
+    total_bytes = 0
+    for index, symbol_name, headers in pending_bundles:
+        total_bytes += _write_headers(
+            config,
+            generator,
+            headers,
+            logger,
+            metadata={
+                "generation": report.to_dict(),
+                "root_symbol": symbol_name,
+                "symbol_index": index,
+                "layout": "separate-symbol-bundles",
+            },
+            output_dir=_symbol_bundle_output_dir(config.output_dir, index, symbol_name),
+        )
+    log_event(
+        logger,
+        20,
+        "header_corpus_published",
+        bundle_count=len(pending_bundles),
+        header_count=sum(len(headers) for _, _, headers in pending_bundles),
+        total_bytes=total_bytes,
+        output_dir=config.output_dir,
+    )
+
+
+def _merge_headers(
+    pending_headers: dict[str, str],
+    pending_header_sources: dict[str, str],
+    headers: dict[str, str],
+    symbol_name: str,
+) -> None:
+    """Merge one result without allowing conflicting filenames to be overwritten."""
+    for filename, content in headers.items():
+        previous_content = pending_headers.get(filename)
+        if previous_content is not None and previous_content != content:
+            previous_symbol = pending_header_sources[filename]
+            raise HeaderCollisionError(
+                f"Conflicting generated header {filename!r} for {symbol_name!r}; "
+                f"already generated for {previous_symbol!r}"
+            )
+        if previous_content is None:
+            pending_headers[filename] = content
+            pending_header_sources[filename] = symbol_name
+
+
 def _write_headers(
-    config: Config, generator: DwarfGenerator, headers: dict[str, str], logger: Logger
+    config: Config,
+    generator: DwarfGenerator,
+    headers: dict[str, str],
+    logger: Logger,
+    metadata: Mapping[str, object] | None = None,
+    output_dir: Path | None = None,
 ) -> int:
     platform = getattr(generator, "platform", None)
     output_platform = platform if isinstance(platform, ELFPlatform) else ELFPlatform.UNKNOWN
     platform_dir, total_bytes = AtomicHeaderPublisher().publish(
-        config.output_dir, output_platform, headers
+        output_dir or config.output_dir, output_platform, headers, metadata=metadata
     )
     filenames = sorted(headers)
     log_event(
@@ -250,7 +494,6 @@ def _write_headers(
 
 def _log_header_summary(
     options: GenerationOptions,
-    generator: DwarfGenerator,
     headers: dict[str, str],
     total_bytes: int,
     symbols: list[str],
@@ -324,6 +567,7 @@ def run_generation(options: GenerationOptions) -> int:
             LoggerSetup.initialize(config.log_dir, verbose=config.verbose)
             config.ensure_output_dir()
             symbols = _read_symbols(options, logger)
+            _validate_store_options(options)
             _log_options(options, config, symbols, logger)
             success_count, failed_symbols = _run_generation(options, config, symbols, logger)
             _log_summary(symbols, success_count, failed_symbols, logger)

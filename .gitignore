@@ -59,6 +59,9 @@ coverage-*.json
 # UV
 .uv/
 
+# Node-based documentation validators
+tools/documentation/node_modules/
+
 # Output
 output/
 site/
@@ -68,9 +71,14 @@ logs/
 *.sqlite3-*
 *.sqlite3.*
 *.sqlite3.lock
-main.build/
-main.dist/
-main.onefile-build/
+# The performance ledger is a reviewed static-history contract.
+!/resources/performance/benchmarks.sqlite3
+!/resources/performance/benchmark-history.json
+!/resources/performance/benchmark-history.csv
+*.build/
+*.dist/
+*.onefile-build/
+nuitka-crash-report.xml
 
 # Environment files
 .env
@@ -89,3 +97,7 @@ ops/langfuse/.env
 # Checked-in source-bound acceptance index
 !resources/.cache/
 !resources/.cache/DDOORBIS.elf.llvmdwarfdump.index.sqlite3
+.codex-timeline/codex-investigation-timeline.json
+.codex-timeline/codex-investigation-timeline.md
+.codex-timeline/codex-investigation-timeline.mmd
+.codex-timeline/codex-investigation-turns.csv

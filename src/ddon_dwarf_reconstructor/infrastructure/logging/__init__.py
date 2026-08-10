@@ -11,11 +11,9 @@ from ...core.observability import (
     log_timing,
 )
 from .logger_setup import LoggerSetup
-from .progress_tracker import ProgressTracker
 
 __all__ = [
     "LoggerSetup",
-    "ProgressTracker",
     "bind_context",
     "current_context",
     "get_logger",

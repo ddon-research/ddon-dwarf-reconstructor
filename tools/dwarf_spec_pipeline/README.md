@@ -6,8 +6,15 @@ repository artifacts.
 
 ## Local development
 
+The standalone project uses CPython 3.14.7 and uv 0.12.3 with its own locked dependency
+boundary.
+
+Its container uses the pinned `python:3.14.7-slim-trixie` base and copies uv 0.12.3 from Astral's
+image. Validate that boundary with `docker compose --file tools/dwarf_spec_pipeline/compose.yaml
+build --no-cache`, followed by the Python, uv, and CLI help smoke checks.
+
 ```text
-uv sync --python 3.14.6
+uv sync --python 3.14.7 --locked
 uv run just test-unit
 uv run just test-integration
 uv run just test
@@ -54,7 +61,7 @@ docker compose -f compose.yaml run --rm dwarf-spec-pipeline
 applicability, and inventories source-code references. It does not make the runtime import the
 specification project.
 
-The project uses Ruff, Pyrefly, deptry, and just through its frozen uv environment. Tests and
+The project uses Ruff, Pyrefly, deptry, and just through its locked uv environment. Tests and
 quality checks do not download sources unless an explicit build requests it; `--offline` requires
 an already verified local cache. The test suite uses the shared project vocabulary: `unit`,
 `integration`, and `acceptance` scopes plus `functional`, `regression`, and `non_functional`

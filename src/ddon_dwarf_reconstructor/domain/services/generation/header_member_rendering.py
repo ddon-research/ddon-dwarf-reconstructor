@@ -46,13 +46,22 @@ class HeaderMemberRenderingMixin:
         return self._with_bitfield(f"{member.type_name} {member.name}", member)
 
     def _format_array_member(self: HeaderGeneratorContext, member: MemberInfo) -> str | None:
-        if "[" not in member.type_name or "]" not in member.type_name:
+        opening = member.type_name.find("[")
+        if opening <= 0:
             return None
-        match = re.match(r"^(.+?)(\[.+\])$", member.type_name)
-        if match is None:
+
+        base_type = member.type_name[:opening].strip()
+        dimensions = member.type_name[opening:]
+        cursor = 0
+        while cursor < len(dimensions):
+            if dimensions[cursor] != "[":
+                return None
+            closing = dimensions.find("]", cursor + 1)
+            if closing < 0:
+                return None
+            cursor = closing + 1
+        if not base_type or cursor != len(dimensions):
             return None
-        base_type = match.group(1).strip()
-        dimensions = match.group(2)
         if member.is_static:
             type_name = self._const_type(base_type, member)
             return self._with_bitfield(f"static {type_name} {member.name}{dimensions}", member)

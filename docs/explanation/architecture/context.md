@@ -11,7 +11,7 @@ System(reconstructor, "DDON DWARF Reconstructor", "Reads source evidence and pub
 System_Ext(elfInput, "ELF/DWARF or compressed dump", "Immutable PS4/PS3 producer evidence, optionally indexed for bounded lookup.")
 System_Ext(toolEvidence, "Optional inspection tools", "Orbis, LLVM, GNU, elfutils, libdwarf, pyelftools, LIEF, or OpenOrbis observations.")
 System_Ext(headerConsumer, "C/C++ or analysis consumer", "Consumes generated headers or compilation databases.")
-System_Ext(graphConsumer, "Future graph loader", "Neo4j or equivalent; the current contract is a JSONL bundle, not a live graph.")
+System_Ext(graphConsumer, "Future LadybugDB loader", "Proposed embedded read model; the current contract is a JSONL bundle, not a live graph.")
 System_Ext(site, "Published documentation site", "Zensical renders checked-in Markdown and generated specification artifacts.")
 Rel(developer, reconstructor, "Runs typed CLI commands")
 Rel(elfInput, reconstructor, "Provides source evidence")
@@ -43,7 +43,7 @@ flowchart LR
     app --> headers["Atomic generated headers"]
     app --> knowledge["Knowledge bundle\nJSONL + manifest"]
     headers --> consumer["C/C++ or analysis consumer"]
-    knowledge --> graph_loader["Future graph loader\nNeo4j or equivalent"]
+    knowledge --> graph_loader["Future graph loader\nLadybugDB-first evaluation"]
 ```
 
 The site is a separate publication consumer of checked-in Markdown and generated DWARF

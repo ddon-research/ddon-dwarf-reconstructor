@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from ....core.dwarf import DwarfCompilationUnit, DwarfEntry
 from ....core.observability import get_logger
-from ...ports.dump_lookup import DumpDefinitionLocation, DumpLookupPort
+from ...ports.validation_dump import DumpDefinitionLocation, ValidationDumpPort
 from .class_parser_context import ClassParserContext
 
 logger = get_logger(__name__)
 
 
 class ClassParserDumpDiscoveryMixin:
-    _dump_parser: DumpLookupPort | None
+    _dump_parser: ValidationDumpPort | None
 
-    def _get_dump_parser(self: ClassParserContext) -> DumpLookupPort | None:
+    def _get_dump_parser(self: ClassParserContext) -> ValidationDumpPort | None:
         """Return the adapter supplied by the composition root."""
         if self._dump_parser is None and self.dwarf_dump_path:
             logger.warning("No dump lookup adapter configured for %s", self.dwarf_dump_path)

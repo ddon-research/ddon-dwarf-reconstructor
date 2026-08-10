@@ -5,21 +5,52 @@ application layer receives typed requests and the composition root wires concret
 
 ## Single or multiple symbols
 
+Materialize the ELF once before the first generation run. Keep the durable store in the ignored
+repository output area so subsequent runs reuse the source-bound manifest:
+
 ```powershell
-uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf --symbol MtObject
-uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf --symbol MtObject --full-hierarchy
-uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf --symbols-file resources/season2-resources.txt
+$storeRoot = Join-Path $PWD 'output\analytical-dwarf\main'
+uv run ddon-dwarf-reconstructor artifacts materialize-dwarf `
+  resources/DDOORBIS.elf `
+  --output-dir $storeRoot --write-parquet
+$storeManifest = Join-Path $storeRoot 'store-<source-sha16>\manifest.json'
+uv run ddon-dwarf-reconstructor artifacts load-doris $storeManifest
+```
+
+The load must complete successfully before generation. It publishes a source-bound registry row
+after all Doris family counts reconcile; `--dry-run`, an incomplete checkpoint, or a stale
+manifest is not a serving publication.
+
+```powershell
+uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf `
+  --dwarf-store $storeManifest `
+  --symbol MtObject
+uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf `
+  --dwarf-store $storeManifest `
+  --symbol MtObject --full-hierarchy
+uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf `
+  --dwarf-store $storeManifest `
+  --symbols-file resources/season2-resources.txt
 ```
 
 `--symbol` is repeatable for targeted work. Do not combine it with `--symbols-file`; the CLI
 rejects the ambiguous request. Use `--full-hierarchy` only when inherited definitions and their
 dependencies are part of the requested evidence surface.
 
+When `--symbols-file` requests more than one full-hierarchy root without `--single-file`, the
+workflow publishes separate bundles under `output/season2/<platform>/symbols/<index>-<safe-root>/`.
+Each bundle has its own `header-bundle.manifest.json`; the root index and symbol name remain in
+the manifest metadata. This avoids overwriting same-named headers from unrelated roots. Aggregate
+single-directory publication still fails closed when two roots produce conflicting file contents.
+Keep failed or incomplete root status in the run report rather than treating the surviving bundles
+as a complete corpus.
+
 ## What happens inside
 
-1. `DwarfGeneratorSetup` creates one session and its source-bound index services.
+1. `DwarfGeneratorSetup` opens a source-bound Doris session and its query/index ports.
 2. `DwarfGenerator` resolves definitions, types, methods, members, and hierarchy information
-   through domain ports.
+  from the Doris serving projection; it does not implicitly traverse the ELF or read the
+  Parquet/JSONL materialization directly.
 3. `HeaderGenerator` renders deterministic declarations with stable ordering and forward
    declarations where required.
 4. `AtomicHeaderPublisher` stages the bundle, writes its manifest, and commits or rolls back as a
@@ -37,11 +68,14 @@ repository does not accept game binaries, generated headers, or runtime caches a
 
 ## Troubleshooting order
 
-1. Run `artifacts inspect --elf <path>` to see catalog, cache, and dump-index state.
-2. Run `artifacts inspect-elf <path>` to confirm the ELF/DWARF producer facts.
-3. Check the run JSONL logs for the `run_id`, symbol, stage, and cache decision.
-4. If a compressed dump is involved, use `artifacts inspect-dwarf-dump <path>` before rebuilding
-   its index.
+1. Run `artifacts inspect-dwarf-store <manifest>` to validate the materialized Parquet store and
+  source binding.
+2. Run `artifacts load-doris <manifest>` and confirm that the registry reports `complete` with
+  reconciled family counts.
+3. Run `artifacts inspect-elf <path>` to confirm the ELF/DWARF producer facts.
+4. Check the run JSONL logs for the `run_id`, symbol, stage, and query evidence status.
+5. If a compressed dump is involved, use `artifacts inspect-dwarf-dump <path>` only for an
+   explicitly labeled validation cross-check.
 
 Do not delete a warm source-bound cache as routine cleanup. Repair and purge commands are
 explicit and narrowly targeted.

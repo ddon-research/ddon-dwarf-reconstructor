@@ -9,6 +9,7 @@ import typer
 
 from .artifact_cli import app as artifacts_app
 from .main import GenerationOptions, run_generation
+from .performance_cli import app as performance_app
 
 app = typer.Typer(
     name="ddon-dwarf-reconstructor",
@@ -17,6 +18,7 @@ app = typer.Typer(
     add_completion=True,
 )
 app.add_typer(artifacts_app, name="artifacts")
+app.add_typer(performance_app, name="performance")
 
 
 def _package_version() -> str:
@@ -58,6 +60,7 @@ def _options(
     exhaustive: bool,
     dwarf_dump: Path | None,
     dwarf_index: Path | None,
+    dwarf_store_manifest: Path | None = None,
     export_knowledge: Path | None = None,
     build_id: str | None = None,
     orbis_objdump: Path | None = None,
@@ -75,6 +78,7 @@ def _options(
         exhaustive=exhaustive,
         dwarf_dump=dwarf_dump,
         dwarf_index=dwarf_index,
+        dwarf_store_manifest=dwarf_store_manifest,
         export_knowledge=export_knowledge,
         build_id=build_id,
         orbis_objdump=orbis_objdump,
@@ -121,10 +125,22 @@ def generate(
         False, "--exhaustive", help="Search all CUs for the best definition."
     ),
     dwarf_dump: Path | None = typer.Option(
-        None, "--dwarf-dump", metavar="PATH", help="Compressed DWARF dump path."
+        None,
+        "--dwarf-dump",
+        metavar="PATH",
+        help="Validation-only compressed DWARF dump; rejected for normal generation.",
     ),
     dwarf_index: Path | None = typer.Option(
-        None, "--dwarf-index", metavar="PATH", help="Explicit DWARF SQLite sidecar."
+        None,
+        "--dwarf-index",
+        metavar="PATH",
+        help="Validation-only DWARF SQLite sidecar; rejected for normal generation.",
+    ),
+    dwarf_store_manifest: Path | None = typer.Option(
+        None,
+        "--dwarf-store",
+        metavar="MANIFEST",
+        help="Complete source-bound manifest whose projection is already published in Doris.",
     ),
     resolve_param_names: bool = typer.Option(
         False,
@@ -145,6 +161,7 @@ def generate(
             exhaustive=exhaustive,
             dwarf_dump=dwarf_dump,
             dwarf_index=dwarf_index,
+            dwarf_store_manifest=dwarf_store_manifest,
             resolve_param_names=resolve_param_names,
         )
     )
@@ -154,40 +171,42 @@ def generate(
 def export_knowledge(
     elf_file: Path = typer.Argument(..., help="Path to the ELF file to analyze."),
     output_dir: Path = typer.Option(
-        ...,
-        "--output-dir",
-        help="Directory in which to publish the knowledge bundle.",
+        ..., "--output-dir", help="Directory in which to publish the knowledge bundle."
     ),
     symbol: list[str] = typer.Option(
-        [],
-        "--symbol",
-        "-s",
-        help="Symbol to export; repeat for multiple symbols.",
+        [], "--symbol", "-s", help="Symbol to export; repeat for multiple symbols."
     ),
     symbols_file: Path | None = typer.Option(
-        None,
-        "--symbols-file",
-        metavar="FILE",
-        help="File containing one symbol per line.",
+        None, "--symbols-file", metavar="FILE", help="File containing one symbol per line."
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logs."),
     exhaustive: bool = typer.Option(
         False, "--exhaustive", help="Search all CUs for the best definition."
     ),
     dwarf_dump: Path | None = typer.Option(
-        None, "--dwarf-dump", metavar="PATH", help="Compressed DWARF dump path."
+        None,
+        "--dwarf-dump",
+        metavar="PATH",
+        help="Validation-only compressed DWARF dump; rejected for normal export.",
     ),
     dwarf_index: Path | None = typer.Option(
-        None, "--dwarf-index", metavar="PATH", help="Explicit DWARF SQLite sidecar."
+        None,
+        "--dwarf-index",
+        metavar="PATH",
+        help="Validation-only DWARF SQLite sidecar; rejected for normal export.",
+    ),
+    dwarf_store_manifest: Path | None = typer.Option(
+        None,
+        "--dwarf-store",
+        metavar="MANIFEST",
+        help="Complete source-bound manifest whose projection is already published in Doris.",
     ),
     build_id: str | None = typer.Option(None, "--build-id", help="Stable build identifier."),
     orbis_objdump: Path | None = typer.Option(
         None, "--orbis-objdump", metavar="PATH", help="Pinned Orbis objdump executable."
     ),
     resolve_param_names: bool = typer.Option(
-        False,
-        "--resolve-param-names",
-        help="Search method implementations for parameter names.",
+        False, "--resolve-param-names", help="Search method implementations for parameter names."
     ),
     tool_evidence: list[Path] = typer.Option(
         [],
@@ -209,6 +228,7 @@ def export_knowledge(
             exhaustive=exhaustive,
             dwarf_dump=dwarf_dump,
             dwarf_index=dwarf_index,
+            dwarf_store_manifest=dwarf_store_manifest,
             export_knowledge=output_dir,
             build_id=build_id,
             orbis_objdump=orbis_objdump,

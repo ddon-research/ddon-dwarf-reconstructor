@@ -13,10 +13,10 @@ same tool loop for Claude-compatible clients. Markdown changes also follow
 
 ## Development loop
 
-Use regular CPython 3.14.6 and the locked uv environment:
+Use regular CPython 3.14.7 and uv 0.12.3 in the locked environment:
 
 ```text
-uv sync --python 3.14.6
+uv sync --python 3.14.7 --locked
 uv run just test-unit
 uv run just test-integration
 uv run just check
@@ -80,6 +80,16 @@ before changing CI.
   performance artifacts.
 - Use explicit local paths for real PS4 and compiler validation; retain cold/warm state and record
   the manifest identity.
+- The durable analytical store is `output/analytical-dwarf/main/`; `%TEMP%\ddon-analytical-dwarf`
+  is for disposable diagnostic artifacts only. Native Doris is the active backend. For Doris
+  clarifications, consult `D:\Apache-Doris-version-4.x-docs` in addition to the live CLI. Treat
+  `information_schema.statistics` and `information_schema.column_statistics` as empty compatibility
+  views; use Doris `SHOW` statistics commands and `__internal_schema.column_statistics` instead.
+- PyArrow is pinned at `25.0.0`. Use `D:\PyArrow-25.0-python-docs` as the local reference for
+  Arrow concepts and API questions. Keep explicit family schemas, bounded `ParquetWriter` row
+  groups and `Table.from_pylist` conversions, typed partition schemas, dataset projection/filter
+  scans, and memory-pool telemetry distinct from whole-process RSS. JSONL backfill shares the
+  bounded sink and manifest writer/layout settings with direct materialization.
 - Probe external tools before selecting an export profile. Orbis executables are authoritative for
   PS4 ABI/SCE semantics; LLVM, GNU Binutils, elfutils, libdwarf, pyelftools, LIEF, and OpenOrbis
   outputs are additive evidence. The `elfldr` reference is loader research only and is not run by
@@ -88,13 +98,28 @@ before changing CI.
   whenever public commands, configuration, or validation behavior changes. Keep Mermaid/UML
   diagrams in Markdown, use C4 context/container/component views plus native UML or runtime views
   at the smallest useful abstraction, keep one Diátaxis page intent per page, use the applicable
-  arc42 sections for architecture, and run `uv run just docs-build` for the strict site check.
+  arc42 sections for architecture, and run `uv run just docs-check` for Markdown, Mermaid, and
+  strict site validation after `uv run just docs-tools-install` on a fresh checkout.
 - Root tests use one scope (`unit`, `integration`, or `acceptance`) plus a purpose
   (`functional`, `regression`, or `non_functional`). Collection enforces the taxonomy; qualify
   performance, slow, real-asset, packaging, and quality work explicitly.
 - The default `just test` and coverage loop includes deterministic integration tests. Use
   `just test-without-integration` only for exceptional iteration, and run the required loop before
-handoff. Real-asset and performance checks remain explicit local evidence.
+  handoff. Real-asset and performance checks remain explicit local evidence.
+- Profiling uses the canonical `performance` command group and the `performance-*` just recipes.
+  `performance doctor` reports tool availability; `performance profile-index` measures a true
+  compressed-dump rebuild separately; the typed runner samples an isolated process
+  tree with psutil and publishes checksummed raw manifests outside Git; `performance history`
+  writes the tracked SQLite/static exports. Scalene is primary, cProfile/pyinstrument/py-spy and
+  tracemalloc are cross-checks, and pyperf is the repeated deterministic fixture harness. Never
+  instrument normal generation or treat unavailable/partial real-asset evidence as green. Nuitka
+  is an explicit MSVC/onefile deployment tool measured with `performance compare-runtimes`; keep
+  free-threaded CPython in a separate venv and record its current Scalene/Nuitka blockers and
+  pyinstrument GIL-enabling behavior rather than adding it to the normal environment.
+- Season-two generation uses the 289 roots in `resources/season2-resources.txt`, separate
+  source-derived bundles, collision-safe publication, and aggregate collision failure. Standalone MSVC checks,
+  Sonar, and IDA are separate evidence surfaces; do not merge their statuses or claim an
+  unavailable baseline is validated.
 
 For a multi-turn DWARF investigation, use a thread-scoped Codex goal. Define the outcome and
 evidence surface first, inspect the validated PS4 DWARF4/PS3 DWARF2 producer facts and semantic

@@ -20,8 +20,8 @@ action, or Dependabot configuration.
   `cancel-in-progress: true` for CI and analysis runs. Add a realistic `timeout-minutes` to every
   hosted job.
 - Keep workflows thin. Checkout first with `fetch-depth: 1` and `persist-credentials: false`,
-  then use `./.github/actions/setup-python-uv` for Python 3.14.6, uv caching, and
-  `uv sync --python 3.14.6 --frozen`. The nested `tools/dwarf_spec_pipeline` project must pass
+  then use `./.github/actions/setup-python-uv` for Python 3.14.7, uv 0.12.3 caching, and
+  `uv sync --python 3.14.7 --locked`. The nested `tools/dwarf_spec_pipeline` project must pass
   its own working directory and lockfile boundary.
 - Call the canonical recipes instead of reproducing their commands: `just check` (including
   `actionlint`), `just audit`, `just coverage-ci`, and the nested project's `just ci`. Do not make
@@ -84,6 +84,7 @@ When CI behavior changes, update the affected Zensical source pages (especially
 base, and the Copilot/Claude adapters as applicable. Update `zensical.toml` navigation when adding
 pages. Follow the [documentation style reference](../../docs/reference/documentation-style.md): give
 the page one Diátaxis intent, map architecture explanation to arc42, label evidence and deferred
-work, and keep Mermaid/UML source in Markdown. Use CommonMark-compatible headings, blank lines
-around lists and code blocks, fenced blocks with a language where syntax is shown, valid descriptive
-links, and tables for repeated mappings.
+work, and keep Mermaid/UML source in Markdown. Use the locked `uv run just docs-check` contract
+for Markdownlint, Mermaid CLI rendering, and the strict site build. Use CommonMark-compatible
+headings, blank lines around lists and code blocks, fenced blocks with a language where syntax is
+shown, valid descriptive links, and tables for repeated mappings.

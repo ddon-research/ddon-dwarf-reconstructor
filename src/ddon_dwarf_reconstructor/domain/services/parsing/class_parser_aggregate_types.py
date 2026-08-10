@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import logging
+from decimal import Decimal
+from numbers import Integral
+
 from ....core.dwarf import DwarfCompilationUnit, DwarfEntry, decode_dwarf_string
-from ....core.observability import get_logger
+from ....core.observability import get_logger, log_event
 from ...models.dwarf import (
     EnumeratorInfo,
     EnumInfo,
@@ -13,6 +17,8 @@ from ...models.dwarf import (
 from .class_parser_context import ClassParserContext
 
 logger = get_logger(__name__)
+_SIGNED_ENCODINGS = frozenset({0x05, 0x06})
+_UNSIGNED_ENCODINGS = frozenset({0x07, 0x08})
 
 
 class ClassParserAggregateTypesMixin:
@@ -33,13 +39,21 @@ class ClassParserAggregateTypesMixin:
 
         # Get enum size
         size_attr = enum_die.attributes.get("DW_AT_byte_size")
-        byte_size = size_attr.value if size_attr is not None else 4
+        byte_size = self._exact_integer(size_attr.value) if size_attr is not None else None
+        if byte_size is None or byte_size <= 0:
+            byte_size = 4
+        signed = self._enum_signedness(enum_die)
 
         # Parse enumerators
         enumerators = []
         for child in enum_die.iter_children():
             if child.tag == "DW_TAG_enumerator":
-                enumerator = self._parse_enumerator(child)
+                enumerator = self._parse_enumerator(
+                    child,
+                    enum_die=enum_die,
+                    enum_byte_size=byte_size,
+                    signed=signed,
+                )
                 if enumerator:
                     enumerators.append(enumerator)
 
@@ -50,7 +64,12 @@ class ClassParserAggregateTypesMixin:
         )
 
     def _parse_enumerator(
-        self: ClassParserContext, enumerator_die: DwarfEntry
+        self: ClassParserContext,
+        enumerator_die: DwarfEntry,
+        *,
+        enum_die: DwarfEntry | None = None,
+        enum_byte_size: int | None = None,
+        signed: bool | None = None,
     ) -> EnumeratorInfo | None:
         """Parse an enumerator value."""
         name_attr = enumerator_die.attributes.get("DW_AT_name")
@@ -62,26 +81,126 @@ class ClassParserAggregateTypesMixin:
         if value_attr is None:
             return None
 
-        value = self._enumerator_value(value_attr.value)
+        value = self._enumerator_value(
+            value_attr.value,
+            form=getattr(value_attr, "form", ""),
+            byte_size=enum_byte_size,
+            signed=signed,
+        )
         if value is None:
-            logger.warning("Ignoring invalid value for enumerator %s", enumerator_name)
+            log_event(
+                logger,
+                logging.WARNING,
+                "invalid_enum_value",
+                enumerator=enumerator_name,
+                enum_offset=getattr(enum_die, "offset", None),
+                die_offset=getattr(enumerator_die, "offset", None),
+                form=str(getattr(value_attr, "form", "")),
+                raw_type=type(value_attr.value).__name__,
+                raw_size=(
+                    len(value_attr.value)
+                    if isinstance(value_attr.value, (bytes, bytearray, memoryview))
+                    else None
+                ),
+                enum_byte_size=enum_byte_size,
+                signed=signed,
+                reason="unsupported_or_out_of_range",
+            )
             return None
 
         return EnumeratorInfo(name=enumerator_name, value=value)
 
     @staticmethod
-    def _enumerator_value(raw_value: object) -> int | None:
-        if isinstance(raw_value, int):
-            return raw_value
-        if isinstance(raw_value, bytes):
-            if not 0 < len(raw_value) <= 8:
+    def _enumerator_value(
+        raw_value: object,
+        *,
+        form: str = "",
+        byte_size: int | None = None,
+        signed: bool | None = None,
+    ) -> int | None:
+        if isinstance(raw_value, bool):
+            return None
+        effective_signed = signed if signed is not None else form != "DW_FORM_udata"
+
+        value = ClassParserAggregateTypesMixin._coerce_enum_value(
+            raw_value, byte_size, effective_signed
+        )
+        if value is None:
+            return None
+
+        if byte_size is not None and not ClassParserAggregateTypesMixin._fits_enum_width(
+            value, byte_size, effective_signed
+        ):
+            return None
+        return value
+
+    @staticmethod
+    def _coerce_enum_value(raw_value: object, byte_size: int | None, signed: bool) -> int | None:
+        if isinstance(raw_value, (bytes, bytearray, memoryview)):
+            raw_bytes = bytes(raw_value)
+            if not 0 < len(raw_bytes) <= 8:
                 return None
-            return int.from_bytes(raw_value, byteorder="little", signed=True)
+            if byte_size is not None and len(raw_bytes) > byte_size:
+                return None
+            return int.from_bytes(raw_bytes, byteorder="little", signed=signed)
         if isinstance(raw_value, str):
+            return ClassParserAggregateTypesMixin._parse_integer_text(raw_value)
+        return ClassParserAggregateTypesMixin._exact_integer(raw_value)
+
+    @staticmethod
+    def _exact_integer(raw_value: object) -> int | None:
+        if isinstance(raw_value, bool):
+            return None
+        if isinstance(raw_value, Integral):
+            return int(raw_value)
+        if (
+            isinstance(raw_value, Decimal)
+            and raw_value.is_finite()
+            and raw_value == raw_value.to_integral_value()
+        ):
+            return int(raw_value)
+        return None
+
+    @staticmethod
+    def _parse_integer_text(raw_value: str) -> int | None:
+        text = raw_value.strip()
+        if not text:
+            return None
+        try:
+            return int(text, 0)
+        except ValueError, TypeError:
             try:
-                return int(raw_value, 0)
+                return int(text, 10)
             except ValueError, TypeError:
                 return None
+
+    @staticmethod
+    def _fits_enum_width(value: int, byte_size: int, signed: bool) -> bool:
+        if byte_size <= 0:
+            return True
+        bit_count = byte_size * 8
+        if signed:
+            return -(1 << (bit_count - 1)) <= value <= (1 << (bit_count - 1)) - 1
+        return 0 <= value <= (1 << bit_count) - 1
+
+    @classmethod
+    def _enum_signedness(cls, enum_die: DwarfEntry) -> bool | None:
+        if enum_die.attributes.get("DW_AT_type") is None:
+            return None
+        try:
+            type_die = enum_die.get_DIE_from_attribute("DW_AT_type")
+        except AttributeError, KeyError, RuntimeError, TypeError, ValueError:
+            return None
+        if type_die is None:
+            return None
+        encoding_attr = type_die.attributes.get("DW_AT_encoding")
+        if encoding_attr is None:
+            return None
+        encoding = cls._exact_integer(encoding_attr.value)
+        if encoding in _SIGNED_ENCODINGS:
+            return True
+        if encoding in _UNSIGNED_ENCODINGS:
+            return False
         return None
 
     def parse_nested_structure(

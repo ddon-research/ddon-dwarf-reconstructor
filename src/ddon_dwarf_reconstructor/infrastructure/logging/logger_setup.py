@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Literal, TextIO, cast
@@ -43,6 +43,13 @@ def _merge_record_fields(
     return event_dict
 
 
+def _system_timestamp(
+    _logger: WrappedLogger, _method_name: str, event_dict: EventDict
+) -> EventDict:
+    event_dict["timestamp"] = datetime.now().astimezone().isoformat()
+    return event_dict
+
+
 def _json_default(value: object) -> object:
     """Encode common diagnostic values while keeping arbitrary objects bounded."""
     if isinstance(value, (datetime, date)):
@@ -60,7 +67,7 @@ def _shared_processors() -> list[Processor]:
         structlog.stdlib.add_logger_name,
         _merge_bound_context,
         _merge_record_fields,
-        structlog.processors.TimeStamper(fmt="iso", utc=True),
+        _system_timestamp,
         structlog.stdlib.PositionalArgumentsFormatter(),
         structlog.processors.StackInfoRenderer(),
         CallsiteParameterAdder(
@@ -187,4 +194,4 @@ class LoggerSetup:
 
 
 def _timestamp() -> str:
-    return datetime.now(UTC).strftime("%Y%m%dT%H%M%S_%fZ")
+    return datetime.now().astimezone().strftime("%Y%m%dT%H%M%S_%f%z")

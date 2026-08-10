@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from ....core.observability import get_logger
 from ...ports.class_parser import ClassParserPort
-from ...ports.dwarf_index import DwarfIndexPort
+from ...ports.dwarf_lookup import DwarfLookupPort
 from .header_aggregate_rendering import HeaderAggregateRenderingMixin
 from .header_forward_declarations import HeaderForwardDeclarationMixin
 from .header_generator_context import HeaderGeneratorContext
@@ -51,7 +51,7 @@ class HeaderGenerator(
     """
 
     def __init__(
-        self, dwarf_index: DwarfIndexPort, class_parser: ClassParserPort | None = None
+        self, dwarf_index: DwarfLookupPort, class_parser: ClassParserPort | None = None
     ) -> None:
         """Initialize header generator with DWARF index.
 

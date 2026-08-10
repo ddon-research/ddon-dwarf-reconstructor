@@ -5,13 +5,20 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 import typer
 
+from .domain.models.analytical_dwarf import DwarfMaterializationRequest
 from .domain.models.tool_evidence import TOOL_EXPORT_SCHEMA_VERSION
 from .domain.repositories.cache import PersistentSymbolCache
+from .infrastructure.analytical.doris import (
+    DorisConfig,
+    DorisLoader,
+    build_doris_plan,
+)
 from .infrastructure.artifacts import SourceIdentityCatalog
 from .infrastructure.config import get_cache_file_path
 from .infrastructure.elf_evidence import inspect_elf
@@ -144,6 +151,176 @@ def inspect_dwarf_dump(
 ) -> None:
     """Stream a compressed LLVM dump and report CU versions and producers."""
     _run_operation(lambda: _write_result(inspect_dump(dwarf_dump)))
+
+
+@app.command("materialize-dwarf")
+def materialize_dwarf(
+    elf: Path = typer.Argument(..., help="ELF path to materialize."),
+    output_dir: Path = typer.Option(
+        ...,
+        "--output-dir",
+        help="External directory for the source-bound analytical store.",
+    ),
+    raw_chunk_size: int = typer.Option(
+        8 * 1024 * 1024,
+        "--raw-chunk-size",
+        min=1,
+        help="Bounded raw-section copy chunk size in bytes.",
+    ),
+    write_jsonl: bool = typer.Option(
+        False,
+        "--write-jsonl/--no-write-jsonl",
+        help="Also publish the lossless JSONL audit/interchange projection.",
+    ),
+    write_parquet: bool = typer.Option(
+        True,
+        "--write-parquet/--no-write-parquet",
+        help="Stream normalized rows directly to the Arrow/Parquet projection (default).",
+    ),
+    checkpoint_every_cus: int | None = typer.Option(
+        None,
+        "--checkpoint-every-cus",
+        min=1,
+        help="Publish an explicit in-progress Parquet snapshot after this many CUs.",
+    ),
+    max_cus: int | None = typer.Option(
+        None,
+        "--max-cus",
+        min=1,
+        help="Diagnostic only: stop after this many CUs and publish a partial store.",
+    ),
+    max_open_writers: int = typer.Option(
+        16,
+        "--max-open-writers",
+        min=1,
+        help="Maximum simultaneous native Parquet writers before rotating a part.",
+    ),
+    parquet_layout: str = typer.Option(
+        "family",
+        "--parquet-layout",
+        help="Parquet layout: one family/source writer or bucketed directory writers.",
+    ),
+    rotate_writers_every_cus: int = typer.Option(
+        64,
+        "--rotate-writers-every-cus",
+        min=0,
+        help="Close Parquet family writers at this CU interval; 0 disables boundary rotation.",
+    ),
+) -> None:
+    """Traverse CUs once and publish a source-bound lossless store."""
+    request = DwarfMaterializationRequest(
+        source_path=elf,
+        output_dir=output_dir,
+        raw_chunk_size=raw_chunk_size,
+        write_jsonl=write_jsonl,
+        write_parquet=write_parquet,
+        checkpoint_every_cus=checkpoint_every_cus,
+        max_cus=max_cus,
+        max_open_writers=max_open_writers,
+        parquet_layout=parquet_layout,
+        rotate_writers_every_cus=rotate_writers_every_cus,
+    )
+    _run_operation(lambda: _run_materialization(request))
+
+
+def _run_materialization(request: DwarfMaterializationRequest) -> None:
+    from .infrastructure.analytical import DwarfMaterializer
+
+    materializer = DwarfMaterializer()
+    manifest = materializer.materialize(request)
+    _write_result(
+        {
+            "manifest": manifest.to_dict(),
+            "manifest_path": str(materializer.last_manifest_path),
+            "last_checkpoint_manifest_path": (
+                str(materializer.last_checkpoint_manifest_path)
+                if materializer.last_checkpoint_manifest_path is not None
+                else None
+            ),
+            "cu_passes": materializer.cu_passes,
+        }
+    )
+
+
+@app.command("inspect-dwarf-store")
+def inspect_dwarf_store(
+    manifest: Path = typer.Argument(..., help="Analytical store manifest."),
+    source_path: Path | None = typer.Option(
+        None,
+        "--source",
+        help="Source ELF used to verify a manifest relocated from its recorded path.",
+    ),
+    verify_source: bool = typer.Option(
+        True,
+        "--verify-source/--no-verify-source",
+        help="Verify the source identity before opening the store.",
+    ),
+    allow_incomplete: bool = typer.Option(
+        False,
+        "--allow-incomplete",
+        help="Inspect an explicit checkpoint snapshot and report partial evidence.",
+    ),
+) -> None:
+    """Validate and summarize a source-bound analytical store."""
+
+    def operation() -> None:
+        from .infrastructure.analytical import load_analytical_store
+
+        store = load_analytical_store(
+            manifest,
+            verify_source=verify_source,
+            source_path=source_path,
+            allow_incomplete=allow_incomplete,
+            verify_artifacts=True,
+        )
+        _write_result(
+            {
+                "manifest_path": str(store.manifest_path),
+                "manifest": store.manifest.to_dict(),
+                "unit_count": store.unit_count,
+                "die_count": store.die_count,
+                "definition_names": store.definition_name_count,
+            }
+        )
+
+    _run_operation(operation)
+
+
+@app.command("load-doris")
+def load_doris(
+    manifest: Path = typer.Argument(..., help="Analytical store manifest."),
+    compose_file: Path | None = typer.Option(
+        None,
+        "--compose-file",
+        help="Compose file recorded with the load evidence; it is not started implicitly.",
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Only emit the validated SQL/file plan.",
+    ),
+    analyze: bool | None = typer.Option(
+        None,
+        "--analyze/--no-analyze",
+        help="For native Doris, submit ANALYZE TABLE after loading; enabled by default.",
+    ),
+) -> None:
+    """Load a complete source-bound analytical store into native Doris."""
+
+    def operation() -> None:
+        config = DorisConfig.from_environment()
+        if analyze is not None:
+            config = replace(config, analyze_after_load=analyze)
+        plan = build_doris_plan(manifest, config)
+        if dry_run:
+            result: dict[str, Any] = {"status": "not_observed", "plan": plan.to_dict()}
+        else:
+            result = DorisLoader().execute(plan, config)
+        if compose_file is not None:
+            result["compose_file"] = str(compose_file.resolve())
+        _write_result(result)
+
+    _run_operation(operation)
 
 
 @app.command("list-tool-profiles")

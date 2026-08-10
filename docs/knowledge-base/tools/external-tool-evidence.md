@@ -11,7 +11,7 @@ authority, and deterministic artifact key.
 | Producer | Local/useful commands | Adopted profile | Authority | Boundary |
 | --- | --- | --- | --- | --- |
 | Sony Orbis 8.0 | `orbis-readelf`, `orbis-objdump`, `orbis-nm`, `orbis-addr2line` | `orbis-elf-headers`, `orbis-symbols` | PS4 ABI/SCE and symbols | Match the SDK to the target build; preserve exact target and flags |
-| LLVM | `llvm-readelf`, `llvm-dwarfdump`, `llvm-debuginfo-analyzer` | `llvm-elf-metadata-json`, `llvm-dwarf-statistics`, `llvm-debug-info-summary` | Generic ELF/DWARF cross-check | Keep unknown SCE values and do not overwrite Orbis facts |
+| LLVM | `llvm-readelf`, `llvm-dwarfdump`, `llvm-debuginfo-analyzer` | `llvm-elf-metadata-json`, `llvm-dwarf-statistics`, `llvm-dwarf-verify`, `llvm-debug-info-summary` | Generic ELF/DWARF cross-check | Keep unknown SCE values and do not overwrite Orbis facts |
 | GNU Binutils | `readelf`, `objdump`, `nm` | `gnu-elf-headers`, `gnu-symbols` | Generic ELF/symbol cross-check | GNU target naming can omit Orbis-specific ABI semantics |
 | elfutils | `eu-readelf`, `eu-elflint` | `elfutils-elflint` | Generic integrity diagnostics | Diagnostics are not reconstructed layout |
 | libdwarf | `dwarfdump` | `libdwarf-check-summary`, `libdwarf-check-all`, `libdwarf-producers` | DWARF integrity/producers | Summary is bounded; full output is capped and fails closed if oversized |
@@ -35,6 +35,12 @@ the original bytes. This keeps cold external scans separate from warm determinis
 allows an evidence producer to be replaced only by a new source/tool/profile identity.
 
 ## PS4 observations
+
+On the Windows development host, the LLVM verifier is run from the MSYS2 UCRT64 profile:
+`C:\msys64\ucrt64.exe` resolves to `C:\msys64\ucrt64\bin\llvm-dwarfdump.exe` (LLVM 22.1.8).
+For captured non-interactive output, the equivalent profile environment is `MSYSTEM=UCRT64` with
+`/ucrt64/bin` on the MSYS2 shell `PATH`. `--verify`, `--verify-json`, and `--statistics` are
+explicit evidence commands; their diagnostics do not replace the source-bound materializer.
 
 The local PS4 ELF is ELF64 little-endian x86-64 with `ELFOSABI_FREEBSD`, Sony type `0xfe10`, and
 SCE program-header values in the `0x61000000` range. Orbis `objdump -f` reports

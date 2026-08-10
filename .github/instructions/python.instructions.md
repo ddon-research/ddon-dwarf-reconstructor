@@ -5,7 +5,7 @@ applyTo: '**/*.py'
 
 # Python instructions
 
-These rules supplement the repository-wide `AGENTS.md`. Use regular CPython 3.14.6 through `uv`;
+These rules supplement the repository-wide `AGENTS.md`. Use regular CPython 3.14.7 through uv 0.12.3;
 do not bypass the managed environment with bare `pytest`, `python -m pytest`, or ad-hoc imports
 through the repository's `src` directory.
 
@@ -64,7 +64,7 @@ through the repository's `src` directory.
 
 - Keep Typer handlers at the composition boundary. Convert CLI values into typed application
   requests; do not import Typer or Click into domain or infrastructure policy code.
-- Use the unified root command tree (`generate`, `export-knowledge`, `artifacts`) and the nested
+- Use the unified root command tree (`generate`, `export-knowledge`, `artifacts`, `performance`) and the nested
   `dwarf-spec-pipeline` command tree. Repeat `--symbol` for multiple symbols; do not reintroduce
   comma-separated parsing.
 - For one-time binary inspection, probe `--help`/`--version` first, then use a named bounded
@@ -73,12 +73,19 @@ through the repository's `src` directory.
 - Declare runtime dependencies in `[project.dependencies]` and development tools in PEP 735
   `[dependency-groups]`. Run tools through `uv run`; use `deptry` to detect missing or misplaced
   dependencies and keep module-name mappings explicit for packages such as `pyelftools`.
+- The default project runtime pins `pyarrow==25.0.0`. Consult `D:\PyArrow-25.0-python-docs` before
+  making Arrow design decisions. Use explicit per-family schemas and `ParquetWriter` for bounded
+  row-group appends; cap `Table.from_pylist` conversion inputs; use typed Hive partition schemas
+  with `pyarrow.dataset` for projection, filters, and `to_batches()`; and treat Arrow memory-pool
+  counters as telemetry rather than process RSS. JSONL projection backfill must share the direct
+  sink's writer bound and layout policy and retain atomic publication.
 - The root documentation tool is Zensical in the `docs` dependency group. Keep site source under
   `docs/`, follow [the Markdown documentation instructions](documentation.instructions.md) and
   [the documentation style reference](../../docs/reference/documentation-style.md), use one
   Diátaxis page intent, arc42 architecture sections, and Mermaid/UML diagrams as Markdown code.
-  Run `uv run just docs-build` when behavior, commands, architecture, or validation guidance
-  changes. Keep Python docstrings factual and concise; link to the site for extended explanation.
+  Run `uv run just docs-tools-install` after checkout or a lockfile change, then run `uv run just
+  docs-check` when behavior, commands, architecture, or validation guidance changes. Keep Python
+  docstrings factual and concise; link to the site for extended explanation.
 - The committed Pyrefly configuration is explicit and authoritative. If a new checkout has no
   `[tool.pyrefly]` section, run `uv run pyrefly init pyproject.toml` once, then review and commit
   the explicit configuration; do not add a second type-checker configuration or broad
@@ -110,6 +117,16 @@ Do not suppress the checker or add a baseline exemption.
   `just test-without-integration` only for exceptional fast iteration; use `test-regression`,
   `test-non-functional`, `test-acceptance`, `test-real-assets`, and `test-performance` for
   explicit evidence slices.
+- Performance code belongs in the infrastructure adapter boundary. Use the typed workload and
+  process runner; do not add always-on profiler hooks to parser/generator hot paths. Use
+  `test-performance-fixtures` for deterministic budgets and `test-performance-real-assets` only
+  with explicit local inputs. Use `performance profile-index` for a separately measured cold
+  compressed-dump rebuild. Keep raw profiler files external and status unavailable/partial
+  evidence rather than substituting zero values. Use `performance compare-runtimes` for
+  CPython/Nuitka/free-threaded comparisons; runtime identity and GIL state are part of the
+  workload/history contract. Nuitka is an opt-in MSVC/onefile tool, and free-threaded Python
+  belongs in a separate project venv because Scalene and Nuitka compilation are currently blocked
+  on Windows `cp314t`; pyinstrument also enables the GIL while importing its native extension.
 - Use Hypothesis for pure type-reference, declarator, array, qualifier, pointer, and parser
   invariants. Use `pytest-regressions` only for small deterministic diagnostics and metadata.
 - Exercise missing, incomplete, conflicting, duplicate, unavailable, cyclic, malformed, and
@@ -127,8 +144,8 @@ uv run just coverage-ci
 uv run just audit
 ```
 
-`uv run just check` includes the strict static-site build; use `uv run just docs-serve` to inspect
-navigation and diagrams locally.
+`uv run just check` includes Markdownlint, Mermaid CLI rendering, and the strict static-site build;
+use `uv run just docs-serve` to inspect navigation and diagrams locally.
 
 For a failing Dependabot or pull-request check, inspect the remote proposal before changing
 source: run gh auth status, gh pr list, gh pr diff, gh pr checks, and gh run view <run-id>

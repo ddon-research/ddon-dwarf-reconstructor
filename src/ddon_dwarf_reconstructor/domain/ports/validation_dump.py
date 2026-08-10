@@ -1,4 +1,4 @@
-"""Application-facing contract for compressed-DWARF definition lookup."""
+"""Explicit validation-only contract for compressed-DWARF dump evidence."""
 
 from __future__ import annotations
 
@@ -8,19 +8,19 @@ from typing import Protocol
 
 
 class DumpDefinitionLocation(Protocol):
-    """Minimum indexed location evidence needed by class discovery."""
+    """Minimum indexed location evidence needed by validation discovery."""
 
     cu_offset: str
     die_offset: str
     completeness_score: int
 
 
-class DumpLookupPort(Protocol):
-    """Narrow port implemented by the infrastructure dump sidecar adapter."""
+class ValidationDumpPort(Protocol):
+    """Compressed-dump lookup retained only for explicit validation runs."""
 
     def find_class_definitions(self, class_name: str) -> Sequence[DumpDefinitionLocation]: ...
 
     def find_method_implementation(self, declaration_offset: int) -> int | None: ...
 
 
-DumpLookupFactory = Callable[[Path, Path | None], DumpLookupPort]
+ValidationDumpFactory = Callable[[Path, Path | None], ValidationDumpPort]

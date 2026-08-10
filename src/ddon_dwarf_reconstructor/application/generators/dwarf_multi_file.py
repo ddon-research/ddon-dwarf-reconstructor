@@ -15,6 +15,21 @@ logger = get_logger(__name__)
 
 
 class MultiFileGenerationService:
+    @staticmethod
+    def _header_filename(file_path: str) -> str:
+        filename = os.path.basename(file_path) if file_path else "Unknown.h"
+        if not filename.endswith(".h"):
+            filename = filename.rsplit(".", 1)[0] + ".h"
+        return filename
+
+    @staticmethod
+    def _class_header_names(classes_by_file: dict[str, list[str]]) -> dict[str, str]:
+        return {
+            class_name: MultiFileGenerationService._header_filename(file_path)
+            for file_path, class_names in classes_by_file.items()
+            for class_name in class_names
+        }
+
     def _build_file_registry(
         self: DwarfGeneratorContext, class_infos: dict[str, ClassInfo]
     ) -> FileRegistry:
@@ -36,25 +51,33 @@ class MultiFileGenerationService:
         classes_by_file: dict[str, list[str]],
         typedefs: dict[str, str],
         include_metadata: bool,
+        class_header_names: dict[str, str] | None = None,
     ) -> dict[str, str]:
         assert self.header_generator is not None
         output_headers: dict[str, str] = {}
+        known_header_names = class_header_names or MultiFileGenerationService._class_header_names(
+            classes_by_file
+        )
         for file_path, file_classes in sorted(classes_by_file.items()):
             if not file_classes:
                 continue
-            filename = os.path.basename(file_path) if file_path else "Unknown.h"
-            if not filename.endswith(".h"):
-                filename = filename.rsplit(".", 1)[0] + ".h"
+            filename = MultiFileGenerationService._header_filename(file_path)
             file_class_infos = {
                 name: info for name, info in class_infos.items() if name in file_classes
             }
             file_order = [name for name in hierarchy_order if name in file_classes]
+            dependency_headers = self.header_generator.external_dependency_headers(
+                class_infos,
+                set(file_classes),
+                known_header_names,
+            )
             header = self.header_generator.generate_single_file_hierarchy_header(
                 file_class_infos,
                 file_order,
                 file_classes[0],
                 typedefs=typedefs,
                 include_metadata=include_metadata,
+                dependency_headers=dependency_headers,
             )
             output_headers[filename] = header
         return output_headers
@@ -66,6 +89,7 @@ class MultiFileGenerationService:
         uncategorized: list[str],
         typedefs: dict[str, str],
         include_metadata: bool,
+        class_header_names: dict[str, str] | None = None,
     ) -> dict[str, str]:
         if not uncategorized:
             return {}
@@ -74,12 +98,24 @@ class MultiFileGenerationService:
             name: info for name, info in class_infos.items() if name in uncategorized
         }
         uncategorized_order = [name for name in hierarchy_order if name in uncategorized]
+        known_header_names = class_header_names or {
+            name: MultiFileGenerationService._header_filename(
+                info.declaration_file or "UncategorizedDefinitions"
+            )
+            for name, info in class_infos.items()
+        }
+        dependency_headers = self.header_generator.external_dependency_headers(
+            class_infos,
+            set(uncategorized),
+            known_header_names,
+        )
         header = self.header_generator.generate_single_file_hierarchy_header(
             uncategorized_infos,
             uncategorized_order,
             "UncategorizedDefinitions",
             typedefs=typedefs,
             include_metadata=include_metadata,
+            dependency_headers=dependency_headers,
         )
         return {"UncategorizedDefinitions.h": header}
 
@@ -116,6 +152,7 @@ class MultiFileGenerationService:
         )
         classes_by_file = file_registry.get_classes_by_file()
         uncategorized = file_registry.get_uncategorized_classes()
+        class_header_names = MultiFileGenerationService._class_header_names(classes_by_file)
         log_event(
             logger,
             logging.DEBUG,
@@ -131,6 +168,7 @@ class MultiFileGenerationService:
             classes_by_file,
             all_typedefs,
             include_metadata,
+            class_header_names,
         )
         output_headers.update(
             context.workflow.render_uncategorized_header(
@@ -139,6 +177,7 @@ class MultiFileGenerationService:
                 uncategorized,
                 all_typedefs,
                 include_metadata,
+                class_header_names,
             )
         )
         log_event(

@@ -12,6 +12,8 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import (
     MethodInfo,
     ParameterInfo,
     StructInfo,
+    TypeDeclarator,
+    TypeReference,
     UnionInfo,
 )
 from ddon_dwarf_reconstructor.domain.services.generation.dependency_extractor import (
@@ -62,6 +64,29 @@ class TestDependencyExtractor:
         dependencies = extractor.extract_dependencies(class_info)
 
         assert dependencies == {0x1000, 0x2000}
+
+    def test_extract_dependencies_from_template_argument_references(self, extractor):
+        class_info = ClassInfo(
+            name="TestClass",
+            members=[
+                MemberInfo(
+                    name="m_path",
+                    type_name="cResPath<rAIFSM>",
+                    type_offset=0x2000,
+                    template_arguments=(
+                        TypeReference(TypeDeclarator("rAIFSM"), die_offset=0x3000),
+                    ),
+                )
+            ],
+            methods=[],
+            nested_structs=[],
+            unions=[],
+            enums=[],
+            base_classes=[],
+            byte_size=8,
+        )
+
+        assert extractor.extract_dependencies(class_info) == {0x2000, 0x3000}
 
     def test_extract_dependencies_from_methods(self, extractor):
         """Test extracting dependencies from method signatures."""

@@ -24,6 +24,7 @@ contract only after it is backed by source and tests.
 | [Tools](tools/external-tool-evidence.md) | bounded external-tool profiles and authority boundaries |
 | [Observability](observability/README.md) | structured events, tracebacks, and telemetry seams |
 | [Testing](testing/README.md) | taxonomy, CI evidence, and validation loop records |
+| [Performance](performance/README.md) | profiler decisions, source-bound metrics, and static benchmark history |
 | [DWARF specification pipeline](dwarf-specification/README.md) | official-source JSON/Markdown artifacts and manifests |
 
 The [static site home](../index.md) and [documentation system explanation](../explanation/documentation-system.md)

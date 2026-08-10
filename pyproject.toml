@@ -3,11 +3,13 @@ name = "ddon-dwarf-reconstructor"
 version = "0.1.0"
 description = "Reconstructs C/C++ header structures from DWARF debug symbols in PS4 ELF files"
 readme = {file = "README.md", content-type = "text/markdown"}
-requires-python = "==3.14.6"
+requires-python = "==3.14.7"
 dependencies = [
-    "pyelftools>=0.31",
+    "pyelftools>=0.33,<0.34",
     "python-dotenv>=1.0.0",
     "psutil>=5.9.0",
+    "pyarrow>=25,<26",
+    "pymysql>=1.2,<1.3",
     "typer>=0.16,<1",
     "structlog>=26.1,<27",
     "rich>=13,<16",
@@ -47,6 +49,9 @@ ddon-dwarf-reconstructor = "ddon_dwarf_reconstructor.cli:app"
 [build-system]
 requires = ["hatchling>=1.26"]
 build-backend = "hatchling.build"
+
+[tool.uv]
+required-version = "==0.12.3"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ddon_dwarf_reconstructor"]
@@ -156,6 +161,11 @@ max-complexity = 10
 
 "src/ddon_dwarf_reconstructor/cli.py" = ["B008"]
 "src/ddon_dwarf_reconstructor/artifact_cli.py" = ["B008"]
+"src/ddon_dwarf_reconstructor/performance_cli.py" = ["B008"]
+"src/ddon_dwarf_reconstructor/performance_analytical_cli.py" = ["B008"]
+"src/ddon_dwarf_reconstructor/performance_materializer_cli.py" = ["B008"]
+"src/ddon_dwarf_reconstructor/performance_current_doris_cli.py" = ["B008"]
+"src/ddon_dwarf_reconstructor/performance_doris_optimization_cli.py" = ["B008"]
 
 [dependency-groups]
 test = [
@@ -178,8 +188,18 @@ quality = [
     "prospector==1.19.1",
 ]
 tools = [
-    "nuitka>=2.7.16",
+    "nuitka>=4.1.3,<5",
     "rust-just>=1.42,<2",
+]
+performance = [
+    "pyperf>=2.10,<3",
+    "py-spy>=0.4,<1",
+    "pyinstrument>=5.1,<6",
+    "scalene>=2.3,<3",
+]
+flight-sql = [
+    "adbc-driver-manager==1.12.0",
+    "adbc-driver-flightsql==1.12.0",
 ]
 docs = ["zensical>=0.0.52,<0.1"]
 dev = [
@@ -188,5 +208,6 @@ dev = [
     { include-group = "type" },
     { include-group = "quality" },
     { include-group = "tools" },
+    { include-group = "performance" },
     { include-group = "docs" },
 ]

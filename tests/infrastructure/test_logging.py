@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -67,6 +68,8 @@ def test_jsonl_log_contains_callsite_and_chained_exception(configured_logging: P
     assert record["run_id"] == "run-2"
     assert record["symbol"] == "rLayout"
     assert record["input_path"] == "input.elf"
+    timestamp = datetime.fromisoformat(record["timestamp"])
+    assert timestamp.utcoffset() == datetime.now().astimezone().utcoffset()
     assert record["filename"] == Path(__file__).name
     assert record["lineno"] > 0
     assert len(record["exception"]) == 2

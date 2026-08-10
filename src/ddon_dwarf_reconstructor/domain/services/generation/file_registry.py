@@ -6,6 +6,8 @@ Maps classes to their source file declarations using DWARF DW_AT_decl_file
 attributes. Handles compilation unit file lists and normalizes paths.
 """
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from ....core.dwarf import decode_dwarf_string

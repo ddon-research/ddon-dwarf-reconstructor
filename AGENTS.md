@@ -1,13 +1,19 @@
 # DDON DWARF Reconstructor contributor guidance
 
 This project extracts deterministic evidence from very large PS4 ELF/DWARF inputs. Performance is
-the first constraint: avoid repeated ELF hashing, repeated full-DIE scans, whole-dump loads, and
-unbounded in-memory intermediates. Preserve stable output ordering and source offsets.
+the first constraint for normal runtime/query work: avoid repeated ELF hashing, repeated full-DIE
+scans, whole-dump loads, and unbounded runtime intermediates. The explicit one-time analytical
+materializer may use substantial CPU/RAM on the 64 GB workstation; measure and publish that cost
+instead of imposing the former ad-hoc parser's memory bound on the producer. Preserve stable output
+ordering and source offsets.
 
 ## Development
 
-- Use regular CPython 3.14.6 and install the complete development environment with
-  `uv sync --python 3.14.6`.
+- Use regular CPython 3.14.7 with uv 0.12.3 and install the complete development environment with
+  `uv sync --python 3.14.7 --locked`. The analytical runtime is part of the default project
+  dependencies.
+- Install Node.js 24.14.1 and the locked documentation validators with `uv run just
+  docs-tools-install` after a fresh checkout or a change to `tools/documentation/package-lock.json`.
 - Install actionlint v1.7.12 with the platform package manager and ensure it is on `PATH`; the
   root `uv run just check` recipe runs it for every local quality loop.
 - Use package-relative imports; do not import the package through the repository's `src` directory.
@@ -34,13 +40,85 @@ unbounded in-memory intermediates. Preserve stable output ordering and source of
 - `ElfDwarfSession` owns the opened ELF/DWARF graph and one-time PS4 normalization. Generated
   headers go through `AtomicHeaderPublisher`, which writes a manifest and rolls back failed bundles.
 - External inspection is an explicit artifact workflow: use `artifacts list-tool-profiles`,
-  `probe-tool`, and `export-tool-evidence` for bounded one-time exports. Matching Orbis tools are
-  authoritative for PS4 ABI/SCE semantics; LLVM, GNU, elfutils, libdwarf, pyelftools, LIEF, and
-  OpenOrbis outputs are additive cross-checks until PS4 behavior is validated. `elfldr` is loader
+  `probe-tool`, and `export-tool-evidence` for bounded one-time exports. Use the modern LLVM
+  UCRT64 profile at `C:\msys64\ucrt64.exe` for generic DWARF parsing, statistics, and verification;
+  matching Orbis tools remain authoritative only for PS4 ABI/SCE semantics. GNU, elfutils,
+  libdwarf, pyelftools, LIEF, and OpenOrbis outputs are additive cross-checks. Preserve unknown
+  forms until the absence of a Sony extension is established by evidence; `elfldr` is loader
   research only and must not be executed by the offline ingestion path.
 - The standard non-proprietary container baseline is
   `tools/binary_toolchain/compose.yaml`. Mount explicit inputs read-only, publish outputs outside
   source control, and never copy Sony SDKs or SELF credentials into the image.
+- Analytical DWARF materialization is the producer boundary. Run
+  `artifacts materialize-dwarf <elf> --output-dir <external-dir>` once, validate it with
+  `artifacts inspect-dwarf-store`, load the complete manifest with `artifacts load-doris`, and
+  pass its source-bound manifest through `--dwarf-store` to `generate` and `export-knowledge`.
+  Normal generation and knowledge export query Doris only; `performance benchmark-dwarf-store`
+  remains the explicit backend-comparison workflow. The canonical typed
+  producer uses pyelftools 0.33, one CU traversal, an explicit stack DIE walk, checksummed raw
+  section/chunk references, and atomic publication. It writes typed Parquet rows directly; JSONL
+  is an opt-in audit projection. Doris is the normal serving backend and complete
+  manifests include source/producer/schema/configuration identity, CU/family counts, and closed
+  Parquet file size, timestamp, hash, footer, compression, and row-group metadata, and validates
+  every closed row group before complete publication. Doris is a downstream load/query backend in
+  the default project runtime; keep all analytical
+  artifacts outside source control. The former compressed-text SQLite index is validation-only and
+  must not be a normal runtime fallback. A partial or stale store fails closed. For long diagnostic
+  runs, use `--checkpoint-every-cus N` to publish explicit `in_progress` Parquet snapshots; inspect
+  them only with `--allow-incomplete`, and never load them into Doris or normal generation. Use
+  `--max-cus N` only for bounded parser/schema probes; those partial stores cannot be used for
+  Doris, generation, knowledge export, or CU-completeness evidence.
+  A source-identity-bound recovery profile is allowed only when an independent LLVM dump supplies
+  guarded context and replacement evidence; it must be recorded in the manifest, preserve the
+  source raw-section bytes and hashes, and still finish with zero parser diagnostics before normal
+  runtime use. The recovery status may be `applied` for an in-memory overlay or `already_applied`
+  when all guarded replacements are already present in the source. A known source without its
+  required recovery profile is stale and fails closed.
+- Keep the promoted source-bound analytical store under
+  `output/analytical-dwarf/main/` (currently the `store-<source-sha16>` directory) for durable
+  local reuse. Use `%TEMP%\ddon-analytical-dwarf` only for bounded probes, checkpoints, profiler
+  output, crash dumps, and other explicitly disposable diagnostics. Do not purge the durable main
+  store or retained evidence as routine cleanup; inventory exact paths before any repair or purge.
+- PyArrow is pinned at `25.0.0` for the default project runtime. When Arrow concepts or API
+  behavior need clarification, consult the local reference at `D:\PyArrow-25.0-python-docs` first.
+  Keep one explicit Arrow schema per record family, use `ParquetWriter` for bounded row-group
+  appends, cap native `Table.from_pylist` inputs, and use `pyarrow.dataset` with the repository's
+  layout-specific typed partition schema for projection, filtering, and `to_batches()` scans.
+  `pa.total_allocated_bytes()` and the memory-pool backend are telemetry, not whole-process RSS;
+  `memory_map` is not a substitute for bounded scans. JSONL-to-Parquet backfill must reuse the
+  bounded writer sink, honor manifest `parquet_layout` and `max_open_writers`, and publish the
+  projection atomically.
+- Native Doris is the active analytical serving backend. Follow the checked-out Apache Doris 4.x
+  guidance in `D:\Apache-Doris-version-4.x-docs`, especially the POC checklist, Duplicate Key,
+  bucketing, prefix-index, load-best-practices, Stream Load, and statistics pages. Preserve
+  append-only `DUPLICATE KEY` semantics, source-first sort keys, bounded bucket counts, strict
+  Stream Load, and profile/tablet evidence. `information_schema.statistics` and
+  `information_schema.column_statistics` are compatibility views and are not Doris optimizer
+  statistics; use `SHOW TABLE STATS`, `SHOW COLUMN STATS`, `SHOW ANALYZE`, `SHOW AUTO ANALYZE`,
+  and `__internal_schema.column_statistics` for database evidence. The loader submits
+  `ANALYZE TABLE` by default and waits for terminal states only when
+  `DDON_DORIS_ANALYZE_WAIT_SECONDS` is positive.
+- The season-two corpus request is the 289 nonblank roots in
+  `resources/season2-resources.txt`. Generate separate source-derived bundles with collision-safe
+  publication and aggregate collision failure; preserve per-root status, provenance, hashes, and incomplete
+  evidence. Standalone MSVC header compilation is distinct from optional aggregate diagnostics.
+  IDA and Sonar observations are additive evidence and must not be reported as completed
+  validation without a retained result. Use the system-derived local timezone in timestamps and
+  examples; do not assume Berlin/CEST or install a tzdata dependency for local runs.
+- Opt-in profiling uses the canonical `performance` command group and `just` recipes. Use
+  `performance doctor` before selecting tools, the deterministic fixture tier before real assets,
+  and `performance history compare/export` for the tracked SQLite/static-history contract. The
+  process runner records CPU, RSS/VMS, process I/O, bounded samples, and source identity in an
+  isolated child. Raw Scalene, cProfile, pyinstrument, py-spy, tracemalloc, pyperf, stdout, stderr,
+  and sample files remain in the OS-local performance artifact directory. Profiling is never
+  enabled in normal generation; missing tools/assets are explicit unavailable or blocked evidence.
+- Nuitka is an opt-in deployment/performance tool. `native-build` uses `python -m nuitka`, the
+  supported Windows MSVC compiler, onefile mode, and an external output directory. Use
+  `performance compare-runtimes` for CPython/Nuitka/free-threaded comparisons; runtime identity,
+  GIL state, output-manifest equality, onefile I/O, and build/tool blockers belong in the feature
+  evidence. The free-threaded runtime is a separate venv and is not a default or CI requirement;
+  Scalene and Nuitka free-threaded compilation are currently blocked by native/upstream support;
+  pyinstrument's current native extension enables the GIL when imported on `cp314t`.
 
 ## Local acceptance artifact
 
@@ -132,6 +210,12 @@ ordering.
   `coverage-ci`. `uv run just test-without-integration` is an exceptional iteration shortcut, not
   a handoff or merge gate. Use `test-regression`, `test-non-functional`, `test-acceptance`,
   `test-real-assets`, and `test-performance` for explicit evidence slices.
+- The performance slices are `test-performance-fixtures` for deterministic budgets and
+  `test-performance-real-assets` for named local environmental evidence. Use
+  `performance-tools-install`, `performance-profile`, `performance-profile-index`, and
+  `performance-history` rather than
+  introducing a second shell benchmark wrapper. Real-asset history is report-only and thresholds
+  are never auto-learned from noisy runs.
 - The knowledge exporter integration path must continue to run without proprietary ELF inputs;
   real PS4/PS3 inputs remain explicitly qualified environmental acceptance evidence.
 - Update the Zensical source pages under `docs/`, `docs/knowledge-base/testing/`, and the active
@@ -143,8 +227,9 @@ ordering.
   `AGENTS.md` remains the repository-wide source of truth. Keep workflow changes synchronized with
   `docs/how-to/validate-changes.md`, `docs/explanation/architecture/deployment.md`, the active
   Spec Kit feature, and the testing knowledge base.
-- GitHub Actions must mirror the local `just` contract: Code Quality runs `just check` (including
-  actionlint), package smoke, and blocking `just audit`; correctness runs taxonomy collection and
+- GitHub Actions must mirror the local `just` contract: Code Quality installs the locked
+  documentation validators, runs `just check` (including actionlint, Markdownlint, and Mermaid
+  rendering), package smoke, and blocking `just audit`; correctness runs taxonomy collection and
   `just coverage-ci`;
   the nested workflow runs its own `just ci` and Compose configuration check. Deterministic
   integration remains in the default correctness selection; real assets and performance remain
@@ -182,8 +267,10 @@ uv run just check
 uv run just test
 ```
 
-`uv run just check` includes the strict Zensical build. Use `uv run just docs-serve` for a local
-preview and keep Mermaid diagrams in Markdown source rather than generated images.
+`uv run just check` includes Markdownlint, Mermaid CLI rendering, and the strict Zensical build.
+Use `uv run just docs-serve` for a local preview and keep Mermaid diagrams in Markdown source
+rather than generated images. Run `uv run just docs-tools-install` once before the first local
+check on a fresh checkout.
 
 Before handoff, also run `uv run just test`, `uv run just coverage-ci`, and `uv run just audit`.
 For distribution changes, also run `uv run just package` and `uv run just package-smoke`.
@@ -235,7 +322,7 @@ security advisory when a patched lock entry is available.
   explanations, and research notes distinct; link between them rather than mixing purposes.
 - For current behavior, inspect source and tests; for intended behavior, cite the active spec; for
   research, preserve the source and authority. Remove obsolete duplicate prose instead of creating
-  a second contract. Use `uv run just docs-build` and then `uv run just check` for site changes.
+  a second contract. Use `uv run just docs-check` and then `uv run just check` for site changes.
 - Keep knowledge-graph infrastructure deferred until the explicit `KG-001` task defines the
   versioned loader, deterministic query fixtures, provenance rules, and acceptance evidence.
 
@@ -253,6 +340,13 @@ security advisory when a patched lock entry is available.
   standalone specification `dwarf-spec-pipeline audit` command. For toolchain work, probe local
   `--help`/`--version` surfaces first, then run only named profiles and retain their manifests.
   Record confirmed, approximate, blocked, and remaining-uncertainty findings separately.
+- For analytical-store work, use the Goal 1 research/compatibility ledger before promoting a
+  dependency, then use `analytical-fixture`, `analytical-materialize`,
+  `analytical-benchmark`, and `analytical-compose-config` from `justfile`. Record CU/DIE/attribute
+  counts, unresolved references, source identity, output hashes, cold/warm resource measurements,
+  and projection/query evidence in `specs/019-analytical-dwarf-store/measured-evidence.md`.
+  Docker and LLVM-source availability are preflight facts, not Doris-load or LLVM-verification
+  observations. Do not weaken the 110%-of-baseline gate when a backend is unavailable.
 - After each parser or evidence slice, run the focused tests, `uv run just check`, and the required
   correctness loop before advancing. Complete the goal only when the named evidence surface passes;
   a time or token budget is never completion evidence.

@@ -6,12 +6,14 @@ The domain stays independent of pyelftools, SQLite, zstd, Rich, structlog, and s
 makes policy testable and lets infrastructure adapters be replaced without changing evidence
 semantics. Architecture tests enforce the dependency direction.
 
-## Persistent, source-bound artifacts
+## Persistent, source-bound analytical artifacts
 
 Hashing and full-DIE scans are too expensive to repeat for every lookup. The identity catalog and
-SQLite dump index therefore use validated metadata and source fingerprints, publish atomically,
-and retain warm artifacts. A forced verification path remains available when evidence must be
-re-established.
+one-pass analytical store therefore use validated source fingerprints, typed offset records,
+checksummed raw references, and atomic publication. The typed row stream is the canonical
+production contract; Parquet is the durable typed output, JSONL is an opt-in audit
+projection, and Doris is a measured query/load backend. The former SQLite dump index remains
+available only for explicit cross-check evidence while query parity is established.
 
 ## Evidence over inference
 
@@ -19,12 +21,12 @@ Producer facts are never overwritten by semantic or external-tool guesses. Parti
 complete evidence. This costs some convenience but makes generated headers and graph records
 auditable.
 
-## Static docs before live graph infrastructure
+## Static docs before live embedded graph infrastructure
 
 The current exporter already provides deterministic JSONL nodes and relationships. Zensical gives
-the project a low-cost, searchable publication surface without adding Neo4j as a runtime
-dependency. A live graph loader/browser is intentionally a roadmap feature until its schema,
-provenance, and update policy are specified.
+the project a low-cost, searchable publication surface without adding LadybugDB as a runtime
+dependency. A LadybugDB-first graph loader/browser is intentionally a roadmap feature until its
+compatibility, schema, provenance, concurrency, and update policy are verified in `KG-001`.
 
 ## One task runner
 

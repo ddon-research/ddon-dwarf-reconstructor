@@ -14,8 +14,9 @@ sources.
 ## Project constraints
 
 - The project reconstructs deterministic C++ headers from very large PS4 ELF/DWARF inputs.
-- Use regular CPython 3.14.6 and `uv`; install the development environment with
-  `uv sync --python 3.14.6`.
+- Use regular CPython 3.14.7 and uv 0.12.3; install the development environment with
+  `uv sync --python 3.14.7 --locked`. The analytical runtime is part of the default project
+  dependencies.
 - Treat inputs for a named DDON build as immutable. Preserve validated source-bound indexes and
   caches locally, and never commit ELF files, compressed dumps, generated headers, caches, logs, or
   credentials.
@@ -28,8 +29,21 @@ sources.
 - Treat external tool output as a separate, source-bound evidence layer. Start with
   `artifacts list-tool-profiles` and explicit `probe-tool` help/version captures; publish named
   exports with `export-tool-evidence` and attach them to knowledge export with repeated
-  `--tool-evidence`. Orbis is authoritative for PS4 ABI/SCE semantics; generic LLVM, GNU,
+  `--tool-evidence`. Use the modern LLVM UCRT64 profile at `C:\msys64\ucrt64.exe` for generic
+  DWARF parsing and verification. Orbis remains authoritative for PS4 ABI/SCE semantics; GNU,
   elfutils, libdwarf, pyelftools, LIEF, and OpenOrbis results remain additive until validated.
+- Keep the complete source-bound analytical store under
+  `output/analytical-dwarf/main/`; reserve `%TEMP%\ddon-analytical-dwarf` for disposable probes,
+  checkpoints, profiles, and crash evidence. Native Doris is the active backend. When clarifying
+  Doris behavior, consult the local Apache Doris 4.x checkout at
+  `D:\Apache-Doris-version-4.x-docs` as well as live CLI output. Doris compatibility statistics
+  views are empty; use `SHOW TABLE STATS`, `SHOW COLUMN STATS`, `SHOW ANALYZE`, `SHOW AUTO ANALYZE`,
+  and `__internal_schema.column_statistics` for evidence.
+- PyArrow is pinned at `25.0.0`; consult `D:\PyArrow-25.0-python-docs` for Arrow reference
+  clarifications. Preserve explicit per-family schemas, bounded `ParquetWriter` row groups and
+  `Table.from_pylist` inputs, typed layout-specific partitioning, dataset projection/filtering,
+  and memory-pool telemetry boundaries. JSONL backfill must use the same bounded sink and manifest
+  layout/writer settings as direct materialization, then publish the projection atomically.
 
 ## Architecture rules
 
@@ -74,9 +88,11 @@ Always use `uv run` for project Python commands and the packaged entry point for
 uv run ddon-dwarf-reconstructor ...
 uv run just test-unit
 uv run just test-integration
+uv run just test-performance-fixtures
 uv run just test
 uv run just check
-uv run ddon-dwarf-reconstructor generate <elf> --symbol <name>
+uv run ddon-dwarf-reconstructor artifacts materialize-dwarf <elf> --output-dir <external-store>
+uv run ddon-dwarf-reconstructor generate <elf> --dwarf-store <manifest> --symbol <name>
 uv run ddon-dwarf-reconstructor artifacts inspect --dwarf-dump <path>
 uv run ddon-dwarf-reconstructor artifacts inspect-elf <elf>
 uv run ddon-dwarf-reconstructor artifacts inspect-dwarf-dump <dump.zst>
@@ -84,7 +100,7 @@ uv run ddon-dwarf-reconstructor artifacts list-tool-profiles
 uv run ddon-dwarf-reconstructor artifacts probe-tool <tool> --output-dir output/tool-probes
 uv run ddon-dwarf-reconstructor artifacts export-tool-evidence <elf> \
   --tool <tool> --profile <profile> --output-dir output/tool-exports
-uv run ddon-dwarf-reconstructor export-knowledge <elf> --symbol <name> \
+uv run ddon-dwarf-reconstructor export-knowledge <elf> --dwarf-store <manifest> --symbol <name> \
   --output-dir output/knowledge --tool-evidence output/tool-exports/<key>/manifest.json
 docker compose --file tools/binary_toolchain/compose.yaml config --quiet
 uv run --directory tools/dwarf_spec_pipeline dwarf-spec-pipeline audit \
@@ -127,6 +143,16 @@ capture read-only `gh` evidence and verify action release SHAs before editing.
   `uv run just test-without-integration` only as an exceptional fast iteration shortcut; it is not
   the handoff gate. Use `test-regression`, `test-non-functional`, `test-acceptance`,
   `test-real-assets`, and `test-performance` for explicit evidence slices.
+- Use `performance-tools-install`, `performance doctor`, `performance-profile`,
+  `performance-profile-index`, and
+  `performance-history` for profiling. The runner samples only an isolated child with psutil and
+  stores summaries in the tracked SQLite/static-history contract; raw profiles, samples, logs,
+  and proprietary inputs remain external. Run `test-performance-real-assets` only with named
+  local paths. Real-asset results are report-only and unavailable tools remain explicit evidence.
+  Use `performance compare-runtimes` for CPython/Nuitka/free-threaded comparisons. Nuitka builds
+  use `python -m nuitka`, MSVC, onefile mode, and external output; free-threaded Python requires a
+  separate project venv and is not a default or CI runtime; pyinstrument currently enables the GIL
+  while loading its native extension on `cp314t`.
 - Validate the packaged entry point and each intentional output mode in fresh-process and warm-cache
   runs, and record input identity, producer/configuration identity, and cache state.
 - Keep real-artifact baselines outside source control; commit only small deterministic manifests or
@@ -137,6 +163,17 @@ capture read-only `gh` evidence and verify action release SHAs before editing.
 - Stream compressed dumps in one pass with bounded memory. Avoid repeated ELF hashing, repeated
   full-DIE scans, unnecessary rescans, and unbounded intermediate collections. Cache artifacts must
   be source-bound, validated before reuse, and published atomically.
+- The analytical store is the normal runtime boundary: materialize every CU once with
+  `artifacts materialize-dwarf`, validate the manifest, and pass `--dwarf-store` to generation and
+  knowledge export. The canonical producer writes typed Arrow/Parquet rows directly; JSONL is an
+  opt-in lossless audit projection, not a mandatory staging format. Doris consumes the same typed
+  Parquet output. Keep the legacy compressed-text SQLite index validation-only and fail
+  closed on missing/stale/partial stores. Record blocked Docker/LLVM prerequisites rather than
+  treating source or Compose files as successful backend evidence.
+- The season-two `--symbols-file resources/season2-resources.txt` workflow publishes separate
+  collision-safe bundles. Keep strict, partial, ambiguous, unavailable, and failed root status
+  visible. Validate standalone headers with MSVC before treating aggregate compilation, Sonar, or
+  IDA observations as additive diagnostics.
 
 ## Change workflow
 
@@ -155,7 +192,8 @@ capture read-only `gh` evidence and verify action release SHAs before editing.
   container, and component views plus native Mermaid/UML diagrams stay as code. Follow [the
   documentation style reference](../docs/reference/documentation-style.md)
   and record unresolved evidence or deferred prerequisites there rather than hiding them in code.
-  Run `uv run just docs-build` for documentation changes.
+  Run `uv run just docs-tools-install` after checkout or a lockfile change, then run
+  `uv run just docs-check` for documentation changes.
 
 ## Goal-oriented research workflow
 

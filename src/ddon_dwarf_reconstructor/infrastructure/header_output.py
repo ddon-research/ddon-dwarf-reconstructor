@@ -24,7 +24,12 @@ class AtomicHeaderPublisher:
     MANIFEST_NAME = "header-bundle.manifest.json"
 
     def publish(
-        self, output_root: Path, platform: ELFPlatform, headers: Mapping[str, str]
+        self,
+        output_root: Path,
+        platform: ELFPlatform,
+        headers: Mapping[str, str],
+        *,
+        metadata: Mapping[str, object] | None = None,
     ) -> tuple[Path, int]:
         platform_dir = output_root / platform.value
         platform_dir.mkdir(parents=True, exist_ok=True)
@@ -53,7 +58,7 @@ class AtomicHeaderPublisher:
             for filename in targets:
                 if filename not in headers:
                     (platform_dir / filename).unlink(missing_ok=True)
-            self._publish_manifest(staged_dir, manifest_path, headers)
+            self._publish_manifest(staged_dir, manifest_path, headers, metadata)
         except Exception as error:
             log_event(
                 logger,
@@ -137,9 +142,13 @@ class AtomicHeaderPublisher:
         return backup
 
     def _publish_manifest(
-        self, staged_dir: Path, manifest_path: Path, headers: Mapping[str, str]
+        self,
+        staged_dir: Path,
+        manifest_path: Path,
+        headers: Mapping[str, str],
+        metadata: Mapping[str, object] | None,
     ) -> None:
-        manifest = {
+        manifest: dict[str, object] = {
             "files": {
                 filename: {
                     "bytes": len(content.encode("utf-8")),
@@ -148,6 +157,8 @@ class AtomicHeaderPublisher:
                 for filename, content in sorted(headers.items())
             }
         }
+        if metadata is not None:
+            manifest["metadata"] = dict(metadata)
         staged_manifest = staged_dir / self.MANIFEST_NAME
         staged_manifest.write_text(
             json.dumps(manifest, indent=2, sort_keys=True) + "\n",

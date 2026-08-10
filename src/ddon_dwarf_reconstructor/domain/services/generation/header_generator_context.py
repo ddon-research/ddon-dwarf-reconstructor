@@ -11,16 +11,17 @@ from ...models.dwarf import (
     MemberInfo,
     MethodInfo,
     StructInfo,
+    TypeReference,
     UnionInfo,
 )
 from ...ports.class_parser import ClassParserPort
-from ...ports.dwarf_index import DwarfIndexPort
+from ...ports.dwarf_lookup import DwarfLookupPort
 
 
 class HeaderGeneratorContext(Protocol):
     """State and operations shared by deterministic header responsibilities."""
 
-    dwarf_index: DwarfIndexPort
+    dwarf_index: DwarfLookupPort
     class_parser: ClassParserPort | None
 
     def _collect_typedef_forward_declarations(self, typedefs: dict[str, str]) -> set[str]: ...
@@ -141,6 +142,13 @@ class HeaderGeneratorContext(Protocol):
         self, class_infos: dict[str, ClassInfo]
     ) -> dict[str, set[str]]: ...
 
+    def external_dependency_headers(
+        self,
+        class_infos: dict[str, ClassInfo],
+        rendered_class_names: set[str],
+        header_names: dict[str, str],
+    ) -> dict[str, str]: ...
+
     def _add_base_dependencies(
         self,
         class_name: str,
@@ -169,6 +177,10 @@ class HeaderGeneratorContext(Protocol):
 
     def _hierarchy_header_prefix(self, guard_name: str) -> list[str]: ...
 
+    def _hierarchy_dependency_include_lines(
+        self, dependency_headers: dict[str, str] | None
+    ) -> list[str]: ...
+
     def _hierarchy_typedef_block(
         self, typedefs: dict[str, str] | None, target_class: str
     ) -> list[str]: ...
@@ -185,7 +197,6 @@ class HeaderGeneratorContext(Protocol):
         self,
         class_infos: dict[str, ClassInfo],
         hierarchy_order: list[str],
-        target_class: str,
         typedefs: dict[str, str] | None,
         resolve_forward_declarations: bool,
     ) -> set[str]: ...
@@ -242,6 +253,14 @@ class HeaderGeneratorContext(Protocol):
 
     def _struct_member_types(
         self, struct: StructInfo
+    ) -> Iterator[tuple[str | None, int | None, bool]]: ...
+
+    def _template_argument_types(
+        self, member: MemberInfo
+    ) -> Iterator[tuple[str | None, int | None, bool]]: ...
+
+    def _template_reference_types(
+        self, reference: TypeReference
     ) -> Iterator[tuple[str | None, int | None, bool]]: ...
 
     def _add_forward_declaration(

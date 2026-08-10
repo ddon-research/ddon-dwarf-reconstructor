@@ -49,9 +49,10 @@ contract.
 ## Current capability boundary
 
 The reconstructor exports a deterministic JSONL knowledge bundle. It does not currently publish a
-Neo4j database, graph API, interactive graph view, or documentation-to-code dependency index. The
-versioned loader and deterministic query fixtures are tracked as `KG-001` in the
-[documentation style feature](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/013-documentation-style-governance).
+LadybugDB database, graph API, interactive graph view, or documentation-to-code dependency index.
+The LadybugDB-first versioned loader, compatibility gate, and deterministic query fixtures are
+tracked as `KG-001` in the
+[dedicated knowledge-graph feature](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/015-ladybugdb-knowledge-graph).
 The static site documents this boundary; it does not imply that future infrastructure exists.
 
 ## Maintenance rule
@@ -62,7 +63,8 @@ For every cross-module change:
 2. update the smallest affected Diátaxis page and relevant arc42 compartment;
 3. update the active spec, roadmap, and instruction adapter when the contract changes;
 4. label evidence, uncertainty, and deferred work;
-5. run `uv run just docs-build` and the applicable repository gates.
+5. run `uv run just docs-check` and the applicable repository gates.
 
-The strict site build is part of `uv run just check`. Git history is the archive for retired prose;
-active navigation should contain one maintained explanation of each contract.
+`docs-check` validates Markdown and Mermaid source before the strict site build. It is part of
+`uv run just check`. Git history is the archive for retired prose; active navigation should contain
+one maintained explanation of each contract.

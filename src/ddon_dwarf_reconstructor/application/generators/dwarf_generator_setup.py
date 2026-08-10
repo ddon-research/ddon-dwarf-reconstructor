@@ -21,6 +21,8 @@ class DwarfGeneratorSetup:
     @staticmethod
     def _resolve_dwarf_dump_path(generator: Any, explicit_path: Path | None = None) -> Path | None:
         """Resolve the configured or adjacent compressed DWARF dump."""
+        if not getattr(generator.session, "legacy_lookup_allowed", True):
+            return None
         candidate_path = explicit_path or generator._configured_dwarf_dump_path
         if candidate_path is not None or not generator.exhaustive_search:
             return candidate_path
@@ -108,19 +110,24 @@ class DwarfGeneratorSetup:
 
     @staticmethod
     def _initialize_lazy_index(generator: Any) -> None:
-        from ...domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
-
         assert generator.dwarf_info is not None, "dwarf_info must be initialized"
         started_at = perf_counter()
-        generator.lazy_index = LazyDwarfIndexService(
-            generator.dwarf_info,
-            str(generator.cache_file or Path(".dwarf_cache.json")),
-            die_cache_size=generator.die_cache_size,
-            type_cache_size=generator.type_cache_size,
-            search_timeout=generator.search_timeout,
-            source_file_path=generator.elf_path,
-            source_identity=generator.source_identity,
-        )
+        store = getattr(generator.session, "store", None)
+        provided_index = getattr(generator.session, "query_index", None)
+        if store is not None and provided_index is not None:
+            generator.lazy_index = provided_index
+        else:
+            from ...domain.services.lazy_dwarf_index_service import LazyDwarfIndexService
+
+            generator.lazy_index = LazyDwarfIndexService(
+                generator.dwarf_info,
+                str(generator.cache_file or Path(".dwarf_cache.json")),
+                die_cache_size=generator.die_cache_size,
+                type_cache_size=generator.type_cache_size,
+                search_timeout=generator.search_timeout,
+                source_file_path=generator.elf_path,
+                source_identity=generator.source_identity,
+            )
         DwarfGeneratorSetup._log_component("lazy_index", started_at)
 
     @staticmethod
@@ -153,6 +160,7 @@ class DwarfGeneratorSetup:
                 exhaustive_search=generator.exhaustive_search,
                 dwarf_dump_path=generator.dwarf_dump_path,
                 dwarf_index_path=generator.dwarf_index_path,
+                query_port=getattr(generator.session, "query_port", None),
                 resolve_param_names=generator.resolve_param_names,
                 dump_parser=dump_parser,
             ),

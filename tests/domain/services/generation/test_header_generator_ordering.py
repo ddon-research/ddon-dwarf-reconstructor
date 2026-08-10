@@ -190,6 +190,66 @@ class TestHeaderGenerator:
         assert header.count("cast(const MtDTI& dti);") == 1
 
     @pytest.mark.unit
+    def test_alias_equivalent_method_parameters_are_emitted_once(self, header_generator):
+        class_info = ClassInfo(
+            name="AliasMethods",
+            byte_size=8,
+            members=[],
+            methods=[
+                MethodInfo(
+                    name="concat",
+                    return_type="void",
+                    parameters=[ParameterInfo("value", "MT_CHAR", type_offset=0x10)],
+                ),
+                MethodInfo(
+                    name="concat",
+                    return_type="void",
+                    parameters=[ParameterInfo("value", "MT_CTSTR", type_offset=0x10)],
+                ),
+            ],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x5510,
+        )
+
+        header = header_generator.generate_header(class_info, include_metadata=False)
+
+        assert header.count("concat(MT_CHAR value);") == 1
+        assert "concat(MT_CTSTR value);" not in header
+
+    @pytest.mark.unit
+    def test_parameter_declarators_remain_distinct(self, header_generator):
+        class_info = ClassInfo(
+            name="QualifiedMethods",
+            byte_size=8,
+            members=[],
+            methods=[
+                MethodInfo(
+                    name="read",
+                    return_type="void",
+                    parameters=[ParameterInfo("value", "Value*", type_offset=0x10)],
+                ),
+                MethodInfo(
+                    name="read",
+                    return_type="void",
+                    parameters=[ParameterInfo("value", "const Value*", type_offset=0x10)],
+                ),
+            ],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x5520,
+        )
+
+        header = header_generator.generate_header(class_info, include_metadata=False)
+
+        assert "read(Value* value);" in header
+        assert "read(const Value* value);" in header
+
+    @pytest.mark.unit
     def test_nested_struct_pointer_members_receive_forward_declarations(self, header_generator):
         """Pointer-only members in nested structs must name declared aggregate types."""
         class_info = ClassInfo(

@@ -6,7 +6,7 @@ import re
 from typing import TYPE_CHECKING
 
 from ....core.observability import get_logger
-from ...models.dwarf import MethodInfo
+from ...models.dwarf import MethodInfo, ParameterInfo
 
 if TYPE_CHECKING:
     from .header_generator_context import HeaderGeneratorContext
@@ -106,7 +106,7 @@ class HeaderMethodRenderingMixin:
 
         for method in methods:
             parameter_types = tuple(
-                parameter.type_name
+                HeaderMethodRenderingMixin._canonical_parameter_type(parameter)
                 for parameter in (method.parameters or [])
                 if parameter.name != "__artificial__"
             )
@@ -124,6 +124,19 @@ class HeaderMethodRenderingMixin:
             unique_methods.append(method)
 
         return unique_methods
+
+    @staticmethod
+    def _canonical_parameter_type(parameter: ParameterInfo) -> tuple[object, ...]:
+        """Normalize alias-only parameter names without losing declarator qualifiers."""
+        type_name = re.sub(r"\s+", " ", parameter.type_name.strip())
+        if parameter.type_offset is None:
+            return ("name", type_name, (), "")
+
+        qualifiers = tuple(re.findall(r"\b(?:const|volatile|restrict)\b", type_name))
+        declarator = re.sub(r"\b(?:const|volatile|restrict)\b", "", type_name)
+        declarator = re.sub(r"[A-Za-z_]\w*(?:::[A-Za-z_]\w*)*", "", declarator)
+        declarator = re.sub(r"\s+", "", declarator)
+        return ("terminal", parameter.type_offset, qualifiers, declarator)
 
     @staticmethod
     def _canonical_method_name(method_name: str) -> str:

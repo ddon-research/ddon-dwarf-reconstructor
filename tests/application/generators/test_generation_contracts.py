@@ -11,6 +11,8 @@ from hypothesis import strategies as st
 
 from ddon_dwarf_reconstructor.application.generators import (
     DwarfGenerator,
+    GenerationOutcome,
+    GenerationReport,
     GenerationRequest,
     HeaderBundle,
 )
@@ -31,6 +33,29 @@ def test_header_bundle_only_requires_one_header() -> None:
     assert HeaderBundle.single("MtObject", "header").only() == "header"
     with pytest.raises(ValueError, match="exactly one"):
         HeaderBundle({"a.h": "a", "b.h": "b"}).only()
+
+
+@pytest.mark.unit
+def test_generation_report_serializes_per_symbol_outcomes() -> None:
+    report = GenerationReport(
+        requested_symbols=("B", "A"),
+        outcomes=(
+            GenerationOutcome("B", "success", headers=("B.h",)),
+            GenerationOutcome("A", "error", error="not found"),
+        ),
+        published=False,
+    )
+
+    assert report.to_dict() == {
+        "requested_symbols": ["B", "A"],
+        "outcomes": [
+            {"symbol": "B", "status": "success", "headers": ["B.h"]},
+            {"symbol": "A", "status": "error", "headers": [], "error": "not found"},
+        ],
+        "published": False,
+        "succeeded": 1,
+        "failed": 1,
+    }
 
 
 @pytest.mark.unit

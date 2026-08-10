@@ -96,3 +96,27 @@ def test_render_helpers_skip_empty_file_groups(tmp_path: Path) -> None:
         )
         == {}
     )
+
+
+@pytest.mark.unit
+def test_render_file_headers_pass_external_dependency_headers(tmp_path: Path) -> None:
+    generator = _generator(tmp_path)
+    infos = {"Base": _class("Base", "base.cpp"), "Derived": _class("Derived", "derived.cpp")}
+    infos["Derived"].base_classes = ["Base"]
+    generator.header_generator.external_dependency_headers.return_value = {"Base": "base.h"}
+    generator.header_generator.generate_single_file_hierarchy_header.return_value = "Derived header"
+
+    result = MultiFileGenerationService._render_file_headers(
+        generator,
+        infos,
+        ["Derived"],
+        {"derived.cpp": ["Derived"]},
+        {},
+        True,
+        {"Base": "base.h", "Derived": "derived.h"},
+    )
+
+    assert result == {"derived.h": "Derived header"}
+    assert generator.header_generator.generate_single_file_hierarchy_header.call_args.kwargs[
+        "dependency_headers"
+    ] == {"Base": "base.h"}

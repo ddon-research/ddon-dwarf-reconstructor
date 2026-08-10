@@ -69,7 +69,9 @@ repeatable authoring loop. Keep this adapter short enough to apply to every page
   from their own boundary with `uv run --directory tools/dwarf_spec_pipeline ...`.
 - Update `zensical.toml` navigation, the relevant README, Spec Kit feature, roadmap entry, and
   instruction adapter when a public workflow or documentation contract changes.
-- Run `uv run just docs-build` for every site change and `uv run just check` before handoff. Run
-  focused tests and the nested project's checks when the changed page describes those contracts.
+- Run `uv run just docs-tools-install` after checkout or a documentation-tool lockfile change,
+  then run `uv run just docs-check` for every site change and `uv run just check` before handoff.
+  Run focused tests and the nested project's checks when the changed page describes those
+  contracts.
 - Review internal links, headings, code fences, diagram semantics, source paths, dates, version
   claims, and obsolete duplicate pages. Preserve unrelated worktree edits and local evidence.

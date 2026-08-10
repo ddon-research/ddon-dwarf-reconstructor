@@ -13,8 +13,29 @@ uv run just test
 ```
 
 `check` includes Ruff, format verification, actionlint, Pyrefly, deptry, structure, architecture,
-and the strict documentation build. `test` includes deterministic integration tests but excludes
-performance, packaging, and real-asset qualifiers.
+Markdownlint, Mermaid CLI validation, and the strict documentation build. `test` includes
+deterministic integration tests but excludes performance, packaging, and real-asset qualifiers.
+
+For the explicit profiling slice, use the same source of truth:
+
+```powershell
+uv run just performance-tools-install
+uv run just test-performance-fixtures
+uv run just test-performance-real-assets  # only with named local inputs
+uv run just performance-profile-index     # only with the explicit local dump default/override
+uv run just performance-runtime-compare   # CPython/Nuitka/free-threaded real-asset comparison
+uv run just performance-history
+```
+
+The fixture command can gate deterministic budgets. Real-asset runs are report-only and record
+cold/warm state, source identity, tool availability, and external manifest paths; a skipped or
+unavailable profiler is not replacement evidence.
+
+Nuitka builds are also explicit environmental evidence. `native-build` uses `python -m nuitka`,
+MSVC, onefile mode, and an external output directory. Free-threaded Python must use a separate
+project venv; a bare base interpreter can report a misleading missing-project failure. Nuitka and
+Scalene free-threaded blockers remain recorded rather than added to the normal correctness loop,
+and pyinstrument is not no-GIL evidence because its native extension enables the GIL on import.
 
 ## Handoff loop
 
@@ -50,18 +71,23 @@ be hidden behind a green default test command.
 For a docs-only change, run at least:
 
 ```powershell
-uv run just docs-build
+uv run just docs-tools-install
+uv run just docs-check
 uv run just check
 ```
 
-Review generated `site/` locally, then remove or leave the ignored build output as convenient.
-The GitHub Pages workflow repeats the strict build from the lockfile.
+Run `docs-tools-install` once after checkout or a documentation-tool lockfile change. `docs-check`
+validates every Mermaid fence by rendering it to a temporary SVG and lints the authored site
+Markdown with the locked `markdownlint-cli2` configuration before building `site/`. Review the
+generated site locally, then remove or leave the ignored build output as convenient. The GitHub
+Pages workflow repeats all three checks from the lockfiles.
 
 ## Documentation review
 
 Use the [documentation style reference](../reference/documentation-style.md) and the
 [authoring how-to](write-documentation.md) before reviewing prose. Confirm that the page has one
 Diátaxis intent, an identifiable audience and outcome, source-backed claims, explicit evidence
-status, and links to the relevant arc42 compartment or reference contract. Check Mermaid source,
-commands, paths, headings, and internal links. Delete obsolete duplicate narratives instead of
-preserving competing instructions.
+status, and links to the relevant arc42 compartment or reference contract. Check Mermaid source
+with `uv run just docs-diagrams`, Markdown with `uv run just docs-lint`, commands, paths, headings,
+and internal links. Delete obsolete duplicate narratives instead of preserving competing
+instructions.

@@ -6,10 +6,11 @@ This module handles building complete inheritance chains and collecting
 all classes in an inheritance hierarchy for full hierarchy header generation.
 """
 
+from ....core.dwarf import DwarfCompilationUnit, DwarfEntry
 from ....core.observability import get_logger, log_timing
 from ...models.dwarf import ClassInfo
 from ...ports.class_parser import ClassParserPort
-from ...ports.dwarf_index import DwarfIndexPort
+from ...ports.dwarf_lookup import DwarfLookupPort
 from .dependency_extractor import DependencyExtractor
 from .hierarchy_builder_context import HierarchyBuilderContext
 from .hierarchy_chain import HierarchyChainMixin
@@ -34,7 +35,7 @@ class HierarchyBuilder(
     - Ordering classes from base to derived for proper generation
     """
 
-    def __init__(self, class_parser: ClassParserPort, dwarf_index: DwarfIndexPort):
+    def __init__(self, class_parser: ClassParserPort, dwarf_index: DwarfLookupPort):
         """Initialize hierarchy builder with class parser and DWARF index.
 
         Args:
@@ -73,21 +74,18 @@ class HierarchyBuilder(
         visited = set()
 
         is_root_lookup = True
+        pending_base_offset: int | None = None
         while current_class and current_class not in visited:
             visited.add(current_class)
             logger.debug(f"Processing class in hierarchy: {current_class}")
 
-            if is_root_lookup and root_die_offset is not None:
-                result = self.class_parser._find_die_and_cu_by_offset(root_die_offset)
-                if result is None:
-                    raise ValueError(
-                        f"Approved root DIE 0x{root_die_offset:x} is unavailable for {class_name}"
-                    )
-            else:
-                result = self.class_parser.find_class(
-                    current_class,
-                    exhaustive_override=None if is_root_lookup else False,
-                )
+            result = self._lookup_hierarchy_class(
+                current_class,
+                class_name,
+                is_root_lookup,
+                root_die_offset,
+                pending_base_offset,
+            )
             if not result:
                 logger.warning(f"Could not find class: {current_class}")
                 break
@@ -97,11 +95,11 @@ class HierarchyBuilder(
             all_class_infos[current_class] = class_info
             hierarchy_order.insert(0, current_class)  # Insert at beginning for base->derived order
 
-            # Find base class
-            next_class = self._find_base_class(class_die)
+            next_class, next_base_offset = self._next_hierarchy_base(class_info, class_die)
             if next_class and next_class != "unknown_type":
                 logger.debug(f"Found base class: {next_class}")
                 current_class = next_class
+                pending_base_offset = next_base_offset
                 is_root_lookup = False
             else:
                 logger.debug(f"No base class found for: {current_class}")
@@ -113,6 +111,41 @@ class HierarchyBuilder(
         )
 
         return all_class_infos, hierarchy_order
+
+    def _lookup_hierarchy_class(
+        self: HierarchyBuilderContext,
+        current_class: str,
+        root_class: str,
+        is_root_lookup: bool,
+        root_die_offset: int | None,
+        pending_base_offset: int | None,
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
+        if is_root_lookup and root_die_offset is not None:
+            result = self.class_parser._find_die_and_cu_by_offset(root_die_offset)
+            if result is None:
+                raise ValueError(
+                    f"Approved root DIE 0x{root_die_offset:x} is unavailable for {root_class}"
+                )
+            return result
+        if pending_base_offset is not None:
+            result = self.class_parser._find_die_and_cu_by_offset(pending_base_offset)
+            if result is not None:
+                return result
+        return self.class_parser.find_class(
+            current_class,
+            exhaustive_override=None if is_root_lookup else False,
+        )
+
+    def _next_hierarchy_base(
+        self: HierarchyBuilderContext, class_info: ClassInfo, class_die: DwarfEntry
+    ) -> tuple[str | None, int | None]:
+        next_class = class_info.base_classes[0] if class_info.base_classes else None
+        if next_class is None:
+            next_class = self._find_base_class(class_die)
+        next_base_offset = (
+            class_info.base_class_offsets[0] if class_info.base_class_offsets else None
+        )
+        return next_class, next_base_offset
 
     @log_timing
     def build_full_hierarchy_with_dependencies(

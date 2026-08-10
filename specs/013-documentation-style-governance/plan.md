@@ -35,7 +35,8 @@
 3. Refactor the documentation-system explanation, goal workflow, architecture index, roadmap, graph
    boundary, and validation guidance to use the new tone and evidence vocabulary.
 4. Synchronize `AGENTS.md`, Copilot, Claude, Python, GitHub Actions, README, and site navigation.
-5. Track the next graph step as `KG-001` without implementing it.
+5. Track the next graph step as the dedicated LadybugDB-first `KG-001` feature without implementing
+   it in the documentation feature.
 
 ## Files
 
@@ -46,7 +47,8 @@
   `docs/reference/knowledge-graph.md`, `docs/roadmap/index.md`, `README.md`.
 - Adapters: `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`,
   `.github/instructions/python.instructions.md`, `.github/instructions/github-actions.instructions.md`.
-- Spec record: `specs/013-documentation-style-governance/`.
+- Spec records: `specs/013-documentation-style-governance/` and the dedicated
+  [KG-001 contract](../015-ladybugdb-knowledge-graph/spec.md).
 
 ## Validation tiers
 
@@ -55,4 +57,5 @@
 - Handoff: `uv run just coverage-ci` and `uv run just audit`; package checks remain unchanged
   because this feature does not modify distribution behavior.
 - Nested: run the nested checks when its documentation or command boundary changes.
-- Deferred: `KG-001` requires a separate graph contract and deterministic query evidence.
+- Deferred: LadybugDB-first `KG-001` requires the separate import contract, compatibility gate, and
+  deterministic query evidence in the [KG-001 feature record](../015-ladybugdb-knowledge-graph/spec.md).

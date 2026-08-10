@@ -1,0 +1,26 @@
+{
+  "config": {
+    "default": true,
+    "MD013": false,
+    "MD024": {
+      "siblings_only": true
+    },
+    "MD029": {
+      "style": "ordered"
+    },
+    "MD046": {
+      "style": "fenced"
+    },
+    "MD060": false
+  },
+  "globs": [
+    "docs/**/*.md",
+    "README.md",
+    "tools/documentation/README.md"
+  ],
+  "ignores": [
+    "docs/knowledge-base/dwarf-specification/generated/**/*.md"
+  ],
+  "noBanner": true,
+  "noProgress": true
+}

@@ -11,6 +11,7 @@ uv run ddon-dwarf-reconstructor [OPTIONS] COMMAND [ARGS]...
 | `generate` | Generate deterministic C++ headers for one or more symbols. |
 | `export-knowledge` | Export deterministic evidence as a knowledge bundle. |
 | `artifacts` | Inspect and maintain source catalogs, indexes, caches, and tool evidence. |
+| `performance` | Collect opt-in resource/profiler evidence and maintain benchmark history. |
 
 ## Generation and export
 
@@ -24,6 +25,16 @@ Common inputs are an ELF path, one or more `--symbol` values or a `--symbols-fil
 the complete option list; this page intentionally documents stable commands rather than copying
 Typer's formatting.
 
+Normal generation and knowledge export require a source-bound `--dwarf-store` manifest whose
+complete projection has been loaded into Doris with `artifacts load-doris`. The manifest is
+produced and published explicitly before lookup; missing, stale, incomplete, unavailable, or
+source/count-mismatched stores fail closed. These commands query Doris only; Parquet remains the
+canonical materializer output and JSONL remains an opt-in audit/interchange projection.
+
+For a complete local store, the repository convention is
+`output/analytical-dwarf/main/store-<source-sha16>/manifest.json`. Checkpoints and bounded probes
+belong under `%TEMP%\ddon-analytical-dwarf` and require explicit incomplete-evidence flags.
+
 ## Artifact subcommands
 
 ```text
@@ -31,6 +42,9 @@ inspect
 verify-source
 inspect-elf
 inspect-dwarf-dump
+materialize-dwarf
+inspect-dwarf-store
+load-doris
 list-tool-profiles
 probe-tool
 export-tool-evidence
@@ -44,3 +58,81 @@ purge-dump-index
 Every maintenance command has an explicit target and confirmation contract. Use
 `uv run ddon-dwarf-reconstructor artifacts --help` and the individual subcommand help before
 operating on a large or durable artifact.
+
+## Performance subcommands
+
+```text
+doctor
+profile <elf>
+compare-runtimes <elf>
+profile-index <dump>
+benchmark-dwarf-store <elf>
+benchmark-doris-current <elf>
+benchmark-doris-optimization <elf>
+benchmark-doris-flight
+check-doris-flight
+profile-dwarf-store <elf>
+benchmark
+history compare
+history export
+```
+
+See the [performance reference](performance.md) for profiler choices, metric status semantics,
+raw artifact boundaries, and the v1 history schema.
+
+`benchmark-dwarf-store` accepts `--run-knowledge-export` for explicit complete export evidence;
+the command writes the generated bundle and its deterministic tree hash under the external
+benchmark artifact directory. For a database already loaded from the complete manifest, combine
+`--query-existing-doris` to measure serving queries without reloading the canonical files or
+rescanning the full Parquet projection.
+
+`profile-dwarf-store` wraps that same benchmark through the shared performance runner. Use
+repeatable `--profiler scalene` and `--profiler cprofile` options for line/memory and method CPU
+evidence before changing Doris keys, indexes, buckets, or materialized views. Add
+`--profiler scalene-libraries` for an optional standard-library/site-package comparison; it is a
+broad diagnostic and is not included in `--profiler all`. The child benchmark report remains
+separate from the profiler manifests.
+
+`benchmark-doris-current` reuses a complete source-bound publication. The opt-in
+`benchmark-doris-optimization` command adds redacted generation query tracing, typed serving-variant
+identity, selective-statistics policy, and one-factor lookup/physical candidates. Runtime-only
+variants such as `typed-projections`, `reference-prefetch-lazy`, and
+`targeted-child-tag-filter` reuse the canonical tables; lookup candidates require explicit
+`--provision-candidate`. No candidate changes the canonical fourteen-family contract. Use the
+command's `--help` surface for the cold/warm repetition and profile-budget controls.
+
+To repeat the measured interaction batch of all positive standalone candidates, use
+`--candidate combined-positive-below-gate --provision-candidate`. It activates lazy reference
+prefetch, the decoded-serving projection, and source/name lookup buckets 2/4/8 with b8 active;
+the other buckets are provisioned as comparison-only alternatives. The active b8 statistics pass
+is now terminal-success, but the measured batch remains opt-in because decoded-serving projection
+does not preserve raw attribute values for the full serving contract.
+
+The 2026-08-09/10 complete-store run measured the live generator path. Bounded source/unit-aware
+hydration produced exact exhaustive `rAIFSM` output; the post-policy canonical run measured
+`19.121/19.127 s` warm p50/p95. Child-frontier/reference prefetching and line-program caching
+are included in the serving algorithm. The canonical schema, keys, indexes, storage, and registry
+data were unchanged; only the additive registry variant identity was refreshed. Name lookup
+buckets 2 and 8 reduced global lookup scheduling but reached only about 10% warm p50 and 5% warm
+p95 improvement, so neither was promoted. Lazy reference prefetch and decoded attribute
+projection were exact but each missed the 10% end-to-end gate; the latter reduced warm p95 RSS by
+15.1% and remains an opt-in memory variant. The targeted child-tag filter regressed warm p50 by
+10.5% and is rejected. MV, index, bucket, storage-format, session, and Stream Load variants
+remain `not_observed` unless their trace gate is met. This command is a reusable, change-triggered
+one-shot regression/promotion tool, not a continuous service.
+
+`DDON_DORIS_HYDRATION_SCOPE=global` is the canonical setting. A fair-path `unit` screen preserved
+exact `rAIFSM` output but took `289.048 s` versus the canonical `19.121/19.127 s` warm p50/p95;
+its partial trace showed 26,463 observations and is recorded as a rejected query-fan-out
+candidate, not a serving default.
+
+`check-doris-flight` is the explicit preflight for the optional Flight SQL overlay. It records
+Compose-file and rendered-configuration hashes, FE/BE endpoint reachability, and bounded startup
+log markers. Run it with `uv run --group flight-sql` before
+`benchmark-doris-flight`; the latter compares the default PyMySQL row path with ADBC qmark queries,
+Arrow table/RecordBatch consumption, a reducer, and bounded hydration batches. Neither command
+changes the default MySQL/DDL/Stream Load path. Because the current Doris producer rejects prepared
+statement parameter exchange, the benchmark-only
+`--allow-unparameterized-flight-fallback` flag can be combined with
+`--reused-connections-only` to render checked literals for a diagnostic run; its report remains
+`partial` and is not a runtime fallback.

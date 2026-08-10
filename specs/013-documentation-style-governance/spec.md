@@ -1,7 +1,7 @@
 # Feature Specification: Documentation style and governance
 
 **Feature branch:** `013-documentation-style-governance`
-**Status:** Style contract implemented; `KG-001` remains explicitly deferred
+**Status:** Style contract implemented; LadybugDB-first `KG-001` remains explicitly deferred
 **Owner:** DDON DWARF Reconstructor maintainers
 
 ## Problem
@@ -10,7 +10,8 @@ The repository now has a Zensical site with Diátaxis navigation and arc42 archi
 the writing contract is distributed across several adapters. Without a single tone, evidence, page
 intent, and review rule, new pages can reintroduce mixed-purpose narratives, unsupported claims, or
 obsolete duplicates. The next knowledge-graph integration also needs to remain a roadmap task
-while the documentation governance work settles.
+while the documentation governance work settles; its dedicated contract is maintained in the
+[KG-001 feature record](../015-ladybugdb-knowledge-graph/spec.md).
 
 ## Outcome
 
@@ -37,8 +38,9 @@ validation mandatory for authored documentation while preserving the existing JS
   the documentation-writer skill, and synchronized repository adapters.
 - **STYLE-007:** Documentation changes MUST validate the strict Zensical build and update navigation,
   specs, roadmap, and contributor guidance when the public contract changes.
-- **STYLE-008:** `KG-001` MUST track the versioned JSONL graph loader and deterministic query fixtures;
-  this feature MUST NOT implement a live graph database, API, or browser.
+- **STYLE-008:** `KG-001` MUST track the versioned JSONL graph loader, LadybugDB-first compatibility
+  gate, provenance rules, and deterministic query fixtures; this feature MUST NOT implement a live
+  LadybugDB database, API, or browser.
 
 ## Acceptance scenarios
 
@@ -49,11 +51,13 @@ validation mandatory for authored documentation while preserving the existing JS
 3. Existing authored site entry points use concise, direct, source-backed language and do not claim
    that the deferred graph integration exists.
 4. `uv run just docs-build` and `uv run just check` validate the changed documentation surface.
-5. The roadmap and feature task list show the graph loader as an unchecked deferred task.
+5. The roadmap and the dedicated `KG-001` feature task list show the LadybugDB-first graph loader
+   as an unchecked deferred task.
 
 ## Non-goals
 
-- Implementing Neo4j, a graph loader, graph queries, a graph API, or an interactive graph browser.
+- Implementing LadybugDB, a graph loader, graph queries, a graph API, or an interactive graph
+  browser.
 - Rewriting generated DWARF specification artifacts or changing reconstruction behavior.
 - Introducing a second documentation generator, proprietary diagram format, or exported diagram
   image as the source of truth.

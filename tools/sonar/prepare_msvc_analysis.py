@@ -15,6 +15,7 @@ from pathlib import Path
 
 REQUIRED_MSVC_FLAGS = ("/std:c++latest", "/EHsc", "/W4", "/Zc:__cplusplus")
 TRANSLATION_UNIT_SUFFIXES = (".c", ".cc", ".cpp", ".cxx")
+AGGREGATE_TRANSLATION_UNIT = "compile_all.cpp"
 DEFAULT_VALIDATION_DIRECTORY = Path("output/msvc-header-validation-20260801")
 
 
@@ -237,7 +238,7 @@ def _batch_include_path(header_directory: Path, validation_directory: Path) -> s
     return f"%ROOT%{str(relative).replace('/', '\\')}"
 
 
-def _compile_script_text(source_names: list[str], include_path: str) -> str:
+def _compile_script_text(source_names: list[str], aggregate_name: str, include_path: str) -> str:
     lines = [
         "@echo off",
         "setlocal EnableExtensions",
@@ -245,7 +246,7 @@ def _compile_script_text(source_names: list[str], include_path: str) -> str:
         'if not exist "%ROOT%objects" mkdir "%ROOT%objects"',
         'set "EXIT_CODE=0"',
     ]
-    for source_name in source_names:
+    for source_name in [*source_names, aggregate_name]:
         object_name = Path(source_name).with_suffix(".obj").name
         lines.extend(
             [
@@ -268,7 +269,7 @@ def prepare_validation_inputs(paths: SonarPaths) -> ValidationInputs:
     """Generate deterministic translation units and the MSVC wrapper command."""
     headers = _header_files(paths)
     source_names = [_translation_unit_name(header) for header in headers]
-    aggregate_name = "compile_all.cpp"
+    aggregate_name = AGGREGATE_TRANSLATION_UNIT
     if aggregate_name in source_names:
         raise SonarAnalysisError(
             "Generated header names collide with the aggregate translation unit"
@@ -285,7 +286,7 @@ def prepare_validation_inputs(paths: SonarPaths) -> ValidationInputs:
     include_path = _batch_include_path(paths.header_directory, paths.validation_directory)
     _write_generated(
         paths.validation_script,
-        _compile_script_text(source_names, include_path),
+        _compile_script_text(source_names, aggregate_name, include_path),
         newline="\r\n",
     )
     manifest_path = paths.validation_directory / "sonar-inputs.json"
@@ -361,12 +362,7 @@ def _compile_arguments(entry: dict[str, object]) -> str:
 
 def validate_compile_commands(path: Path) -> tuple[int, int]:
     compile_commands = read_compile_commands(path)
-    translation_units = [
-        entry
-        for entry in compile_commands
-        if isinstance(entry.get("file"), str)
-        and Path(entry["file"]).suffix.lower() in TRANSLATION_UNIT_SUFFIXES
-    ]
+    translation_units = [entry for entry in compile_commands if _is_translation_unit(entry)]
     if not translation_units:
         raise SonarAnalysisError(
             f"The compilation database contains no C/C++ translation-unit entries: '{path}'."
@@ -382,6 +378,13 @@ def validate_compile_commands(path: Path) -> tuple[int, int]:
             "The compilation database contains no translation unit with the expected MSVC flags."
         )
     return len(translation_units), len(msvc_entries)
+
+
+def _is_translation_unit(entry: dict[str, object]) -> bool:
+    file_name = entry.get("file")
+    return (
+        isinstance(file_name, str) and Path(file_name).suffix.lower() in TRANSLATION_UNIT_SUFFIXES
+    )
 
 
 def _result_json(result: dict[str, object]) -> None:

@@ -1,6 +1,6 @@
 # PS4 ELF Constants and Extensions
 
-Source: GhidraOrbis (https://github.com/astrelsky/GhidraOrbis)
+Source: GhidraOrbis (<https://github.com/astrelsky/GhidraOrbis>)
 
 ## ELF Types (e_type values)
 
@@ -36,6 +36,7 @@ PT_SCE_SEGSYM = 0x700000A8         // Segment symbols
 PS4 extends the dynamic section with many SCE-specific tags:
 
 ### Module Information
+
 ```java
 DT_SCE_MODULE_INFO = 0x6100000D         // Module information
 DT_SCE_MODULE_ATTR = 0x61000011         // Module attributes
@@ -45,6 +46,7 @@ DT_SCE_ORIGINAL_FILENAME = 0x61000009   // Original filename
 ```
 
 ### Library Management
+
 ```java
 DT_SCE_EXPORT_LIB = 0x61000013          // Export library
 DT_SCE_IMPORT_LIB = 0x61000015          // Import library
@@ -57,6 +59,7 @@ DT_SCE_STUB_LIBRARY_VERSION = 0x61000023// Stub library version
 ```
 
 ### Symbol and String Tables
+
 ```java
 DT_SCE_STRTAB = 0x61000035      // SCE string table address
 DT_SCE_STRSZ = 0x61000037       // SCE string table size
@@ -66,6 +69,7 @@ DT_SCE_SYMTABSZ = 0x6100003F    // SCE symbol table size
 ```
 
 ### Relocations
+
 ```java
 DT_SCE_RELA = 0x6100002F        // SCE relocation table address
 DT_SCE_RELASZ = 0x61000031      // SCE relocation table size
@@ -77,12 +81,14 @@ DT_SCE_PLTGOT = 0x61000027      // SCE PLT/GOT address
 ```
 
 ### Hash Table
+
 ```java
 DT_SCE_HASH = 0x61000025        // SCE hash table
 DT_SCE_HASHSZ = 0x6100003D      // SCE hash table size
 ```
 
 ### Other
+
 ```java
 DT_SCE_IDTABENTSZ = 0x61000005  // ID table entry size
 DT_SCE_HIOS = 0x6FFFF000        // High OS-specific value

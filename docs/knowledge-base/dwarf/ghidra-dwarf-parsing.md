@@ -1,6 +1,6 @@
 # Ghidra DWARF Parsing Implementation
 
-Source: Ghidra (https://github.com/NationalSecurityAgency/ghidra)
+Source: Ghidra (<https://github.com/NationalSecurityAgency/ghidra>)
 Path: Ghidra/Features/Base/src/main/java/ghidra/app/util/bin/format/dwarf/
 
 ## Architecture Overview
@@ -36,7 +36,8 @@ Ghidra's DWARF parser uses a layered architecture:
 ### Version-Specific Parsing
 
 **DWARF v4:**
-```
+
+```text
 Header:
 - unit_length (4 or 12 bytes)
 - version (2 bytes)
@@ -45,7 +46,8 @@ Header:
 ```
 
 **DWARF v5:**
-```
+
+```text
 Header:
 - unit_length (4 or 12 bytes)
 - version (2 bytes)
@@ -65,11 +67,13 @@ Header:
 ### Lazy Attribute Loading
 
 Ghidra uses an optimization strategy:
+
 - **First pass**: Only read attribute offsets
 - **On demand**: Parse attribute value when accessed
 - **Memory efficient**: Doesn't load unused attributes
 
 Benefits:
+
 - Faster initial parsing
 - Lower memory footprint
 - Only parses what's needed
@@ -77,6 +81,7 @@ Benefits:
 ### Abbreviation Caching
 
 Abbreviations are read once per compilation unit:
+
 ```java
 Map<Integer, DWARFAbbreviation> codeToAbbreviationMap
 ```
@@ -88,6 +93,7 @@ This maps abbreviation codes (1, 2, 3...) to their definitions.
 ### Attribute Forms
 
 Ghidra supports all DWARF forms:
+
 - Block forms (DW_FORM_block, block1, block2, block4, exprloc)
 - Data forms (data1, data2, data4, data8, udata, sdata)
 - String forms (string, strp, line_strp, strx)
@@ -99,6 +105,7 @@ Ghidra supports all DWARF forms:
 ### Form Context
 
 `DWARFFormContext` provides context for parsing:
+
 - BinaryReader (stream)
 - Compilation unit
 - Attribute definition
@@ -108,6 +115,7 @@ Ghidra supports all DWARF forms:
 ### Parent-Child Relationships
 
 Ghidra uses index-based relationships:
+
 - Each DIE has a unique index in the program
 - Parent-child stored in separate structure
 - Efficient memory use
@@ -116,6 +124,7 @@ Ghidra uses index-based relationships:
 ### Error Handling
 
 Graceful error handling:
+
 - Empty compilation units silently skipped (return null)
 - Invalid abbreviation codes throw IOException
 - Invalid lengths throw IOException

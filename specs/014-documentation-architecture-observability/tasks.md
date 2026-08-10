@@ -11,8 +11,11 @@
   validation; repair all local documentation gaps found by the scan.
 - [x] T008 Commit, push, and merge the intended documentation changes through PR #13.
 - [x] T009 Verify the new GitHub Pages site is reachable and record the successful deployment.
+- [x] T010 Add locked Mermaid CLI and `markdownlint-cli2` validators to the local and CI
+  documentation quality loop; repair the authored Markdown findings they expose.
 
 ## Deferred task tracking
 
-- [ ] KG-001 remains the separate knowledge-graph loader/integration task. This feature documents
-  the current JSONL projection and must not implement or imply a live graph integration.
+- [ ] KG-001 remains the separate LadybugDB-first knowledge-graph loader/evaluation task in the
+  [KG-001 feature record](../015-ladybugdb-knowledge-graph/tasks.md). This feature documents the
+  current JSONL projection and must not implement or imply a live graph integration.

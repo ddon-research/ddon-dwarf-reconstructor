@@ -71,6 +71,32 @@ class HeaderOrderingMixin:
                 self._add_member_dependencies(class_name, nested_class.members, names, dependencies)
         return dependencies
 
+    def external_dependency_headers(
+        self: HeaderGeneratorContext,
+        class_infos: dict[str, ClassInfo],
+        rendered_class_names: set[str],
+        header_names: dict[str, str],
+    ) -> dict[str, str]:
+        """Return headers needed by definitions rendered in another file."""
+        dependencies = self._definition_dependencies(class_infos)
+        current_headers = {
+            header_names[class_name]
+            for class_name in rendered_class_names
+            if class_name in header_names
+        }
+        required_names = {
+            dependency_name
+            for class_name in rendered_class_names
+            for dependency_name in dependencies.get(class_name, set())
+            if dependency_name not in rendered_class_names
+            and dependency_name in header_names
+            and header_names[dependency_name] not in current_headers
+        }
+        return {
+            dependency_name: header_names[dependency_name]
+            for dependency_name in sorted(required_names)
+        }
+
     def _add_base_dependencies(
         self: HeaderGeneratorContext,
         class_name: str,

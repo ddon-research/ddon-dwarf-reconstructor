@@ -32,7 +32,7 @@ confused with the per-header database used by Sonar.
 - SonarQube for VS Code installed and enabled.
 - Visual Studio with the MSVC x64 build tools and `VsDevCmd.bat`.
 - `vswhere.exe` at the standard Visual Studio Installer location.
-- The root uv environment installed with `uv sync --python 3.14.6`.
+- The root uv environment installed with `uv sync --python 3.14.7 --locked`.
 - SonarSource's Windows Build Wrapper downloaded outside the repository.
 
 Sonar's supported C/C++ setup is described in [Analyze C and C++ code](https://docs.sonarsource.com/sonarqube-for-vs-code/getting-started/running-an-analysis#analyze-c-and-cpp-code).
@@ -85,7 +85,9 @@ uv run just sonar-validate
 ```
 
 After generated headers exist in the configured validation bundle, capture the compilation
-database:
+database. For season two, point the adapter at one generated root bundle under
+`output/season2/<platform>/symbols/<index>-<safe-root>/` or copy one selected bundle into the
+configured validation directory; do not merge all roots before standalone validation.
 
 ```powershell
 uv run just sonar-capture
@@ -126,6 +128,10 @@ evidence. Keep the generated-header failure and Sonar observations separate.
 To inspect the optional aggregate independently, compile
 `output/msvc-header-validation-20260801/translation-units/compile_all.cpp` in the same MSVC
 environment and record its diagnostics separately from the Sonar database.
+
+Standalone MSVC success is the header-closure evidence. Sonar findings are additive diagnostics,
+and IDA comparisons are a separate authority/gap-catalog surface; neither may be reported as a
+successful full-corpus validation without its own retained result.
 
 ## Point SonarQube for VS Code at the database
 
