@@ -43,15 +43,39 @@ is not promoted from an improved `EXPLAIN`: exact row/order/header hashes, termi
 healthy tablets, and representative cold/warm end-to-end latency must pass the existing acceptance
 gate.
 
-The first complete-corpus evaluation on 2026-08-09 kept the canonical physical variant and found
+The first complete-corpus evaluation on 2026-08-09/10 kept the canonical physical variant and found
 that sequential DIE/attribute/reference/unit hydration, rather than Doris scan CPU, dominated the
 generation path. The serving runtime now uses bounded source/unit-aware batches, child-frontier and
-reference prefetching, and per-unit line-program caching. Exact exhaustive `rAIFSM` runs completed
-in `19.811 s`, `20.166 s`, and `20.784 s`, versus the earlier `361.004 s` warm process sample; all 11 headers
-matched. A paired traced run also matched all headers, but tracing added `96.3%` wall time and its
-FE profiles were `partial`, so it is attribution evidence only. The source/name candidate was exact
-but did not improve warm lookup latency. The canonical schema, keys, buckets, storage, indexes, and
-registry remain unchanged.
+reference prefetching, per-unit line-program caching, and semantic operation tracing when explicitly
+enabled. The post-policy canonical eager/full/all run measured `19.121/19.127 s` warm p50/p95; all
+11 headers matched. Lazy reference prefetch reduced trace query count from 754 to 680 but cleared
+only 5.3% of paired warm latency, while the decoded attribute projection reduced warm p95 RSS by
+15.1% without clearing the latency gate. Both remain opt-in. A targeted child-tag predicate was
+exact but regressed warm p50 by 10.5% and was rejected. Name lookup candidates reduced global
+lookup tablet scheduling but did not clear the confirmatory p95 gate. A grouped-count rewrite was
+exact but end-to-end tied with the raw path and was removed. The canonical schema, keys, buckets,
+storage, indexes, and table data remain unchanged; the source registry only gained the additive
+serving-variant identity fields.
+
+The fair-path `unit-bound-hydration` screen preserved exact output but took `289.048 s` for
+exhaustive `rAIFSM` versus the canonical `19.121/19.127 s` warm p50/p95. Its partial trace
+expanded attribute/reference/child-tag operations to `9,262/7,579/9,136` queries from
+`85/154/25`; the candidate is rejected because unit predicates increased scheduling fan-out.
+
+The subsequent `combined-positive-below-gate` interaction test activated every candidate that had
+shown roughly 5% or better standalone improvement: lazy reference prefetch, decoded-serving
+attribute projection, and name lookup buckets 2/4/8, with b8 active. It preserved the exact
+approved 11-file output and improved confirmatory warm `rAIFSM` p50/p95 from `19.1208/19.1271 s`
+to `16.1152/16.1187 s` (`15.7%` at both quantiles); warm p95 RSS also fell by about 17%. The
+active auxiliary table adds `7.23%` to canonical storage. A follow-up selective analysis produced
+two manual `FINISHED` jobs with zero failed subjobs, clearing the current statistics gate. It
+remains an opt-in variant because the decoded-serving projection is not lossless for raw
+attribute values outside the proven generation path; the canonical fourteen-family deployment is
+still the default.
+
+The optimization command is a reusable, change-triggered evidence tool rather than a continuously
+running service. It is rerun when the generator, source publication, Doris image/configuration,
+candidate variant, or representative workload changes.
 
 ## Documentation deployment
 

@@ -95,18 +95,36 @@ separate from the profiler manifests.
 
 `benchmark-doris-current` reuses a complete source-bound publication. The opt-in
 `benchmark-doris-optimization` command adds redacted generation query tracing, typed serving-variant
-identity, selective-statistics policy, and one-factor lookup/physical candidates. Candidate DDL and
-population are isolated and require `--provision-candidate`; no candidate changes the canonical
-fourteen-family contract. Use the command's `--help` surface for the cold/warm repetition and
-profile-budget controls.
+identity, selective-statistics policy, and one-factor lookup/physical candidates. Runtime-only
+variants such as `typed-projections`, `reference-prefetch-lazy`, and
+`targeted-child-tag-filter` reuse the canonical tables; lookup candidates require explicit
+`--provision-candidate`. No candidate changes the canonical fourteen-family contract. Use the
+command's `--help` surface for the cold/warm repetition and profile-budget controls.
 
-The 2026-08-09 complete-store run also measured the live generator path. Bounded source/unit-aware
-hydration produced exact exhaustive `rAIFSM` output in `19.811 s`, `20.166 s`, and `20.784 s`, versus the
-earlier `361.004 s` warm sample. Child-frontier/reference prefetching and line-program caching
+To repeat the measured interaction batch of all positive standalone candidates, use
+`--candidate combined-positive-below-gate --provision-candidate`. It activates lazy reference
+prefetch, the decoded-serving projection, and source/name lookup buckets 2/4/8 with b8 active;
+the other buckets are provisioned as comparison-only alternatives. The active b8 statistics pass
+is now terminal-success, but the measured batch remains opt-in because decoded-serving projection
+does not preserve raw attribute values for the full serving contract.
+
+The 2026-08-09/10 complete-store run measured the live generator path. Bounded source/unit-aware
+hydration produced exact exhaustive `rAIFSM` output; the post-policy canonical run measured
+`19.121/19.127 s` warm p50/p95. Child-frontier/reference prefetching and line-program caching
 are included in the serving algorithm. The canonical schema, keys, indexes, storage, and registry
-were unchanged. The source/name table was rejected for latency, while MV, index, bucket,
-storage-format, session, and Stream Load variants remain `not_observed`. This command is a reusable
+data were unchanged; only the additive registry variant identity was refreshed. Name lookup
+buckets 2 and 8 reduced global lookup scheduling but reached only about 10% warm p50 and 5% warm
+p95 improvement, so neither was promoted. Lazy reference prefetch and decoded attribute
+projection were exact but each missed the 10% end-to-end gate; the latter reduced warm p95 RSS by
+15.1% and remains an opt-in memory variant. The targeted child-tag filter regressed warm p50 by
+10.5% and is rejected. MV, index, bucket, storage-format, session, and Stream Load variants
+remain `not_observed` unless their trace gate is met. This command is a reusable, change-triggered
 one-shot regression/promotion tool, not a continuous service.
+
+`DDON_DORIS_HYDRATION_SCOPE=global` is the canonical setting. A fair-path `unit` screen preserved
+exact `rAIFSM` output but took `289.048 s` versus the canonical `19.121/19.127 s` warm p50/p95;
+its partial trace showed 26,463 observations and is recorded as a rejected query-fan-out
+candidate, not a serving default.
 
 `check-doris-flight` is the explicit preflight for the optional Flight SQL overlay. It records
 Compose-file and rendered-configuration hashes, FE/BE endpoint reachability, and bounded startup

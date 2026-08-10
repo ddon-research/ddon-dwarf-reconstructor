@@ -22,6 +22,11 @@ _REFERENCE_NAMES = frozenset(
         "DW_AT_signature",
     }
 )
+_COUNTED_CHILD_TAGS = (
+    "DW_TAG_enumeration_type",
+    "DW_TAG_structure_type",
+    "DW_TAG_union_type",
+)
 _DIE_METADATA_COLUMNS = (
     "unit_offset",
     "die_offset",
@@ -32,6 +37,27 @@ _DIE_METADATA_COLUMNS = (
     "depth",
     "parent_offset",
     "is_null",
+)
+_SERVING_ATTRIBUTE_COLUMNS = (
+    "unit_offset",
+    "die_offset",
+    "ordinal",
+    "record_type",
+    "name",
+    "form",
+    "value_offset",
+    "indirection_length",
+    "decoded_value_kind",
+    "decoded_value_bool",
+    "decoded_value_int",
+    "decoded_value_uint",
+    "decoded_value_float",
+    "decoded_value_text",
+    "decoded_value_binary",
+    "decoded_value_json",
+    "decoded_value_path",
+    "decoded_value_sha256",
+    "decoded_value_size",
 )
 
 
@@ -45,6 +71,10 @@ class _DorisHydrationStore(Protocol):
     _child_tag_counts: dict[int, NestedTypeCounts]
     _reference_targets: dict[tuple[int | None, int, str], int | None]
     _reference_loaded: set[tuple[int, int]]
+    _reference_prefetch: str
+    _attribute_projection: str
+    _child_tag_filter: str
+    _hydration_scope: str
 
     def _rows(
         self,
@@ -55,6 +85,7 @@ class _DorisHydrationStore(Protocol):
         order_by: Sequence[str] = (),
         limit: int | None = None,
         table_name: str | None = None,
+        operation: str = "family_rows",
     ) -> tuple[dict[str, Any], ...]: ...
 
     def _unit_from_record(self, record: dict[str, Any]) -> DorisCompilationUnit: ...
@@ -87,13 +118,16 @@ def attributes_by_die(
     )
     if not offsets or unit_offset is None:
         return {}
+    columns = attribute_projection_columns(store)
     rows: list[dict[str, Any]] = []
     for batch in batched(offsets):
         rows.extend(
             store._rows(
                 "attribute",
                 {"unit_offset": unit_offset, "die_offset": batch},
+                columns=columns,
                 order_by=("die_offset", "ordinal"),
+                operation="hydrate_attributes_for_children",
             )
         )
     return _group_attributes(rows)
@@ -124,33 +158,68 @@ def prime_child_tag_counts(
     dies: Iterable[DorisDie],
 ) -> None:
     """Batch the child-tag counts used by definition ranking."""
-    offsets = tuple(
-        sorted({die.offset for die in dies if die.offset not in store._child_tag_counts})
-    )
-    for batch in batched(offsets):
-        counts = {
-            offset: {
-                "DW_TAG_enumeration_type": 0,
-                "DW_TAG_structure_type": 0,
-                "DW_TAG_union_type": 0,
-            }
-            for offset in batch
+    groups = _group_die_offsets_by_unit(store, dies, store._child_tag_counts)
+    for unit_offset, offsets in groups:
+        for batch in batched(offsets):
+            _prime_child_tag_batch(store, unit_offset, batch)
+
+
+def _prime_child_tag_batch(
+    store: _DorisHydrationStore,
+    unit_offset: int | None,
+    batch: Sequence[int],
+) -> None:
+    counts = {
+        offset: {
+            "DW_TAG_enumeration_type": 0,
+            "DW_TAG_structure_type": 0,
+            "DW_TAG_union_type": 0,
         }
-        for row in store._rows(
-            "die",
-            {"parent_offset": batch},
-            columns=("parent_offset", "tag", "is_null"),
-        ):
-            parent_offset = _as_int(row.get("parent_offset"))
-            tag = row.get("tag")
-            if parent_offset in counts and not row.get("is_null") and tag in counts[parent_offset]:
-                counts[parent_offset][tag] += 1
-        for offset, values in counts.items():
-            store._child_tag_counts[offset] = NestedTypeCounts(
-                enums=values["DW_TAG_enumeration_type"],
-                structs=values["DW_TAG_structure_type"],
-                unions=values["DW_TAG_union_type"],
-            )
+        for offset in batch
+    }
+    filters: dict[str, object] = {"parent_offset": batch}
+    if store._hydration_scope == "unit" and unit_offset is not None:
+        filters["unit_offset"] = unit_offset
+    if store._child_tag_filter == "targeted":
+        filters["tag"] = _COUNTED_CHILD_TAGS
+    for row in store._rows(
+        "die",
+        filters,
+        columns=("parent_offset", "tag", "is_null"),
+        operation="prefetch_child_tag_counts",
+    ):
+        _record_child_tag_count(counts, row)
+    for offset, values in counts.items():
+        store._child_tag_counts[offset] = NestedTypeCounts(
+            enums=values["DW_TAG_enumeration_type"],
+            structs=values["DW_TAG_structure_type"],
+            unions=values["DW_TAG_union_type"],
+        )
+
+
+def _record_child_tag_count(counts: dict[int, dict[str, int]], row: Mapping[str, Any]) -> None:
+    parent_offset = _as_int(row.get("parent_offset"))
+    tag = row.get("tag")
+    if parent_offset not in counts or row.get("is_null") or tag not in counts[parent_offset]:
+        return
+    counts[parent_offset][tag] += 1
+
+
+def _group_die_offsets_by_unit(
+    store: _DorisHydrationStore,
+    dies: Iterable[DorisDie],
+    existing: Mapping[int, object],
+) -> tuple[tuple[int | None, tuple[int, ...]], ...]:
+    grouped: dict[int | None, set[int]] = defaultdict(set)
+    for die in dies:
+        if die.offset in existing:
+            continue
+        unit_offset = store._die_unit_offsets.get(die.offset, die.cu.cu_offset)
+        key = unit_offset if store._hydration_scope == "unit" else None
+        grouped[key].add(die.offset)
+    return tuple(
+        (unit, tuple(sorted(offsets))) for unit, offsets in sorted(grouped.items(), key=str)
+    )
 
 
 def prefetch_dies(store: _DorisHydrationStore, dies: Iterable[DorisDie]) -> None:
@@ -229,6 +298,7 @@ def _child_records(
             {"parent_offset": parent_offsets},
             columns=_DIE_METADATA_COLUMNS,
             order_by=("parent_offset", "ordinal"),
+            operation="prefetch_children",
         )
         if not row.get("is_null")
     )
@@ -270,6 +340,7 @@ def _hydrate_offsets(
             {"die_offset": batch},
             columns=_DIE_METADATA_COLUMNS,
             order_by=("unit_offset", "ordinal"),
+            operation="hydrate_dies_by_offset",
         )
         hydrated.extend(_hydrate_die_records(store, die_rows))
     return _unique_dies(store, hydrated)
@@ -284,12 +355,13 @@ def _hydrate_die_records(
     if not rows:
         return ()
     _hydrate_units(store, _unit_offsets(rows))
-    attributes = _attributes_for_die_offsets(store, _die_offsets(rows))
+    attributes = _attributes_for_die_offsets(store, rows)
     result = _unique_dies(
         store,
         (_hydrate_die_record(store, row, attributes) for row in rows),
     )
-    prefetch_references(store, result)
+    if store._reference_prefetch == "eager":
+        prefetch_references(store, result)
     return result
 
 
@@ -305,20 +377,55 @@ def _die_offsets(records: Iterable[Mapping[str, Any]]) -> tuple[int, ...]:
 
 def _attributes_for_die_offsets(
     store: _DorisHydrationStore,
-    die_offsets: Sequence[int],
+    records: Iterable[Mapping[str, Any]],
 ) -> dict[tuple[int, int], tuple[dict[str, Any], ...]]:
     attributes: dict[tuple[int, int], tuple[dict[str, Any], ...]] = {}
-    for batch in batched(die_offsets):
-        attributes.update(
-            _group_attributes_by_key(
-                store._rows(
-                    "attribute",
-                    {"die_offset": batch},
-                    order_by=("unit_offset", "die_offset", "ordinal"),
+    columns = attribute_projection_columns(store)
+    keys = _attribute_keys(records)
+    groups = _group_keys_by_unit(store, keys)
+    for unit_offset, die_offsets in groups:
+        for batch in batched(die_offsets):
+            filters: dict[str, object] = {"die_offset": batch}
+            if store._hydration_scope == "unit" and unit_offset is not None:
+                filters["unit_offset"] = unit_offset
+            attributes.update(
+                _group_attributes_by_key(
+                    store._rows(
+                        "attribute",
+                        filters,
+                        columns=columns,
+                        order_by=("unit_offset", "die_offset", "ordinal"),
+                        operation="hydrate_attributes_by_die",
+                    )
                 )
             )
-        )
     return attributes
+
+
+def _attribute_keys(records: Iterable[Mapping[str, Any]]) -> tuple[tuple[int, int], ...]:
+    return tuple(
+        (int(row["unit_offset"]), int(row["die_offset"]))
+        for row in records
+        if row.get("unit_offset") is not None and row.get("die_offset") is not None
+    )
+
+
+def _group_keys_by_unit(
+    store: _DorisHydrationStore,
+    keys: Iterable[tuple[int, int]],
+) -> tuple[tuple[int | None, tuple[int, ...]], ...]:
+    grouped: dict[int | None, set[int]] = defaultdict(set)
+    for unit_offset, die_offset in keys:
+        key = unit_offset if store._hydration_scope == "unit" else None
+        grouped[key].add(die_offset)
+    return tuple(
+        (unit, tuple(sorted(offsets))) for unit, offsets in sorted(grouped.items(), key=str)
+    )
+
+
+def attribute_projection_columns(store: _DorisHydrationStore) -> tuple[str, ...]:
+    """Return generator-only attribute columns, or empty for the lossless query."""
+    return _SERVING_ATTRIBUTE_COLUMNS if store._attribute_projection == "serving" else ()
 
 
 def _hydrate_die_record(
@@ -342,6 +449,7 @@ def _hydrate_units(store: _DorisHydrationStore, offsets: Sequence[int]) -> None:
             "unit",
             {"unit_offset": batch},
             order_by=("unit_offset",),
+            operation="hydrate_units",
         ):
             store._unit_from_record(row)
 
@@ -369,23 +477,30 @@ def _load_reference_targets(
 ) -> tuple[int, ...]:
     targets: set[int] = set()
     target_cache, loaded = _reference_caches(store)
-    offsets = tuple(dict.fromkeys(die for _unit, die in keys))
     wanted = set(keys)
-    for batch in batched(offsets):
-        rows = store._rows(
-            "reference",
-            {"die_offset": batch, "relation": "attribute_reference"},
-            columns=(
-                "unit_offset",
-                "die_offset",
-                "attribute_name",
-                "target_offset",
-                "relation",
-            ),
-            order_by=("unit_offset", "die_offset", "attribute_name"),
-        )
-        for row in rows:
-            _record_reference_row(row, wanted, target_cache, targets)
+    for unit_offset, offsets in _group_keys_by_unit(store, keys):
+        for batch in batched(offsets):
+            filters: dict[str, object] = {
+                "die_offset": batch,
+                "relation": "attribute_reference",
+            }
+            if store._hydration_scope == "unit" and unit_offset is not None:
+                filters["unit_offset"] = unit_offset
+            rows = store._rows(
+                "reference",
+                filters,
+                columns=(
+                    "unit_offset",
+                    "die_offset",
+                    "attribute_name",
+                    "target_offset",
+                    "relation",
+                ),
+                order_by=("unit_offset", "die_offset", "attribute_name"),
+                operation="prefetch_reference_targets",
+            )
+            for row in rows:
+                _record_reference_row(row, wanted, target_cache, targets)
     loaded.update(keys)
     return tuple(sorted(targets))
 

@@ -73,8 +73,8 @@ or implicit cache/session tuning is authorized by this benchmark route.
 The optimization evaluation is a separate opt-in route over the same complete manifest. It defines
 typed `DorisServingVariant`, `DorisQueryObservation`, and `DorisOptimizationReport` contracts. The
 actual generation child may enable bounded redacted query tracing; the trace records query-shape
-digests, query IDs, local execute/fetch timing, rows, scan/tablet/operator/memory/spill metrics,
-and profile status without parameter values. Profiles are retrieved immediately on the executing
+digests, semantic operations, query IDs, local execute/fetch timing, rows, scan/tablet/operator/
+memory/spill metrics, and profile status without parameter values. Profiles are retrieved immediately on the executing
 FE, and a missing, mismatched, evicted, or timed-out profile is `partial` evidence. The route
 captures all query summaries but only one representative profile per shape, slow queries over
 500 ms, and a maximum of 20 profile instances. Tracing is paired with an untraced run and adds no
@@ -90,6 +90,30 @@ current workload. Promotion requires source/manifest binding, exact fourteen-fam
 ordered-result and generated-header hashes, zero diagnostics, terminal-success statistics, healthy
 tablets, and at least 10% confirmatory warm p50/p95 improvement without exceeding the existing 110%
 regression bound.
+
+The route is a reusable one-shot regression and promotion tool, not a continuously running service.
+The current complete publication was evaluated on 2026-08-09/10; future runs are change-triggered
+by a generator, source publication, Doris image/configuration, or candidate-variant change. The
+post-policy canonical `eager/full/all` run measured `19.121/19.127 s` warm p50/p95 with exact
+11-header output. Lazy reference prefetch and the decoded-serving attribute projection were exact
+but cleared only `5.3%` paired warm latency and no warm p95 latency gain, respectively; both remain
+opt-in, with the projection explicitly non-lossless for raw values. The targeted child-tag filter
+was exact but regressed warm p50 by `10.5%` and was rejected. The current decision retains the
+canonical physical model and bounded hydration runtime; name lookup candidates remain opt-in below
+the confirmatory p95 gate, and grouped child-tag aggregation remains rejected after no end-to-end
+improvement. A fair-path `unit-bound-hydration` screen preserved exact output but took `289.048 s`
+for exhaustive `rAIFSM` versus the canonical `19.121/19.127 s` warm p50/p95; its partial trace
+expanded attribute/reference/child-tag operations to `9,262/7,579/9,136` queries from
+`85/154/25`. That candidate is rejected for query fan-out, and `DDON_DORIS_HYDRATION_SCOPE=global`
+remains the canonical default. The follow-up `combined-positive-below-gate` interaction batch
+activated lazy reference prefetch, decoded-serving attribute projection, and name lookup buckets
+2/4/8 with b8 active. It preserved the approved 11-file output and improved confirmatory warm
+`rAIFSM` p50/p95 to `16.1152/16.1187 s` from `19.1208/19.1271 s` (`15.7%` at both quantiles),
+with lower warm p95 RSS and `7.23%` active auxiliary storage overhead. A follow-up selective
+analysis of the active b8 key/filter columns produced two manual terminal-success jobs with zero
+failed subjobs. The batch remains opt-in because decoded-serving projection does not preserve raw
+attribute values for the full serving contract; the canonical fourteen-family model remains the
+default.
 
 Arrow Flight SQL is an opt-in transport evaluation only. The default MySQL/PyMySQL path remains
 authoritative for semantic queries, DDL, and HTTP Stream Load. The optional ADBC benchmark must

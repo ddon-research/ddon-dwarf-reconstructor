@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,7 @@ from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.doris.current 
     _overall_status,
     _validate_options,
     _workload_configuration,
+    _write_report,
 )
 from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.doris.current_generation import (
     _generation_workload,
@@ -96,6 +98,27 @@ def test_current_route_keeps_short_and_long_workload_settings_independent(
     assert "--full-hierarchy" in heavy.command
     assert "--exhaustive" in heavy.command
     assert "--dwarf-store" in heavy.command
+
+
+def test_generation_workload_records_serving_policy_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("DDON_DORIS_SERVING_VARIANT_ID", "unit-bound-hydration")
+    monkeypatch.setenv("DDON_DORIS_HYDRATION_SCOPE", "unit")
+
+    workload = _generation_workload(
+        Path("source.elf"),
+        Path("manifest.json"),
+        tmp_path / "unit-bound",
+        name="unit-bound",
+        symbol="rAIFSM",
+        state=ColdWarmState.WARM,
+        timeout_seconds=30.0,
+    )
+
+    environment = dict(workload.environment)
+    assert environment["DDON_DORIS_SERVING_VARIANT_ID"] == "unit-bound-hydration"
+    assert environment["DDON_DORIS_HYDRATION_SCOPE"] == "unit"
 
 
 def test_current_route_reports_missing_invalid_and_partial_outputs(tmp_path: Path) -> None:
@@ -182,6 +205,18 @@ def test_doris_query_measurement_records_ordered_result_hash() -> None:
 
     assert rows == [(2,), (1,)]
     assert measurement["ordered_result_sha256"] == _digest([(2,), (1,)])
+
+
+def test_current_report_serializes_typed_doris_statistics_values(tmp_path: Path) -> None:
+    target = tmp_path / "report.json"
+    _write_report(
+        target,
+        {"statistics": {"update_time": datetime(2026, 8, 9, 23, 40, 0)}},
+    )
+
+    payload = json.loads(target.read_text(encoding="utf-8"))
+
+    assert payload["statistics"]["update_time"] == "2026-08-09T23:40:00"
 
 
 def _sha256(path: Path) -> str:

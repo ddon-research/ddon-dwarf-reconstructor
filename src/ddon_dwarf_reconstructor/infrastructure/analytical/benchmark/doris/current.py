@@ -13,6 +13,7 @@ from ....performance import PerformanceRunner
 from ...doris import DorisConfig
 from ...doris_diagnostics import DorisDiagnosticRecorder
 from ...doris_optimization import DorisServingVariant
+from ...doris_optimization_utils import json_default
 from ...doris_statistics import collect_statistics_evidence
 from ...doris_store import DorisDwarfStore
 from ...manifest import (
@@ -560,7 +561,14 @@ def _overall_status(*sections: dict[str, Any] | list[dict[str, Any]]) -> str:
 def _write_report(path: Path, report: dict[str, Any]) -> None:
     temporary = path.with_suffix(".partial")
     with temporary.open("w", encoding="utf-8", newline="\n") as stream:
-        json.dump(report, stream, ensure_ascii=True, sort_keys=True, indent=2)
+        json.dump(
+            report,
+            stream,
+            ensure_ascii=True,
+            sort_keys=True,
+            indent=2,
+            default=json_default,
+        )
         stream.write("\n")
         stream.flush()
         os.fsync(stream.fileno())

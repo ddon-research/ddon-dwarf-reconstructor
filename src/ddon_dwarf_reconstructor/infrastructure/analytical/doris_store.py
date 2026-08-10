@@ -11,7 +11,6 @@ from ...domain.models.analytical_dwarf import (
     MaterializationManifest,
     MaterializedUnit,
     QueryResult,
-    QueryStatus,
 )
 from ...domain.ports.cache import SymbolCachePort
 from ...domain.services.definition_selection import NestedTypeCounts
@@ -19,15 +18,14 @@ from ..artifacts import SourceIdentityCatalog
 from .doris import DorisConfig
 from .doris_cache import DorisCache
 from .doris_hydration import (
+    attribute_projection_columns,
     attributes_by_die,
-    hydrate_dies_by_keys,
     prefetch_children,
     prefetch_dies,
     prefetch_references,
-    prime_child_tag_counts,
     reference_candidates,
 )
-from .doris_index import DorisDwarfIndex
+from .doris_index import DorisDwarfIndex  # noqa: F401 - compatibility re-export
 from .doris_models import (
     DorisCompilationUnit,
     DorisDie,
@@ -38,6 +36,9 @@ from .doris_optimization import DorisServingVariant
 from .doris_queries import DorisQueryExecutor
 from .doris_registry import DorisRegistrySnapshot, validate_registry
 from .doris_rows import restore_row
+from .doris_store_helpers import optional_int as _optional_int
+from .doris_store_helpers import optional_text as _optional_text
+from .doris_store_queries import DorisStoreQueryMixin
 from .line_program import StoreLineProgram, build_line_program
 from .manifest import (
     has_parser_diagnostics,
@@ -46,10 +47,10 @@ from .manifest import (
     validate_schema_version,
 )
 from .optional import import_optional
-from .store_selection import load_selection_cache, prefer_cached_definition
+from .store_selection import load_selection_cache
 
 
-class DorisDwarfStore:
+class DorisDwarfStore(DorisStoreQueryMixin):
     """Lazy, source-bound query façade over normalized Doris family tables."""
 
     def __init__(
@@ -78,6 +79,10 @@ class DorisDwarfStore:
         self._child_tag_counts: dict[int, NestedTypeCounts] = {}
         self._reference_targets: dict[tuple[int | None, int, str], int | None] = {}
         self._reference_loaded: set[tuple[int, int]] = set()
+        self._reference_prefetch = config.reference_prefetch
+        self._attribute_projection = config.attribute_projection
+        self._child_tag_filter = config.child_tag_filter
+        self._hydration_scope = config.hydration_scope
         self._definition_query_cache: dict[
             tuple[str, str | None, frozenset[str] | None], QueryResult
         ] = {}
@@ -155,7 +160,7 @@ class DorisDwarfStore:
         self._connection.close()
 
     def iter_compilation_units(self) -> Iterable[MaterializedUnit]:
-        rows = self._rows("unit", order_by=("unit_offset",))
+        rows = self._rows("unit", order_by=("unit_offset",), operation="iter_compilation_units")
         for record in rows:
             header = record.get("header", {})
             yield MaterializedUnit(
@@ -169,14 +174,16 @@ class DorisDwarfStore:
             )
 
     def iter_dwarf_units(self) -> Iterable[DorisCompilationUnit]:
-        for record in self._rows("unit", order_by=("unit_offset",)):
+        for record in self._rows("unit", order_by=("unit_offset",), operation="iter_dwarf_units"):
             yield self._unit_from_record(record)
 
     def compilation_unit_by_offset(self, unit_offset: int) -> DorisCompilationUnit:
         cached = self._units.get(unit_offset)
         if cached is not None:
             return cached
-        rows = self._rows("unit", {"unit_offset": unit_offset}, limit=1)
+        rows = self._rows(
+            "unit", {"unit_offset": unit_offset}, limit=1, operation="compilation_unit_by_offset"
+        )
         if not rows:
             raise KeyError(f"Compilation unit 0x{unit_offset:x} is not published")
         return self._unit_from_record(rows[0])
@@ -204,13 +211,16 @@ class DorisDwarfStore:
             order_by=("unit_offset", "ordinal"),
             limit=1,
             table_name=self._config.die_lookup_table,
+            operation="die_by_offset",
         )
         if not rows:
             return None
         return self._die_from_record(rows[0])
 
     def dies_for_unit(self, unit_offset: int) -> Iterable[DorisDie]:
-        records = self._rows("die", {"unit_offset": unit_offset}, order_by=("ordinal",))
+        records = self._rows(
+            "die", {"unit_offset": unit_offset}, order_by=("ordinal",), operation="dies_for_unit"
+        )
         attributes = self._attributes_by_die(unit_offset, records)
         return tuple(
             self._die_from_record(record, attributes.get(int(record.get("die_offset", 0)), ()))
@@ -232,7 +242,7 @@ class DorisDwarfStore:
         filters: dict[str, object] = {"parent_offset": die_offset}
         if unit_offset is not None:
             filters["unit_offset"] = unit_offset
-        records = self._rows("die", filters, order_by=("ordinal",))
+        records = self._rows("die", filters, order_by=("ordinal",), operation="children_for_die")
         records = tuple(record for record in records if not record.get("is_null"))
         attributes = self._attributes_by_die(unit_offset, records)
         children = tuple(
@@ -265,7 +275,13 @@ class DorisDwarfStore:
         }
         if unit_offset is not None:
             filters["unit_offset"] = unit_offset
-        rows = self._rows("reference", filters, columns=("target_offset",), limit=1)
+        rows = self._rows(
+            "reference",
+            filters,
+            columns=("target_offset",),
+            limit=1,
+            operation="attribute_target",
+        )
         target = rows[0].get("target_offset") if rows else None
         result = _optional_int(target)
         reference_targets[cache_key] = result
@@ -276,7 +292,12 @@ class DorisDwarfStore:
         if unit_offset in self._line_programs:
             return cached
         program = build_line_program(
-            self._rows("line", {"unit_offset": unit_offset}, order_by=("ordinal",))
+            self._rows(
+                "line",
+                {"unit_offset": unit_offset},
+                order_by=("ordinal",),
+                operation="line_program_for_unit",
+            )
         )
         self._line_programs[unit_offset] = program
         return program
@@ -297,160 +318,12 @@ class DorisDwarfStore:
                 {"index_type": "definition"},
                 columns=("name",),
                 table_name=self._config.name_lookup_table,
+                operation="definition_name_count",
             )
             self._definition_name_count = len(
                 {row.get("name") for row in rows if isinstance(row.get("name"), str)}
             )
         return self._definition_name_count
-
-    def get_compilation_unit(self, unit_offset: int) -> QueryResult:
-        try:
-            item: DorisCompilationUnit | None = self.compilation_unit_by_offset(unit_offset)
-        except KeyError:
-            item = None
-        return _result(item, self.manifest_path, self.manifest.status)
-
-    def get_die(self, die_offset: int) -> QueryResult:
-        return _result(self.die_by_offset(die_offset), self.manifest_path, self.manifest.status)
-
-    def find_definitions(
-        self,
-        name: str,
-        *,
-        qualified_name: str | None = None,
-        tags: frozenset[str] | None = None,
-    ) -> QueryResult:
-        cache_key = (name, qualified_name, tags)
-        cached = self._definition_query_cache.get(cache_key)
-        if cached is not None:
-            return cached
-        filters: dict[str, object] = {"index_type": "definition", "name": name}
-        if tags:
-            filters["tag"] = tuple(sorted(tags))
-        records = self._rows(
-            "index",
-            filters,
-            columns=(
-                "source_id",
-                "unit_offset",
-                "die_offset",
-                "index_type",
-                "name",
-                "tag",
-                "target_offset",
-                "resolution_status",
-            ),
-            order_by=("unit_offset", "die_offset"),
-            limit=1001,
-            table_name=self._config.name_lookup_table,
-        )
-        hydrate_dies_by_keys(
-            self,
-            (
-                (unit_offset, die_offset)
-                for record in records
-                if (unit_offset := _optional_int(record.get("unit_offset"))) is not None
-                and (die_offset := _optional_int(record.get("die_offset"))) is not None
-            ),
-        )
-        items = tuple(
-            die
-            for record in records
-            if (die := self._die_from_index_record(record)) is not None
-            and _definition_matches(die, qualified_name, tags)
-        )
-        prime_child_tag_counts(self, items)
-        items = prefer_cached_definition(
-            name, tuple(sorted(items, key=self._definition_sort_key)), self._selection_cache
-        )
-        result = QueryResult(
-            _query_status(bool(items), self.manifest.status), items, (str(self.manifest_path),)
-        )
-        self._definition_query_cache[cache_key] = result
-        return result
-
-    def find_primary_definition(
-        self,
-        name: str,
-        *,
-        qualified_name: str | None = None,
-        tags: frozenset[str] | None = None,
-    ) -> QueryResult:
-        result = self.find_definitions(name, qualified_name=qualified_name, tags=tags)
-        return QueryResult(result.status, result.items[:1], result.provenance, result.diagnostics)
-
-    def find_method_implementation(self, declaration_offset: int) -> QueryResult:
-        records = self._rows(
-            "index",
-            {
-                "index_type": "method_implementation",
-                "target_offset": declaration_offset,
-                "resolution_status": QueryStatus.COMPLETE.value,
-            },
-            columns=(
-                "source_id",
-                "unit_offset",
-                "die_offset",
-                "index_type",
-                "name",
-                "tag",
-                "target_offset",
-                "resolution_status",
-            ),
-            order_by=("unit_offset", "die_offset"),
-            table_name=self._config.method_lookup_table,
-        )
-        for record in records:
-            die = self._die_from_index_record(record)
-            if die is not None:
-                return _result(die, self.manifest_path, self.manifest.status)
-        return _result(None, self.manifest_path, self.manifest.status)
-
-    def children(self, die_offset: int) -> QueryResult:
-        items = tuple(self.children_for_die(die_offset))
-        return QueryResult(
-            _query_status(bool(items), self.manifest.status), items, (str(self.manifest_path),)
-        )
-
-    def parent(self, die_offset: int) -> QueryResult:
-        die = self.die_by_offset(die_offset)
-        return _result(
-            die.get_parent() if die is not None else None,
-            self.manifest_path,
-            self.manifest.status,
-        )
-
-    def references(self, die_offset: int) -> QueryResult:
-        unit_offset = self._die_unit_offsets.get(die_offset)
-        filters: dict[str, object] = {"die_offset": die_offset}
-        if unit_offset is not None:
-            filters["unit_offset"] = unit_offset
-        items = self._rows("reference", filters, order_by=("attribute_name", "relation"))
-        return QueryResult(
-            _query_status(bool(items), self.manifest.status), items, (str(self.manifest_path),)
-        )
-
-    def child_tag_counts(self, die_offset: int) -> NestedTypeCounts:
-        cached = self._child_tag_counts.get(die_offset)
-        if cached is not None:
-            return cached
-        rows = self._rows(
-            "die",
-            {"parent_offset": die_offset},
-            columns=("tag", "is_null"),
-        )
-        counts = {"DW_TAG_enumeration_type": 0, "DW_TAG_structure_type": 0, "DW_TAG_union_type": 0}
-        for row in rows:
-            tag = row.get("tag")
-            if not row.get("is_null") and tag in counts:
-                counts[tag] += 1
-        result = NestedTypeCounts(
-            enums=counts["DW_TAG_enumeration_type"],
-            structs=counts["DW_TAG_structure_type"],
-            unions=counts["DW_TAG_union_type"],
-        )
-        self._child_tag_counts[die_offset] = result
-        return result
 
     def as_dwarf_info(self) -> DwarfInfo:
         return self.dwarf_info
@@ -464,6 +337,7 @@ class DorisDwarfStore:
         order_by: Sequence[str] = (),
         limit: int | None = None,
         table_name: str | None = None,
+        operation: str = "family_rows",
     ) -> tuple[dict[str, Any], ...]:
         query_options: dict[str, Any] = {
             "columns": columns,
@@ -472,6 +346,7 @@ class DorisDwarfStore:
         }
         if table_name is not None:
             query_options["table_name"] = table_name
+        query_options["operation"] = operation
         rows = self._queries.family_rows(family, filters, **query_options)
         return tuple(restore_row(dict(row)) for row in rows)
 
@@ -496,6 +371,7 @@ class DorisDwarfStore:
             "die",
             {"unit_offset": unit_offset, "die_offset": die_offset},
             limit=1,
+            operation="hydrate_index_die",
         )
         return self._die_from_record(rows[0]) if rows else None
 
@@ -516,7 +392,9 @@ class DorisDwarfStore:
             else self._rows(
                 "attribute",
                 {"unit_offset": unit_offset, "die_offset": die_offset},
+                columns=attribute_projection_columns(self),
                 order_by=("ordinal",),
+                operation="hydrate_die_attributes",
             )
         )
         data = DorisDieData(
@@ -545,10 +423,6 @@ class DorisDwarfStore:
     def _manifest_count(self, family: str) -> int:
         return self.manifest.counts.get(family, 0)
 
-    def _definition_sort_key(self, die: DorisDie) -> tuple[int, int, int, int]:
-        candidate = DorisDwarfIndex._candidate("", die, self)
-        return (-candidate.score, die.cu.cu_offset, die.offset, die.depth)
-
 
 def _validate_runtime_manifest(manifest: MaterializationManifest, path: Path) -> None:
     validate_schema_version(manifest, allow_incomplete=False)
@@ -565,32 +439,3 @@ def _verify_source_binding(manifest: MaterializationManifest, source_path: Path 
     identity = SourceIdentityCatalog().identify(source)
     if identity.sha256 != manifest.source_identity.sha256:
         raise ValueError(f"Materialization source hash mismatch: {source}")
-
-
-def _definition_matches(
-    die: DorisDie,
-    qualified_name: str | None,
-    tags: frozenset[str] | None,
-) -> bool:
-    if tags is not None and die.tag not in tags:
-        return False
-    return qualified_name is None or die.get_full_path() == qualified_name
-
-
-def _query_status(found: bool, manifest_status: str) -> QueryStatus:
-    if manifest_status != "complete":
-        return QueryStatus.PARTIAL
-    return QueryStatus.COMPLETE if found else QueryStatus.NOT_FOUND
-
-
-def _result(item: Any, manifest_path: Path, manifest_status: str) -> QueryResult:
-    status = _query_status(item is not None, manifest_status)
-    return QueryResult(status, (item,) if item is not None else (), (str(manifest_path),))
-
-
-def _optional_int(value: object) -> int | None:
-    return value if isinstance(value, int) and not isinstance(value, bool) else None
-
-
-def _optional_text(value: object) -> str | None:
-    return value if isinstance(value, str) else None

@@ -7,6 +7,8 @@ from pathlib import Path
 
 import typer
 
+from .infrastructure.analytical.doris_optimization_utils import json_default
+
 
 def benchmark_doris_optimization(
     elf: Path = typer.Argument(..., help="ELF whose identity must match the live Doris registry."),
@@ -71,7 +73,7 @@ def benchmark_doris_optimization(
         trace_profile_threshold_ms=trace_profile_threshold_ms,
         trace_max_profiles=trace_max_profiles,
     )
-    typer.echo(json.dumps(report, indent=2, sort_keys=True))
+    typer.echo(json.dumps(report, indent=2, sort_keys=True, default=json_default))
 
 
 __all__ = ["benchmark_doris_optimization"]

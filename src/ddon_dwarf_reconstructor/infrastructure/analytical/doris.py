@@ -69,6 +69,10 @@ class DorisConfig:
     analyze_wait_seconds: float = 0.0
     stream_load_workers: int = 1
     statistics_policy: str = "selective"
+    reference_prefetch: str = "eager"
+    attribute_projection: str = "full"
+    child_tag_filter: str = "all"
+    hydration_scope: str = "global"
     serving_variant_id: str = "canonical"
     query_trace: DorisQueryTraceConfig | None = None
     capture_statistics_evidence: bool = False
@@ -80,6 +84,14 @@ class DorisConfig:
             raise ValueError("stream_load_workers must be positive")
         if self.statistics_policy not in {"all", "selective"}:
             raise ValueError("statistics_policy must be all or selective")
+        if self.reference_prefetch not in {"eager", "lazy"}:
+            raise ValueError("reference_prefetch must be eager or lazy")
+        if self.attribute_projection not in {"full", "serving"}:
+            raise ValueError("attribute_projection must be full or serving")
+        if self.child_tag_filter not in {"all", "targeted"}:
+            raise ValueError("child_tag_filter must be all or targeted")
+        if self.hydration_scope not in {"global", "unit"}:
+            raise ValueError("hydration_scope must be global or unit")
         if not self.serving_variant_id.strip():
             raise ValueError("serving_variant_id must not be empty")
         self._validate_flight_settings()
@@ -109,6 +121,7 @@ class DorisConfig:
     @classmethod
     def from_environment(cls) -> DorisConfig:
         defaults = cls()
+        env = os.getenv
         return cls(
             http_url=os.getenv("DDON_DORIS_HTTP_URL", defaults.http_url),
             stream_load_url=os.getenv("DDON_DORIS_STREAM_LOAD_URL", defaults.stream_load_url),
@@ -118,14 +131,12 @@ class DorisConfig:
             user=os.getenv("DDON_DORIS_USER", defaults.user),
             password=os.getenv("DDON_DORIS_PASSWORD", defaults.password),
             table=os.getenv("DDON_DORIS_TABLE", defaults.table),
-            definition_lookup_table=os.getenv(
+            definition_lookup_table=env(
                 "DDON_DORIS_DEFINITION_LOOKUP_TABLE", defaults.definition_lookup_table
             ),
             name_lookup_table=os.getenv("DDON_DORIS_NAME_LOOKUP_TABLE", defaults.name_lookup_table),
-            method_lookup_table=os.getenv(
-                "DDON_DORIS_METHOD_LOOKUP_TABLE", defaults.method_lookup_table
-            ),
-            die_lookup_table=os.getenv("DDON_DORIS_DIE_LOOKUP_TABLE", defaults.die_lookup_table),
+            method_lookup_table=env("DDON_DORIS_METHOD_LOOKUP_TABLE", defaults.method_lookup_table),
+            die_lookup_table=env("DDON_DORIS_DIE_LOOKUP_TABLE", defaults.die_lookup_table),
             flight_sql_host=os.getenv("DDON_DORIS_FLIGHT_SQL_HOST", defaults.flight_sql_host),
             flight_sql_port=int(
                 os.getenv("DDON_DORIS_FLIGHT_SQL_PORT", str(defaults.flight_sql_port))
@@ -168,9 +179,15 @@ class DorisConfig:
                 "DDON_DORIS_STREAM_LOAD_WORKERS", defaults.stream_load_workers
             ),
             statistics_policy=os.getenv("DDON_DORIS_STATISTICS_POLICY", defaults.statistics_policy),
-            serving_variant_id=os.getenv(
-                "DDON_DORIS_SERVING_VARIANT_ID", defaults.serving_variant_id
+            reference_prefetch=os.getenv(
+                "DDON_DORIS_REFERENCE_PREFETCH", defaults.reference_prefetch
             ),
+            attribute_projection=os.getenv(
+                "DDON_DORIS_ATTRIBUTE_PROJECTION", defaults.attribute_projection
+            ),
+            child_tag_filter=os.getenv("DDON_DORIS_CHILD_TAG_FILTER", defaults.child_tag_filter),
+            hydration_scope=os.getenv("DDON_DORIS_HYDRATION_SCOPE", defaults.hydration_scope),
+            serving_variant_id=env("DDON_DORIS_SERVING_VARIANT_ID", defaults.serving_variant_id),
             query_trace=DorisQueryTraceConfig.from_environment(),
             capture_statistics_evidence=_boolean_environment(
                 "DDON_DORIS_CAPTURE_STATISTICS_EVIDENCE", defaults.capture_statistics_evidence

@@ -6,9 +6,9 @@ import json
 import os
 from collections.abc import Generator
 from contextlib import contextmanager
-from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
+from time import perf_counter
 from typing import Any
 
 from ...doris import DorisConfig
@@ -17,29 +17,15 @@ from ...doris_optimization import DorisOptimizationReport
 from ...manifest import load_manifest
 from ...optional import import_optional
 from .current import run_current_doris_benchmark
-from .optimization_reports import not_observed_report as _not_observed_report
-
-
-@dataclass(frozen=True, slots=True)
-class DorisOptimizationCandidate:
-    """One isolated, evidence-gated optimization variant."""
-
-    candidate_id: str
-    category: str
-    status: str
-    reason: str
-    settings: dict[str, object]
-    table_name: str | None = None
-
-    def to_dict(self) -> dict[str, object]:
-        return {
-            "candidate_id": self.candidate_id,
-            "category": self.category,
-            "status": self.status,
-            "reason": self.reason,
-            "settings": dict(self.settings),
-            "table_name": self.table_name,
-        }
+from .optimization_catalog import (
+    DorisOptimizationCandidate,
+)
+from .optimization_catalog import (
+    physical_candidates as _physical_candidates,
+)
+from .optimization_catalog import rejected_candidates as _rejected_candidates
+from .optimization_environment import candidate_environment as _candidate_environment
+from .optimization_preparation import prepare_candidate as _prepare_candidate
 
 
 def build_optimization_matrix(config: DorisConfig) -> tuple[DorisOptimizationCandidate, ...]:
@@ -72,8 +58,12 @@ def _baseline_candidates(config: DorisConfig) -> tuple[DorisOptimizationCandidat
             "typed-projections",
             "query-shape",
             "not_observed",
-            "Requires an actual generation trace comparison.",
-            {"select_star": False},
+            "Exact decoded-only generator projection; improves memory but misses the latency gate.",
+            {
+                "attribute_projection": "serving",
+                "lossless_raw_values": False,
+                "runtime_only": True,
+            },
         ),
         DorisOptimizationCandidate(
             "batched-hydration",
@@ -81,6 +71,42 @@ def _baseline_candidates(config: DorisConfig) -> tuple[DorisOptimizationCandidat
             "not_observed",
             "Requires a trace-confirmed N+1 sequence.",
             {"batch_size": 512},
+        ),
+        DorisOptimizationCandidate(
+            "reference-prefetch-lazy",
+            "query-shape",
+            "observed",
+            "Exact trace-confirmed candidate; paired gain is below the 10% promotion gate.",
+            {"reference_prefetch": "lazy", "runtime_only": True},
+        ),
+        DorisOptimizationCandidate(
+            "combined-positive-below-gate",
+            "interaction",
+            "not_observed",
+            "Activate the positive below-gate candidates together to measure interaction effects.",
+            {
+                "components": (
+                    "reference-prefetch-lazy",
+                    "typed-projections",
+                    "name-lookup-b8",
+                ),
+                "reference_prefetch": "lazy",
+                "attribute_projection": "serving",
+                "lookup_table": f"{config.table}_opt_name_b8",
+                "provision_lookup_candidates": (
+                    "name-lookup-b2",
+                    "name-lookup-b4",
+                    "name-lookup-b8",
+                ),
+            },
+            f"{config.table}_opt_name_b8",
+        ),
+        DorisOptimizationCandidate(
+            "unit-bound-hydration",
+            "query-shape",
+            "not_observed",
+            "Source/unit-bound attribute, reference, and child-tag scans; requires exact confirmation.",
+            {"hydration_scope": "unit", "runtime_only": True},
         ),
     )
 
@@ -116,62 +142,6 @@ def _name_lookup_candidate(config: DorisConfig, buckets: int) -> DorisOptimizati
         "Source/name lookup candidate; requires exact parity and full-generation benefit.",
         {"buckets": buckets, "distribution": "HASH(source_id,name)"},
         f"{config.table}_opt_name_b{buckets}",
-    )
-
-
-def _physical_candidates() -> tuple[DorisOptimizationCandidate, ...]:
-    definitions = (
-        ("drop-inverted-index", {"index_change": "remove_one_inverted_index"}),
-        ("trim-redundant-bloom", {"index_change": "remove_key_column_bloom"}),
-        ("bucket-tiny-one", {"bucket_change": "tiny_families_to_one_bucket"}),
-        ("storage-v3-widest", {"storage_format": "V3", "family": "attribute"}),
-        ("compression-lz4-widest", {"compression": "lz4", "family": "attribute"}),
-        ("pipeline-parallelism", {"parallel_pipeline_task_num": "default,1,higher"}),
-        ("sql-cache", {"enable_sql_cache": "off,on"}),
-        ("stream-load-workers", {"workers": "1,2,4,8"}),
-    )
-    return tuple(
-        DorisOptimizationCandidate(
-            candidate_id,
-            "physical-or-runtime",
-            "not_observed",
-            "Run as an isolated one-factor comparison.",
-            dict(settings),
-        )
-        for candidate_id, settings in definitions
-    )
-
-
-def _rejected_candidates() -> tuple[DorisOptimizationCandidate, ...]:
-    return (
-        DorisOptimizationCandidate(
-            "row-store",
-            "rejected",
-            "not_applicable",
-            "The workload is append-only analytical Duplicate Key data, not Unique MOW point SELECT *.",
-            {"store_row_column": False},
-        ),
-        DorisOptimizationCandidate(
-            "async-materialized-view",
-            "rejected",
-            "not_applicable",
-            "Exact immutable manifest binding is better served by an auxiliary table.",
-            {"refresh": "not_promoted"},
-        ),
-        DorisOptimizationCandidate(
-            "group-commit",
-            "rejected",
-            "not_applicable",
-            "The publication is immutable bulk Stream Load rather than frequent small batches.",
-            {"group_commit": False},
-        ),
-        DorisOptimizationCandidate(
-            "complex-sql-features",
-            "rejected",
-            "not_applicable",
-            "Current generation trace is single-table parameterized lookup work.",
-            {"features": "cte,subquery,lateral,complex,multidimensional,runtime-filter"},
-        ),
     )
 
 
@@ -290,6 +260,8 @@ def run_doris_optimization_benchmark(
         candidates,
         selected,
         provision_candidate,
+        _provision_candidate,
+        _provision_combined_candidate,
     )
     if early_report is not None:
         _write_json(output_dir / "doris-optimization.json", early_report)
@@ -326,51 +298,6 @@ def _selected_candidate(
     if selected is None:
         raise ValueError(f"unknown Doris optimization candidate: {candidate_id}")
     return selected
-
-
-def _prepare_candidate(
-    elf: Path,
-    store_manifest: Path,
-    output_dir: Path,
-    config: DorisConfig,
-    candidates: tuple[DorisOptimizationCandidate, ...],
-    selected: DorisOptimizationCandidate,
-    provision_candidate: bool,
-) -> tuple[Path, dict[str, object], dict[str, Any] | None]:
-    run_output = output_dir / selected.candidate_id
-    run_output.mkdir(parents=True, exist_ok=True)
-    provisioning: dict[str, object] = {
-        "status": "not_observed",
-        "reason": "canonical serving projection was reused",
-    }
-    if selected.candidate_id == "canonical":
-        return run_output, provisioning, None
-    if not provision_candidate:
-        return (
-            run_output,
-            provisioning,
-            _not_observed_report(
-                selected,
-                candidates,
-                config,
-                output_dir,
-                "--provision-candidate was not set",
-            ),
-        )
-    try:
-        provisioning = _provision_candidate(elf, store_manifest, config, selected)
-    except (ImportError, OSError, RuntimeError, ValueError) as error:
-        report = _not_observed_report(
-            selected,
-            candidates,
-            config,
-            output_dir,
-            f"candidate provisioning was blocked: {error}",
-            status="blocked",
-        )
-        report["provisioning"] = {"status": "blocked", "reason": str(error)}
-        return run_output, provisioning, report
-    return run_output, provisioning, None
 
 
 def _run_selected_candidate(
@@ -473,6 +400,7 @@ def _provision_candidate(
     try:
         statements = lookup_candidate_sql(config, candidate.candidate_id)
         qualified_table = f"{_identifier(config.database)}.{_identifier(candidate.table_name)}"
+        started = perf_counter()
         with connection.cursor() as cursor:
             cursor.execute(statements[0])
             cursor.execute(statements[1], (manifest.source_identity.sha256,))
@@ -481,18 +409,60 @@ def _provision_candidate(
                 f"SELECT COUNT(*) FROM {qualified_table} WHERE source_id = %s",
                 (manifest.source_identity.sha256,),
             )
-            rows = cursor.fetchall()
-        row_count = int(rows[0][0]) if rows else 0
+            count_rows = cursor.fetchall()
+            table_stats = _capture_candidate_rows(cursor, f"SHOW TABLE STATS {qualified_table}")
+            tablet_stats = _capture_candidate_rows(cursor, f"SHOW TABLETS FROM {qualified_table}")
+        row_count = int(count_rows[0][0]) if count_rows else 0
         return {
             "status": "observed",
             "candidate_id": candidate.candidate_id,
             "source_id": manifest.source_identity.sha256,
+            "table": candidate.table_name,
             "row_count": row_count,
+            "population_seconds": perf_counter() - started,
             "ddl_sha256": _sha256_text(statements[0]),
             "population_sql_sha256": _sha256_text(statements[2]),
+            "table_stats": table_stats,
+            "tablet_stats": tablet_stats,
         }
     finally:
         connection.close()
+
+
+def _provision_combined_candidate(
+    elf: Path,
+    store_manifest: Path,
+    config: DorisConfig,
+) -> dict[str, object]:
+    candidates = {
+        candidate.candidate_id: candidate
+        for candidate in _lookup_candidates(config)
+        if candidate.candidate_id in {"name-lookup-b2", "name-lookup-b4", "name-lookup-b8"}
+    }
+    components = [
+        _provision_candidate(elf, store_manifest, config, candidates[candidate_id])
+        for candidate_id in ("name-lookup-b2", "name-lookup-b4", "name-lookup-b8")
+    ]
+    manifest = load_manifest(store_manifest.resolve())
+    return {
+        "status": "observed",
+        "candidate_id": "combined-positive-below-gate",
+        "source_id": manifest.source_identity.sha256,
+        "active_lookup_candidate": "name-lookup-b8",
+        "components": components,
+    }
+
+
+def _capture_candidate_rows(cursor: Any, statement: str) -> dict[str, object]:
+    try:
+        cursor.execute(statement)
+        names = [str(column[0]) for column in (cursor.description or ())]
+        rows = [
+            dict(zip(names, row, strict=False)) if names else list(row) for row in cursor.fetchall()
+        ]
+        return {"status": "observed", "statement": statement, "rows": rows}
+    except Exception as error:  # candidate evidence is additive to the query result
+        return {"status": "partial", "statement": statement, "error": str(error), "rows": []}
 
 
 def _matrix_with_selected_status(
@@ -501,31 +471,15 @@ def _matrix_with_selected_status(
     return [
         {
             **candidate.to_dict(),
-            "status": str(status) if candidate.candidate_id == selected_id else candidate.status,
+            "status": (
+                str(status)
+                if candidate.candidate_id == selected_id
+                and candidate.status not in {"rejected", "not_applicable"}
+                else candidate.status
+            ),
         }
         for candidate in candidates
     ]
-
-
-def _candidate_environment(
-    config: DorisConfig, candidate: DorisOptimizationCandidate
-) -> dict[str, str]:
-    environment = {
-        "DDON_DORIS_SERVING_VARIANT_ID": candidate.candidate_id,
-    }
-    if candidate.category != "lookup-table":
-        return environment
-    if candidate.candidate_id.startswith("name-lookup-"):
-        table = candidate.table_name or ""
-        environment["DDON_DORIS_NAME_LOOKUP_TABLE"] = table
-        environment["DDON_DORIS_DEFINITION_LOOKUP_TABLE"] = table
-    elif candidate.candidate_id == "method-target-b4":
-        environment["DDON_DORIS_METHOD_LOOKUP_TABLE"] = candidate.table_name or ""
-    elif candidate.candidate_id == "die-offset-b4":
-        environment["DDON_DORIS_DIE_LOOKUP_TABLE"] = candidate.table_name or ""
-    environment["DDON_DORIS_CAPTURE_STATISTICS_EVIDENCE"] = "1"
-    environment["DDON_DORIS_STATISTICS_POLICY"] = config.statistics_policy
-    return environment
 
 
 @contextmanager

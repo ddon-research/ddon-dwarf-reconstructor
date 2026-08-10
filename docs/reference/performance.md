@@ -120,17 +120,18 @@ uv run ddon-dwarf-reconstructor performance benchmark-doris-optimization <ELF> `
   --doris-cli D:\doris-cli\target\release\doriscli.exe
 ```
 
-The matrix includes explicit projections, bounded hydration (512 keys), source/name lookup
-tables with buckets 2/4/8, trace-gated method/DIE locator tables, index/Bloom removal, tiny-table
-buckets, V2/V3, ZSTD/LZ4, pipeline parallelism, SQL-cache state, and Stream Load workers 1/2/4/8.
-Row store, asynchronous MV, group commit, and unrelated complex-SQL features are retained as
-`not_applicable`/rejected evidence for this append-only single-table workload. Every report carries
+The matrix includes the decoded-serving attribute projection, lazy reference prefetch, bounded
+hydration (512 keys), source/name lookup tables with buckets 2/4/8, trace-gated method/DIE locator
+tables, index/Bloom removal, tiny-table buckets, V2/V3, ZSTD/LZ4, pipeline parallelism, SQL-cache
+state, and Stream Load workers 1/2/4/8. Row store, asynchronous MV, group commit, and unrelated
+complex-SQL features are retained as `not_applicable`/rejected evidence for this append-only
+single-table workload. Every report carries
 the typed serving variant, complete row-count evidence, cold/warm samples, query traces, output
 hashes, DDL/configuration hashes, and a promotion gate. EXPLAIN-only or scan-only improvements do
 not promote a candidate; confirmatory warm p50/p95 must improve a representative rAIFSM or hot
 lookup by at least 10% with exact parity and no more than the existing 110% regression bound.
 
-#### 2026-08-09 evaluation and serving-path result
+#### 2026-08-09 to 2026-08-10 evaluation and serving-path result
 
 The first complete-store evaluation ran against Doris 4.1.3 and identified the dominant cost as
 generation round trips rather than scan CPU. The source/unit-bound 512-key batch screen was `34.1x`
@@ -146,16 +147,68 @@ while the canonical Doris schema, keys, buckets, storage format, indexes, and re
 unchanged.
 
 A paired traced `rAIFSM` run published the same 11 headers in `39.589 s` and recorded `754` redacted
-observations. Every FE profile was `partial` because query IDs did not match, and tracing added
-`96.3%` wall time, so traced wall time is excluded from performance conclusions. The source/name
-auxiliary table remains rejected because it did not improve measured warm lookup latency; the
-target-DIE prefetch screen was exact but regressed `rAIFSM` to `29.299 s` and was reverted.
-Physical/index/storage/session variants remain `not_observed`.
+observations. The follow-up semantic trace labeled the dominant operations: 85 batched attribute
+hydration queries, 154 reference-prefetch queries, 45 batched DIE hydration queries, and 138
+single-DIE lookups. Every FE profile was `partial` because query IDs did not match, and tracing
+added more than the 5% overhead budget, so traced wall time is excluded from performance
+conclusions. A grouped child-tag `COUNT(*)` experiment reduced one bounded result from 1,970 to
+602 rows and was faster in a SQL microbenchmark, but paired full runs were effectively tied with
+the raw path (`21.160/21.165 s` versus `21.159/21.163 s` warm p50/p95), so it was removed.
 
-This command is a reusable regression/promotion tool, not a continuously running service. The
-2026-08-09 run is the one-time decision for the current publication; future runs are warranted only
-when the generator path, Doris image/configuration, source publication, or a candidate variant
-changes.
+The source/name auxiliary tables did reduce global lookup scheduling to 1/2 and 1/8 tablets, but
+full confirmation produced only about 10% warm p50 and 5% warm p95 improvement; both remain
+opt-in. The target-DIE prefetch screen was exact but regressed `rAIFSM` to `29.299 s` and was
+reverted. Physical/index/storage/session variants remain `not_observed`; the actual trace also
+contained no method-target lookup shape to justify provisioning that table.
+
+The 2026-08-10 policy recheck used the refreshed canonical registry identity and left all fourteen
+physical tables unchanged. Canonical eager/full/all rAIFSM measured `19.121/19.127 s` warm p50/p95
+(`n=3`) with the approved 11-file bundle hash
+`0514bdb383121ebc83d8e9193ef0766c7074a4fd90f3e3d00691cea29461b243`. Lazy reference prefetch was
+exact and reduced the trace from 754 to 680 queries (154 to 108 reference-prefetch calls), but
+paired 3-cold/5-warm execution improved only `5.3%` at both p50 and p95; it remains opt-in. The
+decoded-serving attribute projection kept exact output and reduced traced attribute execute time
+from `7.786 s` to `5.737 s` and warm p95 RSS by `15.1%`, but its warm latency p95 was effectively
+unchanged (`19.126 s`), so it also remains opt-in and is explicitly not lossless for raw attribute
+values. A targeted child-tag predicate was exact but regressed warm p50 by `10.5%` and is rejected.
+
+The next trace-confirmed candidate, `unit-bound-hydration`, was screened against the exact
+canonical ELF path and complete manifest. It preserved the approved 11-header bundle hash, but
+the fair untraced exhaustive `rAIFSM` run took `289.048 s` (`n=1`, exploratory) versus the
+canonical `19.121/19.127 s` warm p50/p95; it is rejected and did not proceed to 3-cold/5-warm
+confirmation. Its attribution trace recorded `26,463` completed observations before the
+profile-fetching process was stopped: `hydrate_attributes_by_die` ran `9,262` times,
+`prefetch_reference_targets` `7,579` times, and `prefetch_child_tag_counts` `9,136` times,
+versus canonical counts of `85`, `154`, and `25`. The unit predicate therefore created query
+fan-out rather than reducing work. The trace is partial attribution evidence; its wall time and
+incomplete FE profiles are excluded from performance conclusions.
+
+#### Combined positive-below-gate batch
+
+The positive candidates that had shown roughly 5% or better improvement were activated together
+as `combined-positive-below-gate`: lazy reference prefetch, the decoded-serving attribute
+projection, and the source/name lookup alternatives b2, b4, and b8. The confirmatory report at
+`C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\combined-positive-below-gate-confirm-20260810\doris-optimization.json`
+ran three cold and five warm exhaustive `rAIFSM` repetitions with b8 active. All eight
+`rAIFSM` outputs were exact and retained the approved 11-file bundle hash
+`0514bdb383121ebc83d8e9193ef0766c7074a4fd90f3e3d00691cea29461b243`.
+
+Warm p50/p95 were `16.1152/16.1187 s`, versus canonical `19.1208/19.1271 s`, or about
+`15.7%` faster at both quantiles. Warm p95 RSS also fell from `164,102,144` to `136,142,848`
+bytes. The active b8 auxiliary table added `399,984,557` bytes (`7.23%` over the complete
+canonical table total), and its source-bound population took `14.875 s`; b2 and b4 were
+provisioned only to make the bucket interaction comparison complete. This clears the end-to-end
+latency and measured storage/memory gates. A follow-up selective analysis of the active b8
+key/filter columns produced two manual `FINISHED` jobs (`1786278610025`, `1786278610030`) with
+1,048,576-row samples and zero failed subjobs; the older automatic-analysis failures remain raw
+context only. The batch remains opt-in because the decoded-serving projection is not lossless for
+raw attribute values outside the proven generation path. A projection-free interaction variant
+would need its own exact 3-cold/5-warm confirmation before changing the default. The canonical
+fourteen-family physical model and default environment remain unchanged.
+
+This command is a reusable, change-triggered regression/promotion tool, not a continuously running
+service. The current publication has now been evaluated; rerun it when the generator path, Doris
+image/configuration, source publication, candidate variant, or representative workload changes.
 
 Candidate reports and all raw traces/profiles are external artifacts. `--no-cache` disables Doris
 query cache for a session; it is not an operating-system storage-cache eviction, so cold and warm

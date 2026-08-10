@@ -28,6 +28,15 @@
 - [x] Implement bounded source/unit-aware hydration for metadata, attributes, references, and
   child-tag counts, then run exact traced/untraced exhaustive `rAIFSM` confirmation. The serving
   algorithm is retained; remaining physical variants stay `not_observed` until separately measured.
+- [x] Recheck the complete store with eager/lazy reference prefetch, decoded-serving attribute
+  projection, and targeted child-tag filtering. Record exact output hashes, cold/warm samples,
+  trace attribution, rejected candidates, and the additive canonical registry identity refresh.
+- [x] Screen the source/unit-bound hydration candidate against the exact canonical ELF path;
+  retain exactness and query-fan-out evidence, reject the candidate, and keep global hydration as
+  the default.
+- [x] Activate the positive standalone candidates together as `combined-positive-below-gate`,
+  confirm exact exhaustive `rAIFSM` parity with three cold/five warm repetitions, and record the
+  interaction result and auxiliary-statistics promotion boundary.
 
 ## Status notes
 
@@ -63,11 +72,21 @@ BOOLEAN values as `int` and `bool`, respectively. Doris's current FE producer al
 FE-local result locations from its process-local address, so endpoint routing is not yet a clean
 runtime boundary. The default MySQL/PyMySQL and loader paths are unchanged.
 
-The 2026-08-09 complete-store optimization evaluation is now observed rather than merely planned.
+The 2026-08-09/10 complete-store optimization evaluation is now observed rather than merely planned.
 Bounded source/unit-aware hydration, child-frontier/reference prefetching, and per-unit line-program
-caching are part of the generator serving path. Exhaustive/full-hierarchy `rAIFSM` produced
-identical 11-header bundles in 19.811, 20.166, and 20.784 seconds on current-code runs; a paired traced run
-also produced exact output but exceeded the 5% tracing overhead limit and retained only partial
-profile attribution. The canonical Doris physical design is unchanged. The benchmark remains a
-reusable one-shot regression/promotion tool, while index, bucket, storage, session, and Stream Load
-variants remain `not_observed`.
+caching are part of the generator serving path. The post-policy canonical `eager/full/all` run
+produced an exact 11-header bundle with `19.121/19.127 s` warm p50/p95. Lazy reference prefetch
+reduced traced queries from 754 to 680 but cleared only 5.3% paired warm latency; the decoded
+attribute projection reduced warm p95 RSS by 15.1% without a p95 latency gain and omits raw values.
+The targeted child-tag filter regressed warm p50 by 10.5% and was rejected. Name lookup candidates
+reduced tablet fan-out but failed the confirmatory p95 gate; the canonical Doris physical design is
+unchanged. The benchmark remains a reusable one-shot regression/promotion tool, while index,
+bucket, storage, session, and Stream Load variants remain `not_observed`.
+The fair-path unit-bound hydration screen preserved exact `rAIFSM` output but took `289.048 s` and
+expanded the partial trace to `26,463` observations, so the candidate is rejected for query fan-out.
+The combined positive-below-gate batch then measured `16.1152/16.1187 s` warm p50/p95 versus
+canonical `19.1208/19.1271 s`, with exact output and lower warm p95 RSS. Its active b8 auxiliary
+table added `7.23%` storage. A follow-up selective analysis produced two manual terminal-success
+jobs with zero failed subjobs; the remaining promotion boundary is that decoded-serving
+projection is not lossless for raw attribute values outside the proven generation path. The
+canonical physical model remains the default.

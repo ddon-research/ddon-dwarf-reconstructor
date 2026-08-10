@@ -328,11 +328,46 @@ compilation unit while preserving the canonical schema and registry.
 The current optimized serving path completed exact `rLayout` in `13.195 s` and exhaustive
 `rAIFSM` in `19.811 s`, `20.166 s`, and `20.784 s`; all 11 headers matched the approved hashes. A paired traced
 `rAIFSM` run recorded `754` redacted observations and published the same output, but took
-`39.589 s` because tracing added `96.3%` wall time. Its FE profiles were all `partial` due
-query-ID mismatch, so traced wall time is attribution-only. The source/name auxiliary table remains
-rejected because it did not improve warm lookup latency. The canonical physical design remains the
-default; index removal, bucket changes, V2/V3, ZSTD/LZ4, pipeline/session tuning, and Stream Load
-worker comparisons are `not_observed` rather than inferred from `EXPLAIN` or partial profiles.
+`39.589 s` because tracing exceeded the 5% overhead budget. Its FE profiles were all `partial`
+due to query-ID mismatch, so traced wall time is attribution-only. The semantic trace identified
+batched attribute/reference/DIE hydration and point-DIE lookups as the dominant query operations.
+Name lookup buckets 2 and 8 reduced global lookup scheduling to 1/2 and 1/8 tablets, respectively,
+but full confirmation reached only about 10% warm p50 and 5% warm p95 improvement; neither is
+promoted. A grouped child-tag aggregation reduced one bounded result but was end-to-end tied with
+the raw path and was removed. The canonical
+physical design remains the default; index removal, bucket changes, V2/V3, ZSTD/LZ4,
+pipeline/session tuning, and Stream Load worker comparisons are `not_observed` rather than inferred
+from `EXPLAIN` or partial profiles.
+
+The 2026-08-10 policy recheck used the refreshed canonical registry identity without reloading or
+changing any physical table. Canonical `eager/full/all` measured `19.121/19.127 s` warm p50/p95
+(`n=3`) with exact 11-header output. Lazy reference prefetch remained exact, reduced traced
+queries from 754 to 680 and reference-prefetch calls from 154 to 108, but improved paired warm
+p50/p95 by only `5.3%`, below promotion. The decoded-serving attribute projection reduced traced
+attribute execute time from `7.786 s` to `5.737 s` and warm p95 RSS by `15.1%`, but did not
+improve warm p95 latency and omits raw attribute values; it remains opt-in. The targeted child-tag
+filter was exact but regressed warm p50 by `10.5%` and was rejected. This route is a reusable,
+change-triggered one-shot regression/promotion command, not a continuous service.
+
+The fair-path screen of `unit-bound-hydration` then preserved the exact 11-header bundle but took
+`289.048 s` for exhaustive `rAIFSM` (`n=1`) against the canonical `19.121/19.127 s` warm
+p50/p95. A partial attribution trace recorded `26,463` observations, including `9,262`
+attribute-by-DIE, `7,579` reference-prefetch, and `9,136` child-tag-count queries; the canonical
+trace had `85`, `154`, and `25`. The known unit predicate increased round trips and is rejected.
+The canonical global hydration scope remains the default; no physical table or registry contract
+changed.
+
+The positive-below-gate interaction batch then activated lazy reference prefetch, the
+decoded-serving attribute projection, and source/name lookup buckets 2, 4, and 8 together, with
+b8 active. Its three-cold/five-warm confirmation preserved the exact approved 11-file bundle and
+measured `16.1152/16.1187 s` warm p50/p95 versus canonical `19.1208/19.1271 s`—approximately
+`15.7%` faster at both quantiles. Warm p95 RSS fell from `164,102,144` to `136,142,848` bytes.
+The active b8 table added `399,984,557` bytes, or `7.23%` over the complete canonical table
+total, and all auxiliary tablets were `NORMAL`. A follow-up selective analysis of the active b8
+key/filter columns produced two manual `FINISHED` jobs with 1,048,576-row samples and zero failed
+subjobs; older automatic-analysis failures remain historical context. The batch remains opt-in
+because its decoded-serving projection is not lossless for raw attribute values outside the
+proven generation path. The canonical fourteen-family schema and registry remain unchanged.
 
 The same fail-closed rule applies to a non-zero `parse_error_count`: the closed files and raw
 evidence may be inspected diagnostically with `--allow-incomplete`, but a runtime consumer must

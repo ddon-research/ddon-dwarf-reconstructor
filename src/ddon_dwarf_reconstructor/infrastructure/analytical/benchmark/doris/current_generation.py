@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +13,22 @@ from ....performance import PerformanceRunner
 from ....performance.workloads import build_reconstructor_workload
 from ..common.output import safe_output_name
 from .current_outputs import generation_output as _generation_output
+
+_SERVING_ENVIRONMENT_KEYS = (
+    "DDON_DORIS_SERVING_VARIANT_ID",
+    "DDON_DORIS_REFERENCE_PREFETCH",
+    "DDON_DORIS_ATTRIBUTE_PROJECTION",
+    "DDON_DORIS_CHILD_TAG_FILTER",
+    "DDON_DORIS_HYDRATION_SCOPE",
+    "DDON_DORIS_NAME_LOOKUP_TABLE",
+    "DDON_DORIS_DEFINITION_LOOKUP_TABLE",
+    "DDON_DORIS_METHOD_LOOKUP_TABLE",
+    "DDON_DORIS_DIE_LOOKUP_TABLE",
+    "DDON_DORIS_STATISTICS_POLICY",
+    "DDON_DORIS_CAPTURE_STATISTICS_EVIDENCE",
+    "DDON_DORIS_PARALLEL_PIPELINE_TASK_NUM",
+    "DDON_DORIS_ENABLE_SQL_CACHE",
+)
 
 
 def run_generation_workloads(
@@ -158,7 +176,7 @@ def _generation_workload(
     query_trace_profile_threshold_ms: float = 500.0,
     query_trace_max_profiles: int = 20,
 ) -> PerformanceWorkload:
-    return build_reconstructor_workload(
+    workload = build_reconstructor_workload(
         repository_root=Path.cwd(),
         name=name,
         elf=elf,
@@ -174,10 +192,23 @@ def _generation_workload(
         query_trace_profile_threshold_ms=query_trace_profile_threshold_ms,
         query_trace_max_profiles=query_trace_max_profiles,
     )
+    return replace(
+        workload,
+        environment=(*workload.environment, *_serving_environment()),
+    )
 
 
 def _trace_path(target: Path, enabled: bool) -> Path | None:
     return target / "doris-query-trace.jsonl" if enabled else None
+
+
+def _serving_environment() -> tuple[tuple[str, str], ...]:
+    """Record bounded serving-policy settings in each generation workload."""
+    return tuple(
+        (key, value)
+        for key in _SERVING_ENVIRONMENT_KEYS
+        if (value := os.environ.get(key)) is not None
+    )
 
 
 def _run_one(

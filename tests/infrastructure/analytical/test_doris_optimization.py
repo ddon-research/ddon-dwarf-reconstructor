@@ -105,6 +105,7 @@ def test_query_trace_records_actual_query_without_parameter_values(
     assert rows == ({"name": "value"},)
     record = json.loads(trace_path.read_text(encoding="utf-8").splitlines()[0])
     assert record["family"] == "index"
+    assert record["operation"] == "family_rows"
     assert record["profile_status"] == "observed"
     assert record["scan_bytes"] == 12
     assert record["scan_rows"] is None
@@ -191,11 +192,70 @@ def test_serving_variant_fingerprint_includes_lookup_tables() -> None:
     assert candidate.configuration_sha256 != canonical.configuration_sha256
 
 
+def test_serving_variant_fingerprint_includes_reference_prefetch_policy() -> None:
+    eager = DorisServingVariant.from_config(DorisConfig(reference_prefetch="eager"))
+    lazy = DorisServingVariant.from_config(DorisConfig(reference_prefetch="lazy"))
+
+    assert eager.configuration_sha256 != lazy.configuration_sha256
+    assert lazy.to_dict()["reference_prefetch"] == "lazy"
+
+
+def test_serving_variant_fingerprint_includes_attribute_projection() -> None:
+    full = DorisServingVariant.from_config(DorisConfig(attribute_projection="full"))
+    serving = DorisServingVariant.from_config(DorisConfig(attribute_projection="serving"))
+
+    assert full.configuration_sha256 != serving.configuration_sha256
+    assert serving.to_dict()["attribute_projection"] == "serving"
+
+
+def test_serving_variant_fingerprint_includes_child_tag_filter() -> None:
+    full = DorisServingVariant.from_config(DorisConfig(child_tag_filter="all"))
+    targeted = DorisServingVariant.from_config(DorisConfig(child_tag_filter="targeted"))
+
+    assert full.configuration_sha256 != targeted.configuration_sha256
+    assert targeted.to_dict()["child_tag_filter"] == "targeted"
+
+
+def test_serving_variant_fingerprint_includes_hydration_scope() -> None:
+    global_scope = DorisServingVariant.from_config(DorisConfig(hydration_scope="global"))
+    unit_scope = DorisServingVariant.from_config(DorisConfig(hydration_scope="unit"))
+
+    assert global_scope.configuration_sha256 != unit_scope.configuration_sha256
+    assert unit_scope.to_dict()["hydration_scope"] == "unit"
+
+
+def test_serving_policy_configuration_reads_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DDON_DORIS_REFERENCE_PREFETCH", "lazy")
+    monkeypatch.setenv("DDON_DORIS_ATTRIBUTE_PROJECTION", "serving")
+    monkeypatch.setenv("DDON_DORIS_CHILD_TAG_FILTER", "targeted")
+    monkeypatch.setenv("DDON_DORIS_HYDRATION_SCOPE", "unit")
+
+    config = DorisConfig.from_environment()
+
+    assert config.reference_prefetch == "lazy"
+    assert config.attribute_projection == "serving"
+    assert config.child_tag_filter == "targeted"
+    assert config.hydration_scope == "unit"
+
+
 def test_optimization_matrix_keeps_canonical_and_rejects_inapplicable_paths() -> None:
     candidates = {item.candidate_id: item for item in build_optimization_matrix(DorisConfig())}
-
     assert candidates["canonical"].status == "observed"
+    assert candidates["reference-prefetch-lazy"].settings["reference_prefetch"] == "lazy"
+    assert candidates["combined-positive-below-gate"].settings["components"] == (
+        "reference-prefetch-lazy",
+        "typed-projections",
+        "name-lookup-b8",
+    )
+    assert candidates["typed-projections"].settings["attribute_projection"] == "serving"
+    assert candidates["typed-projections"].settings["lossless_raw_values"] is False
+    assert candidates["targeted-child-tag-filter"].status == "rejected"
+    assert candidates["targeted-child-tag-filter"].settings["child_tag_filter"] == "targeted"
+    assert candidates["unit-bound-hydration"].settings["hydration_scope"] == "unit"
     assert candidates["name-lookup-b4"].settings["distribution"] == "HASH(source_id,name)"
+    assert candidates["grouped-child-tag-counts"].status == "rejected"
     assert candidates["row-store"].status == "not_applicable"
     assert candidates["async-materialized-view"].status == "not_applicable"
 
@@ -361,6 +421,87 @@ def test_lookup_candidate_routes_and_environment_are_isolated() -> None:
     assert benchmark_optimization_module._candidate_environment(
         DorisConfig(), candidates["method-target-b4"]
     )["DDON_DORIS_METHOD_LOOKUP_TABLE"].endswith("_b4")
+    assert (
+        benchmark_optimization_module._candidate_environment(
+            DorisConfig(), candidates["reference-prefetch-lazy"]
+        )["DDON_DORIS_REFERENCE_PREFETCH"]
+        == "lazy"
+    )
+    assert (
+        benchmark_optimization_module._candidate_environment(
+            DorisConfig(), candidates["typed-projections"]
+        )["DDON_DORIS_ATTRIBUTE_PROJECTION"]
+        == "serving"
+    )
+    assert (
+        benchmark_optimization_module._candidate_environment(
+            DorisConfig(), candidates["targeted-child-tag-filter"]
+        )["DDON_DORIS_CHILD_TAG_FILTER"]
+        == "targeted"
+    )
+    assert (
+        benchmark_optimization_module._candidate_environment(
+            DorisConfig(), candidates["unit-bound-hydration"]
+        )["DDON_DORIS_HYDRATION_SCOPE"]
+        == "unit"
+    )
+    batch = benchmark_optimization_module._candidate_environment(
+        DorisConfig(), candidates["combined-positive-below-gate"]
+    )
+    assert batch["DDON_DORIS_REFERENCE_PREFETCH"] == "lazy"
+    assert batch["DDON_DORIS_ATTRIBUTE_PROJECTION"] == "serving"
+    assert batch["DDON_DORIS_NAME_LOOKUP_TABLE"].endswith("_opt_name_b8")
+
+
+def test_runtime_only_candidate_does_not_require_table_provisioning(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        benchmark_optimization_module,
+        "run_current_doris_benchmark",
+        lambda *args, **kwargs: {
+            "status": "observed",
+            "runs": [],
+            "serving_validation": {},
+        },
+    )
+    report = run_doris_optimization_benchmark(
+        Path("source.elf"),
+        Path("manifest.json"),
+        tmp_path,
+        candidate_id="reference-prefetch-lazy",
+        provision_candidate=False,
+        control_cold_iterations=1,
+        control_warm_iterations=1,
+        query_iterations=1,
+        aifsm_iterations=1,
+    )
+
+    assert report["status"] == "observed"
+    assert report["optimization"]["provisioning"]["status"] == "not_applicable"
+
+
+def test_candidate_evidence_capture_serializes_rows_and_failures() -> None:
+    observed = benchmark_optimization_module._capture_candidate_rows(
+        _Cursor(_Connection()), "SHOW TABLE STATS dwarf.records"
+    )
+    assert observed["status"] == "observed"
+    assert observed["rows"] == [{"name": "value"}]
+
+    class FailingCursor:
+        description: tuple[tuple[str], ...] = ()
+
+        def execute(self, _statement: str) -> None:
+            raise RuntimeError("candidate stats unavailable")
+
+        def fetchall(self) -> list[tuple[object, ...]]:
+            return []
+
+    partial = benchmark_optimization_module._capture_candidate_rows(
+        FailingCursor(), "SHOW TABLETS FROM dwarf.records"
+    )
+    assert partial["status"] == "partial"
+    assert "unavailable" in str(partial["error"])
 
 
 class _GenerationRunner:

@@ -55,6 +55,15 @@ reproducible baseline; set it explicitly (for example, `4`) when benchmarking co
 independently labeled Parquet loads on a full corpus. Do not place credentials in the repository
 or in benchmark artifacts.
 
+The serving-path policy switches are opt-in and default to the lossless canonical behavior:
+`DDON_DORIS_REFERENCE_PREFETCH=eager`, `DDON_DORIS_ATTRIBUTE_PROJECTION=full`, and
+`DDON_DORIS_CHILD_TAG_FILTER=all`, with `DDON_DORIS_HYDRATION_SCOPE=global`. The `unit` hydration
+scope was measured and rejected because it multiplies source-bound query fan-out; keep `global`
+unless a new trace and fair-path benchmark proves otherwise. The `serving` attribute projection is decoded-only and does
+not preserve raw attribute-value columns, so it is suitable only for an explicitly bounded
+consumer contract. Each switch is included in the serving-variant identity and must be measured
+with exact output parity before use.
+
 The Compose file does not enable Arrow Flight SQL by default. Doris documents that service as
 experimental and requires distinct FE and BE `arrow_flight_sql_port` settings; enable it only in
 the explicit overlay, with ports, rendered-Compose hash, startup logs, and endpoint checks recorded
@@ -281,25 +290,42 @@ before treating statistics freshness as uniformly healthy.
 
 ### Actual optimization decision
 
-The complete-store evaluation was run on 2026-08-09 under
-`$env:TEMP/ddon-analytical-dwarf/optimization-batched-20260809`. The query-level screen found a
-source/unit-bound 512-key batch was `34.1x` faster than sequential attribute calls with exact row
-parity. The generator now uses bounded batch hydration for DIE metadata, attributes, child
-frontiers, reference targets, and child-tag counts, and caches line programs per compilation unit.
+The complete-store evaluation was run on 2026-08-09/10 under
+`$env:TEMP/ddon-analytical-dwarf`. The query-level screen found a source/unit-bound 512-key batch
+was `34.1x` faster than sequential attribute calls with exact row parity. The generator now uses
+bounded batch hydration for DIE metadata, attributes, child frontiers, reference targets, and
+child-tag counts, and caches line programs per compilation unit.
 
-The current optimized path completed exact `rLayout` in `13.195 s` and exact
-exhaustive/full-hierarchy `rAIFSM` in `19.811 s`, `20.166 s`, and `20.784 s`; all 11 headers matched the
-approved bundle. A paired traced `rAIFSM` run took `39.589 s`, recorded `754` redacted
-observations, and published the same output. Its FE profiles were all `partial` because query IDs
-did not match, and tracing added `96.3%` wall time, so traced wall time is excluded from performance
-conclusions. The result is a retained serving-path optimization, not a physical schema variant:
-canonical `DUPLICATE KEY`, source-first keys, current buckets, V2/ZSTD, indexes, replication, and
-registry remain unchanged.
+The post-policy canonical `eager/full/all` run completed exact exhaustive/full-hierarchy `rAIFSM`
+with warm p50/p95 of `19.121/19.127 s` (`n=3`); all 11 headers matched the approved bundle. The
+physical design and table data stayed unchanged: `DUPLICATE KEY`, source-first keys, current
+buckets, one partition, V2/ZSTD, indexes, replication one, and the canonical registry remain the
+default. The registry received only additive serving-variant identity metadata.
 
-The measured source/name auxiliary table preserved exact ordered results but did not improve warm
-definition lookup latency, so it remains unbound and rejected. Method/DIE locator tables, index
-removal, bucket/storage/session changes, and Stream Load worker comparisons remain `not_observed`;
-the measured target-DIE prefetch screen was exact but regressed `rAIFSM` to `29.299 s` and was
-reverted. These results are not implied by the framework or by `EXPLAIN` alone. The benchmark command is reusable for
-future one-shot regression/promotion runs after generator, source, Doris, or variant changes; it
-is not a continuously running service.
+Lazy reference prefetch was exact and reduced traced queries from 754 to 680, including reference
+prefetch calls from 154 to 108, but paired 3-cold/5-warm execution improved only `5.3%` at both
+warm p50 and p95, below the 10% promotion gate. The decoded-serving attribute projection reduced
+traced attribute execute time from `7.786 s` to `5.737 s` and warm p95 RSS by `15.1%`, but did not
+improve warm p95 latency and is not lossless for raw attribute values; it remains opt-in. The
+targeted child-tag filter preserved exact output but regressed warm p50 by `10.5%` and was
+rejected. Name lookup tables reduced global scheduling fan-out but failed the confirmatory p95
+gate. Grouped child-tag aggregation tied end-to-end and was removed; method-target provisioning
+did not meet its trace threshold.
+
+The combined `combined-positive-below-gate` batch activated the three positive standalone
+families together: lazy reference prefetch, decoded-serving attribute projection, and name lookup
+buckets 2/4/8, with b8 active. Three cold and five warm exhaustive `rAIFSM` runs preserved the
+approved 11-file bundle and measured `16.1152/16.1187 s` warm p50/p95 versus
+`19.1208/19.1271 s` canonical (`15.7%` faster at both quantiles). Warm p95 RSS fell from
+`164,102,144` to `136,142,848` bytes, and active auxiliary storage increased by `7.23%`.
+An explicit selective analysis of the active b8 key/filter columns then produced two manual
+`FINISHED` jobs with zero failed subjobs; older automatic-analysis failures remain historical
+context. The variant is still opt-in because the decoded-serving projection is not lossless for
+raw attribute values outside the proven generation path. b2 and b4 are comparison-only
+alternatives.
+
+All traced FE profiles were `partial` because the returned profile text did not contain the
+requested query ID, and tracing exceeded the 5% wall-time budget; traced wall time is attribution-
+only. Index/Bloom removal, bucket/storage/session changes, and Stream Load worker comparisons
+remain `not_observed`, not inferred from `EXPLAIN`. The benchmark is a reusable, change-triggered
+one-shot regression/promotion command, not a continuously running service.

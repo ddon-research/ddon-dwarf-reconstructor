@@ -6,6 +6,8 @@ import json
 import os
 import re
 from collections.abc import Mapping
+from datetime import date, datetime, time
+from decimal import Decimal
 from hashlib import sha256
 from pathlib import Path
 from typing import Any
@@ -49,6 +51,17 @@ def configured_ddl_sha256(config: Any) -> str:
 
 def mapping(value: object) -> dict[str, object]:
     return {str(key): item for key, item in value.items()} if isinstance(value, Mapping) else {}
+
+
+def json_default(value: object) -> str:
+    """Serialize typed Doris evidence values deterministically."""
+    if isinstance(value, (datetime, date, time)):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return str(value)
+    if isinstance(value, bytes):
+        return value.hex()
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
 
 
 def mapping_sequence(value: object) -> tuple[Mapping[str, object], ...]:
@@ -114,7 +127,8 @@ def write_json_atomic(path: Path, payload: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".partial")
     temporary.write_text(
-        json.dumps(payload, ensure_ascii=True, sort_keys=True, indent=2, default=str) + "\n",
+        json.dumps(payload, ensure_ascii=True, sort_keys=True, indent=2, default=json_default)
+        + "\n",
         encoding="utf-8",
         newline="\n",
     )
