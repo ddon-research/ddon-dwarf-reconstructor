@@ -18,6 +18,7 @@ from .header_generator_context import HeaderGeneratorContext
 from .header_hierarchy import HierarchyHeaderGenerationMixin
 from .header_member_rendering import HeaderMemberRenderingMixin
 from .header_method_rendering import HeaderMethodRenderingMixin
+from .header_nested_rendering import HeaderNestedRenderingMixin
 from .header_ordering import HeaderOrderingMixin
 from .header_single import SingleHeaderGenerationMixin
 from .header_type_planning import HeaderTypePlanningMixin
@@ -35,6 +36,7 @@ class HeaderGenerator(
     HeaderOrderingMixin,
     HeaderForwardDeclarationMixin,
     HeaderMemberRenderingMixin,
+    HeaderNestedRenderingMixin,
     HeaderAggregateRenderingMixin,
     HeaderMethodRenderingMixin,
     HeaderGeneratorContext,

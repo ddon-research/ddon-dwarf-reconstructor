@@ -93,7 +93,7 @@ evidence before changing Doris keys, indexes, buckets, or materialized views. Ad
 broad diagnostic and is not included in `--profiler all`. The child benchmark report remains
 separate from the profiler manifests.
 
-`benchmark-doris-current` reuses a complete source-bound publication. The opt-in
+`benchmark-doris-current` reuses a complete source-bound publication. The
 `benchmark-doris-optimization` command adds redacted generation query tracing, typed serving-variant
 identity, selective-statistics policy, and one-factor lookup/physical candidates. Runtime-only
 variants such as `typed-projections`, `reference-prefetch-lazy`, and
@@ -104,21 +104,35 @@ command's `--help` surface for the cold/warm repetition and profile-budget contr
 To repeat the measured interaction batch of all positive standalone candidates, use
 `--candidate combined-positive-below-gate --provision-candidate`. It activates lazy reference
 prefetch, the decoded-serving projection, and source/name lookup buckets 2/4/8 with b8 active;
-the other buckets are provisioned as comparison-only alternatives. The active b8 statistics pass
-is now terminal-success, but the measured batch remains opt-in because decoded-serving projection
-does not preserve raw attribute values for the full serving contract.
+the other buckets are provisioned as comparison-only alternatives. The measured batch is now the
+promoted generation serving path. Normal canonical loading creates and refreshes
+`dwarf_records_opt_name_b8`, and normal generation uses lazy prefetch and the serving projection
+without environment switches. Raw attribute columns remain retained in Doris for exact evidence;
+the complete Season 2 run has now validated the narrowed generation projection for all 289 roots.
+
+For per-header compiler acceptance, run the external MSVC validator against each published bundle
+root. It creates one translation unit per header and writes the structured report outside the
+repository; warning-only diagnostics are retained while compiler failures are non-zero evidence:
+
+```powershell
+uv run python -m tools.sonar.validate_header_bundle `
+  --input-root $env:TEMP/ddon-analytical-dwarf/season2-msvc-fix4-20260810-input `
+  --validation-directory $env:TEMP/ddon-analytical-dwarf/msvc-season2-fix4-20260810
+```
+
+This validator is a change-triggered acceptance tool, not part of normal generation. A clean
+compiler report proves syntax and generated-closure integrity; it does not replace source-bound
+manifest checks, ordered-output hashes, or separate IDA/Sonar evidence.
 
 The 2026-08-09/10 complete-store run measured the live generator path. Bounded source/unit-aware
 hydration produced exact exhaustive `rAIFSM` output; the post-policy canonical run measured
-`19.121/19.127 s` warm p50/p95. Child-frontier/reference prefetching and line-program caching
-are included in the serving algorithm. The canonical schema, keys, indexes, storage, and registry
-data were unchanged; only the additive registry variant identity was refreshed. Name lookup
-buckets 2 and 8 reduced global lookup scheduling but reached only about 10% warm p50 and 5% warm
-p95 improvement, so neither was promoted. Lazy reference prefetch and decoded attribute
-projection were exact but each missed the 10% end-to-end gate; the latter reduced warm p95 RSS by
-15.1% and remains an opt-in memory variant. The targeted child-tag filter regressed warm p50 by
-10.5% and is rejected. MV, index, bucket, storage-format, session, and Stream Load variants
-remain `not_observed` unless their trace gate is met. This command is a reusable, change-triggered
+`16.1152/16.1187 s` warm p50/p95 for the promoted combined path, versus
+`19.1208/19.1271 s` for the prior canonical path. Child-frontier/reference prefetching and
+line-program caching are included in the serving algorithm. The canonical fourteen-family schema,
+keys, indexes, storage, and registry row contract remain unchanged; the b8 auxiliary table is
+created and populated during canonical load. The targeted child-tag filter regressed warm p50 by
+10.5% and is rejected. MV, index, bucket, storage-format, session, and Stream Load variants remain
+`not_observed` unless their trace gate is met. This command is a reusable, change-triggered
 one-shot regression/promotion tool, not a continuous service.
 
 `DDON_DORIS_HYDRATION_SCOPE=global` is the canonical setting. A fair-path `unit` screen preserved

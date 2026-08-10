@@ -288,7 +288,7 @@ def _backend_report(config: DorisConfig) -> dict[str, Any]:
         "type": "native_doris",
         "database": config.database,
         "table": config.table,
-        "definition_lookup_table": config.definition_lookup_table,
+        "definition_lookup_table": config.effective_definition_lookup_table,
         "materialize_store": "not_observed",
         "load_store": "not_observed",
     }

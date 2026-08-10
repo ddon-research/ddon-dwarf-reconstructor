@@ -58,6 +58,13 @@ require zero parser diagnostics before normal runtime use.
 
 The file-based runtime is eligible only when all critical queries and complete knowledge export match the current byte-stable output and remain within 110% of baseline p95 and 110% of baseline peak memory. Otherwise Doris is the required runtime. If neither backend satisfies the evidence gate, the replacement remains blocked.
 
+Generated-header acceptance additionally requires a complete source-bound Season 2 root run, exact
+per-bundle manifest integrity, and independent MSVC compilation of every published header. The
+2026-08-10 audit passed 289 bundles and 2,760 headers with no compiler failures, timeouts, or
+unresolved-type placeholders. Warning-only compiler diagnostics remain recorded evidence. This
+gate establishes syntactical and generated-closure correctness; byte comparison with an approved
+historical baseline and additive IDA/Sonar observations remain separate gates.
+
 The current-data Doris benchmark is a read-only downstream evidence route. Against an existing
 complete manifest and live publication it retains a schema-`1.2` report (with the nested diagnostics
 artifact retaining its own schema) outside source
@@ -80,8 +87,12 @@ captures all query summaries but only one representative profile per shape, slow
 500 ms, and a maximum of 20 profile instances. Tracing is paired with an untraced run and adds no
 authority to the performance result when overhead exceeds 5%.
 
-The default canonical model remains unchanged: source-first `DUPLICATE KEY`, bounded distribution,
-one partition, V2/ZSTD, and replication one. One-factor candidates include explicit projections,
+The canonical family model remains unchanged: source-first `DUPLICATE KEY`, bounded distribution,
+one partition, V2/ZSTD, and replication one. The promoted generation serving policy is lazy
+reference prefetch, the decoded-serving attribute projection, and the source/name b8 auxiliary
+lookup table. The loader creates and refreshes b8 from the source-bound index; the canonical
+fourteen-family row and registry-count contracts remain unchanged, and raw attribute columns stay
+retained for evidence consumers. One-factor candidates still include explicit projections,
 512-key set hydration, source/name lookup buckets 2/4/8, trace-gated method-target and DIE-offset
 locators, index/Bloom removal, tiny-table buckets, V3/LZ4, pipeline parallelism, SQL cache, and
 Stream Load workers. Candidates are auxiliary and isolated; Unique/Aggregate models, row store,
@@ -94,26 +105,18 @@ regression bound.
 The route is a reusable one-shot regression and promotion tool, not a continuously running service.
 The current complete publication was evaluated on 2026-08-09/10; future runs are change-triggered
 by a generator, source publication, Doris image/configuration, or candidate-variant change. The
-post-policy canonical `eager/full/all` run measured `19.121/19.127 s` warm p50/p95 with exact
-11-header output. Lazy reference prefetch and the decoded-serving attribute projection were exact
-but cleared only `5.3%` paired warm latency and no warm p95 latency gain, respectively; both remain
-opt-in, with the projection explicitly non-lossless for raw values. The targeted child-tag filter
-was exact but regressed warm p50 by `10.5%` and was rejected. The current decision retains the
-canonical physical model and bounded hydration runtime; name lookup candidates remain opt-in below
-the confirmatory p95 gate, and grouped child-tag aggregation remains rejected after no end-to-end
-improvement. A fair-path `unit-bound-hydration` screen preserved exact output but took `289.048 s`
-for exhaustive `rAIFSM` versus the canonical `19.121/19.127 s` warm p50/p95; its partial trace
-expanded attribute/reference/child-tag operations to `9,262/7,579/9,136` queries from
-`85/154/25`. That candidate is rejected for query fan-out, and `DDON_DORIS_HYDRATION_SCOPE=global`
-remains the canonical default. The follow-up `combined-positive-below-gate` interaction batch
-activated lazy reference prefetch, decoded-serving attribute projection, and name lookup buckets
-2/4/8 with b8 active. It preserved the approved 11-file output and improved confirmatory warm
-`rAIFSM` p50/p95 to `16.1152/16.1187 s` from `19.1208/19.1271 s` (`15.7%` at both quantiles),
-with lower warm p95 RSS and `7.23%` active auxiliary storage overhead. A follow-up selective
-analysis of the active b8 key/filter columns produced two manual terminal-success jobs with zero
-failed subjobs. The batch remains opt-in because decoded-serving projection does not preserve raw
-attribute values for the full serving contract; the canonical fourteen-family model remains the
-default.
+prior canonical `eager/full/all` run measured `19.121/19.127 s` warm p50/p95 with exact 11-header
+output. The promoted combined path activated lazy reference prefetch, decoded-serving attribute
+projection, and source/name lookup b8; it preserved the approved output and measured
+`16.1152/16.1187 s` warm p50/p95 (`15.7%` faster at both quantiles), with lower warm p95 RSS and
+`7.23%` active auxiliary storage overhead. Raw attribute values remain stored in the canonical
+attribute family. The full Season 2 generation suite subsequently ran all 289 roots with exact
+header-manifest integrity, approved `rAIFSM` content parity, and a clean per-header MSVC closure
+audit. The targeted child-tag filter was
+exact but regressed warm p50 by `10.5%` and was rejected. A fair-path `unit-bound-hydration` screen preserved exact output but took `289.048 s`
+for exhaustive `rAIFSM`; its partial trace expanded attribute/reference/child-tag operations to
+`9,262/7,579/9,136` queries from `85/154/25`, so it is rejected for query fan-out. The b2 and b4
+lookup tables remain comparison-only, and `DDON_DORIS_HYDRATION_SCOPE=global` remains the default.
 
 Arrow Flight SQL is an opt-in transport evaluation only. The default MySQL/PyMySQL path remains
 authoritative for semantic queries, DDL, and HTTP Stream Load. The optional ADBC benchmark must

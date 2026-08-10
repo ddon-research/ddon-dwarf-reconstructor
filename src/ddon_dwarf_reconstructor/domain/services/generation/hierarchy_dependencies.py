@@ -21,6 +21,7 @@ class DependencyWork:
     """Deterministic queues and counters for recursive dependency resolution."""
 
     offsets: set[int] = field(default_factory=set)
+    base_offsets: set[int] = field(default_factory=set)
     processed_offsets: set[int] = field(default_factory=set)
     depth_by_offset: dict[int, int] = field(default_factory=dict)
     names: dict[str, int] = field(default_factory=dict)
@@ -81,7 +82,10 @@ class HierarchyDependencyWorkMixin:
             class_info,
             include_method_signatures=include_method_signatures,
         )
-        offsets.update(class_info.base_class_offsets)
+        base_offsets = set(class_info.base_class_offsets)
+        base_offsets.update(self._nested_base_class_offsets(class_info))
+        offsets.update(base_offsets)
+        work.base_offsets.update(base_offsets)
         for offset in offsets:
             if offset in work.processed_offsets:
                 continue
@@ -90,6 +94,15 @@ class HierarchyDependencyWorkMixin:
         for base_name in class_info.base_classes:
             if self._is_unresolved_base(base_name, all_classes, work):
                 self._record_name_depth(work, base_name, depth + 1)
+
+    @classmethod
+    def _nested_base_class_offsets(cls, class_info: ClassInfo) -> set[int]:
+        """Return inheritance edges from all nested aggregates in a class."""
+        offsets: set[int] = set()
+        for nested_class in class_info.nested_classes:
+            offsets.update(nested_class.base_class_offsets)
+            offsets.update(cls._nested_base_class_offsets(nested_class))
+        return offsets
 
     @staticmethod
     def _record_offset_depth(work: DependencyWork, offset: int, depth: int) -> None:
@@ -143,7 +156,7 @@ class HierarchyDependencyWorkMixin:
         self: HierarchyBuilderContext, offset: int, work: DependencyWork, max_depth: int
     ) -> str | None:
         depth = work.depth_by_offset.get(offset, 0)
-        if depth >= max_depth:
+        if depth >= max_depth and offset not in work.base_offsets:
             work.skipped_count += 1
             return None
         if not self.dependency_extractor.filter_resolvable_types({offset}):

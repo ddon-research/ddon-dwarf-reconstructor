@@ -68,7 +68,10 @@ def test_loader_executes_native_plan_and_submits_statistics(tmp_path: Path) -> N
         patch.object(DorisLoader, "_load_native_files", return_value=[{"status": "ok"}]),
         patch(
             "ddon_dwarf_reconstructor.infrastructure.analytical.doris._load_manifest",
-            return_value=SimpleNamespace(),
+            return_value=SimpleNamespace(
+                source_identity=SimpleNamespace(sha256="a" * 64),
+                schema_version="1.0",
+            ),
         ),
         patch(
             "ddon_dwarf_reconstructor.infrastructure.analytical.doris.publish_registry",
@@ -78,8 +81,9 @@ def test_loader_executes_native_plan_and_submits_statistics(tmp_path: Path) -> N
         result = DorisLoader().execute(plan, config)
 
     assert result["status"] == "observed"
-    assert len(result["analysis"]) == 14
-    assert cursor.execute.call_count == 15
+    assert len(result["analysis"]) == 15
+    assert result["lookup_load"]["status"] == "observed"
+    assert cursor.execute.call_count == 19
     connection.close.assert_called_once_with()
 
 

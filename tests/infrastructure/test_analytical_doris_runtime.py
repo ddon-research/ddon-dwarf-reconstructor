@@ -73,6 +73,7 @@ class _StoreStub(DorisDwarfStore):
             )
         )
         self._config = DorisConfig(database="analytical", table="dwarf")
+        self._name_lookup_table = self._config.effective_name_lookup_table
         self._source_id = SOURCE_ID
         self.query_log: list[tuple[str, object]] = []
         self.operation_log: list[str] = []
@@ -84,8 +85,9 @@ class _StoreStub(DorisDwarfStore):
             order_by: object = (),
             limit: int | None = None,
             operation: str = "family_rows",
+            table_name: str | None = None,
         ) -> tuple[dict[str, object], ...]:
-            del columns, order_by
+            del columns, order_by, table_name
             self.operation_log.append(operation)
             self.query_log.append((family, filters))
             return tuple(_filter_rows(rows.get(family, []), filters, limit))

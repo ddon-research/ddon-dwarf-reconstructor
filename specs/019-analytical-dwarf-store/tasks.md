@@ -37,14 +37,21 @@
 - [x] Activate the positive standalone candidates together as `combined-positive-below-gate`,
   confirm exact exhaustive `rAIFSM` parity with three cold/five warm repetitions, and record the
   interaction result and auxiliary-statistics promotion boundary.
+- [x] Regenerate all 289 Season 2 roots in bounded external batches and audit every published
+  header with MSVC as an independent translation unit.
+- [x] Correct nested-base closure, nested-base qualification, nested-template forward
+  declarations, and namespace-root lookup/rendering defects found by the compiler audit.
 
 ## Status notes
 
-Current boundary (2026-08-08): the promoted durable v1.1 store is
+Current boundary (2026-08-10): the promoted durable v1.1 store is
 `output/analytical-dwarf/main/store-4236f598acc8f158`; native Doris is the active backend, while
 versioned Temp stores, versioned Doris databases, and Iceberg measurements below are historical
-evidence only. The full season-two run is still in progress, and standalone bundle, approved MSVC,
-IDA, and Sonar acceptance remain separate gates.
+evidence only. The promoted generation serving path now uses lazy reference prefetch, the
+decoded-serving attribute projection, and the source/name b8 lookup table. The full Season 2
+generation suite is observed and exact; the per-header MSVC syntax/closure gate also passes for all
+2,760 final headers. IDA/Sonar evidence and byte comparison with the unavailable historical
+approved header remain separate gates.
 
 The implementation and deterministic/direct-storage fixture slice is complete. The v27 real-ELF
 run now supplies the complete source-bound Parquet manifest, independent payload validation,
@@ -73,20 +80,22 @@ FE-local result locations from its process-local address, so endpoint routing is
 runtime boundary. The default MySQL/PyMySQL and loader paths are unchanged.
 
 The 2026-08-09/10 complete-store optimization evaluation is now observed rather than merely planned.
-Bounded source/unit-aware hydration, child-frontier/reference prefetching, and per-unit line-program
-caching are part of the generator serving path. The post-policy canonical `eager/full/all` run
-produced an exact 11-header bundle with `19.121/19.127 s` warm p50/p95. Lazy reference prefetch
-reduced traced queries from 754 to 680 but cleared only 5.3% paired warm latency; the decoded
-attribute projection reduced warm p95 RSS by 15.1% without a p95 latency gain and omits raw values.
-The targeted child-tag filter regressed warm p50 by 10.5% and was rejected. Name lookup candidates
-reduced tablet fan-out but failed the confirmatory p95 gate; the canonical Doris physical design is
-unchanged. The benchmark remains a reusable one-shot regression/promotion tool, while index,
-bucket, storage, session, and Stream Load variants remain `not_observed`.
+Bounded source/unit-aware hydration, child-frontier/reference prefetching, per-unit line-program
+caching, lazy reference prefetch, the decoded-serving attribute projection, and the b8 source/name
+lookup are part of the generator serving path. The prior canonical `eager/full/all` run produced an
+exact 11-header bundle with `19.121/19.127 s` warm p50/p95; the promoted combined path measured
+`16.1152/16.1187 s` with exact output and lower warm p95 RSS. Raw attribute columns remain in the
+canonical family. The targeted child-tag filter regressed warm p50 by 10.5% and was rejected; b2
+and b4 lookup tables remain comparison-only. The benchmark remains a reusable one-shot
+regression/promotion tool, while index, bucket, storage, session, and Stream Load variants remain
+`not_observed`.
 The fair-path unit-bound hydration screen preserved exact `rAIFSM` output but took `289.048 s` and
 expanded the partial trace to `26,463` observations, so the candidate is rejected for query fan-out.
 The combined positive-below-gate batch then measured `16.1152/16.1187 s` warm p50/p95 versus
 canonical `19.1208/19.1271 s`, with exact output and lower warm p95 RSS. Its active b8 auxiliary
 table added `7.23%` storage. A follow-up selective analysis produced two manual terminal-success
-jobs with zero failed subjobs; the remaining promotion boundary is that decoded-serving
-projection is not lossless for raw attribute values outside the proven generation path. The
-canonical physical model remains the default.
+jobs with zero failed subjobs. The b8 table is now part of the canonical load plan and is refreshed
+from the source-bound index; the canonical physical family model and fourteen-family registry row
+contract remain unchanged. The full Season 2 generation suite then completed with 289/289
+published roots and exact header manifest integrity; per-header MSVC syntax/closure acceptance also
+passes, while IDA/Sonar checks remain separate acceptance gates.

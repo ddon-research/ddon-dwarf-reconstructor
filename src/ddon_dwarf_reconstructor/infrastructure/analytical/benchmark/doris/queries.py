@@ -63,7 +63,9 @@ def _doris_symbol_queries(
             return list(cursor.fetchall())
 
         measurements: list[dict[str, Any]] = []
-        definition_table = _lookup_table(config, tables["index"], config.definition_lookup_table)
+        definition_table = _lookup_table(
+            config, tables["index"], config.effective_definition_lookup_table
+        )
         method_table = _lookup_table(config, tables["index"], config.method_lookup_table)
         if config.die_lookup_table is not None:
             tables["die"] = _lookup_table(config, tables["die"], config.die_lookup_table)

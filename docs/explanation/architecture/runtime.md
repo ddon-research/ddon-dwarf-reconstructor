@@ -8,7 +8,8 @@ sequenceDiagram
     participant CLI
     participant Workflow as Application workflow
     participant Store as Source-bound DWARF store
-    participant Index as Analytical query/index port
+    participant Index as Doris serving query port
+    participant Lookup as Promoted b8 source/name lookup
     participant Parser as Class/type services
     participant Publisher as AtomicHeaderPublisher
 
@@ -16,6 +17,8 @@ sequenceDiagram
     CLI->>Workflow: GenerationRequest
     Workflow->>Store: validate manifest and source identity
     Workflow->>Index: lookup definition
+    Index->>Lookup: source/name key lookup
+    Lookup-->>Index: bounded ordered candidates
     Index-->>Workflow: SearchResult + provenance
     Workflow->>Parser: resolve class, types, methods, hierarchy
     Parser-->>Workflow: typed evidence model
@@ -23,6 +26,24 @@ sequenceDiagram
     Publisher-->>Workflow: committed HeaderBundle
     Workflow-->>CLI: JSON/result path
 ```
+
+The compiler audit is a separate, change-triggered evidence path rather than a normal generation
+dependency:
+
+```mermaid
+flowchart LR
+    Roots["Season 2 root list"] --> Generator["Source-bound generator"]
+    Generator --> Bundles["Atomic header bundles and manifests"]
+    Bundles --> Validator["MSVC: one translation unit per header"]
+    Validator --> Report["Structured pass, warning, or failure report"]
+    Report --> Decision["Syntax and closure acceptance"]
+    Bundles --> Parity["Ordered hashes and provenance"]
+    Parity --> Decision
+    External["IDA/Sonar or approved baseline"] --> Decision
+```
+
+The final Season 2 report passed all 2,760 headers. Warning-only compiler diagnostics remain
+evidence; they do not become generated code or runtime dependencies.
 
 ## Knowledge export
 

@@ -42,18 +42,7 @@ def build_optimization_matrix(config: DorisConfig) -> tuple[DorisOptimizationCan
 
 def _baseline_candidates(config: DorisConfig) -> tuple[DorisOptimizationCandidate, ...]:
     return (
-        DorisOptimizationCandidate(
-            "canonical",
-            "baseline",
-            "observed",
-            "Existing source-bound serving projection.",
-            {
-                "storage_format": "V2",
-                "compression": "zstd",
-                "statistics_policy": config.statistics_policy,
-            },
-            config.table,
-        ),
+        _promoted_canonical_candidate(config),
         DorisOptimizationCandidate(
             "typed-projections",
             "query-shape",
@@ -82,8 +71,8 @@ def _baseline_candidates(config: DorisConfig) -> tuple[DorisOptimizationCandidat
         DorisOptimizationCandidate(
             "combined-positive-below-gate",
             "interaction",
-            "not_observed",
-            "Activate the positive below-gate candidates together to measure interaction effects.",
+            "observed",
+            "Historical confirmatory interaction; its serving policy is now the canonical default.",
             {
                 "components": (
                     "reference-prefetch-lazy",
@@ -98,6 +87,7 @@ def _baseline_candidates(config: DorisConfig) -> tuple[DorisOptimizationCandidat
                     "name-lookup-b4",
                     "name-lookup-b8",
                 ),
+                "promoted_default": True,
             },
             f"{config.table}_opt_name_b8",
         ),
@@ -108,6 +98,27 @@ def _baseline_candidates(config: DorisConfig) -> tuple[DorisOptimizationCandidat
             "Source/unit-bound attribute, reference, and child-tag scans; requires exact confirmation.",
             {"hydration_scope": "unit", "runtime_only": True},
         ),
+    )
+
+
+def _promoted_canonical_candidate(config: DorisConfig) -> DorisOptimizationCandidate:
+    return DorisOptimizationCandidate(
+        "canonical",
+        "baseline",
+        "observed",
+        "Promoted source-bound serving path: lazy prefetch, serving projection, and name lookup b8.",
+        {
+            "storage_format": "V2",
+            "compression": "zstd",
+            "statistics_policy": config.statistics_policy,
+            "reference_prefetch": config.reference_prefetch,
+            "attribute_projection": config.attribute_projection,
+            "lookup_table": config.effective_name_lookup_table,
+            "child_tag_filter": config.child_tag_filter,
+            "hydration_scope": config.hydration_scope,
+            "promoted_default": True,
+        },
+        config.table,
     )
 
 

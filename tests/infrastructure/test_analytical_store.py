@@ -540,6 +540,8 @@ def test_doris_plan_uses_source_aware_family_keys(tmp_path: Path) -> None:
     assert "raw_value_json STRING" in sql
     assert "raw_value_uint LARGEINT" in sql
     assert "`column` BIGINT" in sql
+    assert "dwarf_opt_name_b8" in sql
+    assert "DISTRIBUTED BY HASH(source_id, name) BUCKETS 8" in sql
     assert "ADD INDEX IF NOT EXISTS idx_name (name) USING INVERTED" in sql
 
 

@@ -376,8 +376,8 @@ _FIELD_ATTRIBUTE_NAMES = (
 def _definition_table(config: DorisConfig) -> str:
     return (
         doris_table_name(config, "index")
-        if config.definition_lookup_table is None
-        else f"{_identifier(config.database)}.{_identifier(config.definition_lookup_table)}"
+        if config.effective_definition_lookup_table == f"{config.table}_index"
+        else f"{_identifier(config.database)}.{_identifier(config.effective_definition_lookup_table)}"
     )
 
 

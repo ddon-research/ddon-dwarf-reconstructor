@@ -7,6 +7,7 @@ import os
 from time import perf_counter
 
 from ...core.observability import get_logger, log_event, log_timing
+from ...core.path_policy import create_header_filename
 from ...domain.models.dwarf import ClassInfo
 from ...domain.services.generation import FileRegistry, SpecialHeaderRenderer
 from .dwarf_generator_context import DwarfGeneratorContext
@@ -15,6 +16,23 @@ logger = get_logger(__name__)
 
 
 class MultiFileGenerationService:
+    @staticmethod
+    def _namespace_headers(
+        context: DwarfGeneratorContext, class_name: str
+    ) -> dict[str, str] | None:
+        """Render a namespace root without sending it through class hierarchy parsing."""
+        result = context.workflow.find_class(class_name)
+        if result is None:
+            return None
+        cu, die = result
+        if not context.workflow.is_namespace(die):
+            return None
+        return {
+            create_header_filename(class_name): SpecialHeaderRenderer.render_namespace(
+                class_name, cu, die
+            )
+        }
+
     @staticmethod
     def _header_filename(file_path: str) -> str:
         filename = os.path.basename(file_path) if file_path else "Unknown.h"
@@ -67,9 +85,7 @@ class MultiFileGenerationService:
             }
             file_order = [name for name in hierarchy_order if name in file_classes]
             dependency_headers = self.header_generator.external_dependency_headers(
-                class_infos,
-                set(file_classes),
-                known_header_names,
+                class_infos, set(file_classes), known_header_names, typedefs
             )
             header = self.header_generator.generate_single_file_hierarchy_header(
                 file_class_infos,
@@ -78,6 +94,7 @@ class MultiFileGenerationService:
                 typedefs=typedefs,
                 include_metadata=include_metadata,
                 dependency_headers=dependency_headers,
+                base_type_infos=class_infos,
             )
             output_headers[filename] = header
         return output_headers
@@ -105,9 +122,7 @@ class MultiFileGenerationService:
             for name, info in class_infos.items()
         }
         dependency_headers = self.header_generator.external_dependency_headers(
-            class_infos,
-            set(uncategorized),
-            known_header_names,
+            class_infos, set(uncategorized), known_header_names, typedefs
         )
         header = self.header_generator.generate_single_file_hierarchy_header(
             uncategorized_infos,
@@ -116,6 +131,7 @@ class MultiFileGenerationService:
             typedefs=typedefs,
             include_metadata=include_metadata,
             dependency_headers=dependency_headers,
+            base_type_infos=class_infos,
         )
         return {"UncategorizedDefinitions.h": header}
 
@@ -204,6 +220,17 @@ class MultiFileGenerationService:
             mode="full-hierarchy-multi-file",
             include_metadata=include_metadata,
         )
+
+        namespace_headers = MultiFileGenerationService._namespace_headers(self, class_name)
+        if namespace_headers is not None:
+            log_event(
+                logger,
+                logging.INFO,
+                "namespace_header_generation",
+                symbol=class_name,
+                header_count=len(namespace_headers),
+            )
+            return namespace_headers
 
         prepared = MultiFileGenerationService._prepare_hierarchy(self, class_name)
         if prepared is None:

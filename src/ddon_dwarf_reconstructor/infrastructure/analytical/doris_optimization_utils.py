@@ -37,8 +37,12 @@ def configured_ddl_sha256(config: Any) -> str:
             "database": config.database,
             "table": config.table,
             "lookup_tables": {
-                "definition": getattr(config, "definition_lookup_table", None),
-                "name": getattr(config, "name_lookup_table", None),
+                "definition": _effective_lookup(
+                    config, "effective_definition_lookup_table", "definition_lookup_table"
+                ),
+                "name": _effective_lookup(
+                    config, "effective_name_lookup_table", "name_lookup_table"
+                ),
                 "method": getattr(config, "method_lookup_table", None),
                 "die": getattr(config, "die_lookup_table", None),
             },
@@ -47,6 +51,14 @@ def configured_ddl_sha256(config: Any) -> str:
         separators=(",", ":"),
     )
     return sha256_text(ddl)
+
+
+def _effective_lookup(config: Any, effective_name: str, raw_name: str) -> str | None:
+    value = getattr(config, effective_name, None)
+    if isinstance(value, str):
+        return value
+    raw_value = getattr(config, raw_name, None)
+    return raw_value if isinstance(raw_value, str) else None
 
 
 def mapping(value: object) -> dict[str, object]:

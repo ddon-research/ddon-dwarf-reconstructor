@@ -36,6 +36,8 @@ def _generator(tmp_path: Path) -> DwarfGenerator:
     generator.header_generator = Mock()
     generator.dwarf_info = Mock()
     generator.workflow = Mock()
+    generator.workflow.find_class.return_value = None
+    generator.workflow.is_namespace.return_value = False
     return generator
 
 
@@ -72,6 +74,25 @@ def test_multi_file_generation_returns_not_found_bundle(tmp_path: Path) -> None:
     assert MultiFileGenerationService.generate_multi_file_hierarchy(generator, "Missing") == {
         "UncategorizedDefinitions.h": SpecialHeaderRenderer.render_not_found("Missing")
     }
+
+
+@pytest.mark.unit
+def test_multi_file_generation_renders_namespace_root(tmp_path: Path) -> None:
+    generator = _generator(tmp_path)
+    cu = Mock(cu_offset=0x10)
+    namespace_die = Mock(tag="DW_TAG_namespace", offset=0x20)
+    namespace_die.iter_children.return_value = []
+    generator.workflow.find_class.return_value = (cu, namespace_die)
+    generator.workflow.is_namespace.return_value = True
+
+    result = MultiFileGenerationService.generate_multi_file_hierarchy(
+        generator, "rAcquirement", include_metadata=True
+    )
+
+    assert set(result) == {"rAcquirement.h"}
+    assert "not found in DWARF" not in result["rAcquirement.h"]
+    assert "namespace rAcquirement" in result["rAcquirement.h"]
+    generator.workflow.build_hierarchy_with_timing.assert_not_called()
 
 
 @pytest.mark.unit

@@ -17,6 +17,7 @@ _CLASS_DEFINITION_TAGS = frozenset(
         "DW_TAG_array_type",
         "DW_TAG_class_type",
         "DW_TAG_enumeration_type",
+        "DW_TAG_namespace",
         "DW_TAG_structure_type",
         "DW_TAG_typedef",
         "DW_TAG_union_type",
@@ -33,7 +34,7 @@ class ClassParserDiscoveryMixin(ClassParserDumpDiscoveryMixin, ClassParserLazyDi
         class_name: str,
         exhaustive_override: bool | None = None,
     ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
-        """Find a class, struct, union, enum, typedef, or array by name."""
+        """Find a class-like definition or namespace by name."""
         exhaustive = self.exhaustive_search if exhaustive_override is None else exhaustive_override
         if class_name in TYPE_BLACKLIST:
             logger.warning("Type '%s' is blacklisted; skipping search", class_name)

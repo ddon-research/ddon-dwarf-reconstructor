@@ -38,6 +38,7 @@ from ddon_dwarf_reconstructor.infrastructure.analytical.doris_optimization_utils
 )
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris_queries import DorisQueryExecutor
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris_statistics import analyze_tables
+from tests.support.doris_statistics import StatisticsConnection
 
 pytestmark = [pytest.mark.unit, pytest.mark.functional]
 
@@ -227,8 +228,10 @@ def test_serving_variant_fingerprint_includes_hydration_scope() -> None:
 def test_serving_policy_configuration_reads_environment(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("DDON_DORIS_REFERENCE_PREFETCH", "lazy")
-    monkeypatch.setenv("DDON_DORIS_ATTRIBUTE_PROJECTION", "serving")
+    monkeypatch.setenv("DDON_DORIS_REFERENCE_PREFETCH", "eager")
+    monkeypatch.setenv("DDON_DORIS_ATTRIBUTE_PROJECTION", "full")
+    monkeypatch.setenv("DDON_DORIS_NAME_LOOKUP_TABLE", "legacy_lookup")
+    monkeypatch.setenv("DDON_DORIS_DEFINITION_LOOKUP_TABLE", "legacy_lookup")
     monkeypatch.setenv("DDON_DORIS_CHILD_TAG_FILTER", "targeted")
     monkeypatch.setenv("DDON_DORIS_HYDRATION_SCOPE", "unit")
 
@@ -236,14 +239,37 @@ def test_serving_policy_configuration_reads_environment(
 
     assert config.reference_prefetch == "lazy"
     assert config.attribute_projection == "serving"
+    assert config.effective_name_lookup_table == "dwarf_records_opt_name_b8"
+    assert config.effective_definition_lookup_table == "dwarf_records_opt_name_b8"
     assert config.child_tag_filter == "targeted"
     assert config.hydration_scope == "unit"
+
+
+def test_noncanonical_variant_can_override_promoted_runtime_policy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DDON_DORIS_SERVING_VARIANT_ID", "name-lookup-b4")
+    monkeypatch.setenv("DDON_DORIS_NAME_LOOKUP_TABLE", "dwarf_records_opt_name_b4")
+    monkeypatch.setenv("DDON_DORIS_DEFINITION_LOOKUP_TABLE", "dwarf_records_opt_name_b4")
+    monkeypatch.setenv("DDON_DORIS_REFERENCE_PREFETCH", "eager")
+    monkeypatch.setenv("DDON_DORIS_ATTRIBUTE_PROJECTION", "full")
+
+    config = DorisConfig.from_environment()
+
+    assert config.serving_variant_id == "name-lookup-b4"
+    assert config.effective_name_lookup_table == "dwarf_records_opt_name_b4"
+    assert config.reference_prefetch == "eager"
+    assert config.attribute_projection == "full"
 
 
 def test_optimization_matrix_keeps_canonical_and_rejects_inapplicable_paths() -> None:
     candidates = {item.candidate_id: item for item in build_optimization_matrix(DorisConfig())}
     assert candidates["canonical"].status == "observed"
+    assert candidates["canonical"].settings["promoted_default"] is True
+    assert candidates["canonical"].settings["lookup_table"] == "dwarf_records_opt_name_b8"
     assert candidates["reference-prefetch-lazy"].settings["reference_prefetch"] == "lazy"
+    assert candidates["combined-positive-below-gate"].status == "observed"
+    assert candidates["combined-positive-below-gate"].settings["promoted_default"] is True
     assert candidates["combined-positive-below-gate"].settings["components"] == (
         "reference-prefetch-lazy",
         "typed-projections",
@@ -276,16 +302,18 @@ def test_query_trace_config_rejects_unbounded_profile_settings(tmp_path: Path) -
 
 
 def test_selective_statistics_policy_targets_filter_columns() -> None:
-    connection = _StatisticsConnection()
+    connection = StatisticsConnection()
     config = DorisConfig(statistics_policy="selective")
     plan = SimpleNamespace(database="dwarf", table="dwarf_records")
 
     statements = analyze_tables(connection, plan, config)
 
-    assert len(statements) == 14
+    assert len(statements) == 15
     assert "WITH SAMPLE ROWS 4194304" in connection.statements[0]
     assert "`source_id`" in connection.statements[0]
     assert "`details_json`" not in connection.statements[0]
+    assert statements[-1]["table"] == "dwarf_records_opt_name_b8"
+    assert "`name`" in statements[-1]["statement"]
 
 
 def test_optimization_report_serializes_cold_warm_traces_and_rejections() -> None:
@@ -570,31 +598,3 @@ def test_generation_query_trace_loading_distinguishes_missing_invalid_and_non_ob
     assert missing["status"] == "not_observed"
     assert invalid["status"] == "partial"
     assert non_object["status"] == "partial"
-
-
-class _StatisticsCursor:
-    description: tuple[tuple[str], ...] = ()
-
-    def __init__(self, connection: _StatisticsConnection) -> None:
-        self.connection = connection
-
-    def __enter__(self) -> _StatisticsCursor:
-        return self
-
-    def __exit__(self, exc_type: object, exc_value: object, traceback: object) -> None:
-        del exc_type, exc_value, traceback
-
-    def execute(self, statement: str, params: object = ()) -> None:
-        del params
-        self.connection.statements.append(statement)
-
-    def fetchall(self) -> list[tuple[object, ...]]:
-        return []
-
-
-class _StatisticsConnection:
-    def __init__(self) -> None:
-        self.statements: list[str] = []
-
-    def cursor(self) -> _StatisticsCursor:
-        return _StatisticsCursor(self)

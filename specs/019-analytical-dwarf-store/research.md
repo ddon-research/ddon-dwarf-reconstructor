@@ -1,6 +1,6 @@
 # Research and evidence ledger
 
-## Current documentation boundary (2026-08-08)
+## Current documentation boundary (2026-08-10)
 
 The active implementation is the native-Doris path over the promoted v1.1 source-bound store at
 `output/analytical-dwarf/main/store-4236f598acc8f158`. Its manifest records 2,305 compilation
@@ -17,11 +17,23 @@ Duplicate Key/schema and bucketing guidance, load guidance, and statistics pages
 are not authoritative; use `SHOW TABLE STATS`, `SHOW COLUMN STATS`, `SHOW ANALYZE`, `SHOW AUTO ANALYZE`,
 and `__internal_schema.column_statistics`.
 
-The full season-two symbol generation remains in progress. Standalone per-root bundles, status,
-provenance, collision-safe publication, and MSVC/IDA/Sonar evidence are separate gates; the
-promoted store and historical Doris measurements do not imply complete header acceptance. Versioned
-v9/v27/v28 Temp paths and database names below are historical evidence labels, not current path
-or service defaults.
+The full season-two symbol generation and per-header MSVC closure audit are complete for the
+source-bound Season 2 root set. Standalone per-root bundles, status, provenance, collision-safe
+publication, and compiler evidence remain separate evidence surfaces; the promoted store and
+historical Doris measurements do not imply byte parity with the unavailable historical approved
+header baseline. IDA/Sonar observations remain separate. Versioned v9/v27/v28 Temp paths and
+database names below are historical evidence labels, not current path or service defaults.
+
+### Season 2 compiler-closure result
+
+The complete root list contains 289 nonblank symbols. The bulk rerun published all 289 roots with
+zero generation failures and exact manifest file hashes. The final composite audit input contains
+289 bundles and 2,760 headers. MSVC `14.51.36231` compiled every header independently with zero
+failures and zero timeouts. The initial errors were traced to omitted nested-base edges at the
+hierarchy depth cap, loss of owning-type qualification for nested bases, class-style forward
+declarations for nested templates, and namespace roots excluded from store lookup. The fixes are
+source-bound and deterministic. No `not found`, unknown-type, unresolved-symbol, or synthetic-type
+placeholder remains in the final headers. `C4099`, `C4201`, and `C4309` are warning-only records.
 
 ## Authority matrix
 

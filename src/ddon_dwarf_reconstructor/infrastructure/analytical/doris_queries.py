@@ -57,6 +57,7 @@ class DorisQueryExecutor:
         self._connection = connection
         self._config = config
         self._source_id = source_id
+        self._definition_lookup_table = config.effective_definition_lookup_table
         self._tracer = (
             DorisQueryTracer(
                 source_id,
@@ -98,6 +99,7 @@ class DorisQueryExecutor:
             filters,
             order_by=("unit_offset", "die_offset"),
             limit=limit,
+            table_name=self._definition_lookup_table,
         )
 
     def family_rows(

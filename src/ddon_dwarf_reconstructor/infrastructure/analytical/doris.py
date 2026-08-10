@@ -14,10 +14,17 @@ from typing import Any
 from urllib.parse import urljoin, urlparse
 
 from ...domain.models.analytical_dwarf import MaterializationManifest
-from .doris_layout import _FAMILIES, _family_table, _identifier
+from .doris_config_environment import flight_environment_values
+from .doris_ddl import (
+    _FAMILY_BLOOM_COLUMNS,
+    _FAMILY_DISTRIBUTION,
+    _FAMILY_KEYS,
+    _native_columns,
+    _native_sql,
+)
+from .doris_layout import _FAMILIES, _family_table, _identifier, default_name_lookup_table
 from .doris_optimization import DorisQueryTraceConfig, DorisServingVariant
-from .doris_registry import publish_registry, registry_sql
-from .doris_schema import _FAMILY_COLUMNS
+from .doris_registry import publish_registry
 from .doris_statistics import analyze_tables, collect_statistics_evidence
 from .doris_validation import (
     validate_manifest_for_load as _validate_manifest_for_load,
@@ -38,6 +45,23 @@ from .manifest import (
     load_manifest,
 )
 from .optional import import_optional
+
+__all__ = [
+    "DorisConfig",
+    "DorisLoadPlan",
+    "DorisLoader",
+    "_FAMILY_BLOOM_COLUMNS",
+    "_FAMILY_DISTRIBUTION",
+    "_FAMILY_KEYS",
+    "_native_columns",
+    "_native_sql",
+    "build_doris_plan",
+]
+
+
+def _load_manifest(path: Path) -> MaterializationManifest:
+    """Load a materialization manifest for planning and repeatable load labels."""
+    return load_manifest(path)
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,8 +93,8 @@ class DorisConfig:
     analyze_wait_seconds: float = 0.0
     stream_load_workers: int = 1
     statistics_policy: str = "selective"
-    reference_prefetch: str = "eager"
-    attribute_projection: str = "full"
+    reference_prefetch: str = "lazy"
+    attribute_projection: str = "serving"
     child_tag_filter: str = "all"
     hydration_scope: str = "global"
     serving_variant_id: str = "canonical"
@@ -101,6 +125,24 @@ class DorisConfig:
         ddl = "\n".join(_native_sql(self))
         return hashlib.sha256(ddl.encode("utf-8")).hexdigest()
 
+    @property
+    def effective_definition_lookup_table(self) -> str:
+        """Return the source/name table used for definition lookup by default."""
+        return self.definition_lookup_table or default_name_lookup_table(self.table)
+
+    @property
+    def effective_name_lookup_table(self) -> str:
+        """Return the source/name table used for name lookup by default."""
+        return self.name_lookup_table or default_name_lookup_table(self.table)
+
+    @property
+    def uses_promoted_name_lookup(self) -> bool:
+        """Whether this configuration owns the canonical source/name projection."""
+        return (
+            self.serving_variant_id == "canonical"
+            and self.effective_name_lookup_table == default_name_lookup_table(self.table)
+        )
+
     def _validate_flight_settings(self) -> None:
         if self.flight_sql_port < 1 or self.flight_sql_port > 65535:
             raise ValueError("flight_sql_port must be a valid TCP port")
@@ -122,6 +164,8 @@ class DorisConfig:
     def from_environment(cls) -> DorisConfig:
         defaults = cls()
         env = os.getenv
+        serving_variant_id = env("DDON_DORIS_SERVING_VARIANT_ID", defaults.serving_variant_id)
+        canonical_serving = serving_variant_id == "canonical"
         return cls(
             http_url=os.getenv("DDON_DORIS_HTTP_URL", defaults.http_url),
             stream_load_url=os.getenv("DDON_DORIS_STREAM_LOAD_URL", defaults.stream_load_url),
@@ -131,44 +175,19 @@ class DorisConfig:
             user=os.getenv("DDON_DORIS_USER", defaults.user),
             password=os.getenv("DDON_DORIS_PASSWORD", defaults.password),
             table=os.getenv("DDON_DORIS_TABLE", defaults.table),
-            definition_lookup_table=env(
-                "DDON_DORIS_DEFINITION_LOOKUP_TABLE", defaults.definition_lookup_table
+            **flight_environment_values(defaults),
+            definition_lookup_table=(
+                defaults.definition_lookup_table
+                if canonical_serving
+                else env("DDON_DORIS_DEFINITION_LOOKUP_TABLE", defaults.definition_lookup_table)
             ),
-            name_lookup_table=os.getenv("DDON_DORIS_NAME_LOOKUP_TABLE", defaults.name_lookup_table),
+            name_lookup_table=(
+                defaults.name_lookup_table
+                if canonical_serving
+                else env("DDON_DORIS_NAME_LOOKUP_TABLE", defaults.name_lookup_table)
+            ),
             method_lookup_table=env("DDON_DORIS_METHOD_LOOKUP_TABLE", defaults.method_lookup_table),
             die_lookup_table=env("DDON_DORIS_DIE_LOOKUP_TABLE", defaults.die_lookup_table),
-            flight_sql_host=os.getenv("DDON_DORIS_FLIGHT_SQL_HOST", defaults.flight_sql_host),
-            flight_sql_port=int(
-                os.getenv("DDON_DORIS_FLIGHT_SQL_PORT", str(defaults.flight_sql_port))
-            ),
-            flight_sql_uri=os.getenv("DDON_DORIS_FLIGHT_SQL_URI", defaults.flight_sql_uri),
-            flight_sql_fe_public_host=os.getenv(
-                "DDON_DORIS_FLIGHT_SQL_FE_PUBLIC_HOST", defaults.flight_sql_fe_public_host
-            ),
-            flight_sql_public_host=os.getenv(
-                "DDON_DORIS_FLIGHT_SQL_PUBLIC_HOST", defaults.flight_sql_public_host
-            ),
-            flight_sql_public_port=int(
-                os.getenv("DDON_DORIS_FLIGHT_SQL_PUBLIC_PORT", str(defaults.flight_sql_public_port))
-            ),
-            flight_sql_max_message_size=int(
-                os.getenv(
-                    "DDON_DORIS_FLIGHT_SQL_MAX_MESSAGE_SIZE",
-                    str(defaults.flight_sql_max_message_size),
-                )
-            ),
-            flight_sql_query_timeout_seconds=float(
-                os.getenv(
-                    "DDON_DORIS_FLIGHT_SQL_QUERY_TIMEOUT_SECONDS",
-                    str(defaults.flight_sql_query_timeout_seconds),
-                )
-            ),
-            flight_sql_fetch_timeout_seconds=float(
-                os.getenv(
-                    "DDON_DORIS_FLIGHT_SQL_FETCH_TIMEOUT_SECONDS",
-                    str(defaults.flight_sql_fetch_timeout_seconds),
-                )
-            ),
             analyze_after_load=_boolean_environment(
                 "DDON_DORIS_ANALYZE_AFTER_LOAD", defaults.analyze_after_load
             ),
@@ -179,15 +198,19 @@ class DorisConfig:
                 "DDON_DORIS_STREAM_LOAD_WORKERS", defaults.stream_load_workers
             ),
             statistics_policy=os.getenv("DDON_DORIS_STATISTICS_POLICY", defaults.statistics_policy),
-            reference_prefetch=os.getenv(
-                "DDON_DORIS_REFERENCE_PREFETCH", defaults.reference_prefetch
+            reference_prefetch=(
+                defaults.reference_prefetch
+                if canonical_serving
+                else env("DDON_DORIS_REFERENCE_PREFETCH", defaults.reference_prefetch)
             ),
-            attribute_projection=os.getenv(
-                "DDON_DORIS_ATTRIBUTE_PROJECTION", defaults.attribute_projection
+            attribute_projection=(
+                defaults.attribute_projection
+                if canonical_serving
+                else env("DDON_DORIS_ATTRIBUTE_PROJECTION", defaults.attribute_projection)
             ),
             child_tag_filter=os.getenv("DDON_DORIS_CHILD_TAG_FILTER", defaults.child_tag_filter),
             hydration_scope=os.getenv("DDON_DORIS_HYDRATION_SCOPE", defaults.hydration_scope),
-            serving_variant_id=env("DDON_DORIS_SERVING_VARIANT_ID", defaults.serving_variant_id),
+            serving_variant_id=serving_variant_id,
             query_trace=DorisQueryTraceConfig.from_environment(),
             capture_statistics_evidence=_boolean_environment(
                 "DDON_DORIS_CAPTURE_STATISTICS_EVIDENCE", defaults.capture_statistics_evidence
@@ -223,8 +246,8 @@ class DorisLoadPlan:
             "parquet_files": [str(path) for path in self.parquet_files],
             "manifest_path": str(self.manifest_path),
             "table_families": list(_FAMILIES),
-            "definition_lookup_table": self.definition_lookup_table,
-            "name_lookup_table": self.name_lookup_table,
+            "definition_lookup_table": self.effective_definition_lookup_table,
+            "name_lookup_table": self.effective_name_lookup_table,
             "method_lookup_table": self.method_lookup_table,
             "die_lookup_table": self.die_lookup_table,
             "analyze_after_load": self.analyze_after_load,
@@ -234,6 +257,16 @@ class DorisLoadPlan:
             "serving_variant_id": self.serving_variant_id,
             "capture_statistics_evidence": self.capture_statistics_evidence,
         }
+
+    @property
+    def effective_definition_lookup_table(self) -> str:
+        """Return the source/name table used for definition lookup."""
+        return self.definition_lookup_table or default_name_lookup_table(self.table)
+
+    @property
+    def effective_name_lookup_table(self) -> str:
+        """Return the source/name table used for name lookup."""
+        return self.name_lookup_table or default_name_lookup_table(self.table)
 
 
 def build_doris_plan(
@@ -255,8 +288,8 @@ def build_doris_plan(
         tuple(_native_sql(config)),
         parquet_files,
         manifest_path,
-        config.definition_lookup_table,
-        config.name_lookup_table,
+        config.effective_definition_lookup_table,
+        config.effective_name_lookup_table,
         config.method_lookup_table,
         config.die_lookup_table,
         config.analyze_after_load,
@@ -285,8 +318,14 @@ class DorisLoader:
         try:
             self._execute_sql(connection, plan)
             loaded = self._load_native_files(plan, config)
-            analysis = analyze_tables(connection, plan, config)
             manifest = _load_manifest(plan.manifest_path)
+            lookup_load = self._populate_promoted_name_lookup(
+                connection,
+                plan,
+                config,
+                manifest.source_identity.sha256,
+            )
+            analysis = analyze_tables(connection, plan, config)
             serving_variant = DorisServingVariant.from_config(
                 config,
                 source_id=getattr(getattr(manifest, "source_identity", None), "sha256", None),
@@ -305,6 +344,7 @@ class DorisLoader:
                 "status": "observed",
                 "plan": plan.to_dict(),
                 "loads": loaded,
+                "lookup_load": lookup_load,
                 "analysis": analysis,
                 "statistics_evidence": (
                     collect_statistics_evidence(connection, plan)
@@ -341,6 +381,46 @@ class DorisLoader:
             for statement in plan.sql:
                 cursor.execute(statement)
         return []
+
+    @staticmethod
+    def _populate_promoted_name_lookup(
+        connection: Any,
+        plan: DorisLoadPlan,
+        config: DorisConfig,
+        source_id: str,
+    ) -> dict[str, object]:
+        if not config.uses_promoted_name_lookup:
+            return {
+                "status": "not_applicable",
+                "reason": "non-canonical serving variant owns its lookup table",
+            }
+        database = _identifier(config.database)
+        lookup_table = _identifier(config.effective_name_lookup_table)
+        source_table = _identifier(_family_table(plan.table, "index"))
+        delete = f"DELETE FROM {database}.{lookup_table} WHERE source_id = %s"
+        insert = (
+            f"INSERT INTO {database}.{lookup_table} "
+            "(source_id, name, unit_offset, die_offset, index_type, tag, target_offset, "
+            "resolution_status) "
+            f"SELECT source_id, name, unit_offset, die_offset, index_type, tag, target_offset, "
+            f"resolution_status FROM {database}.{source_table} "
+            "WHERE source_id = %s AND index_type = 'definition'"
+        )
+        count = f"SELECT COUNT(*) FROM {database}.{lookup_table} WHERE source_id = %s"
+        with connection.cursor() as cursor:
+            cursor.execute(delete, (source_id,))
+            cursor.execute(insert, (source_id,))
+            cursor.execute(count, (source_id,))
+            rows = cursor.fetchall()
+        row_count = int(rows[0][0]) if rows else 0
+        return {
+            "status": "observed",
+            "table": config.effective_name_lookup_table,
+            "source_id": source_id,
+            "row_count": row_count,
+            "delete_sql": delete,
+            "insert_sql": insert,
+        }
 
     def _load_native_files(
         self, plan: DorisLoadPlan, config: DorisConfig
@@ -427,118 +507,6 @@ class DorisLoader:
             for chunk in iter(lambda: stream.read(1024 * 1024), b""):
                 connection.send(chunk)
         return connection, connection.getresponse()
-
-
-def _native_sql(config: DorisConfig) -> list[str]:
-    database = _identifier(config.database)
-    statements = [f"CREATE DATABASE IF NOT EXISTS {database}"]
-    for family in _FAMILIES:
-        table = _identifier(_family_table(config.table, family))
-        columns = ",\n    ".join(_native_columns(family))
-        keys = ", ".join(_FAMILY_KEYS[family])
-        bloom = ",".join(_FAMILY_BLOOM_COLUMNS[family])
-        distribution = _FAMILY_DISTRIBUTION[family]
-        statements.append(
-            f"""CREATE TABLE IF NOT EXISTS {database}.{table} (
-    {columns}
-) ENGINE=OLAP
-DUPLICATE KEY({keys})
-DISTRIBUTED BY {distribution}
-PROPERTIES ("replication_num" = "1", "compression" = "zstd", "bloom_filter_columns" = "{bloom}")"""
-        )
-    statements.append(registry_sql(config.database, config.table))
-    statements.append(
-        f"ALTER TABLE {database}.{_identifier(_family_table(config.table, 'index'))} "
-        "ADD INDEX IF NOT EXISTS idx_name (name) USING INVERTED"
-    )
-    statements.append(
-        f"ALTER TABLE {database}.{_identifier(_family_table(config.table, 'attribute'))} "
-        "ADD INDEX IF NOT EXISTS idx_attribute_name (name) USING INVERTED"
-    )
-    statements.append(
-        f"ALTER TABLE {database}.{_identifier(_family_table(config.table, 'name'))} "
-        "ADD INDEX IF NOT EXISTS idx_name_value (name) USING INVERTED"
-    )
-    return statements
-
-
-def _native_columns(family: str) -> tuple[str, ...]:
-    """Place every duplicate-key column at the required schema prefix."""
-    definitions = _FAMILY_COLUMNS[family]
-    by_name = {_column_name(definition): definition for definition in definitions}
-    keys = _FAMILY_KEYS[family]
-    missing = tuple(key for key in keys if key not in by_name)
-    if missing:
-        raise ValueError(f"Doris key columns missing from {family} schema: {missing}")
-    key_definitions = tuple(by_name[key] for key in keys)
-    key_names = set(keys)
-    remaining = tuple(
-        definition for definition in definitions if _column_name(definition) not in key_names
-    )
-    return key_definitions + remaining
-
-
-def _column_name(definition: str) -> str:
-    """Extract a Doris column identifier from a column definition."""
-    return definition.split(maxsplit=1)[0].strip("`")
-
-
-def _load_manifest(path: Path) -> MaterializationManifest:
-    from .manifest import load_manifest
-
-    return load_manifest(path)
-
-
-_FAMILY_KEYS = {
-    "section": ("source_id", "section_index"),
-    "raw_chunk": ("source_id", "section_index", "chunk_index"),
-    "unit": ("source_id", "unit_offset"),
-    "die": ("source_id", "unit_offset", "die_offset", "ordinal"),
-    "attribute": ("source_id", "unit_offset", "die_offset", "ordinal"),
-    "reference": ("source_id", "unit_offset", "die_offset", "attribute_name", "relation"),
-    "index": ("source_id", "unit_offset", "die_offset", "index_type"),
-    "range": ("source_id", "unit_offset", "die_offset", "ordinal"),
-    "location": ("source_id", "unit_offset", "die_offset", "ordinal"),
-    "line": ("source_id", "unit_offset", "ordinal"),
-    "macro": ("source_id", "section_name", "record_offset"),
-    "frame": ("source_id", "section_name", "record_offset"),
-    "abbreviation": ("source_id", "unit_offset", "abbrev_code"),
-    "name": ("source_id", "unit_offset", "die_offset", "ordinal"),
-}
-
-_FAMILY_BLOOM_COLUMNS = {
-    "section": ("source_id", "section_index"),
-    "raw_chunk": ("source_id", "section_index", "chunk_index"),
-    "unit": ("source_id", "unit_offset"),
-    "die": ("source_id", "unit_offset", "die_offset", "parent_offset"),
-    "attribute": ("source_id", "unit_offset", "die_offset", "name"),
-    "reference": ("source_id", "unit_offset", "die_offset", "target_offset"),
-    "index": ("source_id", "unit_offset", "die_offset", "target_offset", "name"),
-    "range": ("source_id", "unit_offset", "die_offset", "start_address", "end_address"),
-    "location": ("source_id", "unit_offset", "die_offset", "start_address", "end_address"),
-    "line": ("source_id", "unit_offset", "address", "file_index"),
-    "macro": ("source_id", "section_name", "record_offset"),
-    "frame": ("source_id", "section_name", "record_offset"),
-    "abbreviation": ("source_id", "unit_offset", "abbrev_code"),
-    "name": ("source_id", "unit_offset", "die_offset", "name"),
-}
-
-_FAMILY_DISTRIBUTION = {
-    "section": "HASH(source_id, section_index) BUCKETS 3",
-    "raw_chunk": "HASH(source_id, section_index) BUCKETS 3",
-    "unit": "HASH(source_id, unit_offset) BUCKETS 8",
-    "die": "HASH(source_id, unit_offset) BUCKETS 16",
-    "attribute": "HASH(source_id, unit_offset) BUCKETS 16",
-    "reference": "HASH(source_id, unit_offset) BUCKETS 16",
-    "index": "HASH(source_id, unit_offset) BUCKETS 8",
-    "range": "HASH(source_id, unit_offset) BUCKETS 16",
-    "location": "HASH(source_id, unit_offset) BUCKETS 16",
-    "line": "HASH(source_id, unit_offset) BUCKETS 16",
-    "macro": "HASH(source_id, section_name) BUCKETS 3",
-    "frame": "HASH(source_id, section_name) BUCKETS 3",
-    "abbreviation": "HASH(source_id, unit_offset) BUCKETS 8",
-    "name": "HASH(source_id, unit_offset) BUCKETS 16",
-}
 
 
 def _family_for_file(path: Path, manifest_path: Path) -> str:

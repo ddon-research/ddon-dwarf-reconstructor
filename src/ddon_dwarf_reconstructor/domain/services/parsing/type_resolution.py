@@ -106,6 +106,10 @@ class TypeResolutionMixin:
             return self._resolve_qualified_type(type_die)
         if type_die.tag == "DW_TAG_array_type":
             return self._resolve_array_type(type_die)
+        if type_die.tag == "DW_TAG_subroutine_type":
+            return "void"
+        if type_die.tag == "DW_TAG_ptr_to_member_type":
+            return "void*"
         if type_die.tag == "DW_TAG_base_type":
             return "base_type"
         logger.debug("Unnamed type with tag: %s", type_die.tag)

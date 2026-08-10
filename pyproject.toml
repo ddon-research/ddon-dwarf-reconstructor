@@ -113,7 +113,7 @@ log_cli_format = "%(levelname)s %(name)s: %(message)s"
 
 [tool.pyrefly]
 project-includes = ["src/**/*.py", "tests/support/**/*.py", "tools/sonar/**/*.py"]
-search-path = ["src"]
+search-path = ["src", "."]
 python-version = "3.14"
 preset = "default"
 ignore-missing-imports = ["elftools.*"]

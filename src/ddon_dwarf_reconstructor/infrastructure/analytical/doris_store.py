@@ -68,6 +68,7 @@ class DorisDwarfStore(DorisStoreQueryMixin):
         self._connection = connection
         self._config = config
         self._source_id = manifest.source_identity.sha256
+        self._name_lookup_table = config.effective_name_lookup_table
         self._selection_cache = selection_cache
         self.registry = registry
         self._queries = DorisQueryExecutor(connection, config, self._source_id)
@@ -317,7 +318,7 @@ class DorisDwarfStore(DorisStoreQueryMixin):
                 "index",
                 {"index_type": "definition"},
                 columns=("name",),
-                table_name=self._config.name_lookup_table,
+                table_name=self._name_lookup_table,
                 operation="definition_name_count",
             )
             self._definition_name_count = len(

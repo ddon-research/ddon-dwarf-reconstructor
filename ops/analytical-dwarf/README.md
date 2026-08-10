@@ -4,9 +4,10 @@ This Compose project is an explicit local benchmark dependency. It keeps Doris
 metadata, BE storage, and source-bound Parquet inputs outside source control.
 
 The Doris 4.1.3 images are pinned by immutable amd64 digest in `compose.yaml` and
-[`images.lock.json`](images.lock.json). Registry metadata, image pulls, a healthy daemon,
-native fixture load were observed on 2026-08-05. Full-corpus load, cold/warm benchmark, and
-runtime-parity evidence remain required for final service acceptance.
+[`images.lock.json`](images.lock.json). Registry metadata, image pulls, a healthy daemon, and
+native fixture load were observed on 2026-08-05. The complete source-bound Season 2 generation
+and per-header MSVC closure audit were observed on 2026-08-10; IDA/Sonar evidence and comparison
+with the unavailable historical approved header remain separate boundaries.
 
 The default bind mounts are repository-local ignored paths under
 `output/analytical-dwarf/warehouse` for Doris metadata, storage, and logs. The source-bound
@@ -55,14 +56,14 @@ reproducible baseline; set it explicitly (for example, `4`) when benchmarking co
 independently labeled Parquet loads on a full corpus. Do not place credentials in the repository
 or in benchmark artifacts.
 
-The serving-path policy switches are opt-in and default to the lossless canonical behavior:
-`DDON_DORIS_REFERENCE_PREFETCH=eager`, `DDON_DORIS_ATTRIBUTE_PROJECTION=full`, and
-`DDON_DORIS_CHILD_TAG_FILTER=all`, with `DDON_DORIS_HYDRATION_SCOPE=global`. The `unit` hydration
-scope was measured and rejected because it multiplies source-bound query fan-out; keep `global`
-unless a new trace and fair-path benchmark proves otherwise. The `serving` attribute projection is decoded-only and does
-not preserve raw attribute-value columns, so it is suitable only for an explicitly bounded
-consumer contract. Each switch is included in the serving-variant identity and must be measured
-with exact output parity before use.
+The canonical serving policy is now fixed in normal generation: lazy reference prefetch, the
+decoded-serving attribute projection, `DDON_DORIS_CHILD_TAG_FILTER=all`, and
+`DDON_DORIS_HYDRATION_SCOPE=global`. The source/name lookup is the automatically maintained
+`dwarf_records_opt_name_b8` table. Raw attribute-value columns remain stored in the canonical
+attribute family; the serving projection narrows the generation fetch and is covered by the full
+Season 2 exactness run. The `unit` hydration scope was measured and rejected because it multiplies
+source-bound query fan-out. Legacy policy environment variables are ignored for the canonical
+variant; non-canonical benchmark variants may still set them inside their isolated child process.
 
 The Compose file does not enable Arrow Flight SQL by default. Doris documents that service as
 experimental and requires distinct FE and BE `arrow_flight_sql_port` settings; enable it only in
@@ -214,11 +215,10 @@ filtered Stream Load rows, and zero failed statistics jobs. The all-table CLI he
 only `NORMAL` tablets; the largest table is `full_attribute` at 2,591.3 MB with skew 1.2.
 
 Native Doris is the serving backend. The source/CU/DIE lookup prunes to one of 16 DIE tablets.
-Name-only lookup touches all eight canonical index tablets, so an explicitly provisioned
-`full_index_name_candidate` projection was measured and retained as an opt-in path via
-`DDON_DORIS_DEFINITION_LOOKUP_TABLE`. It is not automatically created by Compose or the loader:
-bind it only after verifying its source identity and ordered result parity. The full application
-query suite improved by only about 3.7%, so the canonical `full_index` table remains the default.
+The historical v9 name-only projection was an explicitly provisioned experiment and is retained
+below only as historical routing evidence. It is not the current serving contract: the promoted
+v1.1 loader creates and refreshes the source-bound `dwarf_records_opt_name_b8` lookup table, and
+normal generation binds it without an environment switch.
 
 Use the repository `performance profile-dwarf-store` command for cProfile/Scalene process evidence
 and `doriscli sql --profile`, `profile get`, `profile diff`, `EXPLAIN`, and `tablet --detail` for
@@ -235,16 +235,25 @@ the authoritative identity rather than a run label or a Temp directory name.
 
 The supported Doris configuration defaults to database `dwarf`. The versioned `dwarf_full_v27_*`
 and `dwarf_full_v28_*` databases in the evidence ledger are retained serving measurements, not
-the durable store identity. Before claiming current serving completeness, repeat native Stream
-Load counts, `SHOW TABLE STATS`, `SHOW COLUMN STATS`, `SHOW ANALYZE`, tablet health, and cold/warm
-profiles against the promoted manifest. The full season-two symbol run and approved MSVC header
-comparison remain separate acceptance gates.
+the durable store identity. Current serving evidence reconciles all fourteen manifest family
+counts plus the source-bound b8 lookup table, has terminal selective statistics for the active
+lookup columns, and has healthy tablets. The full Season 2 generation run is now observed; the
+per-header MSVC syntax and closure gate is now observed and clean. IDA/Sonar checks and byte
+comparison with the unavailable historical approved header remain separate acceptance gates.
 
-For name-only serving, the opt-in `full_index_name_candidate` projection is source-bound and
-ordered-result equivalent to `full_index`. Current CLI evidence is 149 ms p50 for five no-cache
-base `rLayout` queries versus 9 ms for the candidate, with `EXPLAIN` pruning the candidate to
-1/4 tablets instead of 8/8. Bind `DDON_DORIS_DEFINITION_LOOKUP_TABLE` only after verifying the
-source identity and query parity. Native Doris remains the default serving backend.
+For name-only serving, the canonical loader creates and refreshes the source-bound
+`dwarf_records_opt_name_b8` table from the canonical index. The promoted interaction benchmark
+confirmed ordered parity and reduced the heavy exhaustive workload; b2 and b4 remain
+comparison-only. `DDON_DORIS_DEFINITION_LOOKUP_TABLE` is reserved for isolated non-canonical
+benchmark variants, while Native Doris remains the default serving backend.
+
+The full Season 2 header-generation run completed on 2026-08-10 against source SHA-256
+`4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0`. Because the local command
+runner has a bounded execution window, the 289 roots were published in four external batches
+under `C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\season2-msvc-fix2-20260810-batch-001`
+through `...-batch-004`: 289/289 symbols, 2,759 generated headers, zero generation failures, and
+zero manifest/header-integrity errors. The final compiler-closure staging input adds the explicit
+`MtStream.h` dependency discovered during audit and contains 2,760 headers.
 
 The approved real-header baseline is currently missing, so this operational result does not yet
 authorize byte-stable header parity or the 110%-of-baseline runtime claim. The generic full-store
@@ -255,6 +264,15 @@ and no diagnostics. Its classifier-backed closure policy preserves real missing-
 failures while accepting transparent primitive, enum, and declaration-only targets. The historical
 v9/v27/v28 paths and database names remain useful evidence references, but must not be used as
 current durable-path examples.
+
+The final external MSVC audit input is
+`C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\season2-msvc-fix4-20260810-input`.
+It contains 289 bundles and 2,760 headers; MSVC `14.51.36231` passed every header independently
+with no timeout or error. The corrected causes were missing nested-base closure edges, unqualified
+nested base names, class-versus-template forward declarations, and namespace-root discovery.
+The final tree contains no not-found or unresolved-type placeholders. Warning-only `C4099`,
+`C4201`, and `C4309` diagnostics remain recorded in the external validation report at
+`C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\msvc-season2-fix4-20260810\msvc-header-validation.json`.
 
 ## Current live-Doris benchmark evidence
 
@@ -296,21 +314,21 @@ was `34.1x` faster than sequential attribute calls with exact row parity. The ge
 bounded batch hydration for DIE metadata, attributes, child frontiers, reference targets, and
 child-tag counts, and caches line programs per compilation unit.
 
-The post-policy canonical `eager/full/all` run completed exact exhaustive/full-hierarchy `rAIFSM`
-with warm p50/p95 of `19.121/19.127 s` (`n=3`); all 11 headers matched the approved bundle. The
-physical design and table data stayed unchanged: `DUPLICATE KEY`, source-first keys, current
-buckets, one partition, V2/ZSTD, indexes, replication one, and the canonical registry remain the
-default. The registry received only additive serving-variant identity metadata.
+The prior canonical `eager/full/all` run completed exact exhaustive/full-hierarchy `rAIFSM` with
+warm p50/p95 of `19.121/19.127 s` (`n=3`); all 11 headers matched the approved bundle. The
+promoted combined path completed the same exact workload at `16.1152/16.1187 s` warm p50/p95.
+The physical family design remains `DUPLICATE KEY`, source-first keys, current buckets, one
+partition, V2/ZSTD, indexes, and replication one. Canonical loading additionally creates and
+refreshes the b8 lookup table; the registry still carries only the fourteen-family counts plus
+additive serving-variant identity metadata.
 
 Lazy reference prefetch was exact and reduced traced queries from 754 to 680, including reference
-prefetch calls from 154 to 108, but paired 3-cold/5-warm execution improved only `5.3%` at both
-warm p50 and p95, below the 10% promotion gate. The decoded-serving attribute projection reduced
-traced attribute execute time from `7.786 s` to `5.737 s` and warm p95 RSS by `15.1%`, but did not
-improve warm p95 latency and is not lossless for raw attribute values; it remains opt-in. The
+prefetch calls from 154 to 108. The decoded-serving attribute projection reduced traced attribute
+execute time from `7.786 s` to `5.737 s` and warm p95 RSS by `15.1%`. Their combined use with b8
+cleared the end-to-end gate; these three behaviors are now the canonical generation defaults. The
 targeted child-tag filter preserved exact output but regressed warm p50 by `10.5%` and was
-rejected. Name lookup tables reduced global scheduling fan-out but failed the confirmatory p95
-gate. Grouped child-tag aggregation tied end-to-end and was removed; method-target provisioning
-did not meet its trace threshold.
+rejected. b2 and b4 lookup tables, grouped child-tag aggregation, and method-target provisioning
+remain comparison-only or unobserved.
 
 The combined `combined-positive-below-gate` batch activated the three positive standalone
 families together: lazy reference prefetch, decoded-serving attribute projection, and name lookup
@@ -320,9 +338,9 @@ approved 11-file bundle and measured `16.1152/16.1187 s` warm p50/p95 versus
 `164,102,144` to `136,142,848` bytes, and active auxiliary storage increased by `7.23%`.
 An explicit selective analysis of the active b8 key/filter columns then produced two manual
 `FINISHED` jobs with zero failed subjobs; older automatic-analysis failures remain historical
-context. The variant is still opt-in because the decoded-serving projection is not lossless for
-raw attribute values outside the proven generation path. b2 and b4 are comparison-only
-alternatives.
+context. The b8 table is now created and refreshed by the canonical loader. b2 and b4 are
+comparison-only alternatives; raw values remain retained in the canonical attribute table for
+evidence consumers.
 
 All traced FE profiles were `partial` because the returned profile text did not contain the
 requested query ID, and tracing exceeded the 5% wall-time budget; traced wall time is attribution-

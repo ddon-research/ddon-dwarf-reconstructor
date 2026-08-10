@@ -41,6 +41,28 @@ def _analyze_native_tables(connection: Any, plan: Any, config: Any) -> list[dict
                     "columns": ",".join(columns),
                 }
             )
+        lookup_table = _plan_lookup_table(plan, config)
+        if lookup_table is not None:
+            columns = _LOOKUP_SELECTIVE_COLUMNS if config.statistics_policy == "selective" else ()
+            column_clause = ""
+            sample_clause = ""
+            if columns:
+                column_clause = " (" + ", ".join(_identifier(column) for column in columns) + ")"
+                sample_clause = " WITH SAMPLE ROWS 4194304"
+            statement = (
+                f"ANALYZE TABLE {database}.{_identifier(lookup_table)}"
+                f"{column_clause}{sample_clause}"
+            )
+            cursor.execute(statement)
+            statements.append(
+                {
+                    "table": lookup_table,
+                    "statement": statement,
+                    "status": "submitted",
+                    "statistics_policy": config.statistics_policy,
+                    "columns": ",".join(columns),
+                }
+            )
         return _wait_if_requested(cursor, statements, config, prior_job_ids)
 
 
@@ -155,6 +177,20 @@ def collect_statistics_evidence(connection: Any, plan: Any) -> dict[str, object]
                 connection, f"SHOW TABLETS FROM {database}.{_identifier(table)}"
             ),
         }
+    lookup_table = _plan_lookup_table(plan, None)
+    if lookup_table is not None:
+        tables["name_lookup"] = {
+            "table": lookup_table,
+            "table_stats": _capture_rows(
+                connection, f"SHOW TABLE STATS {database}.{_identifier(lookup_table)}"
+            ),
+            "column_stats": _capture_rows(
+                connection, f"SHOW COLUMN STATS {database}.{_identifier(lookup_table)}"
+            ),
+            "tablet_stats": _capture_rows(
+                connection, f"SHOW TABLETS FROM {database}.{_identifier(lookup_table)}"
+            ),
+        }
     return {
         "status": "observed"
         if all(
@@ -263,6 +299,31 @@ _SELECTIVE_COLUMN_CANDIDATES: dict[str, tuple[str, ...]] = {
         "parser_status",
     ),
 }
+
+_LOOKUP_SELECTIVE_COLUMNS = (
+    "source_id",
+    "name",
+    "unit_offset",
+    "die_offset",
+    "index_type",
+    "tag",
+)
+
+
+def _plan_lookup_table(plan: Any, config: Any | None) -> str | None:
+    configured = getattr(plan, "name_lookup_table", None)
+    if isinstance(configured, str) and configured:
+        return configured
+    if getattr(plan, "serving_variant_id", "canonical") != "canonical":
+        return None
+    table = getattr(plan, "table", None)
+    if not isinstance(table, str) or not table:
+        return None
+    if config is not None:
+        effective = getattr(config, "effective_name_lookup_table", None)
+        if isinstance(effective, str) and effective:
+            return effective
+    return f"{table}_opt_name_b8"
 
 
 def _selective_columns(family: str) -> tuple[str, ...]:

@@ -44,32 +44,12 @@ class SingleHeaderGenerationMixin:
             "",
         ]
 
-        typedef_forward_decls = self._collect_typedef_forward_declarations(typedefs or {})
-        if typedef_forward_decls:
-            lines.append("// Forward declarations")
-            lines.extend(sorted(typedef_forward_decls))
-            lines.append("")
-
-        # Add typedefs if provided
-        if typedefs:
-            lines.append("// Type definitions from DWARF")
-            for typedef_name, underlying_type in sorted(typedefs.items()):
-                if typedef_name == "size_t":
-                    lines.append("// size_t provided by the standard C++ headers")
-                    continue
-                lines.append(f"typedef {underlying_type} {typedef_name};")
-            lines.append("")
+        lines.extend(self._single_typedef_lines(typedefs))
 
         if include_metadata:
             lines.extend(self._generate_metadata_header(class_info, cu_offset))
 
-        # Add forward declarations
-        forward_decls = self._collect_forward_declarations(class_info, typedefs or {})
-        if forward_decls:
-            lines.append("")
-            lines.append("// Forward declarations")
-            for decl in sorted(forward_decls):
-                lines.append(decl)
+        lines.extend(self._single_forward_declaration_lines(class_info, typedefs))
 
         # Generate class definition
         class_lines = self._generate_single_class(class_info, include_metadata)
@@ -78,6 +58,38 @@ class SingleHeaderGenerationMixin:
         lines.extend(["", f"#endif // {sanitized_name}_H"])
 
         return "\n".join(lines)
+
+    def _single_typedef_lines(
+        self: HeaderGeneratorContext, typedefs: dict[str, str] | None
+    ) -> list[str]:
+        lines: list[str] = []
+        typedef_map = typedefs or {}
+        typedef_forward_decls = self._collect_typedef_forward_declarations(typedef_map)
+        if typedef_forward_decls:
+            lines.extend(["// Forward declarations", *sorted(typedef_forward_decls), ""])
+        if not typedefs:
+            return lines
+        lines.append("// Type definitions from DWARF")
+        for typedef_name, underlying_type in self._ordered_typedefs(typedefs):
+            if self._normalize_type_name(underlying_type) == typedef_name:
+                continue
+            if typedef_name == "size_t":
+                lines.append("// size_t provided by the standard C++ headers")
+                continue
+            rendered_type = self._void_alias_storage_type(underlying_type)
+            lines.append(f"typedef {rendered_type} {typedef_name};")
+        lines.append("")
+        return lines
+
+    def _single_forward_declaration_lines(
+        self: HeaderGeneratorContext,
+        class_info: ClassInfo,
+        typedefs: dict[str, str] | None,
+    ) -> list[str]:
+        forward_decls = self._collect_forward_declarations(class_info, typedefs or {})
+        if not forward_decls:
+            return []
+        return ["", "// Forward declarations", *sorted(forward_decls)]
 
     @log_timing
     def generate_single_class_header(
@@ -163,18 +175,26 @@ class SingleHeaderGenerationMixin:
             return []
         return ["// Base classes", *[f'#include "{header}"' for header in sorted(headers)], ""]
 
-    @staticmethod
-    def _typedef_block(typedefs: dict[str, str] | None) -> list[str]:
+    def _typedef_block(self: HeaderGeneratorContext, typedefs: dict[str, str] | None) -> list[str]:
         if not typedefs:
             return []
         lines = ["// Type definitions"]
-        for typedef_name, underlying_type in sorted(typedefs.items()):
+        for typedef_name, underlying_type in self._ordered_typedefs(typedefs):
+            if self._normalize_type_name(underlying_type) == typedef_name:
+                continue
             if typedef_name == "size_t":
                 lines.append("// size_t provided by the standard C++ headers")
             else:
-                lines.append(f"typedef {underlying_type} {typedef_name};")
+                rendered_type = self._void_alias_storage_type(underlying_type)
+                lines.append(f"typedef {rendered_type} {typedef_name};")
         lines.append("")
         return lines
+
+    def _void_alias_storage_type(self: HeaderGeneratorContext, underlying_type: str) -> str:
+        """Give exact-void handle aliases a declaration-safe storage type."""
+        if self._normalize_type_name(underlying_type) == "void":
+            return "std::uint8_t"
+        return self._unqualify_type_expression(underlying_type)
 
     @staticmethod
     def _single_class_metadata_lines(class_info: ClassInfo) -> list[str]:

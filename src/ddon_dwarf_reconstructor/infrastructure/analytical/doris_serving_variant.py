@@ -25,8 +25,8 @@ class DorisServingVariant:
     storage_format: str = "V2"
     compression: str = "zstd"
     statistics_policy: str = "selective"
-    reference_prefetch: str = "eager"
-    attribute_projection: str = "full"
+    reference_prefetch: str = "lazy"
+    attribute_projection: str = "serving"
     child_tag_filter: str = "all"
     hydration_scope: str = "global"
     load_workers: int = 1
@@ -66,13 +66,17 @@ class DorisServingVariant:
         settings = {
             "database": config.database,
             "base_table": config.table,
-            "definition_lookup_table": config.definition_lookup_table,
-            "name_lookup_table": config.name_lookup_table,
+            "definition_lookup_table": _effective_lookup(
+                config, "effective_definition_lookup_table", "definition_lookup_table"
+            ),
+            "name_lookup_table": _effective_lookup(
+                config, "effective_name_lookup_table", "name_lookup_table"
+            ),
             "method_lookup_table": config.method_lookup_table,
             "die_lookup_table": config.die_lookup_table,
             "statistics_policy": statistics_policy,
-            "reference_prefetch": getattr(config, "reference_prefetch", "eager"),
-            "attribute_projection": getattr(config, "attribute_projection", "full"),
+            "reference_prefetch": getattr(config, "reference_prefetch", "lazy"),
+            "attribute_projection": getattr(config, "attribute_projection", "serving"),
             "child_tag_filter": getattr(config, "child_tag_filter", "all"),
             "hydration_scope": getattr(config, "hydration_scope", "global"),
             "stream_load_workers": config.stream_load_workers,
@@ -90,8 +94,8 @@ class DorisServingVariant:
             ddl_sha256 or _configured_ddl_sha256(config),
             configuration_sha256,
             statistics_policy=statistics_policy,
-            reference_prefetch=getattr(config, "reference_prefetch", "eager"),
-            attribute_projection=getattr(config, "attribute_projection", "full"),
+            reference_prefetch=getattr(config, "reference_prefetch", "lazy"),
+            attribute_projection=getattr(config, "attribute_projection", "serving"),
             child_tag_filter=getattr(config, "child_tag_filter", "all"),
             hydration_scope=getattr(config, "hydration_scope", "global"),
             load_workers=config.stream_load_workers,
@@ -119,3 +123,11 @@ class DorisServingVariant:
 
 
 __all__ = ["DorisServingVariant"]
+
+
+def _effective_lookup(config: Any, effective_name: str, raw_name: str) -> str | None:
+    value = getattr(config, effective_name, None)
+    if isinstance(value, str):
+        return value
+    raw_value = getattr(config, raw_name, None)
+    return raw_value if isinstance(raw_value, str) else None

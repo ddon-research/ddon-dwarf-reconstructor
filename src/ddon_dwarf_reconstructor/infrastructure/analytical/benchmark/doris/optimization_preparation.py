@@ -30,7 +30,7 @@ def prepare_candidate(
     run_output.mkdir(parents=True, exist_ok=True)
     provisioning: dict[str, object] = {
         "status": "not_observed",
-        "reason": "canonical serving projection was reused",
+        "reason": "promoted canonical serving policy was reused",
     }
     if selected.candidate_id == "canonical":
         return run_output, provisioning, None

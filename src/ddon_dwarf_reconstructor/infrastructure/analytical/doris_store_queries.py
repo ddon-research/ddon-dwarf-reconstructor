@@ -55,7 +55,7 @@ class DorisStoreQueryMixin:
             ),
             order_by=("unit_offset", "die_offset"),
             limit=1001,
-            table_name=self._config.name_lookup_table,
+            table_name=self._name_lookup_table,
             operation="find_definitions",
         )
         hydrate_dies_by_keys(
