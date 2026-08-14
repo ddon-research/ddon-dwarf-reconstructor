@@ -24,7 +24,7 @@ tasks remain visible.
 | [016 Performance profiling](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/016-performance-profiling) | Implemented; fixture and explicit real-asset evidence recorded | source-bound CPU/RAM/I/O/method evidence, SQLite history, and static exports |
 | [017 Nuitka and runtime comparison](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/017-nuitka-runtime-comparison) | Evaluation slice implemented; free-threaded Nuitka blocked upstream | runtime-aware CPython/Nuitka/free-threaded comparison and compiler/dependency evidence |
 | [018 Performance and algorithm audit](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/018-performance-algorithm-audit) | Evidence and implementation slice complete; repository gates pending | source-bound warm/cold traces, candidate decisions, and deterministic optimization evidence |
-| [019 Analytical DWARF store](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/019-analytical-dwarf-store) | Promoted v1.1 store and native-Doris workflow implemented; full season-two/MSVC acceptance pending | one-pass lossless materialization, optional JSONL audit, native serving evidence, query parity, and measured runtime replacement |
+| [019 Analytical DWARF store](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/019-analytical-dwarf-store) | Promoted v1.1 serving path; full Season 2 generation and per-header MSVC closure observed | one-pass lossless materialization, native serving evidence, query parity, exact header closure, and measured runtime replacement |
 
 ## Next best step
 

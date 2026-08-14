@@ -1,6 +1,6 @@
 # Measured evidence
 
-## Active evidence boundary (2026-08-09)
+## Active evidence boundary (2026-08-10)
 
 The promoted durable v1.1 store is
 `output/analytical-dwarf/main/store-4236f598acc8f158/manifest.json`. The complete manifest records
@@ -14,12 +14,104 @@ For current Doris evidence, use the checked-out `D:\Apache-Doris-version-4.x-doc
 the CLI. In particular, treat `information_schema.statistics` and
 `information_schema.column_statistics` as empty compatibility views and use `SHOW TABLE STATS`,
 `SHOW COLUMN STATS`, `SHOW ANALYZE`, `SHOW AUTO ANALYZE`, and `__internal_schema.column_statistics`.
-Full season-two generation, standalone bundle validation, and approved MSVC/IDA/Sonar acceptance
-remain pending and are not implied by this store record.
+The complete Season 2 generation, standalone bundle validation, and per-header MSVC closure audit
+were observed against the promoted serving path on 2026-08-10, before the boundary refactor.
+They remain historical observations; fresh post-refactor acceptance is recorded in the dated
+section below. IDA/Sonar evidence and byte comparison with the unavailable historical approved
+header remain separate and are not implied by this store record.
 
 Benchmark rows include source identity, producer/schema/configuration identity, runtime and Python
 identity, cold/warm state, machine metadata, resource metrics, output-manifest identity, and an
 explicit status (`observed`, `partial`, `blocked`, or `not_observed`).
+
+## Boundary-refactor validation (2026-08-11 to 2026-08-13)
+
+The coordinated boundary refactor introduced the typed `GenerationFacade`/`GenerationRuntime`,
+composed `HeaderRenderer`, composed JSONL/Parquet validation adapters, canonical definition
+selection, bounded Doris caches, immutable serving-profile validation, explicit registry migration,
+and staged Stream Load publication. Focused repository evidence covers renderer determinism,
+truncation/status propagation, cache reset, registry mismatch, publication interruption, and
+loader timeout states.
+
+The source-bound Season 2 baseline was captured outside Git at
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\baseline-33b8271`:
+`root_count=289`, `bundle_count=289`, `manifest_count=289`, `header_file_count=2745`,
+`published_file_count=3034`, and `msvc_unit_count=2745`. The pre-fix refactor run recorded
+`root_count=289`, `bundle_count=289`, `manifest_count=289`, `header_file_count=1653`,
+`published_file_count=1942`, and `msvc_unit_count=1653`. It is `partial`: the missing headers
+correspond to roots that were incorrectly allowed to publish unresolved placeholders after Doris
+became unavailable. The code now raises on non-complete root lookup evidence and rejects a pure
+placeholder bundle before publication.
+
+Representative post-refactor bundles are `observed` and byte-exact (`rAIFSM` 11/11 headers;
+`rArchive` and `rTexture` 6/6 each) under the external review directory. The corrected batch-001
+rerun at
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\season2-after-doris-policy4-20260812`
+completed 73/73 roots and 598/598 headers. Comparing every bundle-relative header against the
+immutable baseline produced `header_hash_mismatches=0` and `missing_baseline_headers=0`; its
+aggregate manifest hash is intentionally different because the batch request list contains 73
+roots rather than 289. A fresh targeted `rOcdImmuneParamRes` run published 8/8 headers.
+
+| Surface | Status | Current observation | Evidence boundary |
+| --- | --- | --- | --- |
+| Corrected Season 2 batch 001 | `observed`, partial corpus | 73 roots, 73 bundles, 73 manifests, 598 headers, zero failed roots, and zero compared header SHA-256 mismatches against the baseline | Exact batch evidence only; it does not establish the remaining 216 roots |
+| Full Season 2 attempt 1 | `blocked` | The run reached root 190 (`rOcdImmuneParamRes`) and then the host rebooted at 2026-08-12 21:39:44; no output was published and stderr contains no application exception | Windows WER recorded a BlueScreen/LiveKernelEvent; this is not generator or Doris failure evidence |
+| Full Season 2 attempt 2 | `blocked` | The run started at 2026-08-13 07:32:33 and the host rebooted at 07:42:49; no output was published | Kernel-Power event 41 and WER BlueScreen evidence; the attempt is not a partial accepted result |
+| Targeted post-reboot root | `observed` | `rOcdImmuneParamRes` published 8 headers with zero generation failures in 20.290 s | Single-root smoke/parity evidence, not Season 2 completeness |
+| Independent MSVC closure | `observed`, partial corpus | Visual Studio MSVC `14.51.36231` compiled all 598 batch-001 headers independently; failures=0, timeouts=0, and nine C4201 warnings retained separately | The focused 11/11 probe also passed; full 2,745-unit closure remains pending because the complete post-refactor bundle was not published |
+| Doris availability for fresh full run | `blocked` | After the second reboot, BE could start but FE could not bind host TCP 9030; Windows reports the excluded range 8983-9082 | No alternate port/backend was substituted; current full generation evidence remains blocked |
+| Matched post-refactor performance | `not_observed` | No complete post-refactor 289-root workload and no matched cold/warm performance report were published | Historical 2026-08-09/10 measurements remain historical and do not close the 110% gate |
+
+The full rerun is therefore `blocked` by host stability and the unavailable Doris FE endpoint, not
+by a known application exception. Historical 2026-08-10 Season 2/MSVC and 2026-08-09/10
+performance rows remain valid historical observations but are not fresh evidence for this
+refactor. The corrected Doris configuration now also supplies bounded SQL connect/read/write
+timeouts; focused environment validation and repository gates pass.
+
+## Completed boundary-refactor acceptance (2026-08-14)
+
+The previously blocked full-corpus evidence is now observed. The final source-bound generation log is
+`logs/ddon_reconstructor_17560_20260814T012907_837060+0200.jsonl`, and its output is
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\season2-final-source-cache-early-20260814`.
+It recorded 289 successful roots and zero failures. Machine-derived counts are:
+
+| Metric | Observed |
+| --- | ---: |
+| `root_count` | 289 |
+| `bundle_count` | 289 |
+| `manifest_count` | 289 |
+| `header_file_count` | 2,745 |
+| `published_file_count` | 3,034 |
+| `msvc_unit_count` | 2,745 |
+| Header bytes | 10,009,533 |
+| Header SHA-256 mismatches | 0 |
+| Bundle-manifest SHA-256 mismatches | 0 |
+
+The independent MSVC report at
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\msvc-season2-final-source-cache-early-20260814\msvc-header-validation.json`
+records compiler `14.51.36231`, `passed=2745`, `failed=0`, and `timed_out=0`. Warnings are
+separate (`C4201=124`, `C4309=1`).
+
+The matched Doris performance report is
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\performance-rAIFSM-final-early-3-20260814\current-doris-benchmark.json`.
+After one explicit cold run, three warm exhaustive `rAIFSM` runs were 9.06, 9.06, and 9.07 seconds;
+nearest-rank p50/p95 are 9.06/9.07 seconds and maximum peak RSS is 73.8 MiB. Each output retained
+the approved bundle SHA-256 `1176bd80524391ef2d23fd99541f9a63e04566e2e8a8906dc15670a80ca7f63b`.
+This is below the 110% warm p95 and RSS acceptance boundary relative to the retained canonical
+measurements.
+
+The cache experiment separates two mechanisms. Request-scoped hydration caches reset at each
+root and remain bounded. The persistent selection cache is source/profile-bound and schema
+validated; removing it changed 15 dependency files and 21 header payloads in `rLayout` and
+`rTexture`, so that configuration is rejected for canonical generation. The benchmark's cold versus
+warm Doris query difference was approximately 13 ms versus 6 ms, while the generated-header parity
+difference was structural. Every benchmark child loaded the verified 58-symbol source-bound cache at
+`C:\Users\morph\AppData\Local\ddon-dwarf-reconstructor\DDOORBIS-beced6568432-dwarf-cache.json`.
+The earlier `rAIFSM` degradation is therefore not attributed to an empty transient Doris cache;
+source-bound cache identity and selection-hint reuse are the material cache boundaries. The
+backend restart/no-replica episode was an external `blocked` run that
+failed closed; after remapping the local endpoints, FE/BE remained healthy through the accepted
+full run.
 
 ## 2026-08-09 current live-Doris benchmark
 
@@ -155,8 +247,8 @@ payload, and source-identity validation passed. The source-bound SHA-256 is
 The normal Parquet runtime loaded the store and resolved `rLayout` to 145 complete items. A fresh
 full-hierarchy generation rerun from the immutable ELF was started in external Temp storage, but
 was stopped after more than 40 minutes while still processing the first symbol (`rAIFSM`); it
-published no header bundle. Header generation and the repository MSVC/Sonar acceptance adapter
-therefore remain blocked in this worktree.
+published no header bundle. This paragraph records the superseded 2026-08-07 historical attempt;
+the later 2026-08-10 four-batch rerun and MSVC audit are recorded below.
 
 Native and Iceberg Doris dry-run plans were generated from the same manifest-declared file set.
 The native v1.1 projection was then loaded into `dwarf_full_v28_20260808_r2` with four workers;
@@ -170,11 +262,11 @@ and process-sampler artifacts are retained under
 
 The repository quality gates passed lint, formatting, actionlint, typing, dependency checks,
 structure checks, architecture tests, documentation checks, full tests, coverage, and audit.
-The MSVC/Sonar acceptance command is currently blocked before compilation because the referenced
-approved validation directory `output/msvc-header-validation-20260801` is absent from the
-checkout; the earlier exit-code-0 claim is therefore not independently reproducible in this
-worktree. The fresh Doris database is serving evidence only until header acceptance is rerun against
-an available approved header bundle.
+At the historical 2026-08-07 boundary, the MSVC/Sonar acceptance command was blocked before
+compilation because the referenced approved validation directory
+`output/msvc-header-validation-20260801` was absent from the checkout. That state is superseded by
+the final per-header MSVC report recorded in the 2026-08-10 evidence row below. The approved byte
+baseline itself remains unavailable.
 evidence status. Full-corpus Parquet materialization is the production measurement; JSONL rows are
 fixture/audit evidence only.
 
@@ -329,16 +421,18 @@ infer CU completeness.
 
 | Surface | Status | Evidence | Boundary |
 | --- | --- | --- | --- |
-| Typed serving variant and optimization report | `observed`, deterministic | `DorisServingVariant`, `DorisQueryObservation`, and `DorisOptimizationReport` serialize source/schema/DDL/configuration identity, complete row counts, cold/warm samples, query traces, output hashes, load/statistics/tablet evidence slots, and rejected/not-applicable decisions. The focused optimization/runtime slice passes 31 tests, including exact JSON serialization, policy configuration, profile mismatch handling, and semantic operation labels. | No live candidate is promoted by deterministic tests alone. |
+| Typed serving profile and optimization report | `observed`, deterministic | `DorisServingProfile`, `DorisQueryObservation`, and `DorisOptimizationReport` serialize source/schema/DDL/configuration identity, complete row counts, cold/warm samples, query traces, output hashes, load/statistics/tablet evidence slots, and rejected/not-applicable decisions. The focused optimization/runtime slice passes 31 tests, including exact JSON serialization, policy configuration, profile mismatch handling, and semantic operation labels. | No live candidate is promoted by deterministic tests alone. |
 | Actual generation query tracing | `partial`, real attribution | The Doris query executor records parameter-free JSONL observations, query-shape digests, semantic operations, local execute/fetch timing, result rows, query IDs, and bounded FE-local profile artifacts. The eager/full/all 2026-08-10 semantic `rAIFSM` trace recorded 754 observations: 85 `hydrate_attributes_by_die` queries (7.786 s execute time), 154 `prefetch_reference_targets` queries (3.233 s), 45 `hydrate_dies_by_offset` queries (2.052 s), and 138 point `die_by_offset` queries (1.486 s). It published the exact 11-header output. The lazy trace recorded 680 observations, including 108 reference-prefetch calls; the serving-projection trace reduced attribute execute time to 5.737 s. | FE profiles for the traced runs were `partial` because the returned text did not contain the requested query ID. Tracing exceeded the 5% wall-time budget and is attribution-only; traced wall time is excluded from performance conclusions. |
-| Post-policy canonical and runtime candidates | `observed`, exact but not promoted | The canonical report is `C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\canonical-after-policy-20260810\current-doris-benchmark.json`; complete-store `rAIFSM` warm p50/p95 were `19.121/19.127 s` (`n=3`) with bundle hash `0514bdb383121ebc83d8e9193ef0766c7074a4fd90f3e3d00691cea29461b243`. Lazy reference prefetch at `reference-prefetch-confirm-20260810` was exact and improved paired warm p50/p95 by `5.3%`, below promotion. The decoded-serving projection at `attribute-projection-confirm-20260810` was exact, reduced warm p95 RSS by `15.1%`, and did not improve p95 latency; it omits raw attribute values. | Canonical `eager/full/all` remains the default. Lazy prefetch and decoded projection are explicit opt-in variants because neither clears the 10% end-to-end gate, and the projection is not lossless for raw values. |
+| Post-policy canonical and runtime candidates | `observed`, exact baseline | The canonical report is `C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\canonical-after-policy-20260810\current-doris-benchmark.json`; complete-store `rAIFSM` warm p50/p95 were `19.121/19.127 s` (`n=3`) with bundle hash `0514bdb383121ebc83d8e9193ef0766c7074a4fd90f3e3d00691cea29461b243`. Lazy reference prefetch at `reference-prefetch-confirm-20260810` was exact and improved paired warm p50/p95 by `5.3%`, below the standalone gate. The decoded-serving projection at `attribute-projection-confirm-20260810` was exact, reduced warm p95 RSS by `15.1%`, and did not improve p95 latency; raw columns remain retained in the canonical attribute family. | This is the prior canonical baseline. The three positive behaviors were evaluated together and promoted by the confirmatory interaction result below; b2 and b4 remain comparison-only alternatives. |
 | Unit-bound hydration candidate | `rejected`, exact regression | The fair-path untraced exhaustive `rAIFSM` run under `C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\unit-bound-hydration-fair-rAIFSM-20260810` took `289.048 s` and published the exact approved 11-header bundle. The canonical warm p50/p95 is `19.121/19.127 s`. Its partial attribution trace retained `26,463` complete observations: `9,262` attribute-by-DIE, `7,579` reference-prefetch, and `9,136` child-tag-count calls, versus canonical `85/154/25`. | The known unit predicate split bounded batches into thousands of per-unit requests and increased scheduling fan-out. The candidate was rejected without 3-cold/5-warm confirmation; traced wall time and incomplete FE profiles are not performance evidence. |
 | Targeted child-tag filter | `rejected`, exact regression | `child-tag-filter-screen-20260810/doris-optimization.json` preserved the exact bundle hash but regressed warm `rAIFSM` p50 by `10.5%` relative to the post-policy canonical run. | The additional predicate work is counterproductive for this trace; the default remains `child_tag_filter=all`. |
 | Registry serving identity refresh | `observed`, additive | The live registry gained `serving_variant_id` and `serving_variant_configuration_sha256` columns and was refreshed with the canonical identity. All fourteen family counts remained equal to the complete source-bound manifest; Parquet data and physical Doris tables were not reloaded or changed. | The identity is evidence metadata only and does not alter the canonical fourteen-family row contract. |
-| Selective statistics policy | `observed`, SQL and live evidence | The promoted configuration defaults to selective `ANALYZE TABLE` columns with `WITH SAMPLE ROWS 4194304`, excluding raw/detail payload columns; all 14 requested live jobs reached terminal `Finished` with zero failures. Raw `SHOW TABLE STATS`, `SHOW COLUMN STATS`, `SHOW ANALYZE`, `SHOW AUTO ANALYZE`, and internal column-statistics evidence remain retained. | Four historical automatic-analysis memory-limit failures remain context; they do not invalidate the current terminal-success jobs. |
+| Selective statistics policy | `observed`, SQL and live evidence | The promoted configuration defaults to selective `ANALYZE TABLE` columns with `WITH SAMPLE ROWS 4194304`, excluding raw/detail payload columns; the canonical load plan requests the 14 family jobs plus the b8 lookup job. The existing 14 live jobs reached terminal `Finished` with zero failures, and the active b8 follow-up jobs (`1786278610025`, `1786278610030`) also reached `Finished` with zero failed subjobs. Raw `SHOW TABLE STATS`, `SHOW COLUMN STATS`, `SHOW ANALYZE`, `SHOW AUTO ANALYZE`, and internal column-statistics evidence remain retained. | Four historical automatic-analysis memory-limit failures remain context; they do not invalidate the current terminal-success jobs. |
 | Optimization command and candidate isolation | `observed`, implementation and live evaluation | `performance benchmark-doris-optimization` exposes 3/5 control and 1/3 `rAIFSM` screening defaults, canonical reuse, explicit candidate provisioning, source-bound name/method/DIE candidate SQL, semantic generation tracing, and a 10%/110% promotion gate. CLI help and focused routes pass. | Candidate artifacts remain external. Repeated provisioning can leave delete-version storage in a fixed candidate table, so candidate physical-size evidence is retained separately from logical row-count evidence. |
-| Source/name lookup candidates | `observed`, exact but not promoted | Full confirmation against the source-path canonical baseline preserved ordered outputs and all 11 `rAIFSM` header hashes. Name bucket 2 reduced global lookup scheduling to 1/2 tablets and bucket 8 to 1/8 tablets. Warm `rAIFSM` p50/p95 were `18.1344/19.1521 s` (b2) and `18.1352/19.1458 s` (b8), versus canonical `20.1489/20.1511 s`. | p50 improvement was approximately 10%, but p95 improvement was only 4.96% (b2) and 4.99% (b8), so neither satisfies the 10% confirmatory p50/p95 gate. They remain explicit opt-in evidence, not the default. |
-| Combined positive-below-gate batch | `observed`, exact confirmatory, not promoted | `combined-positive-below-gate-confirm-20260810/doris-optimization.json` activated lazy reference prefetch, decoded-serving attribute projection, and all three mutually exclusive source/name bucket tables, with b8 active. The 3-cold/5-warm exhaustive `rAIFSM` run published the exact approved 11-file bundle hash `0514bdb383121ebc83d8e9193ef0766c7074a4fd90f3e3d00691cea29461b243`. Warm samples were `16.1152/16.1187 s` p50/p95 versus canonical `19.1208/19.1271 s`, a `15.7%` improvement at both quantiles; warm p95 RSS was `136,142,848` bytes versus `164,102,144` bytes. All eight `rAIFSM` runs were observed and exact; the three auxiliary tables each contained `35,250,925` source-bound rows and all provisioned tablets were `NORMAL`. | The active b8 table added `399,984,557` bytes, `7.23%` over the `5,531,444,641`-byte canonical physical total; its population took `14.875 s` in this run. b2 and b4 were provisioned for the interaction test but are comparison-only. Historical automatic-analysis failures remain raw context, but a follow-up selective analysis of the active b8 key/filter columns produced two manual `FINISHED` jobs (`1786278610025`, `1786278610030`) with 1,048,576-row samples and zero failed subjobs. The batch remains opt-in because decoded-serving projection is not lossless for raw attribute values outside the proven generation path; a projection-free interaction variant would need separate confirmation before default promotion. |
+| Source/name lookup candidates | `observed`, exact standalone comparison | Full confirmation against the source-path canonical baseline preserved ordered outputs and all 11 `rAIFSM` header hashes. Name bucket 2 reduced global lookup scheduling to 1/2 tablets and bucket 8 to 1/8 tablets. Warm `rAIFSM` p50/p95 were `18.1344/19.1521 s` (b2) and `18.1352/19.1458 s` (b8), versus canonical `20.1489/20.1511 s`. | Standalone p50 improvement was approximately 10%, but p95 improvement was only 4.96% (b2) and 4.99% (b8). b2 and b4 remain comparison-only; b8 is promoted only as part of the confirmed three-optimization serving path below. |
+| Combined positive-below-gate batch | `observed`, exact confirmatory, promoted default serving path | `combined-positive-below-gate-confirm-20260810/doris-optimization.json` activated lazy reference prefetch, decoded-serving attribute projection, and all three mutually exclusive source/name bucket tables, with b8 active. The 3-cold/5-warm exhaustive `rAIFSM` run published the exact approved 11-file bundle hash `0514bdb383121ebc83d8e9193ef0766c7074a4fd90f3e3d00691cea29461b243`. Warm samples were `16.1152/16.1187 s` p50/p95 versus canonical `19.1208/19.1271 s`, a `15.7%` improvement at both quantiles; warm p95 RSS was `136,142,848` bytes versus `164,102,144` bytes. All eight `rAIFSM` runs were observed and exact; the three auxiliary tables each contained `35,250,925` source-bound rows and all provisioned tablets were `NORMAL`. | The promoted b8 table added `399,984,557` bytes, `7.23%` over the `5,531,444,641`-byte canonical physical total; its population took `14.875 s` in the interaction run. b2 and b4 remain comparison-only. Historical automatic-analysis failures remain raw context, while the active b8 key/filter follow-up produced two manual `FINISHED` jobs (`1786278610025`, `1786278610030`) with 1,048,576-row samples and zero failed subjobs. Raw attribute columns remain in the canonical family for evidence consumers; the full Season 2 suite below validates the promoted generation projection. |
+| Full Season 2 promoted generation suite | `observed`, exact | The canonical serving path ran all 289 nonblank roots from `resources/season2-resources.txt` on 2026-08-10 in four bounded external batches under `C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\season2-promoted-20260810-batch-001` through `...-batch-004`. All 289/289 bundles published with zero generation failures, 2,744 header manifests, and 10,017,050 header bytes. Every declared header byte count and SHA-256 matched its file. The run was source-bound to SHA-256 `4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0`; the `rAIFSM` 11-header content hashes match the approved exhaustive bundle. A separate no-environment canonical exhaustive run at `C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\season2-promoted-20260810-canonical-raifsm-exhaustive-final` published manifest SHA-256 `0514bdb383121ebc83d8e9193ef0766c7074a4fd90f3e3d00691cea29461b243`. | The batch bundle manifest metadata includes each surrounding request list, so its `rAIFSM` manifest hash is not the single-symbol approved manifest hash; generated header content is exact. Approved MSVC/IDA/Sonar checks remain separate. |
+| Per-header MSVC closure audit | `observed`, exact and clean | The complete Season 2 root set was regenerated in four external batches with 289/289 published roots, zero generation failures, and exact manifest byte/hash integrity. The final composite input `C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\season2-msvc-fix4-20260810-input` contains 289 bundles and 2,760 headers. MSVC `14.51.36231` compiled every header independently with `/std:c++latest /EHsc /W4 /Zc:__cplusplus`: 2,760/2,760 passed, zero timeouts, and zero compiler failures. | The audit corrected omitted nested-base closure edges, unqualified nested base names, class-versus-template nested forward declarations, and namespace-root discovery/rendering. The final tree has no not-found, unknown-type, unresolved-symbol, or synthetic-type placeholders. Diagnostics are warning-only `C4099` (91), `C4201` (125), and `C4309` (1). This closes syntax and generated-closure acceptance; byte parity with the unavailable historical approved header and IDA/Sonar remain separate. |
 | DIE-offset locator candidate | `observed`, rejected | `dwarf_records_opt_die_offset_b4` returned exact rowsets for checked offsets, passed exhaustive `rAIFSM` and `rLayout` header parity, and pruned the global locator EXPLAIN to 1/4 tablets. The exhaustive `rAIFSM` warm p50/p95 remained approximately `19.154/20.152 s`, with no improvement over canonical. | The candidate was not promoted. Its four tablets occupied about 544 MB versus about 454 MB for the 16-tablet canonical DIE family, so fan-out reduction did not justify the storage cost. The trace contained no promotion-worthy DIE-offset workload. |
 | Grouped child-tag-count experiment | `rejected`, exact but no end-to-end benefit | Replacing the bounded child-row fetch with `COUNT(*) GROUP BY parent_offset, tag` reduced one 512-parent result from 1,970 to 602 rows and was faster in a direct SQL microbenchmark. The paired full runs preserved the 11-header hashes but had effectively identical warm p50/p95: grouped `21.160/21.165 s`, raw `21.159/21.163 s`. | The lower operator time did not translate into generation latency or a 10% improvement. The change was removed from the serving path and is recorded as a rejected optimization. |
 | Trace-gated and physical variants | `not_observed` or `not_applicable` | The semantic trace recorded zero method-target lookup operations, so the 5%/10% promotion trigger was not met. Index/Bloom removal, tiny-family buckets, V2/V3, ZSTD/LZ4, pipeline settings, SQL cache, Stream Load workers, MVs, row store, and unrelated complex SQL were not promoted. | EXPLAIN-only reductions, absent trace shapes, and partial FE profiles do not establish a candidate result. The canonical source-first fourteen-family model, V2/ZSTD storage, one-partition layout, replication-one deployment, indexes, and registry remain unchanged. |

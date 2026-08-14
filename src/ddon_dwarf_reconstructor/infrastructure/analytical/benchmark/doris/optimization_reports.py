@@ -6,7 +6,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from ...doris_optimization import DorisOptimizationReport, DorisServingVariant
+from ...doris_optimization import DorisOptimizationReport
+from ...doris_serving_profile import DorisServingProfile
 
 
 def not_observed_report(
@@ -29,7 +30,7 @@ def not_observed_report(
         schema_version="1.0",
         status=status,
         workload="doris-optimization",
-        variant=DorisServingVariant.from_config(
+        variant=DorisServingProfile.from_config(
             config, variant_id=candidate.candidate_id
         ).to_dict(),
         baseline_identity={},

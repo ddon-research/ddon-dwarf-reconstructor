@@ -33,7 +33,6 @@ from .doris_optimization_utils import (
 from .doris_optimization_utils import (
     write_json_atomic as _write_json_atomic,
 )
-from .doris_serving_variant import DorisServingVariant
 
 
 @dataclass(frozen=True, slots=True)
@@ -489,5 +488,4 @@ __all__ = [
     "DorisQueryObservation",
     "DorisQueryTraceConfig",
     "DorisQueryTracer",
-    "DorisServingVariant",
 ]

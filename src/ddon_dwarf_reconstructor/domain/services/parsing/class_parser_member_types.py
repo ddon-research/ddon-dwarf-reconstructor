@@ -40,14 +40,48 @@ class ClassParserMemberTypesMixin:
     ) -> int | None:
         """Use byte storage when flattening would make an alternate type recursive."""
         aggregate = ClassParserMemberTypesMixin._named_aggregate(type_die)
-        if aggregate is not None:
-            try:
-                parent = member_die.get_parent()
-            except AttributeError, RuntimeError:
-                return None
-            if ClassParserMemberTypesMixin._has_same_name(parent, aggregate):
-                return ClassParserMemberTypesMixin._byte_size(aggregate)
+        handled, size = ClassParserMemberTypesMixin._recursive_aggregate_storage(
+            member_die, aggregate
+        )
+        if handled:
+            return size
 
+        terminal_type = (
+            TypeChainTraverser.follow_to_terminal_type(type_die) if type_die is not None else None
+        )
+        if ClassParserMemberTypesMixin._needs_terminal_storage(member_die, terminal_type):
+            return ClassParserMemberTypesMixin._byte_size(type_die)
+
+        return ClassParserMemberTypesMixin._unresolved_storage_size(member_die, type_die, type_name)
+
+    @staticmethod
+    def _recursive_aggregate_storage(
+        member_die: DwarfEntry, aggregate: DwarfEntry | None
+    ) -> tuple[bool, int | None]:
+        if aggregate is None:
+            return False, None
+        try:
+            parent = member_die.get_parent()
+        except AttributeError, RuntimeError:
+            return True, None
+        if ClassParserMemberTypesMixin._has_same_name(parent, aggregate):
+            return True, ClassParserMemberTypesMixin._byte_size(aggregate)
+        return False, None
+
+    @staticmethod
+    def _needs_terminal_storage(member_die: DwarfEntry, terminal_type: DwarfEntry | None) -> bool:
+        if terminal_type is None:
+            return False
+        if ClassParserMemberTypesMixin._named_aggregate(terminal_type) is None:
+            return False
+        return ClassParserMemberTypesMixin._is_declaration_only(
+            terminal_type
+        ) or ClassParserMemberTypesMixin._same_named_parent(member_die, terminal_type)
+
+    @staticmethod
+    def _unresolved_storage_size(
+        member_die: DwarfEntry, type_die: DwarfEntry | None, type_name: str | None
+    ) -> int | None:
         if not ClassParserMemberTypesMixin._is_unresolved_type_name(type_name):
             return None
         return ClassParserMemberTypesMixin._byte_size(type_die) or (
@@ -70,6 +104,25 @@ class ClassParserMemberTypesMixin:
         return clean_name in {"void", "unknown_type"} or clean_name.startswith(
             ("void[", "unknown_type[")
         )
+
+    @staticmethod
+    def _is_declaration_only(type_die: DwarfEntry) -> bool:
+        """Return whether a named aggregate has no recoverable definition."""
+        declaration = type_die.attributes.get("DW_AT_declaration")
+        if declaration is not None and bool(getattr(declaration, "value", declaration)):
+            return True
+        try:
+            return not any(type_die.iter_children())
+        except AttributeError, RuntimeError, TypeError:
+            return True
+
+    @staticmethod
+    def _same_named_parent(member_die: DwarfEntry, type_die: DwarfEntry) -> bool:
+        try:
+            parent = member_die.get_parent()
+        except AttributeError, RuntimeError:
+            return False
+        return ClassParserMemberTypesMixin._has_same_name(parent, type_die)
 
     def _template_argument_references(
         self: ClassParserContext, type_die: DwarfEntry | None

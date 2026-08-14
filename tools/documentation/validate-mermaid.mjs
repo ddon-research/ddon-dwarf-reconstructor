@@ -20,6 +20,7 @@ const markdownFiles = [
 ];
 const mermaidFence = /^```[ \t]*mermaid[ \t]*\r?\n([\s\S]*?)^```[ \t]*$/gim;
 const temporaryDirectory = mkdtempSync(join(tmpdir(), "ddon-mermaid-"));
+const puppeteerConfigPath = createPuppeteerConfig(temporaryDirectory);
 let diagramCount = 0;
 let failureCount = 0;
 
@@ -34,11 +35,11 @@ try {
       const outputPath = join(temporaryDirectory, `${diagramName}.svg`);
       writeFileSync(inputPath, `${match[1].trim()}\n`, "utf8");
 
-      const result = spawnSync(
-        process.execPath,
-        [mmdcCli, "--input", inputPath, "--output", outputPath, "--quiet"],
-        { encoding: "utf8" },
-      );
+      const cliArguments = [mmdcCli, "--input", inputPath, "--output", outputPath, "--quiet"];
+      if (puppeteerConfigPath !== null) {
+        cliArguments.push("--puppeteerConfigFile", puppeteerConfigPath);
+      }
+      const result = spawnSync(process.execPath, cliArguments, { encoding: "utf8" });
       if (result.status !== 0) {
         const line = source.slice(0, match.index).split(/\r?\n/).length;
         const detail = (
@@ -75,4 +76,21 @@ function findMarkdownFiles(directory) {
     }
   }
   return files.sort();
+}
+
+function createPuppeteerConfig(directory) {
+  if (process.platform !== "linux" || !process.env.CI) {
+    return null;
+  }
+
+  // GitHub-hosted Linux runners do not permit Chromium's setuid/user-namespace
+  // sandbox. This validator processes repository Markdown only, so use the
+  // documented CI workaround without weakening local developer runs.
+  const configPath = join(directory, "puppeteer.json");
+  writeFileSync(
+    configPath,
+    JSON.stringify({ args: ["--no-sandbox", "--disable-setuid-sandbox"] }),
+    "utf8",
+  );
+  return configPath;
 }

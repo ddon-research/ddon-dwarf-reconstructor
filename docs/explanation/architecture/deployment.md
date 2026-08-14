@@ -33,8 +33,10 @@ output.
 ## Doris serving-variant boundary
 
 The canonical serving path is an immutable source-bound fourteen-family `DUPLICATE KEY`
-publication. Optimization experiments run beside it as external, source-bound candidates. Each
-candidate carries a variant ID plus source, schema, DDL, configuration, statistics, index,
+publication plus the source/name b8 lookup table. The canonical loader creates and refreshes that
+auxiliary table from the source-bound index; it does not change the fourteen-family row contract or
+registry counts. Optimization experiments remain beside it as external, source-bound candidates.
+Each candidate carries a variant ID plus source, schema, DDL, configuration, statistics, index,
 storage, compression, and load identities; candidate DDL and population are isolated from the
 canonical registry and require an explicit optimization command. The generation executor can
 write redacted query observations and bounded FE-local profiles to an external JSONL artifact, but
@@ -43,19 +45,20 @@ is not promoted from an improved `EXPLAIN`: exact row/order/header hashes, termi
 healthy tablets, and representative cold/warm end-to-end latency must pass the existing acceptance
 gate.
 
-The first complete-corpus evaluation on 2026-08-09/10 kept the canonical physical variant and found
+The first complete-corpus evaluation on 2026-08-09/10 kept the canonical physical family design and found
 that sequential DIE/attribute/reference/unit hydration, rather than Doris scan CPU, dominated the
-generation path. The serving runtime now uses bounded source/unit-aware batches, child-frontier and
-reference prefetching, per-unit line-program caching, and semantic operation tracing when explicitly
-enabled. The post-policy canonical eager/full/all run measured `19.121/19.127 s` warm p50/p95; all
-11 headers matched. Lazy reference prefetch reduced trace query count from 754 to 680 but cleared
-only 5.3% of paired warm latency, while the decoded attribute projection reduced warm p95 RSS by
-15.1% without clearing the latency gate. Both remain opt-in. A targeted child-tag predicate was
-exact but regressed warm p50 by 10.5% and was rejected. Name lookup candidates reduced global
-lookup tablet scheduling but did not clear the confirmatory p95 gate. A grouped-count rewrite was
-exact but end-to-end tied with the raw path and was removed. The canonical schema, keys, buckets,
-storage, indexes, and table data remain unchanged; the source registry only gained the additive
-serving-variant identity fields.
+generation path. The promoted serving runtime now uses bounded source/unit-aware batches, lazy
+reference prefetch, the decoded-serving attribute projection, the b8 source/name lookup,
+child-frontier prefetching, per-unit line-program caching, and semantic operation tracing when
+explicitly enabled. The prior canonical eager/full/all run measured `19.121/19.127 s` warm p50/p95;
+the promoted combined path measured `16.1152/16.1187 s`, and all confirmed outputs matched. Raw
+attribute columns remain in the canonical attribute family; only the generation fetch projection is
+narrowed. The full Season 2 run then validated that projection across all 289 requested roots. A
+targeted child-tag predicate was exact but regressed warm p50 by 10.5% and was rejected.
+b2 and b4 name lookup tables, grouped-count rewrites, and the remaining physical matrix stay
+comparison-only or unobserved. The canonical keys, buckets, storage, indexes, and fourteen-family
+registry contract remain unchanged; the source registry carries additive serving-variant identity
+fields.
 
 The fair-path `unit-bound-hydration` screen preserved exact output but took `289.048 s` for
 exhaustive `rAIFSM` versus the canonical `19.121/19.127 s` warm p50/p95. Its partial trace
@@ -68,14 +71,22 @@ attribute projection, and name lookup buckets 2/4/8, with b8 active. It preserve
 approved 11-file output and improved confirmatory warm `rAIFSM` p50/p95 from `19.1208/19.1271 s`
 to `16.1152/16.1187 s` (`15.7%` at both quantiles); warm p95 RSS also fell by about 17%. The
 active auxiliary table adds `7.23%` to canonical storage. A follow-up selective analysis produced
-two manual `FINISHED` jobs with zero failed subjobs, clearing the current statistics gate. It
-remains an opt-in variant because the decoded-serving projection is not lossless for raw
-attribute values outside the proven generation path; the canonical fourteen-family deployment is
-still the default.
+two manual `FINISHED` jobs with zero failed subjobs, clearing the current statistics gate. This
+interaction is now the canonical generation serving path; raw attribute values remain available in
+Doris for evidence consumers, while generation uses the bounded serving projection. The b8 table is
+the default lookup table; b2 and b4 are comparison-only alternatives.
 
 The optimization command is a reusable, change-triggered evidence tool rather than a continuously
 running service. It is rerun when the generator, source publication, Doris image/configuration,
 candidate variant, or representative workload changes.
+
+The complete Season 2 header closure is independently validated outside the runtime path. The
+final external input contains 289 bundles and 2,760 headers; MSVC `14.51.36231` compiled every
+header as a separate translation unit with zero failures or timeouts. The audit corrected nested
+base dependency closure, nested base qualification, template forward declarations, and namespace
+root discovery. No not-found or unresolved-type placeholders remain. The remaining `C4099`,
+`C4201`, and `C4309` records are warning-only diagnostics; IDA/Sonar and byte comparison against
+the unavailable historical approved header remain separate evidence surfaces.
 
 ## Documentation deployment
 
@@ -99,6 +110,6 @@ and neither is a substitute for deterministic producer or repository acceptance 
 | stale source-bound cache | identity catalog, fingerprints, atomic publication | artifact manifests |
 | unmeasured Doris fan-out or query attribution | source-bound lookup candidates and opt-in generation query traces | external optimization report |
 | incomplete or conflicting DIE evidence | typed status/provenance and authority rules | deterministic tests |
-| generated header closure failures | exact manifests plus optional MSVC/Sonar evidence | local acceptance only |
+| generated header closure failures | exact manifests plus the complete per-header MSVC audit; optional IDA/Sonar evidence | local acceptance only |
 | documentation drift | strict Zensical build in `just check` and source-backed pages | docs CI build |
 | graph semantics overclaiming | JSONL projection documented as current; live ingestion on roadmap | knowledge bundle manifest |

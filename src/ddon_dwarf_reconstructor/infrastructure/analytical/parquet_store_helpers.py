@@ -8,7 +8,8 @@ from typing import Any
 
 from ...domain.models.analytical_dwarf import QueryResult
 from ...domain.services.definition_selection import NestedTypeCounts
-from .jsonl_store import StoreDie, _query_status
+from .jsonl_views import StoreDie
+from .materialized_selection import query_status as _query_status
 from .parquet_layout import UNIT_BUCKET_SIZE
 
 

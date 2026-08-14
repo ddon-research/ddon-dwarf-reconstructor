@@ -4,16 +4,18 @@
 
 from .dependency_extractor import DependencyExtractor
 from .file_registry import FileRegistry
-from .header_generator import HeaderGenerator
 from .hierarchy_builder import HierarchyBuilder
 from .packing_analyzer import calculate_packing_info
+from .rendering import HeaderRenderContext, HeaderRenderer, TypeExpressionPolicy
 from .special_header_renderer import SpecialHeaderRenderer
 
 __all__ = [
     "DependencyExtractor",
     "FileRegistry",
-    "HeaderGenerator",
+    "HeaderRenderContext",
+    "HeaderRenderer",
     "HierarchyBuilder",
+    "TypeExpressionPolicy",
     "calculate_packing_info",
     "SpecialHeaderRenderer",
 ]

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from ...domain.models.analytical_dwarf import QueryStatus
 from ...domain.ports.cache import SymbolCachePort
 from .doris_models import DorisDie
 
@@ -19,16 +20,22 @@ class DorisCache(SymbolCachePort):
 
     def get_symbol_offset(self, symbol_name: str) -> int | None:
         result = self._store.find_primary_definition(symbol_name)
+        if result.status is not QueryStatus.COMPLETE:
+            return None
         item = result.items[0] if result.items else None
         return item.offset if isinstance(item, DorisDie) else None
 
     def get_symbol_cu_offset(self, symbol_name: str) -> int | None:
         result = self._store.find_primary_definition(symbol_name)
+        if result.status is not QueryStatus.COMPLETE:
+            return None
         item = result.items[0] if result.items else None
         return item.cu.cu_offset if isinstance(item, DorisDie) else None
 
     def get_symbol_completeness(self, symbol_name: str) -> bool | None:
         result = self._store.find_primary_definition(symbol_name)
+        if result.status is not QueryStatus.COMPLETE:
+            return None
         if not result.items or not isinstance(result.items[0], DorisDie):
             return None
         return "DW_AT_declaration" not in result.items[0].attributes

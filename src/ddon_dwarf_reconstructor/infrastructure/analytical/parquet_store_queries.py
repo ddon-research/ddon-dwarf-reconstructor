@@ -3,33 +3,36 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any
 
-from ...domain.models.analytical_dwarf import QueryResult, QueryStatus
-from .jsonl_store import (
-    StoreCompilationUnit,
-    StoreDie,
-    _definition_matches,
-    _definition_sort_key,
-    _query_status,
+from ...domain.models.analytical_dwarf import MaterializationManifest, QueryResult, QueryStatus
+from ...domain.ports.cache import SymbolCachePort
+from .jsonl_views import StoreCompilationUnit, StoreDie, _MaterializedCache
+from .materialized_selection import (
+    DEFINITION_QUERY_LIMIT as _DEFINITION_QUERY_LIMIT,
 )
-from .line_program import StoreLineProgram, build_line_program
+from .materialized_selection import (
+    definition_matches as _definition_matches,
+)
+from .materialized_selection import (
+    definition_sort_key as _definition_sort_key,
+)
+from .materialized_selection import (
+    query_status as _query_status,
+)
+from .materialized_selection import (
+    unavailable as _unavailable,
+)
 from .parquet_layout import UNIT_BUCKET_SIZE
-from .parquet_rows import restore_record
 from .parquet_store_access import (
-    _filter_expression,
     _ParquetStoreAccess,
-    _read_table,
-    _selected_columns,
 )
 from .parquet_store_helpers import (
     attributes_by_die as _attributes_by_die,
 )
 from .parquet_store_helpers import (
     child_tag_counts_from_rows as _child_tag_counts_from_rows,
-)
-from .parquet_store_helpers import (
-    effective_filters as _effective_filters,
 )
 from .parquet_store_helpers import (
     index_die_key as _index_die_key,
@@ -63,21 +66,31 @@ _ATTRIBUTE_FALLBACK_BATCH_SIZE = 64
 class ParquetStoreQueries(_ParquetStoreAccess):
     """Expose the analytical query-port operations over hydrated Parquet rows."""
 
-    def line_program_for_unit(self, unit_offset: int) -> StoreLineProgram | None:
-        """Reconstruct a CU line program through the typed line table."""
-        return build_line_program(
-            self._payload_rows({"record_type": "line", "unit_offset": unit_offset})
-        )
+    def __init__(
+        self,
+        manifest_path: Path,
+        manifest: MaterializationManifest,
+        *,
+        selection_cache: SymbolCachePort | None = None,
+    ) -> None:
+        super().__init__(manifest_path, manifest, selection_cache=selection_cache)
+        self.persistent_cache = _MaterializedCache(self)
 
     def get_compilation_unit(self, unit_offset: int) -> QueryResult:
-        return _result(
-            self.compilation_unit_by_offset_or_none(unit_offset),
-            self.manifest_path,
-            self.manifest.status,
-        )
+        try:
+            return _result(
+                self.compilation_unit_by_offset_or_none(unit_offset),
+                self.manifest_path,
+                self.manifest.status,
+            )
+        except Exception as error:
+            return _unavailable(error, self.manifest_path)
 
     def get_die(self, die_offset: int) -> QueryResult:
-        return _result(self.die_by_offset(die_offset), self.manifest_path, self.manifest.status)
+        try:
+            return _result(self.die_by_offset(die_offset), self.manifest_path, self.manifest.status)
+        except Exception as error:
+            return _unavailable(error, self.manifest_path)
 
     def find_definitions(
         self,
@@ -86,12 +99,9 @@ class ParquetStoreQueries(_ParquetStoreAccess):
         qualified_name: str | None = None,
         tags: frozenset[str] | None = None,
     ) -> QueryResult:
-        cache = getattr(self, "_definition_query_cache", None)
-        if cache is None:
-            cache = {}
-            self._definition_query_cache = cache
+        cache = self._definition_query_cache
         cache_key = (name, qualified_name, tags)
-        cached_result = cache.get(cache_key)
+        cached_result = cache.lookup(cache_key)
         if cached_result is not None:
             return cached_result
         filters: dict[str, Any] = {
@@ -101,10 +111,14 @@ class ParquetStoreQueries(_ParquetStoreAccess):
         }
         if tags:
             filters["tag"] = tuple(sorted(tags))
-        records = sorted(
-            self._payload_rows(filters),
-            key=_record_sort_key,
+        records = self._payload_rows(
+            filters,
+            limit=_DEFINITION_QUERY_LIMIT + 1,
+            order_key=_record_sort_key,
         )
+        truncated = len(records) > _DEFINITION_QUERY_LIMIT
+        records.sort(key=_record_sort_key)
+        records = records[:_DEFINITION_QUERY_LIMIT]
         items = tuple(
             die
             for die in self._dies_for_index_records(records)
@@ -114,10 +128,17 @@ class ParquetStoreQueries(_ParquetStoreAccess):
         items = prefer_cached_definition(
             name,
             tuple(sorted(items, key=_definition_sort_key)),
-            getattr(self, "_selection_cache", None),
+            self._selection_cache,
         )
-        status = _query_status(bool(items), self.manifest.status)
-        result = QueryResult(status, items, (str(self.manifest_path),))
+        status = _query_status(bool(items), self.manifest.status, truncated=truncated)
+        diagnostics = ("definition query reached its safety bound",) if truncated else ()
+        result = QueryResult(
+            status,
+            items,
+            (str(self.manifest_path),),
+            diagnostics,
+            truncated,
+        )
         cache[cache_key] = result
         return result
 
@@ -128,7 +149,7 @@ class ParquetStoreQueries(_ParquetStoreAccess):
         qualified_name: str | None = None,
         tags: frozenset[str] | None = None,
     ) -> QueryResult:
-        cache = getattr(self, "_selection_cache", None)
+        cache = self._selection_cache
         offset = (
             cache.get_symbol_offset(name)
             if cache is not None and qualified_name is None and tags is None
@@ -153,14 +174,12 @@ class ParquetStoreQueries(_ParquetStoreAccess):
             result.items[:1],
             result.provenance,
             result.diagnostics,
+            result.truncated,
         )
 
     def _prime_child_tag_counts(self, dies: Iterable[StoreDie]) -> None:
         """Hydrate definition-ranking child counts with one projected DIE scan."""
-        cache = getattr(self, "_child_tag_counts", None)
-        datasets = getattr(self, "_datasets", None)
-        if not isinstance(cache, dict) or not isinstance(datasets, dict):
-            return
+        cache = self._child_tag_counts
         items = tuple(dies)
         offsets = _uncached_definition_offsets(items, cache)
         if not offsets:
@@ -169,9 +188,7 @@ class ParquetStoreQueries(_ParquetStoreAccess):
         for die in items:
             if die.offset not in offsets:
                 continue
-            unit_offset = getattr(getattr(die, "cu", None), "cu_offset", None)
-            if not isinstance(unit_offset, int):
-                continue
+            unit_offset = die.cu.cu_offset
             unit_offsets, parent_offsets = grouped.setdefault(
                 unit_offset // UNIT_BUCKET_SIZE, (set(), set())
             )
@@ -191,10 +208,6 @@ class ParquetStoreQueries(_ParquetStoreAccess):
 
     def _dies_for_index_records(self, records: list[dict[str, Any]]) -> tuple[StoreDie, ...]:
         """Hydrate indexed DIEs with one batched DIE and attribute scan."""
-        if not hasattr(self, "_die_cache"):
-            return tuple(
-                die for record in records if (die := self._die_for_index_record(record)) is not None
-            )
         key_sequence = tuple(
             key for record in records if (key := _index_die_key(record)) is not None
         )
@@ -288,64 +301,65 @@ class ParquetStoreQueries(_ParquetStoreAccess):
         )
 
     def find_method_implementation(self, declaration_offset: int) -> QueryResult:
-        records = sorted(
-            self._payload_rows(
-                {
-                    "record_type": "index",
-                    "index_type": "method_implementation",
-                    "target_offset": declaration_offset,
-                }
-            ),
-            key=_record_sort_key,
-        )
-        for record in records:
-            if (
-                _optional_int(record.get("die_offset")) is not None
-                and record.get("resolution_status") == QueryStatus.COMPLETE.value
-            ):
-                die = self._die_for_index_record(record)
-                if die is None:
-                    continue
-                return QueryResult(
-                    _query_status(True, self.manifest.status),
-                    (die,),
-                    (str(self.manifest_path),),
-                )
-        return QueryResult(
-            _query_status(False, self.manifest.status),
-            (),
-            (str(self.manifest_path),),
-        )
+        try:
+            records = sorted(
+                self._payload_rows(
+                    {
+                        "record_type": "index",
+                        "index_type": "method_implementation",
+                        "target_offset": declaration_offset,
+                    }
+                ),
+                key=_record_sort_key,
+            )
+            for record in records:
+                if (
+                    _optional_int(record.get("die_offset")) is not None
+                    and record.get("resolution_status") == QueryStatus.COMPLETE.value
+                ):
+                    die = self._die_for_index_record(record)
+                    if die is None:
+                        continue
+                    return QueryResult(
+                        _query_status(True, self.manifest.status),
+                        (die,),
+                        (str(self.manifest_path),),
+                    )
+            return QueryResult(
+                _query_status(False, self.manifest.status),
+                (),
+                (str(self.manifest_path),),
+            )
+        except Exception as error:
+            return _unavailable(error, self.manifest_path)
 
     def children(self, die_offset: int) -> QueryResult:
-        items = tuple(self.children_for_die(die_offset))
-        status = _query_status(bool(items), self.manifest.status)
-        return QueryResult(status, items, (str(self.manifest_path),))
+        try:
+            items = tuple(self.children_for_die(die_offset))
+            status = _query_status(bool(items), self.manifest.status)
+            return QueryResult(status, items, (str(self.manifest_path),))
+        except Exception as error:
+            return _unavailable(error, self.manifest_path)
 
     def parent(self, die_offset: int) -> QueryResult:
-        die = self.die_by_offset(die_offset)
-        parent = die.get_parent() if die is not None else None
-        return _result(parent, self.manifest_path, self.manifest.status)
+        try:
+            die = self.die_by_offset(die_offset)
+            parent = die.get_parent() if die is not None else None
+            return _result(parent, self.manifest_path, self.manifest.status)
+        except Exception as error:
+            return _unavailable(error, self.manifest_path)
 
     def references(self, die_offset: int) -> QueryResult:
-        items = tuple(
-            self._payload_rows(
-                self._die_scoped_filters("reference", die_offset, die_offset=die_offset)
+        try:
+            items = tuple(
+                self._payload_rows(
+                    self._die_scoped_filters("reference", die_offset, die_offset=die_offset)
+                )
             )
-        )
-        status = _query_status(bool(items), self.manifest.status)
-        return QueryResult(status, items, (str(self.manifest_path),))
-
-    def _count_records(self, record_type: str) -> int:
-        cached = self._counts.get(record_type)
-        if cached is None:
-            dataset = self._datasets.get(record_type)
-            cached = int(dataset.count_rows()) if dataset is not None else 0
-            self._counts[record_type] = cached
-        return cached
-
-    def _payload_rows(self, filters: dict[str, Any]) -> list[dict[str, Any]]:
-        return [restore_record(row) for row in self._rows(filters)]
+            status = _query_status(bool(items), self.manifest.status)
+            return QueryResult(status, items, (str(self.manifest_path),))
+        except Exception as error:
+            return _unavailable(error, self.manifest_path)
 
     def _attribute_rows_by_unit(self, keys: Iterable[tuple[int, int]]) -> list[dict[str, Any]]:
         grouped: dict[int, set[int]] = {}
@@ -377,26 +391,6 @@ class ParquetStoreQueries(_ParquetStoreAccess):
             return self._attribute_rows_batch(
                 unit_offset, die_offsets[:midpoint]
             ) + self._attribute_rows_batch(unit_offset, die_offsets[midpoint:])
-
-    def _rows(
-        self,
-        filters: dict[str, Any],
-        columns: tuple[str, ...] | None = None,
-    ) -> list[dict[str, Any]]:
-        kind = filters.get("record_type")
-        if not isinstance(kind, str):
-            raise ValueError("Parquet queries must select one record family")
-        dataset = self._datasets.get(kind)
-        if dataset is None:
-            return []
-        available = set(dataset.schema.names)
-        effective_filters = _effective_filters(
-            filters, self.manifest.source_identity.sha256, available
-        )
-        expression = _filter_expression(self._dataset_module, effective_filters)
-        selected = _selected_columns(dataset, columns, available)
-        table = _read_table(dataset, expression, selected)
-        return table.to_pylist()
 
     def compilation_unit_by_offset_or_none(self, unit_offset: int) -> StoreCompilationUnit | None:
         try:

@@ -14,7 +14,7 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import (
     TypeDeclarator,
     TypeReference,
 )
-from ddon_dwarf_reconstructor.domain.services.generation import HeaderGenerator
+from ddon_dwarf_reconstructor.domain.services.generation import HeaderRenderer
 
 
 class TestHeaderGenerator:
@@ -28,7 +28,7 @@ class TestHeaderGenerator:
     @pytest.fixture
     def header_generator(self, mock_dwarf_index):
         """HeaderGenerator instance with mock dwarf_index."""
-        return HeaderGenerator(mock_dwarf_index)
+        return HeaderRenderer(mock_dwarf_index)
 
     @pytest.fixture
     def sample_class(self):
@@ -134,7 +134,7 @@ class TestHeaderGenerator:
         assert "class cDialogPage" in header
         assert "template <typename T> class MtTypedArray;" in header
         assert "class MtTypedArray<rTutorialDialogMessage::cDialogPage>;" not in header
-        assert "MtTypedArray<rTutorialDialogMessage::cDialogPage> m_page_info;" in header
+        assert "MtTypedArray<cDialogPage> m_page_info;" in header
 
     @pytest.mark.unit
     def test_generate_header_declares_template_argument_from_structured_evidence(
@@ -198,6 +198,45 @@ class TestHeaderGenerator:
 
         # Should include inheritance syntax
         assert "class DerivedClass : public BaseClass" in header
+
+    @pytest.mark.unit
+    def test_hierarchy_qualifies_nested_base_from_die_identity(self, header_generator):
+        """Nested bases use their enclosing aggregate when rendered out of scope."""
+        nested_base = ClassInfo(
+            name="cInGameGroupManager",
+            byte_size=64,
+            members=[],
+            methods=[],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x2000,
+            qualified_name="cZoneLayout::cInGameGroupManager",
+            containing_type="cZoneLayout",
+        )
+        derived_class = ClassInfo(
+            name="cGroupManager",
+            byte_size=32,
+            members=[],
+            methods=[],
+            base_classes=["cInGameGroupManager"],
+            base_class_offsets=[0x2000],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x3000,
+        )
+
+        header = header_generator.generate_single_file_hierarchy_header(
+            {"cGroupManager": derived_class},
+            ["cGroupManager"],
+            "cGroupManager",
+            include_metadata=False,
+            base_type_infos={"cInGameGroupManager": nested_base},
+        )
+
+        assert "class cGroupManager : public cZoneLayout::cInGameGroupManager" in header
 
     @pytest.mark.unit
     def test_generate_single_file_hierarchy_header_empty(self, header_generator):
@@ -312,6 +351,16 @@ class TestHeaderGenerator:
 
 @pytest.mark.unit
 def test_template_forward_declaration_matches_multiple_argument_arity() -> None:
-    declaration = HeaderGenerator._template_forward_declaration("Box<Pair<int, float>, 4>")
+    declaration = HeaderRenderer._template_forward_declaration("Box<Pair<int, float>, 4>")
 
     assert declaration == "template <typename T, auto N1> class Box;"
+
+
+@pytest.mark.unit
+def test_nested_template_arguments_use_template_forward_declarations() -> None:
+    declarations = HeaderRenderer._template_argument_forward_declarations(
+        "MtStlVector<s8, MtStlAllocator<signed char>>", set()
+    )
+
+    assert "template <typename T> class MtStlAllocator;" in declarations
+    assert "class MtStlAllocator;" not in declarations

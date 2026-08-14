@@ -6,12 +6,32 @@ from typing import cast
 
 from ...core.dwarf import DwarfCompilationUnit, DwarfEntry, compilation_unit_length
 from ...core.observability import get_logger
+from ...domain.models.analytical_dwarf import QueryResult, QueryStatus
 from .lazy_index_context import LazyIndexContext
 
 logger = get_logger(__name__)
 
 
 class LazyIndexLookupMixin:
+    def find_definition_tag(self: LazyIndexContext, symbol_name: str) -> QueryResult:
+        """Return an aggregate tag only from complete offset evidence."""
+        offset = self.find_symbol_offset(symbol_name)
+        if offset is None:
+            search = self.targeted_symbol_search(symbol_name)
+            if search.status.value != QueryStatus.COMPLETE.value or search.die_offset is None:
+                return QueryResult(
+                    QueryStatus(search.status.value),
+                    diagnostics=search.diagnostics,
+                )
+            offset = search.die_offset
+        die = self.get_die_by_offset(offset)
+        tag = getattr(die, "tag", None)
+        return (
+            QueryResult(QueryStatus.COMPLETE, (tag,))
+            if isinstance(tag, str)
+            else QueryResult(QueryStatus.NOT_FOUND)
+        )
+
     def find_symbol_offset(self: LazyIndexContext, symbol_name: str) -> int | None:
         """Look up a symbol in the persistent index."""
         return self.persistent_cache.get_symbol_offset(symbol_name)

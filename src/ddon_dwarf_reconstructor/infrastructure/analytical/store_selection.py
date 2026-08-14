@@ -4,13 +4,20 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from pathlib import Path
-from typing import TypeVar
+from typing import Protocol, TypeVar
 
 from ...domain.models.analytical_dwarf import MaterializationManifest
 from ...domain.ports.cache import SymbolCachePort
 from ...domain.repositories.cache import PersistentSymbolCache
 
-_Item = TypeVar("_Item")
+
+class _OffsetItem(Protocol):
+    """Minimum materialized definition shape needed for cache reordering."""
+
+    offset: int
+
+
+_Item = TypeVar("_Item", bound=_OffsetItem)
 
 
 def load_selection_cache(
@@ -57,11 +64,7 @@ def prefer_cached_definition(
     if not isinstance(preferred_offset, int):
         return ordered
     preferred_index = next(
-        (
-            index
-            for index, item in enumerate(ordered)
-            if getattr(item, "offset", None) == preferred_offset
-        ),
+        (index for index, item in enumerate(ordered) if item.offset == preferred_offset),
         None,
     )
     if preferred_index is None or preferred_index == 0:

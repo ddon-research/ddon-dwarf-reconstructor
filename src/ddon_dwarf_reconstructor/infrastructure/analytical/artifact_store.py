@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .jsonl_store import JsonlDwarfStore
 from .manifest import load_manifest
+from .materialized_views import MaterializedStorePort
 
 
 def load_analytical_store(
@@ -17,15 +18,22 @@ def load_analytical_store(
     verify_artifacts: bool = False,
     selection_cache_path: Path | None = None,
     selection_source_fingerprint: dict[str, int | str] | None = None,
-) -> JsonlDwarfStore:
+) -> MaterializedStorePort:
     """Load a JSONL/Parquet artifact explicitly outside generation."""
     manifest = load_manifest(manifest_path.resolve())
-    store_type: type[JsonlDwarfStore] = JsonlDwarfStore
     if "parquet" in manifest.files:
         from .parquet_store import ParquetDwarfStore
 
-        store_type = ParquetDwarfStore
-    return store_type.load(
+        return ParquetDwarfStore.load(
+            manifest_path,
+            verify_source=verify_source,
+            source_path=source_path,
+            allow_incomplete=allow_incomplete,
+            verify_artifacts=verify_artifacts,
+            selection_cache_path=selection_cache_path,
+            selection_source_fingerprint=selection_source_fingerprint,
+        )
+    return JsonlDwarfStore.load(
         manifest_path,
         verify_source=verify_source,
         source_path=source_path,

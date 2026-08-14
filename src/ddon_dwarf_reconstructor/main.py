@@ -5,12 +5,13 @@ from __future__ import annotations
 import re
 import sys
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
 from logging import Logger
 from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
 
+from .application.generation.completeness import reject_source_bound_placeholder
+from .application.generation.options import GenerationOptions
 from .application.generators import (
     DwarfGenerator,
     GenerationOutcome,
@@ -19,7 +20,6 @@ from .application.generators import (
 )
 from .application.generators.session import DwarfSessionFactory
 from .core.observability import bind_context, get_logger, log_event, log_exception
-from .core.platform import ELFPlatform
 from .domain.models.tool_evidence import ToolExport
 from .generation_state import GenerationState as _GenerationState
 from .infrastructure.artifacts import SourceIdentityCatalog
@@ -32,28 +32,6 @@ from .infrastructure.config import Config, DwarfRuntimeConfig, get_cache_file_pa
 from .infrastructure.header_output import AtomicHeaderPublisher
 from .infrastructure.logging import LoggerSetup
 from .infrastructure.toolchain_exports import load_tool_exports
-
-
-@dataclass(frozen=True, slots=True)
-class GenerationOptions:
-    """Typed options accepted by the generation and knowledge-export commands."""
-
-    elf_file: Path
-    symbols: tuple[str, ...] = ()
-    symbols_file: Path | None = None
-    output: Path | None = None
-    verbose: bool = False
-    full_hierarchy: bool = False
-    single_file: bool = False
-    exhaustive: bool = False
-    dwarf_dump: Path | None = None
-    dwarf_index: Path | None = None
-    dwarf_store_manifest: Path | None = None
-    export_knowledge: Path | None = None
-    build_id: str | None = None
-    orbis_objdump: Path | None = None
-    resolve_param_names: bool = False
-    tool_export_manifests: tuple[Path, ...] = ()
 
 
 class HeaderCollisionError(ValueError):
@@ -225,9 +203,21 @@ def _generate_symbols(
 ) -> None:
     for index, symbol_name in enumerate(symbols, 1):
         with bind_context(symbol=symbol_name, symbol_index=index, symbol_count=len(symbols)):
-            _generate_symbol(
-                options, config, generator, symbols, logger, tool_exports, state, index, symbol_name
-            )
+            generator.begin_root(symbol_name)
+            try:
+                _generate_symbol(
+                    options,
+                    config,
+                    generator,
+                    symbols,
+                    logger,
+                    tool_exports,
+                    state,
+                    index,
+                    symbol_name,
+                )
+            finally:
+                generator.end_root()
 
 
 def _generate_symbol(
@@ -286,6 +276,7 @@ def _generate_symbol_headers(
         _process_symbol(options, config, generator, symbol_name, symbols, logger, tool_exports)
         return {}
     generated_headers = _build_headers(options, generator, symbol_name)
+    reject_source_bound_placeholder(options, generated_headers, symbol_name)
     if state.separate_symbol_bundles:
         state.pending_bundles.append((index, symbol_name, generated_headers))
     else:
@@ -295,8 +286,7 @@ def _generate_symbol_headers(
             generated_headers,
             symbol_name,
         )
-    if generator.lazy_index is not None:
-        generator.lazy_index.save_cache()
+    generator.save_cache()
     return generated_headers
 
 
@@ -343,7 +333,10 @@ def _process_symbol(
 ) -> None:
     if options.export_knowledge:
         build_id = options.build_id or f"{generator.platform.value}-{config.elf_file_path.stem}"
-        generator.export_knowledge_graph(
+        facade = generator.facade
+        if facade is None:
+            raise RuntimeError("generation facade is unavailable outside an open session")
+        facade.export_knowledge_graph(
             symbol_name,
             options.export_knowledge,
             build_id,
@@ -353,8 +346,7 @@ def _process_symbol(
         return
     headers = _build_headers(options, generator, symbol_name)
     total_bytes = _write_headers(config, generator, headers, logger)
-    if generator.lazy_index is not None:
-        generator.lazy_index.save_cache()
+    generator.save_cache()
     _log_header_summary(options, headers, total_bytes, symbols, logger)
 
 
@@ -473,10 +465,8 @@ def _write_headers(
     metadata: Mapping[str, object] | None = None,
     output_dir: Path | None = None,
 ) -> int:
-    platform = getattr(generator, "platform", None)
-    output_platform = platform if isinstance(platform, ELFPlatform) else ELFPlatform.UNKNOWN
     platform_dir, total_bytes = AtomicHeaderPublisher().publish(
-        output_dir or config.output_dir, output_platform, headers, metadata=metadata
+        output_dir or config.output_dir, generator.platform, headers, metadata=metadata
     )
     filenames = sorted(headers)
     log_event(
@@ -556,15 +546,14 @@ def run_generation(options: GenerationOptions) -> int:
     run_id = uuid4().hex
     command = "export-knowledge" if options.export_knowledge else "generate"
     try:
-        LoggerSetup.initialize(Path("logs"), verbose=options.verbose)
+        config = _load_config(options)
+        LoggerSetup.initialize(config.log_dir, verbose=config.verbose)
         with bind_context(
             run_id=run_id,
             command=command,
             input_path=options.elf_file,
             output_path=options.output,
         ):
-            config = _load_config(options)
-            LoggerSetup.initialize(config.log_dir, verbose=config.verbose)
             config.ensure_output_dir()
             symbols = _read_symbols(options, logger)
             _validate_store_options(options)

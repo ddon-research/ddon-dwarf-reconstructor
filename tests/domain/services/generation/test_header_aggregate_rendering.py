@@ -10,12 +10,12 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import (
     StructInfo,
     UnionInfo,
 )
-from ddon_dwarf_reconstructor.domain.services.generation import HeaderGenerator
+from ddon_dwarf_reconstructor.domain.services.generation import HeaderRenderer
 
 
 @pytest.mark.unit
 def test_inline_anonymous_aggregate_member_is_valid_cpp() -> None:
-    generator = HeaderGenerator(Mock())
+    generator = HeaderRenderer(Mock())
     class_info = ClassInfo(
         name="DataFormat",
         byte_size=4,

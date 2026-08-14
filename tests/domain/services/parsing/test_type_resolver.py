@@ -32,6 +32,17 @@ def test_initialization_and_hierarchy_expansion(resolver: LazyTypeResolver) -> N
 
 
 @pytest.mark.unit
+@pytest.mark.regression
+@pytest.mark.parametrize(("alias", "expected"), [("f64", "double"), ("s64", "long int")])
+def test_source_primitive_aliases_do_not_require_bounded_name_queries(
+    resolver: LazyTypeResolver, index: Mock, alias: str, expected: str
+) -> None:
+    assert resolver._resolve_primitive_typedef(alias) == expected
+    index.find_symbol_offset.assert_not_called()
+    index.targeted_symbol_search.assert_not_called()
+
+
+@pytest.mark.unit
 @pytest.mark.functional
 def test_named_type_resolution_is_cached(resolver: LazyTypeResolver) -> None:
     source = Mock(tag="DW_TAG_member")

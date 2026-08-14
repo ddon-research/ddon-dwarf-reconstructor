@@ -6,21 +6,20 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from ...domain.ports.cache import SymbolCachePort
+from ...domain.services.definition_selection import NestedTypeCounts
 from .json_codec import untag_value
 from .jsonl_models import DieData, StoreAttribute
 from .line_program import StoreLineProgram
-
-if TYPE_CHECKING:
-    from .jsonl_store import JsonlDwarfStore
+from .materialized_views import MaterializedQueryPort, MaterializedStorePort
 
 
 class StoreCompilationUnit:
     """Generator-compatible compilation unit reconstructed from store rows."""
 
-    def __init__(self, store: JsonlDwarfStore, record: dict[str, Any]) -> None:
+    def __init__(self, store: MaterializedStorePort, record: dict[str, Any]) -> None:
         self._store = store
         self.cu_offset = int(record.get("unit_offset", 0))
         self.header = untag_value(record.get("header", {}))
@@ -44,7 +43,7 @@ class StoreCompilationUnit:
 class StoreDie:
     """Generator-compatible DIE reconstructed from normalized records."""
 
-    def __init__(self, store: JsonlDwarfStore, data: DieData) -> None:
+    def __init__(self, store: MaterializedStorePort, data: DieData) -> None:
         self._store = store
         self._data = data
         self.tag = data.tag
@@ -84,6 +83,10 @@ class StoreDie:
     def is_null(self) -> bool:
         return self._data.is_null
 
+    def child_tag_counts(self) -> NestedTypeCounts:
+        """Return ranking counts through the store view boundary."""
+        return self._store.child_tag_counts(self.offset)
+
 
 class _EmptyLineProgram:
     """Explicit empty line-program view when line records are unavailable."""
@@ -94,7 +97,7 @@ class _EmptyLineProgram:
 class StoreDwarfInfo:
     """DwarfInfo protocol implemented by the materialized store."""
 
-    def __init__(self, store: JsonlDwarfStore) -> None:
+    def __init__(self, store: MaterializedStorePort) -> None:
         self._store = store
 
     def iter_CUs(self) -> Iterable[StoreCompilationUnit]:
@@ -112,7 +115,7 @@ class StoreDwarfInfo:
 class _MaterializedCache(SymbolCachePort):
     """Non-persistent cache view because the store itself is already durable."""
 
-    def __init__(self, store: JsonlDwarfStore) -> None:
+    def __init__(self, store: MaterializedQueryPort) -> None:
         self._store = store
 
     def get_symbol_offset(self, symbol_name: str) -> int | None:

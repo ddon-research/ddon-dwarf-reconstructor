@@ -20,6 +20,7 @@ from ddon_dwarf_reconstructor.infrastructure.analytical import (
     MaterializedDwarfIndex,
     ParquetDwarfStore,
 )
+from ddon_dwarf_reconstructor.infrastructure.analytical.artifact_store import load_analytical_store
 from ddon_dwarf_reconstructor.infrastructure.analytical.manifest import (
     declared_parquet_files,
     validate_manifest_files,
@@ -31,7 +32,6 @@ from ddon_dwarf_reconstructor.infrastructure.analytical.parquet_rows import (
     restore_record,
     schema_for,
 )
-from ddon_dwarf_reconstructor.infrastructure.analytical.session import load_analytical_store
 from ddon_dwarf_reconstructor.infrastructure.artifacts import SourceIdentityCatalog
 from tests.infrastructure.test_analytical_store import _fixture_dwarf, _Session
 
@@ -399,8 +399,6 @@ def test_jsonl_and_parquet_stores_generate_byte_identical_headers(tmp_path: Path
     assert parquet_manifest is not None
 
     class _ArtifactSession:
-        legacy_lookup_allowed = True
-
         def __init__(self, manifest: Path) -> None:
             self.manifest = manifest
             self.store = None
@@ -424,6 +422,12 @@ def test_jsonl_and_parquet_stores_generate_byte_identical_headers(tmp_path: Path
             self.dwarf_info = None
             self.query_port = None
             self.query_index = None
+
+        def begin_root(self, _root_symbol: str) -> None:
+            return
+
+        def end_root(self) -> None:
+            return
 
     def generate(manifest: Path, cache_file: Path) -> str:
         with DwarfGenerator(

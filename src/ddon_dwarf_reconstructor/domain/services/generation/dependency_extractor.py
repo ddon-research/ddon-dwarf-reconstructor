@@ -65,6 +65,9 @@ class DependencyExtractor:
         self, class_info: ClassInfo, include_method_signatures: bool
     ) -> set[int]:
         dependencies: set[int] = set()
+        dependencies.update(
+            offset for offset in class_info.base_class_offsets if offset is not None
+        )
         for member in class_info.members:
             dependencies.update(self._get_member_dependency_offsets(member))
         if include_method_signatures:

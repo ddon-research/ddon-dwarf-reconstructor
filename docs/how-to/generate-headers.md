@@ -47,14 +47,16 @@ as a complete corpus.
 
 ## What happens inside
 
-1. `DwarfGeneratorSetup` opens a source-bound Doris session and its query/index ports.
-2. `DwarfGenerator` resolves definitions, types, methods, members, and hierarchy information
+1. The composition root constructs a typed `GenerationFacade` and a `GenerationRuntime` with one
+  explicit resource scope.
+2. `GenerationRuntime` resolves definitions, types, methods, members, and hierarchy information
   from the Doris serving projection; it does not implicitly traverse the ELF or read the
   Parquet/JSONL materialization directly.
-3. `HeaderGenerator` renders deterministic declarations with stable ordering and forward
-   declarations where required.
+3. `HeaderRenderer` renders deterministic declarations with stable ordering and forward
+  declarations where required.
 4. `AtomicHeaderPublisher` stages the bundle, writes its manifest, and commits or rolls back as a
-   unit.
+  unit. A partial, unavailable, or unresolved source-bound full-hierarchy result is recorded as an
+  error and cannot publish `UncategorizedDefinitions.h` as a successful bundle.
 
 The implementation preserves qualified names, inheritance, field offsets, sizes, source
 locations, DIE/CU provenance, and deterministic output ordering. A partial search result is not

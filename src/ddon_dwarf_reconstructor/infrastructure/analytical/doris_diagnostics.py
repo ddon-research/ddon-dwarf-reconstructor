@@ -351,7 +351,7 @@ class DorisDiagnosticRecorder:
             "manifest_path": None if self.manifest_path is None else str(self.manifest_path),
             "database": self.config.database,
             "base_table": self.config.table,
-            "definition_lookup_table": self.config.definition_lookup_table,
+            "definition_lookup_table": self.config.effective_definition_lookup_table,
             "doris_version": version,
             "tables": tables,
             "schema_snapshot_sha256": snapshot,

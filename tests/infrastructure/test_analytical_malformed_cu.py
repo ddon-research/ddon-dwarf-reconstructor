@@ -18,7 +18,7 @@ from ddon_dwarf_reconstructor.domain.models.analytical_dwarf import (
     QueryStatus,
 )
 from ddon_dwarf_reconstructor.infrastructure.analytical import DwarfMaterializer
-from ddon_dwarf_reconstructor.infrastructure.analytical.session import load_analytical_store
+from ddon_dwarf_reconstructor.infrastructure.analytical.artifact_store import load_analytical_store
 from ddon_dwarf_reconstructor.infrastructure.artifacts import SourceIdentityCatalog
 
 pytestmark = [pytest.mark.unit, pytest.mark.functional]

@@ -17,8 +17,8 @@ services:
       default:
         ipv4_address: 172.31.240.2
     ports:
-      - "8030:8030"
-      - "9030:9030"
+      - "${DDON_DORIS_HTTP_HOST_PORT:-8030}:8030"
+      - "${DDON_DORIS_SQL_HOST_PORT:-9030}:9030"
     volumes:
       - ${DDON_DORIS_FE_DATA:-../../output/analytical-dwarf/warehouse/doris-fe-4.1.3}:/opt/apache-doris/fe/doris-meta
       - ${DDON_DORIS_FE_LOG:-../../output/analytical-dwarf/warehouse/doris-fe-4.1.3-log}:/opt/apache-doris/fe/log
@@ -35,7 +35,7 @@ services:
       default:
         ipv4_address: 172.31.240.3
     ports:
-      - "8040:8040"
+      - "${DDON_DORIS_BE_HTTP_HOST_PORT:-8040}:8040"
     volumes:
       - ${DDON_DORIS_BE_DATA:-../../output/analytical-dwarf/warehouse/doris-be-4.1.3}:/opt/apache-doris/be/storage
       - ${DDON_DORIS_BE_LOG:-../../output/analytical-dwarf/warehouse/doris-be-4.1.3-log}:/opt/apache-doris/be/log

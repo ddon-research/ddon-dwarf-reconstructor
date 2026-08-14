@@ -12,8 +12,8 @@ from ....artifacts import SourceIdentityCatalog
 from ....performance import PerformanceRunner
 from ...doris import DorisConfig
 from ...doris_diagnostics import DorisDiagnosticRecorder
-from ...doris_optimization import DorisServingVariant
 from ...doris_optimization_utils import json_default
+from ...doris_serving_profile import DorisServingProfile
 from ...doris_statistics import collect_statistics_evidence
 from ...doris_store import DorisDwarfStore
 from ...manifest import (
@@ -251,7 +251,7 @@ def _build_report(
         "status": _overall_status(serving_validation, query_contract, doris_diagnostics, runs),
         "workload": "current-doris",
         "backend": _backend_report(config),
-        "serving_variant": DorisServingVariant.from_config(
+        "serving_variant": DorisServingProfile.from_config(
             config,
             source_id=manifest.source_identity.sha256,
             schema_version=manifest.schema_version,
@@ -288,7 +288,7 @@ def _backend_report(config: DorisConfig) -> dict[str, Any]:
         "type": "native_doris",
         "database": config.database,
         "table": config.table,
-        "definition_lookup_table": config.definition_lookup_table,
+        "definition_lookup_table": config.effective_definition_lookup_table,
         "materialize_store": "not_observed",
         "load_store": "not_observed",
     }

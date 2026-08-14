@@ -9,6 +9,9 @@ from types import SimpleNamespace
 import pytest
 
 from ddon_dwarf_reconstructor.domain.models.analytical_dwarf import QueryStatus
+from ddon_dwarf_reconstructor.infrastructure.analytical.bounded_query_cache import (
+    BoundedQueryCache,
+)
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris import DorisConfig
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris_hydration import (
     attribute_projection_columns,
@@ -16,10 +19,14 @@ from ddon_dwarf_reconstructor.infrastructure.analytical.doris_hydration import (
     prime_child_tag_counts,
 )
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris_models import DorisDwarfInfo
-from ddon_dwarf_reconstructor.infrastructure.analytical.doris_queries import DorisQueryExecutor
-from ddon_dwarf_reconstructor.infrastructure.analytical.doris_registry import validate_registry
-from ddon_dwarf_reconstructor.infrastructure.analytical.doris_rows import restore_row
+from ddon_dwarf_reconstructor.infrastructure.analytical.doris_queries import (
+    BoundedRows,
+    DorisQueryExecutor,
+)
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris_store import DorisDwarfStore
+from ddon_dwarf_reconstructor.infrastructure.analytical.doris_store_queries import (
+    DorisStoreQueryOperations,
+)
 
 SOURCE_ID = "a" * 64
 
@@ -73,7 +80,9 @@ class _StoreStub(DorisDwarfStore):
             )
         )
         self._config = DorisConfig(database="analytical", table="dwarf")
+        self._name_lookup_table = self._config.effective_name_lookup_table
         self._source_id = SOURCE_ID
+        self._selection_cache = None
         self.query_log: list[tuple[str, object]] = []
         self.operation_log: list[str] = []
 
@@ -84,13 +93,32 @@ class _StoreStub(DorisDwarfStore):
             order_by: object = (),
             limit: int | None = None,
             operation: str = "family_rows",
+            table_name: str | None = None,
         ) -> tuple[dict[str, object], ...]:
-            del columns, order_by
+            del columns, order_by, table_name
             self.operation_log.append(operation)
             self.query_log.append((family, filters))
             return tuple(_filter_rows(rows.get(family, []), filters, limit))
 
-        self._selection_cache = None
+        def find_definition_rows_bounded(
+            name: str,
+            *,
+            tags: Sequence[str] = (),
+            limit: int = 1001,
+        ) -> BoundedRows:
+            filters = {"index_type": "definition", "name": name}
+            if tags:
+                filters["tag"] = tuple(tags)
+            found = family_rows(
+                "index",
+                filters,
+                order_by=("unit_offset", "die_offset"),
+                limit=limit,
+                table_name=self._name_lookup_table,
+                operation="find_definitions",
+            )
+            return BoundedRows(found, len(found) >= limit)
+
         self._units = {}
         self._dies = {}
         self._die_unit_offsets = {}
@@ -103,9 +131,13 @@ class _StoreStub(DorisDwarfStore):
         self._attribute_projection = "full"
         self._child_tag_filter = "all"
         self._hydration_scope = "global"
-        self._definition_query_cache = {}
+        self._cache_hits = 0
+        self._cache_misses = 0
+        self._definition_query_cache = BoundedQueryCache()
         self._definition_name_count = None
+        self._query_operations = DorisStoreQueryOperations(self)
         self._queries.family_rows = family_rows
+        self._queries.find_definition_rows_bounded = find_definition_rows_bounded
         self.dwarf_info = DorisDwarfInfo(self)
         self.persistent_cache = SimpleNamespace()
 
@@ -182,6 +214,42 @@ def test_doris_store_hydrates_attributes_children_references_and_dwarf_info() ->
     assert sum(family == "line" for family, _filters in store.query_log) == 1
     assert "find_definitions" in store.operation_log
     assert "hydrate_die_attributes" in store.operation_log
+
+
+@pytest.mark.unit
+@pytest.mark.functional
+def test_doris_definition_query_propagates_backend_unavailability() -> None:
+    store = _StoreStub(_runtime_rows())
+
+    def unavailable(*_args: object, **_kwargs: object) -> BoundedRows:
+        raise OSError("Doris backend unavailable")
+
+    store._queries.find_definition_rows_bounded = unavailable
+
+    result = store.find_definitions("Thing")
+
+    assert result.status is QueryStatus.UNAVAILABLE
+    assert result.items == ()
+    assert "backend unavailable" in result.diagnostics[0]
+    assert store.find_definitions("Thing") is result
+
+
+@pytest.mark.unit
+@pytest.mark.functional
+def test_doris_definition_query_retains_truncation_evidence() -> None:
+    store = _StoreStub(_runtime_rows())
+
+    def truncated(*_args: object, **_kwargs: object) -> BoundedRows:
+        return BoundedRows((_index_row(),), True)
+
+    store._queries.find_definition_rows_bounded = truncated
+
+    result = store.find_definitions("Thing")
+
+    assert result.status is QueryStatus.PARTIAL
+    assert result.truncated is True
+    assert result.items
+    assert result.diagnostics == ("definition query reached its safety bound",)
 
 
 @pytest.mark.unit
@@ -379,23 +447,6 @@ def _prefetch_rows() -> dict[str, list[dict[str, object]]]:
     }
 
 
-@pytest.mark.unit
-@pytest.mark.functional
-def test_restore_row_converts_doris_largeint_uint_strings() -> None:
-    row = {
-        "record_type": "attribute",
-        "decoded_value_kind": "uint",
-        "decoded_value_uint": "8",
-        "raw_value_kind": "uint",
-        "raw_value_uint": "8",
-    }
-
-    restored = restore_row(row)
-
-    assert restored["decoded_value"] == 8
-    assert restored["raw_value"] == 8
-
-
 def _runtime_rows() -> dict[str, list[dict[str, object]]]:
     return {
         "unit": [_unit_row()],
@@ -536,18 +587,3 @@ def _index_row() -> dict[str, object]:
         "name": "Thing",
         "tag": "DW_TAG_class_type",
     }
-
-
-@pytest.mark.unit
-@pytest.mark.functional
-def test_registry_validation_rejects_missing_publication() -> None:
-    manifest = SimpleNamespace(
-        source_identity=SimpleNamespace(sha256=SOURCE_ID),
-        schema_version="1.1",
-        counts={"unit": 1},
-    )
-    cursor = _FakeCursor(())
-    connection = _FakeConnection(cursor)
-
-    with pytest.raises(RuntimeError, match="unavailable"):
-        validate_registry(connection, "analytical", "dwarf", manifest)

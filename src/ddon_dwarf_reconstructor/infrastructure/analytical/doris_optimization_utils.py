@@ -10,7 +10,10 @@ from datetime import date, datetime, time
 from decimal import Decimal
 from hashlib import sha256
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .doris import DorisConfig
 
 
 def last_query_id(connection: Any) -> tuple[str | None, str | None]:
@@ -25,28 +28,9 @@ def last_query_id(connection: Any) -> tuple[str | None, str | None]:
         return None, str(error)
 
 
-def configured_ddl_sha256(config: Any) -> str:
-    """Hash the exact canonical native DDL when the SQL builder is available."""
-    ddl_hash = getattr(config, "ddl_sha256", None)
-    if callable(ddl_hash):
-        value = str(ddl_hash())
-        if value:
-            return value
-    ddl = json.dumps(
-        {
-            "database": config.database,
-            "table": config.table,
-            "lookup_tables": {
-                "definition": getattr(config, "definition_lookup_table", None),
-                "name": getattr(config, "name_lookup_table", None),
-                "method": getattr(config, "method_lookup_table", None),
-                "die": getattr(config, "die_lookup_table", None),
-            },
-        },
-        sort_keys=True,
-        separators=(",", ":"),
-    )
-    return sha256_text(ddl)
+def configured_ddl_sha256(config: DorisConfig) -> str:
+    """Hash the exact canonical native DDL from the typed Doris configuration."""
+    return config.ddl_sha256()
 
 
 def mapping(value: object) -> dict[str, object]:

@@ -14,12 +14,12 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import (
     StructInfo,
     UnionInfo,
 )
-from ddon_dwarf_reconstructor.domain.services.generation import HeaderGenerator
+from ddon_dwarf_reconstructor.domain.services.generation import HeaderRenderer
 
 
 @pytest.mark.unit
 def test_header_renders_enum_struct_union_and_bitfield_members() -> None:
-    generator = HeaderGenerator(Mock())
+    generator = HeaderRenderer(Mock())
     info = ClassInfo(
         name="Aggregates",
         byte_size=32,
@@ -51,7 +51,7 @@ def test_header_renders_enum_struct_union_and_bitfield_members() -> None:
 
 @pytest.mark.unit
 def test_single_class_header_plans_dependency_and_base_includes() -> None:
-    generator = HeaderGenerator(Mock())
+    generator = HeaderRenderer(Mock())
     info = ClassInfo(
         name="Derived",
         byte_size=8,

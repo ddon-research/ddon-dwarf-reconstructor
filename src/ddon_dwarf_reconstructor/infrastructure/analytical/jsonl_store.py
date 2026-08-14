@@ -20,14 +20,10 @@ from ...domain.models.analytical_dwarf import (
     QueryStatus,
 )
 from ...domain.ports.cache import SymbolCachePort
-from ...domain.services.definition_selection import (
-    DefinitionCandidate,
-    DefinitionSignals,
-    NestedTypeCounts,
-    score_definition,
-)
-from ...domain.services.search_result import SearchResult, SearchStatus
+from ...domain.services.definition_selection import NestedTypeCounts
+from ...domain.services.search_result import SearchResult, search_status_for_query
 from ..artifacts import SourceIdentityCatalog
+from .bounded_query_cache import BoundedQueryCache
 from .json_codec import untag_value
 from .jsonl_models import DieData
 from .jsonl_views import (
@@ -43,6 +39,24 @@ from .manifest import (
     load_manifest,
     validate_manifest_files,
     validate_schema_version,
+)
+from .materialized_selection import (
+    DEFINITION_QUERY_LIMIT as _DEFINITION_QUERY_LIMIT,
+)
+from .materialized_selection import (
+    definition_candidate as _definition_candidate,
+)
+from .materialized_selection import (
+    definition_matches as _definition_matches,
+)
+from .materialized_selection import (
+    definition_sort_key as _definition_sort_key,
+)
+from .materialized_selection import (
+    query_status as _query_status,
+)
+from .materialized_selection import (
+    result as _result,
 )
 from .store_selection import load_selection_cache, prefer_cached_definition
 
@@ -75,9 +89,7 @@ class JsonlDwarfStore:
         self._derived_methods: dict[int, list[int]] = defaultdict(list)
         self._definitions: dict[str, list[StoreDie]] = defaultdict(list)
         self._methods: dict[int, StoreDie] = {}
-        self._definition_query_cache: dict[
-            tuple[str, str | None, frozenset[str] | None], QueryResult
-        ] = {}
+        self._definition_query_cache = BoundedQueryCache()
         self.dwarf_info = StoreDwarfInfo(self)
         self._load_records()
         self._build_views()
@@ -151,6 +163,17 @@ class JsonlDwarfStore:
         """Return a reconstructed line program for one CU."""
         return build_line_program(self._line_records.get(unit_offset, ()))
 
+    def child_tag_counts(self, die_offset: int) -> NestedTypeCounts:
+        counts = {"DW_TAG_enumeration_type": 0, "DW_TAG_structure_type": 0, "DW_TAG_union_type": 0}
+        for child in self._children.get(die_offset, ()):
+            if not child.is_null() and child.tag in counts:
+                counts[child.tag] += 1
+        return NestedTypeCounts(
+            enums=counts["DW_TAG_enumeration_type"],
+            structs=counts["DW_TAG_structure_type"],
+            unions=counts["DW_TAG_union_type"],
+        )
+
     @property
     def unit_count(self) -> int:
         """Return the number of source compilation units in the store."""
@@ -180,12 +203,9 @@ class JsonlDwarfStore:
         qualified_name: str | None = None,
         tags: frozenset[str] | None = None,
     ) -> QueryResult:
-        cache = getattr(self, "_definition_query_cache", None)
-        if cache is None:
-            cache = {}
-            self._definition_query_cache = cache
+        cache = self._definition_query_cache
         cache_key = (name, qualified_name, tags)
-        cached_result = cache.get(cache_key)
+        cached_result = cache.lookup(cache_key)
         if cached_result is not None:
             return cached_result
 
@@ -194,9 +214,18 @@ class JsonlDwarfStore:
             for die in self._definitions.get(name, ())
             if _definition_matches(die, qualified_name, tags)
         )
+        truncated = len(candidates) > _DEFINITION_QUERY_LIMIT
+        candidates = candidates[:_DEFINITION_QUERY_LIMIT]
         items = prefer_cached_definition(name, candidates, self._selection_cache)
-        status = _query_status(bool(items), self.manifest.status)
-        result = QueryResult(status, items, (str(self.manifest_path),))
+        status = _query_status(bool(items), self.manifest.status, truncated=truncated)
+        diagnostics = ("definition query reached its safety bound",) if truncated else ()
+        result = QueryResult(
+            status,
+            items,
+            (str(self.manifest_path),),
+            diagnostics,
+            truncated,
+        )
         cache[cache_key] = result
         return result
 
@@ -213,6 +242,7 @@ class JsonlDwarfStore:
             result.items[:1],
             result.provenance,
             result.diagnostics,
+            result.truncated,
         )
 
     def find_method_implementation(self, declaration_offset: int) -> QueryResult:
@@ -383,16 +413,6 @@ class JsonlDwarfStore:
         return self.dwarf_info
 
 
-def _definition_matches(
-    die: StoreDie,
-    qualified_name: str | None,
-    tags: frozenset[str] | None,
-) -> bool:
-    if tags is not None and die.tag not in tags:
-        return False
-    return qualified_name is None or die.get_full_path() == qualified_name
-
-
 class MaterializedDwarfIndex:
     """Generator lookup adapter backed by precomputed analytical store indexes."""
 
@@ -404,8 +424,24 @@ class MaterializedDwarfIndex:
 
     def find_symbol_offset(self, symbol_name: str) -> int | None:
         result = self.store.find_primary_definition(symbol_name)
+        if result.status is not QueryStatus.COMPLETE:
+            return None
         item = result.items[0] if result.items else None
         return item.offset if isinstance(item, StoreDie) else None
+
+    def find_definition_tag(self, symbol_name: str) -> QueryResult:
+        """Return the tag from a complete materialized definition result."""
+        result = self.store.find_primary_definition(symbol_name)
+        item = result.items[0] if result.items else None
+        tag = getattr(item, "tag", None)
+        if result.status is QueryStatus.COMPLETE and isinstance(tag, str):
+            return QueryResult(QueryStatus.COMPLETE, (tag,), result.provenance)
+        return QueryResult(
+            result.status,
+            diagnostics=result.diagnostics,
+            provenance=result.provenance,
+            truncated=result.truncated,
+        )
 
     def targeted_symbol_search(
         self, symbol_name: str, timeout: float | None = None
@@ -416,10 +452,11 @@ class MaterializedDwarfIndex:
         candidates = [self._candidate(symbol_name, die) for die in result.items]
         candidate = candidates[0] if candidates else None
         return SearchResult(
-            status=SearchStatus.COMPLETE if candidate is not None else SearchStatus.NOT_FOUND,
+            status=search_status_for_query(result.status),
             candidate=candidate,
             elapsed_seconds=perf_counter() - started,
             cus_searched=self.store.unit_count,
+            diagnostics=result.diagnostics,
         )
 
     def get_die_by_offset(self, offset: int) -> StoreDie | None:
@@ -429,48 +466,8 @@ class MaterializedDwarfIndex:
         return
 
     @staticmethod
-    def _candidate(symbol_name: str, die: StoreDie) -> DefinitionCandidate:
-        byte_size = _attribute_int(die, "DW_AT_byte_size") or 0
-        declaration = "DW_AT_declaration" in die.attributes
-        nested = _nested_type_counts(die)
-        score = score_definition(
-            DefinitionSignals(
-                tag=str(die.tag),
-                byte_size=byte_size,
-                has_children=die.has_children,
-                is_declaration=declaration,
-                has_type_reference="DW_AT_type" in die.attributes,
-                nested=nested,
-            )
-        )
-        return DefinitionCandidate(
-            symbol=symbol_name,
-            cu_offset=die.cu.cu_offset,
-            die_offset=die.offset,
-            score=score,
-            complete=not declaration and score >= 0,
-            byte_size=byte_size,
-            has_children=die.has_children,
-            is_declaration=declaration,
-            has_type_reference="DW_AT_type" in die.attributes,
-        )
-
-
-def _nested_type_counts(die: StoreDie) -> NestedTypeCounts:
-    child_tag_counts = getattr(getattr(die, "_store", None), "child_tag_counts", None)
-    if callable(child_tag_counts):
-        counts = child_tag_counts(die.offset)
-        if isinstance(counts, NestedTypeCounts):
-            return counts
-    enums = structs = unions = 0
-    for child in die.iter_children():
-        if child.tag == "DW_TAG_enumeration_type":
-            enums += 1
-        elif child.tag == "DW_TAG_structure_type":
-            structs += 1
-        elif child.tag == "DW_TAG_union_type":
-            unions += 1
-    return NestedTypeCounts(enums=enums, structs=structs, unions=unions)
+    def _candidate(symbol_name: str, die: StoreDie):
+        return _definition_candidate(symbol_name, die)
 
 
 def _verify_source_binding(
@@ -483,28 +480,6 @@ def _verify_source_binding(
     identity = SourceIdentityCatalog().identify(source)
     if identity.sha256 != manifest.source_identity.sha256:
         raise ValueError(f"Materialization source hash mismatch: {source}")
-
-
-def _query_status(found: bool, manifest_status: str) -> QueryStatus:
-    if manifest_status != "complete":
-        return QueryStatus.PARTIAL
-    return QueryStatus.COMPLETE if found else QueryStatus.NOT_FOUND
-
-
-def _result(item: Any, manifest_path: Path, manifest_status: str = "complete") -> QueryResult:
-    status = _query_status(item is not None, manifest_status)
-    items = (item,) if item is not None else ()
-    return QueryResult(status, items, (str(manifest_path),))
-
-
-def _definition_sort_key(die: StoreDie) -> tuple[int, int, int, int]:
-    candidate = MaterializedDwarfIndex._candidate("", die)
-    return (-candidate.score, die.cu.cu_offset, die.offset, die.depth)
-
-
-def _attribute_int(die: StoreDie, name: str) -> int | None:
-    value = die.attributes.get(name)
-    return value.value if value is not None and isinstance(value.value, int) else None
 
 
 def _optional_int(value: Any) -> int | None:

@@ -5,7 +5,11 @@ from unittest.mock import Mock, mock_open
 
 import pytest
 
-from ddon_dwarf_reconstructor.application.generators import DwarfGenerator
+from ddon_dwarf_reconstructor.application.generators import (
+    DwarfGenerator,
+    GenerationRequest,
+    HeaderBundle,
+)
 from ddon_dwarf_reconstructor.infrastructure.elf_session import ElfDwarfSession
 
 
@@ -13,8 +17,8 @@ class TestDwarfGenerator:
     """Test suite for DwarfGenerator with proper mocking."""
 
     @pytest.mark.unit
-    def test_resolve_dwarf_dump_path_prefers_explicit_argument(self, tmp_path: Path) -> None:
-        """Explicit dwarf dump paths should win over environment or sibling discovery."""
+    def test_resolve_dwarf_dump_path_accepts_explicit_argument(self, tmp_path: Path) -> None:
+        """Validation dump paths must be explicitly configured."""
         elf_path = tmp_path / "DDOORBIS.elf"
         elf_path.write_bytes(b"elf")
         explicit_dump = tmp_path / "explicit.zst"
@@ -33,10 +37,10 @@ class TestDwarfGenerator:
         assert generator._resolve_dwarf_dump_path() == explicit_dump
 
     @pytest.mark.unit
-    def test_resolve_dwarf_dump_path_uses_environment_variable(
+    def test_resolve_dwarf_dump_path_does_not_use_environment_discovery(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The DDON_DWARF_DUMP_PATH environment variable should be honored when present."""
+        """Normal generation must not discover a legacy dump from the environment."""
         elf_path = tmp_path / "DDOORBIS.elf"
         elf_path.write_bytes(b"elf")
         env_dump = tmp_path / "env.zst"
@@ -50,13 +54,13 @@ class TestDwarfGenerator:
             cache_file=tmp_path / "dwarf-cache.json",
         )
 
-        assert generator._resolve_dwarf_dump_path() == env_dump
+        assert generator._resolve_dwarf_dump_path() is None
 
     @pytest.mark.unit
-    def test_resolve_dwarf_dump_path_uses_sibling_dump(
+    def test_resolve_dwarf_dump_path_does_not_use_sibling_discovery(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The generator should auto-discover a sibling compressed dump for the same ELF."""
+        """Normal generation must not discover a sibling compressed dump."""
         elf_path = tmp_path / "DDOORBIS.elf"
         elf_path.write_bytes(b"elf")
         sibling_dump = tmp_path / "DDOORBIS.elf.llvmdwarfdump.zst"
@@ -70,7 +74,7 @@ class TestDwarfGenerator:
             cache_file=tmp_path / "dwarf-cache.json",
         )
 
-        assert generator._resolve_dwarf_dump_path() == sibling_dump
+        assert generator._resolve_dwarf_dump_path() is None
 
     @pytest.mark.unit
     def test_generator_initialization(self, mocker, tmp_path: Path):
@@ -87,7 +91,7 @@ class TestDwarfGenerator:
         )
 
         assert generator.elf_path == mock_path
-        assert generator.dwarf_info is None  # Not loaded yet
+        assert generator.facade is None  # Not loaded yet
 
     @pytest.mark.unit
     def test_context_manager_behavior(self, mocker, mock_elf_file, tmp_path: Path):
@@ -109,13 +113,13 @@ class TestDwarfGenerator:
             session_factory=ElfDwarfSession,
             cache_file=tmp_path / "dwarf-cache.json",
         ) as generator:
-            assert generator.dwarf_info is not None
+            assert generator.runtime.dwarf_info is not None
             # Verify new lazy loading components are initialized
-            assert generator.type_resolver is not None
-            assert generator.class_parser is not None
-            assert generator.header_generator is not None
-            assert generator.hierarchy_builder is not None
-            assert generator.lazy_index is not None
+            assert generator.runtime.type_resolver is not None
+            assert generator.runtime.class_parser is not None
+            assert generator.runtime.header_renderer is not None
+            assert generator.runtime.hierarchy_builder is not None
+            assert generator.runtime.lazy_index is not None
 
         # Verify files were opened (ELF file + cache file)
         assert mock_open_file.call_count >= 1
@@ -142,7 +146,7 @@ class TestDwarfGenerator:
             session_factory=ElfDwarfSession,
             cache_file=tmp_path / "dwarf-cache.json",
         ) as generator:
-            result = generator.find_class("MtObject")
+            result = generator.runtime.class_parser.find_class("MtObject")
 
         assert result == (mock_compilation_unit, mock_die)
         # Lazy loading may call iter_DIEs multiple times for different search strategies
@@ -177,7 +181,7 @@ class TestDwarfGenerator:
             session_factory=ElfDwarfSession,
             cache_file=tmp_path / "dwarf-cache.json",
         ) as generator:
-            header_content = generator.generate_header("MtObject")
+            header_content = generator.facade.generate(GenerationRequest("MtObject")).only()
 
         # Verify header contains expected C++ elements
         assert "#ifndef MTOBJECT_H" in header_content
@@ -189,17 +193,15 @@ class TestDwarfGenerator:
     def test_generate_header_builds_complete_standalone_closure(self, mocker):
         """Standalone generation must use the dependency-aware hierarchy builder."""
         generator = DwarfGenerator.__new__(DwarfGenerator)
-        generator.class_parser = Mock()
-        generator.type_resolver = Mock()
-        generator.header_generator = Mock()
-        generator.hierarchy_builder = Mock()
-        generator.workflow = Mock()
-        generator.workflow.generate_header.return_value = "header"
+        generator.facade = Mock()
+        generator.facade.generate.return_value = HeaderBundle.single("Target", "header")
 
-        header = DwarfGenerator.generate_header(generator, "Target", include_metadata=False)
+        header = generator.generate("Target", no_metadata=True)
 
         assert header == "header"
-        generator.workflow.generate_header.assert_called_once_with("Target", False)
+        generator.facade.generate.assert_called_once_with(
+            GenerationRequest("Target", single_file=True, include_metadata=False)
+        )
 
     @pytest.mark.unit
     def test_no_dwarf_info_error(self, mocker, tmp_path: Path):

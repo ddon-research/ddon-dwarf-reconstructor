@@ -15,14 +15,7 @@ from ddon_dwarf_reconstructor.core.platform import ELFPlatform
 from ddon_dwarf_reconstructor.domain.models.analytical_dwarf import (
     DwarfMaterializationRequest,
     MaterializationManifest,
-    QueryResult,
     QueryStatus,
-)
-from ddon_dwarf_reconstructor.domain.services.parsing.class_parser_discovery import (
-    ClassParserDiscoveryMixin,
-)
-from ddon_dwarf_reconstructor.domain.services.parsing.class_parser_scan import (
-    ClassParserScanMixin,
 )
 from ddon_dwarf_reconstructor.infrastructure.analytical import (
     DwarfMaterializer,
@@ -134,8 +127,6 @@ class _Session:
 class _ArtifactSession:
     """Test-only generator session for explicit artifact compatibility."""
 
-    legacy_lookup_allowed = True
-
     def __init__(self, manifest: Path) -> None:
         self.manifest = manifest
         self.store = None
@@ -159,6 +150,12 @@ class _ArtifactSession:
         self.dwarf_info = None
         self.query_port = None
         self.query_index = None
+
+    def begin_root(self, _root_symbol: str) -> None:
+        return
+
+    def end_root(self) -> None:
+        return
 
 
 def _fixture_dwarf() -> _DwarfInfo:
@@ -241,6 +238,13 @@ def test_materializer_traverses_each_cu_once_and_loads_store(tmp_path: Path) -> 
         ).status
         is QueryStatus.NOT_FOUND
     )
+
+    store._definitions["Thing"] = [die] * 1001
+    bounded = store.find_definitions("Thing", qualified_name="Thing")
+    assert bounded.status is QueryStatus.PARTIAL
+    assert bounded.truncated is True
+    assert len(bounded.items) == 1000
+    assert bounded.diagnostics == ("definition query reached its safety bound",)
 
     raw = materializer.last_manifest_path.parent / "raw_sections" / "0000-.debug_info.bin"
     assert raw.read_bytes() == b"ELF!"
@@ -348,7 +352,7 @@ def test_generator_can_use_materialized_store_without_live_elf_session(tmp_path:
         session_factory=lambda _path: _ArtifactSession(materializer.last_manifest_path),
         cache_file=tmp_path / "dwarf-cache.json",
     ) as generator:
-        result = generator.find_class("Thing")
+        result = generator.runtime.class_parser.find_class("Thing")
 
     assert result is not None
     assert result[1].offset == 0x20
@@ -540,6 +544,8 @@ def test_doris_plan_uses_source_aware_family_keys(tmp_path: Path) -> None:
     assert "raw_value_json STRING" in sql
     assert "raw_value_uint LARGEINT" in sql
     assert "`column` BIGINT" in sql
+    assert "dwarf_opt_name_b8" in sql
+    assert "DISTRIBUTED BY HASH(source_id, name) BUCKETS 8" in sql
     assert "ADD INDEX IF NOT EXISTS idx_name (name) USING INVERTED" in sql
 
 
@@ -575,14 +581,3 @@ def test_benchmark_verifies_supplied_elf_against_relocated_store(tmp_path: Path)
 
     assert load_store.call_args is not None
     assert load_store.call_args.kwargs["source_path"] == source
-
-
-def test_store_discovery_refuses_cu_scan_after_analytical_miss() -> None:
-    query_port = Mock()
-    query_port.find_primary_definition.return_value = QueryResult(QueryStatus.NOT_FOUND, ())
-    context = SimpleNamespace(query_port=query_port)
-    with patch.object(ClassParserScanMixin, "_find_class_full_scan") as full_scan:
-        result = ClassParserDiscoveryMixin._find_class_from_store(context, "Missing")
-
-    assert result is None
-    full_scan.assert_not_called()

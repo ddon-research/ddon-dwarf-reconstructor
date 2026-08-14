@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from ...core.dwarf import DwarfInfo
 from ...core.platform import ELFPlatform
 from ...domain.ports.dwarf_lookup import DwarfLookupPort
 from ..artifacts import SourceIdentityCatalog
 from .doris import DorisConfig
-from .doris_store import DorisDwarfIndex, DorisDwarfStore
+from .doris_index import DorisDwarfIndex
+from .doris_store import DorisDwarfStore
 
 if TYPE_CHECKING:
     from ...domain.ports.analytical_store import DwarfQueryPort
@@ -18,11 +19,6 @@ if TYPE_CHECKING:
 
 class AnalyticalDwarfSession:
     """Own one materialized store for the duration of a generation request."""
-
-    # A store-backed runtime must never discover or consult the legacy dump
-    # adapter implicitly. Validation producers remain available only through
-    # an explicit non-analytical session.
-    legacy_lookup_allowed = False
 
     def __init__(
         self,
@@ -91,17 +87,13 @@ class AnalyticalDwarfSession:
         self.query_index = None
         self.store = None
 
+    def begin_root(self, root_symbol: str) -> None:
+        if self.store is not None:
+            self.store.begin_root(root_symbol)
 
-def load_analytical_store(*args: Any, **kwargs: Any) -> Any:
-    """Load an artifact store for explicit inspection compatibility only.
-
-    Generation never calls this wrapper; it opens :class:`DorisDwarfStore`
-    directly. Keeping the old import location lazy preserves diagnostic and
-    validation callers without reintroducing a file-backed runtime path.
-    """
-    from .artifact_store import load_analytical_store as load_artifact_store
-
-    return load_artifact_store(*args, **kwargs)
+    def end_root(self) -> None:
+        if self.store is not None:
+            self.store.end_root()
 
 
 def _platform(value: str) -> ELFPlatform:

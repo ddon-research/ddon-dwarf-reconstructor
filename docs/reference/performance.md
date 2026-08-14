@@ -155,22 +155,25 @@ conclusions. A grouped child-tag `COUNT(*)` experiment reduced one bounded resul
 602 rows and was faster in a SQL microbenchmark, but paired full runs were effectively tied with
 the raw path (`21.160/21.165 s` versus `21.159/21.163 s` warm p50/p95), so it was removed.
 
-The source/name auxiliary tables did reduce global lookup scheduling to 1/2 and 1/8 tablets, but
-full confirmation produced only about 10% warm p50 and 5% warm p95 improvement; both remain
-opt-in. The target-DIE prefetch screen was exact but regressed `rAIFSM` to `29.299 s` and was
-reverted. Physical/index/storage/session variants remain `not_observed`; the actual trace also
-contained no method-target lookup shape to justify provisioning that table.
+The source/name auxiliary tables reduced global lookup scheduling to 1/2 and 1/8 tablets. Their
+standalone p50 gain was roughly 10%, but p95 was roughly 5%, so the individual bucket candidates
+did not clear the promotion gate. The three positive behaviors were nevertheless activated
+together: lazy prefetch, the decoded-serving projection, and b8 name lookup. b8 is now the
+canonical lookup table; b2 and b4 remain comparison-only. The target-DIE prefetch screen was exact
+but regressed `rAIFSM` to `29.299 s` and was reverted. Physical/index/storage/session variants
+remain `not_observed`; the actual trace also contained no method-target lookup shape to justify
+provisioning that table.
 
-The 2026-08-10 policy recheck used the refreshed canonical registry identity and left all fourteen
-physical tables unchanged. Canonical eager/full/all rAIFSM measured `19.121/19.127 s` warm p50/p95
-(`n=3`) with the approved 11-file bundle hash
-`0514bdb383121ebc83d8e9193ef0766c7074a4fd90f3e3d00691cea29461b243`. Lazy reference prefetch was
-exact and reduced the trace from 754 to 680 queries (154 to 108 reference-prefetch calls), but
-paired 3-cold/5-warm execution improved only `5.3%` at both p50 and p95; it remains opt-in. The
-decoded-serving attribute projection kept exact output and reduced traced attribute execute time
-from `7.786 s` to `5.737 s` and warm p95 RSS by `15.1%`, but its warm latency p95 was effectively
-unchanged (`19.126 s`), so it also remains opt-in and is explicitly not lossless for raw attribute
-values. A targeted child-tag predicate was exact but regressed warm p50 by `10.5%` and is rejected.
+The 2026-08-10 policy recheck used the refreshed canonical registry identity and left the fourteen
+canonical family tables unchanged. The prior canonical eager/full/all `rAIFSM` result was
+`19.121/19.127 s` warm p50/p95 (`n=3`) with the approved 11-file bundle hash
+`0514bdb383121ebc83d8e9193ef0766c7074a4fd90f3e3d00691cea29461b243`. The measured interaction
+batch is now promoted: canonical generation defaults to lazy reference prefetch, the decoded-serving
+attribute projection, and the source/name b8 lookup table. Its confirmatory result was
+`16.1152/16.1187 s` warm p50/p95 (`n=5`), approximately `15.7%` faster at both quantiles, with
+exact output and lower warm p95 RSS. Raw attribute columns remain stored; the projection narrows
+the generation fetch and is covered by the completed full Season 2 parity run. A targeted child-tag
+predicate was exact but regressed warm p50 by `10.5%` and is rejected.
 
 The next trace-confirmed candidate, `unit-bound-hydration`, was screened against the exact
 canonical ELF path and complete manifest. It preserved the approved 11-header bundle hash, but
@@ -201,10 +204,43 @@ provisioned only to make the bucket interaction comparison complete. This clears
 latency and measured storage/memory gates. A follow-up selective analysis of the active b8
 key/filter columns produced two manual `FINISHED` jobs (`1786278610025`, `1786278610030`) with
 1,048,576-row samples and zero failed subjobs; the older automatic-analysis failures remain raw
-context only. The batch remains opt-in because the decoded-serving projection is not lossless for
-raw attribute values outside the proven generation path. A projection-free interaction variant
-would need its own exact 3-cold/5-warm confirmation before changing the default. The canonical
-fourteen-family physical model and default environment remain unchanged.
+context only. The b8 table is now part of the canonical load plan and is refreshed from the
+source-bound index after the fourteen family loads. b2 and b4 remain comparison-only candidates;
+the canonical fourteen-family physical model and registry row contract remain unchanged.
+
+#### Historical full Season 2 header-generation and MSVC closure audit
+
+The complete `resources/season2-resources.txt` suite was rerun against the source-bound manifest
+on 2026-08-10 in four external generation batches under
+`C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\season2-msvc-fix2-20260810-batch-001`
+through `...-batch-004`. All 289/289 roots published with zero generation failures; the bulk run
+contained 2,759 generated headers and 3,048 published files. Every declared file byte count and
+SHA-256 matched, and the source SHA-256 was
+`4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0`.
+
+Each generated header was then compiled as its own translation unit with MSVC
+`14.51.36231` (`/std:c++latest /EHsc /W4 /Zc:__cplusplus`). The first audit exposed two closure
+defects: nested base dependencies were omitted at the hierarchy depth boundary, and a nested
+template argument was forward-declared as a class instead of a template. The fixes made base
+edges depth-exempt, qualified nested base names from DIE identity, and recursively preserved
+template forward declarations. A separate namespace lookup defect also caused `rAcquirement` to
+fall through to a not-found placeholder; namespace tags are now queried and multi-file namespace
+roots render through the namespace header path.
+
+The final composite validation input is
+`C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\season2-msvc-fix4-20260810-input`.
+It contains all 289 roots, 2,760 manifest-declared headers, and no placeholder or unresolved-type
+markers. MSVC passed all 2,760/2,760 headers with no timeouts or compiler failures. The only
+diagnostics were warning-only `C4099` (91), intentional anonymous struct/union `C4201` (125),
+and one `C4309`; no unresolved-symbol or syntax-error codes remained. The one additional header
+is the explicit `MtStream.h` closure made reachable by the nested-base fix. The raw report is
+`C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\msvc-season2-fix4-20260810\msvc-header-validation.json`.
+
+This closes the per-header MSVC syntax and generated-closure gate. It does not claim byte parity
+with the unavailable historical approved `rLayout.h` baseline, and IDA/Sonar observations remain
+separate evidence surfaces. The command and validator are reusable, change-triggered tools rather
+than continuously running services: rerun them when the generator, source publication, serving
+variant, or representative workload changes.
 
 This command is a reusable, change-triggered regression/promotion tool, not a continuously running
 service. The current publication has now been evaluated; rerun it when the generator path, Doris
@@ -213,6 +249,57 @@ image/configuration, source publication, candidate variant, or representative wo
 Candidate reports and all raw traces/profiles are external artifacts. `--no-cache` disables Doris
 query cache for a session; it is not an operating-system storage-cache eviction, so cold and warm
 labels remain separate and must not be conflated.
+
+### 2026-08-13 boundary-refactor performance status
+
+The boundary refactor retained byte-exact representative output for `rAIFSM`, `rArchive`, and
+`rTexture`. The corrected batch-001 run completed 73/73 roots and 598/598 headers, and its
+independent MSVC audit passed all 598 units. The full 289-root rerun remains `blocked`: two host
+reboots interrupted the attempts, and the Doris FE cannot currently bind its configured 9030
+endpoint because Windows excludes TCP ports 8983-9082. No incomplete output was accepted or used
+as a performance workload. No matched warm p95 or peak-RSS comparison was accepted, so the
+110%-of-baseline gate remains `not_observed` until the same source, runtime, backend, profile, and
+cache-state workload runs to completion. The older 2026-08-09/10 measurements above remain
+historical controls only.
+
+### 2026-08-14 completed boundary-refactor acceptance
+
+The source-bound baseline and complete post-refactor run are now observed. The final output root is
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\season2-final-source-cache-early-20260814`;
+its generation log is `logs/ddon_reconstructor_17560_20260814T012907_837060+0200.jsonl` and records
+289 successful roots with zero failed roots, 289 bundles, 2,745 headers, and 3,034 published files.
+The 2,745 header SHA-256 values and all 289 bundle-manifest SHA-256 values match the immutable baseline at
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\baseline-33b8271`.
+The normalized counts are therefore `root_count=289`, `bundle_count=289`,
+`manifest_count=289`, `header_file_count=2745`, `published_file_count=3034`, and
+`msvc_unit_count=2745`.
+
+Independent MSVC validation is retained at
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\msvc-season2-final-source-cache-early-20260814\msvc-header-validation.json`.
+Visual Studio MSVC `14.51.36231` passed all 2,745 translation units with zero failures and zero
+timeouts. Warnings remain separate: `C4201=124` and `C4309=1`.
+
+The cache diagnosis is also now evidence-backed. Request-scoped Doris hydration caches are
+intentionally reset at each Season 2 root and were bounded during the full run; the process RSS
+remained approximately 288--424 MiB as the corpus progressed. The persistent selection cache is
+different: it is source/profile-bound, fingerprint-validated, and supplies deterministic
+definition-selection hints. Removing it changed 15 dependency headers and 21 header payloads in
+`rLayout`/`rTexture`, so that experiment was rejected for the canonical path. It is not a generic
+compatibility fallback.
+
+The final benchmark report is
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\performance-rAIFSM-final-early-3-20260814\current-doris-benchmark.json`.
+After one explicit cold `rAIFSM --full-hierarchy --exhaustive` run, three warm repetitions measured
+9.06, 9.06, and 9.07 seconds (p50 `9.06 s`, p95 `9.07 s`) with peak RSS at most 73.8 MiB. Every
+run produced the approved bundle SHA-256
+`1176bd80524391ef2d23fd99541f9a63e04566e2e8a8906dc15670a80ca7f63b`. The bounded Doris query
+screen observed complete results; its largest bounded `find_definitions` query was about 13 ms cold
+and 6 ms warm. Every generation child loaded the verified 58-symbol source-bound cache
+`C:\Users\morph\AppData\Local\ddon-dwarf-reconstructor\DDOORBIS-beced6568432-dwarf-cache.json`.
+The measured Doris cache warm-up is therefore milliseconds, while source-bound DWARF cache identity
+changes which deterministic selection hints are available. An empty transient Doris query cache is
+not the observed cause of the earlier apparent degradation. The final full-corpus run took about
+39 minutes; root size varies substantially, so that total is not a per-root latency budget.
 
 ## Flight SQL evaluation
 

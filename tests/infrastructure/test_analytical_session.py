@@ -7,10 +7,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from ddon_dwarf_reconstructor.application.generators.dwarf_generator_setup import (
-    DwarfGeneratorSetup,
-)
+from ddon_dwarf_reconstructor.application.generation import resolve_explicit_validation_dump
 from ddon_dwarf_reconstructor.domain.services.definition_selection import NestedTypeCounts
+from ddon_dwarf_reconstructor.infrastructure.analytical.bounded_query_cache import (
+    BoundedQueryCache,
+)
 from ddon_dwarf_reconstructor.infrastructure.analytical.parquet_layout import UNIT_BUCKET_SIZE
 from ddon_dwarf_reconstructor.infrastructure.analytical.parquet_store import ParquetDwarfStore
 from ddon_dwarf_reconstructor.infrastructure.analytical.session import AnalyticalDwarfSession
@@ -18,7 +19,7 @@ from ddon_dwarf_reconstructor.infrastructure.analytical.session import Analytica
 pytestmark = [pytest.mark.unit, pytest.mark.functional]
 
 
-def test_store_session_disables_implicit_legacy_dump_discovery(tmp_path: Path) -> None:
+def test_store_session_accepts_only_explicit_legacy_dump_configuration(tmp_path: Path) -> None:
     session = AnalyticalDwarfSession(tmp_path / "manifest.json")
     generator = SimpleNamespace(
         session=session,
@@ -27,8 +28,10 @@ def test_store_session_disables_implicit_legacy_dump_discovery(tmp_path: Path) -
         elf_path=tmp_path / "sample.elf",
     )
 
-    assert session.legacy_lookup_allowed is False
-    assert DwarfGeneratorSetup._resolve_dwarf_dump_path(generator) is None
+    assert (
+        resolve_explicit_validation_dump(generator._configured_dwarf_dump_path)
+        == tmp_path / "explicit.zst"
+    )
 
 
 def test_parquet_store_exposes_typed_compilation_units() -> None:
@@ -68,6 +71,9 @@ def test_parquet_definition_lookup_prefers_complete_definition() -> None:
         def get_full_path(self) -> str:
             return "Thing"
 
+        def child_tag_counts(self) -> NestedTypeCounts:
+            return NestedTypeCounts(enums=0, structs=0, unions=0)
+
     declaration = _Die(0x20, True)
     definition = _Die(0x40, False)
     store = object.__new__(ParquetDwarfStore)
@@ -75,9 +81,12 @@ def test_parquet_definition_lookup_prefers_complete_definition() -> None:
     store.manifest = SimpleNamespace(
         source_identity=SimpleNamespace(sha256="source"), status="complete"
     )
+    store._definition_query_cache = BoundedQueryCache()
+    store._selection_cache = None
+    store._die_cache = {}
     calls: list[dict[str, object]] = []
 
-    def rows(filters: dict[str, object]) -> list[dict[str, object]]:
+    def rows(filters: dict[str, object], **_options: object) -> list[dict[str, object]]:
         calls.append(filters)
         return [
             {"die_offset": declaration.offset, "unit_offset": 0x10, "ordinal": 0},
@@ -89,6 +98,10 @@ def test_parquet_definition_lookup_prefers_complete_definition() -> None:
         declaration.offset: declaration,
         definition.offset: definition,
     }.get(offset)
+    store._dies_for_index_records = lambda records: tuple(
+        store.die_by_offset(int(record["die_offset"])) for record in records
+    )
+    store._prime_child_tag_counts = lambda _dies: None
 
     result = store.find_definitions(
         "Thing",
@@ -242,6 +255,7 @@ def test_parquet_index_hydration_falls_back_after_zstd_scan_error() -> None:
 def test_parquet_child_tag_counts_projects_tags_and_caches() -> None:
     store = object.__new__(ParquetDwarfStore)
     store._child_tag_counts = {}
+    store._die_cache = {}
     calls: list[tuple[dict[str, object], tuple[str, ...]]] = []
 
     def rows(filters: dict[str, object], columns: tuple[str, ...]) -> list[dict[str, object]]:
