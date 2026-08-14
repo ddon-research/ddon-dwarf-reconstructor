@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from types import MappingProxyType
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 from hypothesis import given
@@ -69,10 +69,12 @@ def test_generation_request_is_immutable() -> None:
 @pytest.mark.unit
 def test_dwarf_generator_bundle_selects_each_rendering_mode() -> None:
     generator = object.__new__(DwarfGenerator)
-    generator.workflow = Mock()
-    generator.workflow.generate_header.return_value = "single"
-    generator.workflow.generate_complete_hierarchy_header.return_value = "complete"
-    generator.workflow.generate_multi_file_hierarchy.return_value = {"a.h": "multi"}
+    generator.facade = Mock()
+    generator.facade.generate.side_effect = [
+        HeaderBundle.single("A", "single"),
+        HeaderBundle.single("A", "complete"),
+        HeaderBundle({"a.h": "multi"}),
+    ]
 
     assert dict(generator.generate_bundle(GenerationRequest("A")).headers) == {"A.h": "single"}
     assert generator.generate_bundle(
@@ -81,6 +83,11 @@ def test_dwarf_generator_bundle_selects_each_rendering_mode() -> None:
     assert generator.generate_bundle(
         GenerationRequest("A", full_hierarchy=True, single_file=False)
     ).headers == {"a.h": "multi"}
+    assert generator.facade.generate.call_args_list == [
+        call(GenerationRequest("A")),
+        call(GenerationRequest("A", full_hierarchy=True, single_file=True)),
+        call(GenerationRequest("A", full_hierarchy=True, single_file=False)),
+    ]
 
 
 @pytest.mark.unit

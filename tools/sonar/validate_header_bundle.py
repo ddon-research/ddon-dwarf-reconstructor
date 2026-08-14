@@ -3,21 +3,39 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
-import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from .prepare_msvc_analysis import (
-    SonarAnalysisError,
-    get_visual_studio_developer_command_file,
-    test_msvc_toolchain,
-)
+if __package__ in {None, ""}:
+    # Keep the established ``python tools/sonar/validate_header_bundle.py``
+    # launcher usable while retaining package-relative imports for normal use.
+    _repository_root = Path(__file__).resolve().parents[2]
+    if str(_repository_root) not in sys.path:
+        sys.path.insert(0, str(_repository_root))
+    from tools.sonar.msvc_validation.catalog import build_header_catalog
+    from tools.sonar.msvc_validation.commands import run_command
+    from tools.sonar.msvc_validation.publication import write_json_atomic
+    from tools.sonar.msvc_validation.reports import validation_counts
+    from tools.sonar.prepare_msvc_analysis import (
+        SonarAnalysisError,
+        get_visual_studio_developer_command_file,
+        test_msvc_toolchain,
+    )
+else:
+    from .msvc_validation.catalog import build_header_catalog
+    from .msvc_validation.commands import run_command
+    from .msvc_validation.publication import write_json_atomic
+    from .msvc_validation.reports import validation_counts
+    from .prepare_msvc_analysis import (
+        SonarAnalysisError,
+        get_visual_studio_developer_command_file,
+        test_msvc_toolchain,
+    )
 
 MSVC_FLAGS = ("/std:c++latest", "/EHsc", "/W4", "/Zc:__cplusplus")
 DIAGNOSTIC_CODE = re.compile(r"\b([CE]\d{4})\b", re.IGNORECASE)
@@ -49,6 +67,8 @@ class HeaderUnit:
     translation_unit: Path
     object_file: Path
     diagnostic_log: Path
+    header_sha256: str
+    header_bytes: int
 
     @property
     def key(self) -> str:
@@ -99,23 +119,22 @@ def discover_units(
     for root in input_roots:
         bundles.extend(discover_bundles(root))
     bundles = sorted(set(bundles), key=lambda path: str(path).lower())
+    try:
+        catalog = build_header_catalog(bundles)
+    except ValueError as error:
+        raise HeaderValidationError(str(error)) from error
     units: list[HeaderUnit] = []
-    for sequence, header in enumerate(
-        (
-            header
-            for bundle in bundles
-            for header in sorted(bundle.glob("*.h"), key=lambda p: p.name.lower())
-        ),
-        start=1,
-    ):
-        bundle = header.parent
+    for sequence, entry in enumerate(catalog.entries, start=1):
+        bundle = entry.bundle
         unit = HeaderUnit(
             sequence=sequence,
             bundle=bundle,
-            header=header,
+            header=entry.header,
             translation_unit=validation_directory / "translation-units" / f"u{sequence:05d}.cpp",
             object_file=validation_directory / "objects" / f"u{sequence:05d}.obj",
             diagnostic_log=validation_directory / "diagnostics" / f"u{sequence:05d}.log",
+            header_sha256=entry.sha256,
+            header_bytes=entry.byte_count,
         )
         _write_unit(unit)
         units.append(unit)
@@ -194,14 +213,6 @@ def _read_result_markers(output: str) -> dict[str, int]:
     return results
 
 
-def _decode_process_output(value: str | bytes | None) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, bytes):
-        return value.decode(errors="replace")
-    return value
-
-
 def _unit_result(
     unit: HeaderUnit, exit_code: int | None, process_timed_out: bool
 ) -> dict[str, Any]:
@@ -227,8 +238,8 @@ def _unit_result(
         "key": unit.key,
         "bundle": str(unit.bundle),
         "header": str(unit.header),
-        "header_sha256": hashlib.sha256(unit.header.read_bytes()).hexdigest(),
-        "header_bytes": unit.header.stat().st_size,
+        "header_sha256": unit.header_sha256,
+        "header_bytes": unit.header_bytes,
         "translation_unit": str(unit.translation_unit),
         "diagnostic_log": str(unit.diagnostic_log),
         "compiler_exit_code": exit_code,
@@ -240,19 +251,10 @@ def _unit_result(
 
 
 def _run_script(script: Path, timeout_seconds: int) -> tuple[int | None, str, bool]:
-    try:
-        result = subprocess.run(
-            ["cmd.exe", "/d", "/c", "call", str(script)],
-            cwd=script.parent,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=timeout_seconds,
-        )
-    except subprocess.TimeoutExpired as error:
-        output = _decode_process_output(error.stdout) + _decode_process_output(error.stderr)
-        return None, output, True
-    return result.returncode, result.stdout + result.stderr, False
+    execution = run_command(
+        ["cmd.exe", "/d", "/c", "call", str(script)], timeout_seconds=timeout_seconds
+    )
+    return execution.returncode, execution.output, execution.timed_out
 
 
 def run_validation(
@@ -269,12 +271,10 @@ def run_validation(
     process_exit_code, output, timed_out = _run_script(script, timeout_seconds)
     markers = _read_result_markers(output)
     results = [_unit_result(unit, markers.get(unit.key), timed_out) for unit in units]
-    counts: dict[str, int] = {}
+    counts = validation_counts(results)
     failure_classes: dict[str, int] = {}
     diagnostic_codes: dict[str, int] = {}
     for result in results:
-        status = str(result["status"])
-        counts[status] = counts.get(status, 0) + 1
         failure_class = str(result["failure_class"])
         failure_classes[failure_class] = failure_classes.get(failure_class, 0) + 1
         for code in result["diagnostic_codes"]:
@@ -282,6 +282,7 @@ def run_validation(
     report = {
         "schema_version": 1,
         "tool": "tools.sonar.validate_header_bundle",
+        "validation_scope": "season2_header_closures",
         "started_at": started,
         "finished_at": _utc_now(),
         "compiler_path": compiler,
@@ -291,17 +292,17 @@ def run_validation(
         "validation_script": str(script),
         "bundle_count": len(bundles),
         "header_count": len(units),
+        "header_file_count": len(units),
+        "msvc_unit_count": len(units),
         "process_exit_code": process_exit_code,
         "process_timed_out": timed_out,
-        "counts": counts,
+        "counts": counts.to_dict(),
+        "status": "observed" if counts.complete and not timed_out else "partial",
         "failure_classes": failure_classes,
         "diagnostic_code_counts": dict(sorted(diagnostic_codes.items())),
         "units": results,
     }
-    (validation_directory / "msvc-header-validation.json").write_text(
-        json.dumps(report, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(validation_directory / "msvc-header-validation.json", report)
     return report
 
 

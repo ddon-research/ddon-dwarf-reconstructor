@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from time import perf_counter
 from typing import Protocol, TypeGuard
 
+from ...core.observability import get_logger, log_event
 from .doris import DorisConfig
 from .doris_diagnostics_transport import DorisDiagnosticTransport
 from .doris_diagnostics_utils import (
@@ -18,6 +21,8 @@ from .doris_layout import _family_table
 from .doris_optimization import DorisQueryTracer
 from .doris_optimization_utils import profile_metrics as _profile_metrics
 from .doris_schema import _FAMILY_COLUMNS
+
+logger = get_logger(__name__)
 
 
 class _DorisCursor(Protocol):
@@ -40,6 +45,14 @@ class _DorisConnection(Protocol):
     def cursor(self) -> _DorisCursor: ...
 
 
+@dataclass(frozen=True, slots=True)
+class BoundedRows:
+    """Rows returned by a bounded query, including truncation evidence."""
+
+    rows: tuple[dict[str, object], ...]
+    truncated: bool
+
+
 class DorisQueryExecutor:
     """Execute source-bound, read-only queries against Doris.
 
@@ -57,6 +70,7 @@ class DorisQueryExecutor:
         self._connection = connection
         self._config = config
         self._source_id = source_id
+        self._closed = False
         self._definition_lookup_table = config.effective_definition_lookup_table
         self._tracer = (
             DorisQueryTracer(
@@ -73,6 +87,9 @@ class DorisQueryExecutor:
 
     def close(self) -> None:
         """Flush optional query evidence owned by this executor."""
+        if self._closed:
+            return
+        self._closed = True
         if self._tracer is not None:
             self._tracer.close()
 
@@ -88,19 +105,93 @@ class DorisQueryExecutor:
         if limit < 1:
             raise ValueError("limit must be positive")
 
+        return self.find_definition_rows_bounded(name, tags=tags, limit=limit).rows
+
+    def find_definition_rows_bounded(
+        self,
+        name: str,
+        *,
+        tags: Sequence[str] = (),
+        limit: int = 1001,
+    ) -> BoundedRows:
+        """Return definition rows and preserve whether the bound was reached."""
+
+        if limit < 1:
+            raise ValueError("limit must be positive")
+
         filters: dict[str, object] = {
             "index_type": "definition",
             "name": name,
         }
         if tags:
             filters["tag"] = tuple(tags)
-        return self.family_rows(
+        rows = self.family_rows(
             "index",
             filters,
             order_by=("unit_offset", "die_offset"),
             limit=limit,
             table_name=self._definition_lookup_table,
         )
+        return BoundedRows(rows=rows, truncated=len(rows) >= limit)
+
+    def find_definition_rows_complete(
+        self,
+        name: str,
+        *,
+        tags: Sequence[str] = (),
+        max_rows: int = 10_000,
+    ) -> BoundedRows:
+        """Read a complete candidate window with an explicit safety ceiling.
+
+        The normal lookup is intentionally cheap and bounded at 1,001 rows.
+        Primary-definition selection may need more rows because DWARF repeats
+        the same source name in many compilation units.  This path keeps the
+        transfer bounded while distinguishing a complete result from a safety
+        ceiling that was actually exceeded.
+        """
+        if max_rows < 1:
+            raise ValueError("max_rows must be positive")
+
+        filters: dict[str, object] = {
+            "index_type": "definition",
+            "name": name,
+        }
+        if tags:
+            filters["tag"] = tuple(tags)
+        rows = self.family_rows(
+            "index",
+            filters,
+            order_by=("unit_offset", "die_offset"),
+            limit=max_rows + 1,
+            table_name=self._definition_lookup_table,
+            operation="find_definitions_complete",
+        )
+        return BoundedRows(rows=rows[:max_rows], truncated=len(rows) > max_rows)
+
+    def find_definition_tags(self, name: str) -> tuple[str, ...]:
+        """Return the complete set of aggregate tags for one source name."""
+        table = _qualified_table(
+            self._config,
+            "index",
+            table_name=self._definition_lookup_table,
+        )
+        query = (
+            f"SELECT `tag`, COUNT(*) AS `definition_count` FROM {table} "
+            "WHERE `source_id` = %s AND `index_type` = %s AND `name` = %s "
+            "GROUP BY `tag` ORDER BY `tag`"
+        )
+        rows = self._fetch_rows(
+            query,
+            (self._source_id, "definition", name),
+            family="index",
+            operation="definition_tags",
+        )
+        tags: list[str] = []
+        for row in rows:
+            tag = row.get("tag")
+            if isinstance(tag, str) and tag:
+                tags.append(tag)
+        return tuple(tags)
 
     def family_rows(
         self,
@@ -144,21 +235,43 @@ class DorisQueryExecutor:
                 rows = cursor.fetchall()
                 fetch_seconds = perf_counter() - fetch_started
                 columns = tuple(str(column[0]) for column in cursor.description)
-        except BaseException as error:
+        except Exception as error:
             execute_seconds = execute_seconds or perf_counter() - execute_started
-            if self._tracer is not None:
-                self._tracer.record(
-                    self._connection,
-                    sql=query,
-                    family=family,
-                    operation=operation,
-                    execute_seconds=execute_seconds,
-                    fetch_seconds=fetch_seconds,
-                    rows=(),
-                    error=error,
-                )
+            self._record_trace(
+                query,
+                family=family,
+                operation=operation,
+                execute_seconds=execute_seconds,
+                fetch_seconds=fetch_seconds,
+                rows=(),
+                error=error,
+            )
             raise
-        if self._tracer is not None:
+        self._record_trace(
+            query,
+            family=family,
+            operation=operation,
+            execute_seconds=execute_seconds,
+            fetch_seconds=fetch_seconds,
+            rows=rows,
+        )
+        return tuple(dict(zip(columns, row, strict=True)) for row in rows)
+
+    def _record_trace(
+        self,
+        query: str,
+        *,
+        family: str,
+        operation: str,
+        execute_seconds: float,
+        fetch_seconds: float,
+        rows: Sequence[Sequence[object]],
+        error: Exception | None = None,
+    ) -> None:
+        """Keep optional tracing from masking query results or failures."""
+        if self._tracer is None:
+            return
+        try:
             self._tracer.record(
                 self._connection,
                 sql=query,
@@ -167,8 +280,16 @@ class DorisQueryExecutor:
                 execute_seconds=execute_seconds,
                 fetch_seconds=fetch_seconds,
                 rows=rows,
+                error=error,
             )
-        return tuple(dict(zip(columns, row, strict=True)) for row in rows)
+        except Exception as trace_error:
+            log_event(
+                logger,
+                logging.WARNING,
+                "doris_query_trace_failed",
+                operation=operation,
+                exc_info=trace_error,
+            )
 
 
 def _qualified_table(config: DorisConfig, family: str, *, table_name: str | None = None) -> str:

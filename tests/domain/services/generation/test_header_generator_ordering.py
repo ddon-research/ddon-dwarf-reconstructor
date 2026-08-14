@@ -16,7 +16,11 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import (
     ParameterInfo,
     StructInfo,
 )
-from ddon_dwarf_reconstructor.domain.services.generation import HeaderGenerator
+from ddon_dwarf_reconstructor.domain.services.generation import HeaderRenderer
+from ddon_dwarf_reconstructor.domain.services.generation.header_hierarchy import (
+    HierarchyHeaderGenerationService,
+)
+from ddon_dwarf_reconstructor.domain.services.generation.rendering import TypeExpressionPolicy
 
 
 class TestHeaderGenerator:
@@ -30,7 +34,7 @@ class TestHeaderGenerator:
     @pytest.fixture
     def header_generator(self, mock_dwarf_index):
         """HeaderGenerator instance with mock dwarf_index."""
-        return HeaderGenerator(mock_dwarf_index)
+        return HeaderRenderer(mock_dwarf_index)
 
     @pytest.fixture
     def sample_class(self):
@@ -109,7 +113,7 @@ class TestHeaderGenerator:
     @pytest.mark.unit
     def test_by_value_dependency_cycles_are_blocking(self, header_generator) -> None:
         with pytest.raises(ValueError, match="cyclic by-value dependencies"):
-            header_generator._stable_topological_order({"A": {"B"}, "B": {"A"}}, ["A", "B"])
+            header_generator.stable_topological_order({"A": {"B"}, "B": {"A"}}, ["A", "B"])
 
     @pytest.mark.unit
     def test_hierarchy_declares_opaque_typedef_targets(self, header_generator):
@@ -304,3 +308,30 @@ class TestHeaderGenerator:
 
         assert "enum class Mode" in header
         assert "void setMode(Mode mode);" in header
+
+    @pytest.mark.unit
+    def test_conflicting_aggregate_forward_declarations_use_source_kind(self):
+        result = HierarchyHeaderGenerationService._preferred_forward_declaration(
+            "stOcdActiveData",
+            ["class stOcdActiveData;", "struct stOcdActiveData;"],
+            {},
+        )
+
+        assert result == "struct stOcdActiveData;"
+
+    @pytest.mark.unit
+    def test_ambiguous_typedef_forward_declaration_uses_renderer_policy(self):
+        assert TypeExpressionPolicy.preferred_forward_kind("Texture") == "class"
+
+    @pytest.mark.unit
+    def test_template_forward_declarations_survive_kind_deduplication(self):
+        result = HierarchyHeaderGenerationService._preferred_forward_declaration(
+            "rTbl2",
+            [
+                "template <typename T> class rTbl2;",
+                "template <typename T, typename U, typename V> class rTbl2;",
+            ],
+            {},
+        )
+
+        assert result == "template <typename T, typename U, typename V> class rTbl2;"

@@ -3,21 +3,18 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
 
 from ....core.observability import get_logger
 from ...models.dwarf import ClassInfo, MemberInfo
-from .header_type_planning import HeaderTypePlanningMixin
-
-if TYPE_CHECKING:
-    from .header_generator_context import HeaderGeneratorContext
+from .header_type_planning import HeaderTypePlanningService
+from .rendering.operations import HeaderRenderingHost
 
 logger = get_logger(__name__)
 
 
-class HeaderOrderingMixin:
+class HeaderOrderingService:
     def _order_class_definitions(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_infos: dict[str, ClassInfo],
         hierarchy_order: list[str],
         typedefs: dict[str, str] | None = None,
@@ -28,7 +25,7 @@ class HeaderOrderingMixin:
         return self._stable_topological_order(dependencies, hierarchy_order)
 
     def _top_level_infos(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_infos: dict[str, ClassInfo],
         hierarchy_order: list[str],
     ) -> dict[str, ClassInfo]:
@@ -51,16 +48,18 @@ class HeaderOrderingMixin:
 
     @classmethod
     def _nested_names(cls, class_info: ClassInfo) -> set[str]:
-        names = {nested.name for nested in HeaderTypePlanningMixin._iter_nested_classes(class_info)}
+        names = {
+            nested.name for nested in HeaderTypePlanningService._iter_nested_classes(class_info)
+        }
         names.update(
             nested.qualified_name
-            for nested in HeaderTypePlanningMixin._iter_nested_classes(class_info)
+            for nested in HeaderTypePlanningService._iter_nested_classes(class_info)
             if nested.qualified_name
         )
         return names
 
     def _definition_dependencies(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_infos: dict[str, ClassInfo],
         typedefs: dict[str, str] | None = None,
     ) -> dict[str, set[str]]:
@@ -79,7 +78,7 @@ class HeaderOrderingMixin:
             self._add_nested_aggregate_dependencies(
                 class_name, class_info, names, dependencies, offset_names
             )
-            for nested_class in HeaderTypePlanningMixin._iter_nested_classes(class_info):
+            for nested_class in HeaderTypePlanningService._iter_nested_classes(class_info):
                 self._add_base_dependencies(class_name, nested_class, names, dependencies)
                 self._add_member_dependencies(
                     class_name, nested_class.members, names, dependencies, offset_names
@@ -89,7 +88,7 @@ class HeaderOrderingMixin:
         return dependencies
 
     def _add_typedef_dependencies(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_infos: dict[str, ClassInfo],
         typedefs: dict[str, str],
         names: set[str],
@@ -108,7 +107,7 @@ class HeaderOrderingMixin:
                     dependencies[class_name].add(referenced)
 
     def _add_nested_aggregate_dependencies(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_name: str,
         class_info: ClassInfo,
         names: set[str],
@@ -131,7 +130,7 @@ class HeaderOrderingMixin:
         self._add_member_dependencies(class_name, nested_members, names, dependencies, offset_names)
 
     def external_dependency_headers(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_infos: dict[str, ClassInfo],
         rendered_class_names: set[str],
         header_names: dict[str, str],
@@ -174,7 +173,7 @@ class HeaderOrderingMixin:
         }
 
     def _required_typedef_dependency_names(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_infos: dict[str, ClassInfo],
         rendered_class_names: set[str],
         typedefs: dict[str, str],
@@ -196,7 +195,7 @@ class HeaderOrderingMixin:
         }
 
     def _typedef_dependency_names(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         underlying_type: str,
         class_infos: dict[str, ClassInfo],
     ) -> set[str]:
@@ -213,7 +212,7 @@ class HeaderOrderingMixin:
         return {name for name in names if name == primary or name.startswith(f"{primary}<")}
 
     def _value_typedef_underlyings(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_info: ClassInfo | None,
         typedefs: dict[str, str],
     ) -> list[str]:
@@ -236,7 +235,7 @@ class HeaderOrderingMixin:
         return next((info for info in class_infos.values() if info.name == class_name), None)
 
     def _value_typedef_dependency_names(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         underlying_type: str,
         class_infos: dict[str, ClassInfo],
     ) -> set[str]:
@@ -266,7 +265,7 @@ class HeaderOrderingMixin:
         return members
 
     def _add_base_dependencies(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_name: str,
         class_info: ClassInfo,
         names: set[str],
@@ -277,7 +276,7 @@ class HeaderOrderingMixin:
         )
 
     def _add_member_dependencies(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_name: str,
         members: list[MemberInfo],
         names: set[str],
@@ -296,7 +295,7 @@ class HeaderOrderingMixin:
             )
 
     def _member_dependency_names(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         member: MemberInfo,
         class_name: str,
         names: set[str],
@@ -316,7 +315,7 @@ class HeaderOrderingMixin:
         return dependencies
 
     def _referenced_dependency_names(
-        self: HeaderGeneratorContext, type_name: str, names: set[str]
+        self: HeaderRenderingHost, type_name: str, names: set[str]
     ) -> set[str]:
         dependencies: set[str] = set()
         referenced_name = self._referenced_class_name(type_name, names)
@@ -335,14 +334,14 @@ class HeaderOrderingMixin:
         preferred = [name for name in hierarchy_order if name in remaining]
         preferred.extend(sorted(set(remaining) - set(preferred)))
         while remaining:
-            ready = HeaderOrderingMixin._ready_names(remaining, preferred)
+            ready = HeaderOrderingService._ready_names(remaining, preferred)
             if not ready:
                 cycle = ", ".join(sorted(remaining))
                 raise ValueError(f"Cannot order cyclic by-value dependencies: {cycle}")
             for name in ready:
                 ordered.append(name)
                 del remaining[name]
-                HeaderOrderingMixin._remove_dependency(remaining, name)
+                HeaderOrderingService._remove_dependency(remaining, name)
         return ordered
 
     @staticmethod
@@ -381,7 +380,7 @@ class HeaderOrderingMixin:
     def _nested_definition_names(cls, class_infos: dict[str, ClassInfo]) -> set[str]:
         names: set[str] = set()
         for class_info in class_infos.values():
-            for nested_class in HeaderTypePlanningMixin._iter_nested_classes(class_info):
+            for nested_class in HeaderTypePlanningService._iter_nested_classes(class_info):
                 names.add(nested_class.name)
                 if nested_class.qualified_name:
                     names.add(nested_class.qualified_name)

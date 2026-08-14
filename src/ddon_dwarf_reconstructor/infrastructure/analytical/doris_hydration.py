@@ -458,7 +458,7 @@ def _reference_keys(
     store: _DorisHydrationStore,
     dies: Iterable[DorisDie],
 ) -> tuple[tuple[int, int], ...]:
-    loaded = getattr(store, "_reference_loaded", set())
+    loaded = store._reference_loaded
     result: list[tuple[int, int]] = []
     for die in dies:
         unit_offset = store._die_unit_offsets.get(die.offset)
@@ -508,15 +508,7 @@ def _load_reference_targets(
 def _reference_caches(
     store: _DorisHydrationStore,
 ) -> tuple[dict[tuple[int | None, int, str], int | None], set[tuple[int, int]]]:
-    target_cache = getattr(store, "_reference_targets", None)
-    if target_cache is None:
-        target_cache = {}
-        store._reference_targets = target_cache
-    loaded = getattr(store, "_reference_loaded", None)
-    if loaded is None:
-        loaded = set()
-        store._reference_loaded = loaded
-    return target_cache, loaded
+    return store._reference_targets, store._reference_loaded
 
 
 def _record_reference_row(

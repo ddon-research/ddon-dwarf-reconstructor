@@ -138,9 +138,11 @@ indexes. Arrow dataset consumers must use the repository's layout-specific typed
 schema: family stores declare `source_id: string`, while historical bucketed stores additionally
 declare `unit_bucket: int64`; automatic directory inference is not authoritative. The analytical
 default runtime analytical baseline is `pyarrow==25.0.0`, `PyMySQL==1.2.0`, and `SQLAlchemy==2.0.51`. The local Doris benchmark uses
-pinned 4.1.3 FE/BE images. MySQL/PyMySQL remains the default connection and load path; Doris
-documents Arrow Flight SQL as experimental, so it is an opt-in benchmark profile with separate
-FE/BE ports rather than the default runtime.
+pinned 4.1.3 FE/BE images. MySQL/PyMySQL remains the default connection and load path. SQL
+connect, read, and write sockets are bounded by the typed Doris configuration
+(`DDON_DORIS_SQL_*_TIMEOUT_SECONDS`); a timeout is incomplete evidence and never a successful
+lookup. Doris documents Arrow Flight SQL as experimental, so it is an opt-in benchmark profile
+with separate FE/BE ports rather than the default runtime.
 
 ### Arrow Flight SQL evaluation profile
 
@@ -389,12 +391,10 @@ for checkpoints, bounded probes, profiles, and crash diagnostics; a Temp path or
 label is not a durable store identity.
 
 The loader's supported Doris database default is `dwarf`. Versioned databases and external Temp
-stores in the sections below are historical serving measurements. Current evidence includes
-native row-count parity, authoritative `SHOW TABLE STATS`/`SHOW COLUMN STATS`/`SHOW ANALYZE`
-evidence, healthy tablets, cold/warm profiles, and the completed full Season 2 generation run.
-The per-header MSVC syntax/closure gate is now observed and clean; IDA/Sonar evidence and byte
-comparison with the unavailable historical approved `rLayout.h` remain separate boundaries. The
-removed Iceberg runtime is not part of the current loading or acceptance path.
+stores in the sections below are historical serving measurements. The 2026-08-10 full Season 2
+and MSVC results are historical evidence for the pre-boundary-refactor serving path. The fresh
+boundary-refactor acceptance status is recorded below and is not inferred from those older
+results. The removed Iceberg runtime is not part of the current loading or acceptance path.
 
 ### Historical full-corpus Doris serving result (v9)
 
@@ -481,7 +481,7 @@ These observations establish the current serving baseline only. Candidate access
 materialized views remain unevaluated until they demonstrate exact ordered parity and end-to-end
 improvement on the heavy `rAIFSM` generation workload.
 
-### Season 2 per-header MSVC closure audit
+### Historical Season 2 per-header MSVC closure audit
 
 The complete Season 2 root set was regenerated from the source-bound manifest in four external
 batches. The bulk run published 289/289 roots with zero generation failures and exact manifest
@@ -504,6 +504,87 @@ The final external inputs are
 The generated-header content is therefore compiler-clean and symbol-resolvable within the
 source-bound closure; it is not a claim of byte parity against the missing historical approved
 header baseline.
+
+## 2026-08-11 boundary-refactor acceptance
+
+The boundary refactor was validated against the immutable source-bound baseline before the full
+rerun. The baseline terminology is machine-derived:
+
+| Metric | Baseline | Refactor run before the completeness fix |
+| --- | ---: | ---: |
+| `root_count` | 289 | 289 directories observed |
+| `bundle_count` | 289 | 289 bundle directories observed |
+| `manifest_count` | 289 | 289 manifests observed |
+| `header_file_count` | 2,745 | 1,653 |
+| `published_file_count` | 3,034 | 1,942 (`.h` plus bundle manifests) |
+| `msvc_unit_count` | 2,745 | 1,653 |
+
+The baseline is retained at
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\baseline-33b8271`.
+The refactor outputs and four input batches are retained under
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\season2-after-boundary-20260811`.
+The first two batches completed with 73/73 roots each. The later batches were allowed to report
+success while Doris was failing, and many roots contained only `UncategorizedDefinitions.h`;
+therefore this run is `partial`, not a generation acceptance result.
+
+The implementation now prevents that false success: non-complete analytical definition results
+raise a bounded, diagnostic-bearing generation error, and source-bound full-hierarchy generation
+rejects an unresolved placeholder before it reaches the atomic publisher. This preserves valid
+partial bounded candidates used as deterministic hydration hints while preventing unavailable or
+empty evidence from becoming a successful bundle.
+
+Two representative post-refactor outputs remained byte-exact against the baseline:
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\single-after-hint`
+(`rAIFSM`, 11 headers) and
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\single-after-hint-archive-texture`
+(`rArchive` and `rTexture`, 6/6 headers each). These are narrow `observed` regression checks,
+not full-corpus evidence.
+
+The full rerun is `blocked` by the local Doris backend, not by a repository test failure. During
+the run the BE container crashed while serving scans and cleanup; the FE health endpoint reported
+`online_backend_num=0` of `total_backend_num=1`, and the subsequent root lookup failed with Doris
+error 1105 (`no queryable replicas`). The retained logs and Docker state are external diagnostics.
+No fresh full-corpus parity, MSVC closure, or warm performance conclusion may be derived from the
+incomplete output. `cl.exe` was not available on `PATH`, so the independent MSVC gate is
+`not_observed` for this refactor. The 110%-of-baseline warm p95 and peak-RSS gate is also
+`not_observed`; the prior canonical measurements remain historical controls, not a substitute for
+a fresh same-profile run.
+
+## 2026-08-14 completed boundary-refactor acceptance
+
+The blocked state above is historical. The repaired Doris deployment used remapped local FE/BE
+ports and completed the source-bound Season 2 run from
+`output/analytical-dwarf/main/store-4236f598acc8f158/manifest.json`. The final external output is
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\season2-final-source-cache-early-20260814`.
+
+| Metric | Observed |
+| --- | ---: |
+| `root_count` | 289 |
+| `bundle_count` | 289 |
+| `manifest_count` | 289 |
+| `header_file_count` | 2,745 |
+| `published_file_count` | 3,034 |
+| `msvc_unit_count` | 2,745 |
+| Generation failures | 0 |
+| Header/bundle-manifest hash mismatches | 0 |
+
+The independent MSVC report is
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\msvc-season2-final-source-cache-early-20260814\msvc-header-validation.json`.
+All 2,745 units passed with zero failures and zero timeouts; 124 `C4201` and one `C4309` warning
+were retained separately. The matching performance report is
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\performance-rAIFSM-final-early-3-20260814\current-doris-benchmark.json`.
+After one explicit cold run, its three warm full-hierarchy/exhaustive `rAIFSM` runs measured p50
+`9.06 s`, p95 `9.07 s`, and maximum peak RSS `73.8 MiB`, with the approved bundle hash on every run.
+
+Cache semantics matter to interpretation. Per-root hydration caches are intentionally cleared;
+the validated source/profile-bound selection cache is retained because it encodes deterministic
+definition-choice hints needed for existing byte parity. A no-selection-cache experiment produced
+15 extra dependency headers and 21 changed headers in `rLayout` and `rTexture`, so it is not an
+acceptable canonical mode. The complete benchmark observed roughly 13 ms cold versus 6 ms warm for
+the largest bounded Doris definition query, not a tens-of-seconds effect. Every generation child
+loaded the verified 58-symbol source-bound cache. An empty transient Doris cache is therefore not
+the observed cause of the earlier `rAIFSM` concern; source-bound cache identity and deterministic
+selection reuse are the material cache boundaries.
 
 ## Evidence boundary
 

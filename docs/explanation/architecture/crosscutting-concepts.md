@@ -175,6 +175,27 @@ packaging, compiler, and Sonar evidence are explicit tiers. The [testing referen
 and [testing knowledge base](../../knowledge-base/testing/testing-pyramid-and-validation-loop.md)
 define marker and command policy.
 
+## Boundary and completeness semantics
+
+`GenerationFacade` and `GenerationRuntime` form the application boundary. The runtime receives
+ready, typed collaborators from the composition root and owns one explicit resource scope. Domain
+rendering depends on the immutable `HeaderRenderContext`; it does not construct a filesystem,
+Doris, or compiler adapter.
+
+The canonical analytical serving path is Doris. JSONL and Parquet are composed validation adapters
+behind `MaterializedStorePort`; they are not substitutable storage subclasses. Definition
+construction and ordering use the domain `DefinitionCandidate` policy in every adapter. Query
+results retain provenance, truncation, diagnostics, and one of `complete`, `partial`, `not_found`,
+or `unavailable`. A partial or unavailable result cannot be converted to a successful placeholder
+header. A full-hierarchy request backed by a source-bound manifest rejects an unresolved
+`UncategorizedDefinitions.h` bundle before atomic publication.
+
+Doris publication is staged and verified by source-bound family counts. Stream Load distinguishes
+`loaded`, `publish_pending`, and `failed`; a publish timeout remains incomplete until bounded
+verification proves row-count parity. Request-scoped hydration caches are cleared at each root and
+emit bounded size/hit/miss lifecycle events. Registry schema mismatches fail closed rather than
+falling back to an unversioned compatibility shape.
+
 Performance is a separate infrastructure boundary. `PerformanceRunner` samples only an explicit
 child process, while `HistoryStore` writes the v1 ledger at `resources/performance/` and static
 exports under the knowledge base. The normal generation path has no profiler hooks. See [Profile

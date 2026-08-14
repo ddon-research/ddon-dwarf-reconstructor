@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from ....core.dwarf import DwarfCompilationUnit, DwarfEntry
 from ....core.observability import get_logger, log_timing
-from ....domain.models.analytical_dwarf import QueryStatus
+from ....domain.models.analytical_dwarf import QueryResult, QueryStatus
 from .class_parser_context import ClassParserContext
 from .class_parser_dump_discovery import ClassParserDumpDiscoveryMixin
 from .class_parser_lazy_discovery import ClassParserLazyDiscoveryMixin
@@ -71,16 +71,29 @@ class ClassParserDiscoveryMixin(ClassParserDumpDiscoveryMixin, ClassParserLazyDi
         if result.status is QueryStatus.NOT_FOUND:
             logger.debug("No analytical definition found for %s", class_name)
             return None
-        if result.status is not QueryStatus.COMPLETE or not result.items:
+        if result.status is not QueryStatus.COMPLETE:
+            raise RuntimeError(_incomplete_lookup_message(class_name, result))
+        if not result.items:
             logger.warning(
-                "Analytical definition lookup for %s was %s; refusing a CU-scan fallback",
+                "Analytical definition lookup for %s was %s and returned no candidate",
                 class_name,
                 result.status.value,
             )
             return None
         candidate = result.items[0]
-        compilation_unit = getattr(candidate, "cu", None)
+        compilation_unit = candidate.cu
         if compilation_unit is None:
-            logger.warning("Analytical definition for %s returned no compilation unit", class_name)
-            return None
+            raise RuntimeError(
+                f"Analytical definition lookup for {class_name} returned a candidate without "
+                "a compilation unit"
+            )
         return compilation_unit, candidate
+
+
+def _incomplete_lookup_message(class_name: str, result: QueryResult) -> str:
+    """Describe a non-complete store lookup without discarding its evidence state."""
+    detail = "; ".join(result.diagnostics) or "no diagnostics"
+    return (
+        f"Analytical definition lookup for {class_name} is {result.status.value}; "
+        f"source-bound generation cannot continue: {detail}"
+    )

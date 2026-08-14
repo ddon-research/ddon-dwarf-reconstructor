@@ -8,7 +8,8 @@ commands, but are not imported while a normal generation session is composed.
 from importlib import import_module
 from typing import Any
 
-from .doris_store import DorisDwarfIndex, DorisDwarfStore
+from .doris_index import DorisDwarfIndex
+from .doris_store import DorisDwarfStore
 from .session import AnalyticalDwarfSession
 
 __all__ = [

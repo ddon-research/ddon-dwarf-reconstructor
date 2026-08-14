@@ -13,7 +13,7 @@ flowchart TD
     classify --> declarator["TypeDeclarator / TypeReference"]
     declarator --> dependency["DependencyExtractor"]
     dependency --> order["stable dependency ordering"]
-    order --> render["HeaderGenerator"]
+    order --> render["HeaderRenderer"]
 ```
 
 `LazyTypeResolver` follows references only when needed. The chain preserves typedefs, pointers,

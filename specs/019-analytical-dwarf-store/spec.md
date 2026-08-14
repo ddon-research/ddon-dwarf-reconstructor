@@ -78,7 +78,7 @@ generate children are not instrumented by this route. No materialization, load, 
 or implicit cache/session tuning is authorized by this benchmark route.
 
 The optimization evaluation is a separate opt-in route over the same complete manifest. It defines
-typed `DorisServingVariant`, `DorisQueryObservation`, and `DorisOptimizationReport` contracts. The
+typed `DorisServingProfile`, `DorisQueryObservation`, and `DorisOptimizationReport` contracts. The
 actual generation child may enable bounded redacted query tracing; the trace records query-shape
 digests, semantic operations, query IDs, local execute/fetch timing, rows, scan/tablet/operator/
 memory/spill metrics, and profile status without parameter values. Profiles are retrieved immediately on the executing

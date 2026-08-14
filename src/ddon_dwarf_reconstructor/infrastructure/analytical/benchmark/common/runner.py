@@ -174,11 +174,8 @@ def _knowledge_export_measurement(
 ) -> dict[str, Any]:
     del iterations
     try:
-        from .....application.generators import DwarfGenerator
         from .....infrastructure.artifacts import SourceIdentityCatalog
-        from .....infrastructure.composition import create_disassembly_producer, create_dump_lookup
         from .....infrastructure.config import DwarfRuntimeConfig
-        from ...session import AnalyticalDwarfSession
 
         output_root = store_manifest.resolve().parent / "knowledge-export"
         output_root.mkdir(parents=True, exist_ok=True)
@@ -186,37 +183,18 @@ def _knowledge_export_measurement(
         identity_catalog = SourceIdentityCatalog()
         source_path = Path(store.manifest.source_path)
         store_path = store_manifest.resolve()
-
-        def operation() -> tuple[list[Path], int]:
-            exported: list[Path] = []
-
-            def default_session_factory(_path: Path) -> AnalyticalDwarfSession:
-                return AnalyticalDwarfSession(store_path, expected_source_path=source_path)
-
-            with DwarfGenerator(
+        (manifests, exported_count), metrics = measure(
+            lambda: _run_knowledge_export_operation(
                 source_path,
-                session_factory=session_factory or default_session_factory,
-                dump_lookup_factory=create_dump_lookup,
-                disassembly_factory=create_disassembly_producer,
-                cache_file=output_root / "dwarf-cache.json",
-                die_cache_size=runtime.die_cache_size,
-                type_cache_size=runtime.type_cache_size,
-                search_timeout=runtime.search_timeout_seconds,
-                source_hash=identity_catalog.sha256,
-                source_identity=identity_catalog,
-            ) as generator:
-                for symbol in symbols:
-                    symbol_root = output_root / safe_output_name(symbol)
-                    exported.append(
-                        generator.export_knowledge_graph(
-                            symbol,
-                            symbol_root,
-                            f"analytical-{store.manifest.source_identity.sha256[:16]}",
-                        )
-                    )
-            return exported, len(exported)
-
-        (manifests, exported_count), metrics = measure(operation)
+                store_path,
+                output_root,
+                runtime,
+                identity_catalog,
+                store.manifest.source_identity.sha256[:16],
+                symbols,
+                session_factory,
+            )
+        )
         completeness = []
         for manifest_path in manifests:
             payload = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -237,6 +215,52 @@ def _knowledge_export_measurement(
         }
     except (OSError, RuntimeError, ValueError) as error:
         return {"status": "blocked", "reason": str(error)}
+
+
+def _run_knowledge_export_operation(
+    source_path: Path,
+    store_path: Path,
+    output_root: Path,
+    runtime: Any,
+    source_identity: Any,
+    store_identity: str,
+    symbols: tuple[str, ...],
+    session_factory: Callable[[Path], Any] | None,
+) -> tuple[list[Path], int]:
+    from .....application.generators import DwarfGenerator
+    from .....infrastructure.composition import create_disassembly_producer, create_dump_lookup
+    from ...session import AnalyticalDwarfSession
+
+    exported: list[Path] = []
+
+    def default_session_factory(_path: Path) -> AnalyticalDwarfSession:
+        return AnalyticalDwarfSession(store_path, expected_source_path=source_path)
+
+    with DwarfGenerator(
+        source_path,
+        session_factory=session_factory or default_session_factory,
+        dump_lookup_factory=create_dump_lookup,
+        disassembly_factory=create_disassembly_producer,
+        cache_file=output_root / "dwarf-cache.json",
+        die_cache_size=runtime.die_cache_size,
+        type_cache_size=runtime.type_cache_size,
+        search_timeout=runtime.search_timeout_seconds,
+        source_hash=source_identity.sha256,
+        source_identity=source_identity,
+    ) as generator:
+        for symbol in symbols:
+            symbol_root = output_root / safe_output_name(symbol)
+            facade = generator.facade
+            if facade is None:
+                raise RuntimeError("generation facade is unavailable outside an open session")
+            exported.append(
+                facade.export_knowledge_graph(
+                    symbol,
+                    symbol_root,
+                    f"analytical-{store_identity}",
+                )
+            )
+    return exported, len(exported)
 
 
 def _build_report(

@@ -3,22 +3,21 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
 
 from ....core.observability import get_logger, log_timing
 from ....core.path_policy import sanitize_for_filesystem
 from ...models.dwarf import ClassInfo
-
-if TYPE_CHECKING:
-    from .header_generator_context import HeaderGeneratorContext
+from .header_type_planning import HeaderTypePlanningService
+from .rendering.operations import HeaderRenderingHost
+from .rendering.type_policy import TypeExpressionPolicy
 
 logger = get_logger(__name__)
 
 
-class HierarchyHeaderGenerationMixin:
+class HierarchyHeaderGenerationService:
     @log_timing
     def generate_single_file_hierarchy_header(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_infos: dict[str, ClassInfo],
         hierarchy_order: list[str],
         target_class: str,
@@ -124,7 +123,7 @@ class HierarchyHeaderGenerationMixin:
         return ["// Dependencies", *[f'#include "{header}"' for header in headers], ""]
 
     def _hierarchy_typedef_block(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         typedefs: dict[str, str] | None,
         target_class: str,
         class_infos: dict[str, ClassInfo],
@@ -155,7 +154,7 @@ class HierarchyHeaderGenerationMixin:
         return lines
 
     def _normalize_typedef_forward_declarations(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         declarations: set[str],
         class_infos: dict[str, ClassInfo],
     ) -> set[str]:
@@ -172,14 +171,16 @@ class HierarchyHeaderGenerationMixin:
             if not match:
                 normalized.add(declaration)
                 continue
-            kind = kinds.get(match.group(2)) or self._forward_declaration_kind(match.group(2))
+            kind = (
+                TypeExpressionPolicy.preferred_forward_kind(match.group(2))
+                or kinds.get(match.group(2))
+                or self._forward_declaration_kind(match.group(2))
+            )
             kind = kind or match.group(1)
             normalized.add(f"{kind} {match.group(2)};")
         return normalized
 
-    def _aggregate_kind_names(
-        self: HeaderGeneratorContext, info: ClassInfo
-    ) -> list[tuple[str, str]]:
+    def _aggregate_kind_names(self: HeaderRenderingHost, info: ClassInfo) -> list[tuple[str, str]]:
         names: list[tuple[str, str]] = []
         if info.kind in {"class", "struct", "union"}:
             names.append((self._unqualify_type_expression(info.name), info.kind))
@@ -230,7 +231,7 @@ class HierarchyHeaderGenerationMixin:
         return lines
 
     def _hierarchy_forward_declarations(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_infos: dict[str, ClassInfo],
         hierarchy_order: list[str],
         typedefs: dict[str, str] | None,
@@ -247,7 +248,7 @@ class HierarchyHeaderGenerationMixin:
         return self._deduplicate_forward_declarations(forward_decls, class_infos)
 
     def _deduplicate_forward_declarations(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         declarations: set[str],
         class_infos: dict[str, ClassInfo],
     ) -> set[str]:
@@ -274,7 +275,50 @@ class HierarchyHeaderGenerationMixin:
     def _preferred_forward_declaration(
         name: str, candidates: list[str], resolved_kinds: dict[str, str]
     ) -> str:
-        preferred_kind = resolved_kinds.get(name) or next(
+        template_declaration = HierarchyHeaderGenerationService._preferred_template_declaration(
+            candidates
+        )
+        if template_declaration is not None:
+            return template_declaration
+        policy_kind = TypeExpressionPolicy.preferred_forward_kind(name)
+        preferred_kind = HierarchyHeaderGenerationService._select_forward_declaration_kind(
+            name, candidates, resolved_kinds, policy_kind
+        )
+        return HierarchyHeaderGenerationService._render_preferred_forward_declaration(
+            name, candidates, preferred_kind, policy_kind
+        )
+
+    @staticmethod
+    def _preferred_template_declaration(candidates: list[str]) -> str | None:
+        """Choose one stable declaration when specializations expose arities."""
+        templates = [candidate for candidate in candidates if candidate.startswith("template <")]
+        if not templates:
+            return None
+        return max(
+            templates,
+            key=lambda declaration: (
+                len(
+                    HeaderTypePlanningService._split_template_arguments(
+                        declaration[len("template <") : declaration.index("> class")]
+                    )
+                ),
+                declaration,
+            ),
+        )
+
+    @staticmethod
+    def _select_forward_declaration_kind(
+        name: str,
+        candidates: list[str],
+        resolved_kinds: dict[str, str],
+        policy_kind: str | None,
+    ) -> str:
+        if policy_kind is not None:
+            return policy_kind
+        resolved_kind = resolved_kinds.get(name)
+        if resolved_kind is not None:
+            return resolved_kind
+        return next(
             (
                 kind
                 for kind in ("union", "struct", "class")
@@ -282,17 +326,26 @@ class HierarchyHeaderGenerationMixin:
             ),
             "class",
         )
-        return next(
-            (
-                declaration
-                for declaration in candidates
-                if declaration.startswith(f"{preferred_kind} ")
-            ),
-            candidates[0],
+
+    @staticmethod
+    def _render_preferred_forward_declaration(
+        name: str,
+        candidates: list[str],
+        preferred_kind: str,
+        policy_kind: str | None,
+    ) -> str:
+        declaration = next(
+            (candidate for candidate in candidates if candidate.startswith(f"{preferred_kind} ")),
+            None,
         )
+        if declaration is not None:
+            return declaration
+        if policy_kind is not None:
+            return f"{preferred_kind} {name};"
+        return candidates[0]
 
     def _resolved_forward_declarations(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_infos: dict[str, ClassInfo],
         typedefs: dict[str, str],
         enabled: bool,
@@ -305,7 +358,7 @@ class HierarchyHeaderGenerationMixin:
         return declarations
 
     def _exclude_defined_declarations(
-        self: HeaderGeneratorContext, declarations: set[str], class_infos: dict[str, ClassInfo]
+        self: HeaderRenderingHost, declarations: set[str], class_infos: dict[str, ClassInfo]
     ) -> set[str]:
         return {
             declaration
@@ -314,7 +367,7 @@ class HierarchyHeaderGenerationMixin:
         }
 
     def _base_forward_declarations(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_infos: dict[str, ClassInfo],
         known_infos: dict[str, ClassInfo],
     ) -> set[str]:
@@ -333,7 +386,7 @@ class HierarchyHeaderGenerationMixin:
         return declarations
 
     def _hierarchy_definitions(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_infos: dict[str, ClassInfo],
         hierarchy_order: list[str],
         include_metadata: bool,
@@ -351,7 +404,7 @@ class HierarchyHeaderGenerationMixin:
         return lines
 
     def _unique_definition_names(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_infos: dict[str, ClassInfo],
         ordered_classes: list[str],
     ) -> list[str]:

@@ -92,6 +92,39 @@ def score_definition(signals: DefinitionSignals) -> int:
     return score
 
 
+def build_definition_candidate(
+    symbol: str,
+    *,
+    cu_offset: int,
+    die_offset: int,
+    signals: DefinitionSignals,
+) -> DefinitionCandidate:
+    """Build the canonical candidate shared by every lookup adapter.
+
+    Keeping construction beside the scoring policy prevents storage adapters
+    from quietly diverging in their interpretation of completeness.
+    """
+    score = score_definition(signals)
+    return DefinitionCandidate(
+        symbol=symbol,
+        cu_offset=cu_offset,
+        die_offset=die_offset,
+        score=score,
+        complete=not signals.is_declaration and score >= 0,
+        byte_size=signals.byte_size,
+        has_children=signals.has_children,
+        is_declaration=signals.is_declaration,
+        has_type_reference=signals.has_type_reference,
+    )
+
+
+def definition_candidate_sort_key(
+    candidate: DefinitionCandidate, *, depth: int = 0
+) -> tuple[int, int, int, int]:
+    """Return the deterministic ordering shared by every storage adapter."""
+    return (-candidate.score, candidate.cu_offset, candidate.die_offset, depth)
+
+
 def is_early_exit_candidate(signals: DefinitionSignals, score: int) -> bool:
     """Return whether fast search can safely accept this candidate."""
     return (

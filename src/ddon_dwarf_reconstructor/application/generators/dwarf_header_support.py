@@ -9,7 +9,8 @@ from ...core.dwarf import DwarfCompilationUnit, DwarfEntry
 from ...core.observability import get_logger, log_event
 from ...domain.models.dwarf import ClassInfo
 from ...domain.services.generation import calculate_packing_info
-from .dwarf_generator_context import DwarfGeneratorContext
+from ..generation.runtime import GenerationRuntime
+from .dwarf_lookup import GeneratorLookupService
 
 logger = get_logger(__name__)
 
@@ -19,10 +20,10 @@ class HeaderGenerationSupportMixin:
 
     @staticmethod
     def _find_class_with_timing(
-        context: DwarfGeneratorContext, class_name: str
+        context: GenerationRuntime, class_name: str
     ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         started_at = perf_counter()
-        result = context.workflow.find_class(class_name)
+        result = GeneratorLookupService.find_class(context, class_name)
         log_event(
             logger,
             logging.DEBUG,
@@ -34,12 +35,10 @@ class HeaderGenerationSupportMixin:
         return result
 
     @staticmethod
-    def _expand_typedef_search(context: DwarfGeneratorContext, full_hierarchy: bool = True) -> None:
+    def _expand_typedef_search(context: GenerationRuntime, full_hierarchy: bool = True) -> None:
         """Expand typedef search for hierarchy generation."""
         started_at = perf_counter()
-        resolver = context.type_resolver
-        assert resolver is not None
-        resolver.expand_primitive_search(full_hierarchy=full_hierarchy)
+        context.type_resolver.expand_primitive_search(full_hierarchy=full_hierarchy)
         log_event(
             logger,
             logging.DEBUG,
@@ -50,7 +49,7 @@ class HeaderGenerationSupportMixin:
 
     @staticmethod
     def _build_hierarchy_with_timing(
-        context: DwarfGeneratorContext,
+        context: GenerationRuntime,
         class_name: str,
         max_depth: int = 10,
         *,
@@ -58,7 +57,6 @@ class HeaderGenerationSupportMixin:
     ) -> tuple[dict[str, ClassInfo], list[str]]:
         """Build full hierarchy with dependencies and timing."""
         started_at = perf_counter()
-        assert context.hierarchy_builder is not None
         class_infos, hierarchy_order = (
             context.hierarchy_builder.build_full_hierarchy_with_dependencies(
                 class_name,
@@ -80,7 +78,7 @@ class HeaderGenerationSupportMixin:
 
     @staticmethod
     def _validate_hierarchy(
-        context: DwarfGeneratorContext, class_infos: dict[str, ClassInfo], class_name: str
+        context: GenerationRuntime, class_infos: dict[str, ClassInfo], class_name: str
     ) -> bool:
         del context
         if not class_infos:
@@ -90,18 +88,16 @@ class HeaderGenerationSupportMixin:
 
     @staticmethod
     def _collect_typedefs_and_packing(
-        context: DwarfGeneratorContext, class_infos: dict[str, ClassInfo]
+        context: GenerationRuntime, class_infos: dict[str, ClassInfo]
     ) -> dict[str, str]:
         """Add packing information and collect all used typedefs."""
         started_at = perf_counter()
         all_typedefs: dict[str, str] = {}
-        resolver = context.type_resolver
-        assert resolver is not None
         for class_info in class_infos.values():
             if class_info.packing_info is None:
                 class_info.packing_info = calculate_packing_info(class_info)
             all_typedefs.update(
-                resolver.collect_used_typedefs(
+                context.type_resolver.collect_used_typedefs(
                     class_info.members,
                     class_info.methods,
                     class_info.unions,

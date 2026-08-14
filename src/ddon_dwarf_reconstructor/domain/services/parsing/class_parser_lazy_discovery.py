@@ -87,18 +87,19 @@ class ClassParserLazyDiscoveryMixin:
                 "; ".join(search.diagnostics),
             )
             return None
+        if search.status is not SearchStatus.COMPLETE:
+            logger.warning(
+                "Targeted search for %s returned non-complete %s evidence; refusing candidate: %s",
+                class_name,
+                search.status.value,
+                "; ".join(search.diagnostics) or "no diagnostics",
+            )
+            return None
         offset = search.die_offset
         result = self._find_die_and_cu_by_offset(offset)
         if result is None:
             return None
         cu, die = result
-        if search.status is not SearchStatus.COMPLETE:
-            logger.warning(
-                "Targeted search for %s returned %s evidence at offset 0x%x",
-                class_name,
-                search.status.value,
-                offset,
-            )
         if "DW_AT_declaration" in die.attributes:
             logger.warning(
                 "Targeted search found forward declaration for %s at 0x%x", class_name, offset

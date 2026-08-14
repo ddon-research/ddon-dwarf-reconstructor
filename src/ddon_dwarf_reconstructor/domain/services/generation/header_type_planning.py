@@ -5,23 +5,35 @@ from __future__ import annotations
 import re
 
 from ....core.observability import get_logger
+from ...models.analytical_dwarf import QueryStatus
 from ...models.dwarf import ClassInfo, StructInfo
 from ...ports.dwarf_lookup import DwarfLookupPort
+from .rendering.type_policy import TypeExpressionPolicy
 
 logger = get_logger(__name__)
 
 
-class HeaderTypePlanningMixin:
+class HeaderTypePlanningService:
     dwarf_index: DwarfLookupPort
 
     def _forward_declaration_kind(self, name: str) -> str | None:
         """Resolve the aggregate kind for an opaque name through the DWARF index."""
         clean_name = self._unqualify_type_expression(name).strip()
-        cache = getattr(self, "_forward_declaration_kind_cache", {})
+        cache = self._forward_declaration_kind_cache
         if clean_name in cache:
             return cache[clean_name]
 
         kind: str | None = None
+        tag_result = self.dwarf_index.find_definition_tag(clean_name)
+        if tag_result.status is QueryStatus.COMPLETE and tag_result.items:
+            kind = {
+                "DW_TAG_class_type": "class",
+                "DW_TAG_structure_type": "struct",
+                "DW_TAG_union_type": "union",
+            }.get(str(tag_result.items[0]))
+            if kind is not None:
+                cache[clean_name] = kind
+                return kind
         offset = self.dwarf_index.find_symbol_offset(clean_name)
         die = self.dwarf_index.get_die_by_offset(offset) if offset is not None else None
         tag_kind = {
@@ -238,7 +250,7 @@ class HeaderTypePlanningMixin:
     @staticmethod
     def _normalize_type_name(type_name: str) -> str:
         """Remove qualifiers and indirection from a referenced type name."""
-        clean_name = HeaderTypePlanningMixin._unqualify_type_expression(type_name.strip())
+        clean_name = HeaderTypePlanningService._unqualify_type_expression(type_name.strip())
         clean_name = re.sub(r"\b(?:const|volatile|restrict)\b\s*", "", clean_name)
         clean_name = re.sub(r"\b(?:class|struct|union|enum)\b\s*", "", clean_name)
         clean_name = re.sub(r"\s*[*&]+\s*$", "", clean_name)
@@ -336,45 +348,12 @@ class HeaderTypePlanningMixin:
     @staticmethod
     def _is_builtin_type(type_name: str) -> bool:
         """Return whether a type expression contains only built-in type words."""
-        builtin_words = {
-            "bool",
-            "char",
-            "double",
-            "float",
-            "int",
-            "long",
-            "short",
-            "signed",
-            "unsigned",
-            "void",
-            "wchar_t",
-            "size_t",
-            "uint8_t",
-            "uint16_t",
-            "uint32_t",
-            "uint64_t",
-            "int8_t",
-            "int16_t",
-            "int32_t",
-            "int64_t",
-            "u8",
-            "u16",
-            "u32",
-            "u64",
-            "s8",
-            "s16",
-            "s32",
-            "s64",
-            "f32",
-            "f64",
-        }
-        words = set(re.findall(r"[A-Za-z_]\w*", type_name))
-        return bool(words) and words <= builtin_words
+        return TypeExpressionPolicy.is_builtin(type_name)
 
     @staticmethod
     def _referenced_class_name(type_name: str, class_names: set[str]) -> str | None:
         """Match a member's value type to a resolved class or template name."""
-        clean_name = HeaderTypePlanningMixin._normalize_type_name(type_name)
+        clean_name = HeaderTypePlanningService._normalize_type_name(type_name)
         if clean_name in class_names:
             return clean_name
         template_match = re.match(r"([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*<", clean_name)
@@ -394,5 +373,5 @@ class HeaderTypePlanningMixin:
         nested_classes: list[ClassInfo] = []
         for nested_class in class_info.nested_classes:
             nested_classes.append(nested_class)
-            nested_classes.extend(HeaderTypePlanningMixin._iter_nested_classes(nested_class))
+            nested_classes.extend(HeaderTypePlanningService._iter_nested_classes(nested_class))
         return nested_classes

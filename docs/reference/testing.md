@@ -54,6 +54,14 @@ Full real-ELF materialization, LLVM verification, and Doris loading are separate
 evidence. The local Docker daemon and the LLVM source checkout do not count as successful Doris or
 `llvm-dwarfdump --verify` observations without an executable result.
 
+For source-bound Season 2 generation, derive and report `root_count`, `bundle_count`,
+`manifest_count`, `header_file_count`, `published_file_count`, and `msvc_unit_count` separately.
+An output directory containing a manifest or a placeholder header is not evidence of a complete
+root. `complete`, `partial`, `blocked`, and `not_observed` are evidence states; a passing repository
+gate cannot replace unavailable Doris, MSVC, real-asset, or performance observations. A truncated
+or unavailable query must remain non-complete through generation and must not publish a successful
+placeholder bundle.
+
 ## Nested project
 
 ```powershell

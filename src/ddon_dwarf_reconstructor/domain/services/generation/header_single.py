@@ -2,22 +2,18 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from ....core.observability import get_logger, log_timing
 from ....core.path_policy import sanitize_for_filesystem
 from ...models.dwarf import ClassInfo
-
-if TYPE_CHECKING:
-    from .header_generator_context import HeaderGeneratorContext
+from .rendering.operations import HeaderRenderingHost
 
 logger = get_logger(__name__)
 
 
-class SingleHeaderGenerationMixin:
+class SingleHeaderGenerationService:
     @log_timing
     def generate_header(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_info: ClassInfo,
         typedefs: dict[str, str] | None = None,
         cu_offset: int | None = None,
@@ -60,7 +56,7 @@ class SingleHeaderGenerationMixin:
         return "\n".join(lines)
 
     def _single_typedef_lines(
-        self: HeaderGeneratorContext, typedefs: dict[str, str] | None
+        self: HeaderRenderingHost, typedefs: dict[str, str] | None
     ) -> list[str]:
         lines: list[str] = []
         typedef_map = typedefs or {}
@@ -82,7 +78,7 @@ class SingleHeaderGenerationMixin:
         return lines
 
     def _single_forward_declaration_lines(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_info: ClassInfo,
         typedefs: dict[str, str] | None,
     ) -> list[str]:
@@ -93,7 +89,7 @@ class SingleHeaderGenerationMixin:
 
     @log_timing
     def generate_single_class_header(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_info: ClassInfo,
         class_dependencies: dict[str, str] | None = None,
         typedefs: dict[str, str] | None = None,
@@ -175,7 +171,7 @@ class SingleHeaderGenerationMixin:
             return []
         return ["// Base classes", *[f'#include "{header}"' for header in sorted(headers)], ""]
 
-    def _typedef_block(self: HeaderGeneratorContext, typedefs: dict[str, str] | None) -> list[str]:
+    def _typedef_block(self: HeaderRenderingHost, typedefs: dict[str, str] | None) -> list[str]:
         if not typedefs:
             return []
         lines = ["// Type definitions"]
@@ -190,7 +186,7 @@ class SingleHeaderGenerationMixin:
         lines.append("")
         return lines
 
-    def _void_alias_storage_type(self: HeaderGeneratorContext, underlying_type: str) -> str:
+    def _void_alias_storage_type(self: HeaderRenderingHost, underlying_type: str) -> str:
         """Give exact-void handle aliases a declaration-safe storage type."""
         if self._normalize_type_name(underlying_type) == "void":
             return "std::uint8_t"
@@ -215,7 +211,7 @@ class SingleHeaderGenerationMixin:
         return lines
 
     def _generate_metadata_header(
-        self: HeaderGeneratorContext, class_info: ClassInfo, cu_offset: int | None
+        self: HeaderRenderingHost, class_info: ClassInfo, cu_offset: int | None
     ) -> list[str]:
         """Generate metadata comment block for class."""
         lines = [

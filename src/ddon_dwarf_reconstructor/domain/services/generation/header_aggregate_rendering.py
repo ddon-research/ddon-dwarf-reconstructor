@@ -3,20 +3,17 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import TYPE_CHECKING
 
 from ....core.observability import get_logger
 from ...models.dwarf import EnumInfo, StructInfo, UnionInfo
-
-if TYPE_CHECKING:
-    from .header_generator_context import HeaderGeneratorContext
+from .rendering.operations import HeaderRenderingHost
 
 logger = get_logger(__name__)
 
 
-class HeaderAggregateRenderingMixin:
+class HeaderAggregateRenderingService:
     def _generate_enum_definition(
-        self: HeaderGeneratorContext, enum: EnumInfo, include_metadata: bool
+        self: HeaderRenderingHost, enum: EnumInfo, include_metadata: bool
     ) -> list[str]:
         """Generate enum definition."""
         lines = []
@@ -43,7 +40,7 @@ class HeaderAggregateRenderingMixin:
         return lines
 
     def _generate_struct_definition(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         struct: StructInfo,
         containing_class_name: str | None = None,
         rendered_name: str | None = None,
@@ -73,7 +70,7 @@ class HeaderAggregateRenderingMixin:
         return lines
 
     def _generate_union_definition(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         union: UnionInfo,
         containing_class_name: str | None = None,
         occupied_member_names: set[str] | None = None,
@@ -93,7 +90,7 @@ class HeaderAggregateRenderingMixin:
         return lines
 
     def _render_union_nested_structs(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         union: UnionInfo,
         containing_class_name: str | None = None,
     ) -> list[str]:
@@ -108,7 +105,7 @@ class HeaderAggregateRenderingMixin:
         return lines
 
     def _render_union_struct(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         struct: StructInfo,
         containing_class_name: str | None = None,
     ) -> list[str]:
@@ -123,7 +120,7 @@ class HeaderAggregateRenderingMixin:
         return lines
 
     def _render_union_members(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         union: UnionInfo,
         containing_class_name: str | None = None,
         occupied_member_names: set[str] | None = None,

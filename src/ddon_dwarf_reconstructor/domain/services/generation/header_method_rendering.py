@@ -3,20 +3,17 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
 
 from ....core.observability import get_logger
 from ...models.dwarf import MethodInfo, ParameterInfo
-
-if TYPE_CHECKING:
-    from .header_generator_context import HeaderGeneratorContext
+from .rendering.operations import HeaderRenderingHost
 
 logger = get_logger(__name__)
 
 
-class HeaderMethodRenderingMixin:
+class HeaderMethodRenderingService:
     def _generate_methods(
-        self: HeaderGeneratorContext, methods: list[MethodInfo], class_name: str
+        self: HeaderRenderingHost, methods: list[MethodInfo], class_name: str
     ) -> list[str]:
         """Generate method declarations."""
         methods = self._deduplicate_rendered_methods(self._deduplicate_methods(methods))
@@ -33,7 +30,7 @@ class HeaderMethodRenderingMixin:
         ]
 
     def _deduplicate_rendered_methods(
-        self: HeaderGeneratorContext, methods: list[MethodInfo]
+        self: HeaderRenderingHost, methods: list[MethodInfo]
     ) -> list[MethodInfo]:
         """Collapse aliases that render to one C++ signature despite DIE differences."""
         unique_methods: list[MethodInfo] = []
@@ -61,7 +58,7 @@ class HeaderMethodRenderingMixin:
         return method.is_constructor or method.name in {class_name, primary_name}
 
     def _partition_methods(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         methods: list[MethodInfo],
         class_name: str,
         primary_name: str,
@@ -82,30 +79,28 @@ class HeaderMethodRenderingMixin:
         return constructors, destructors, operators, other_methods
 
     def _render_constructors(
-        self: HeaderGeneratorContext, methods: list[MethodInfo], class_name: str
+        self: HeaderRenderingHost, methods: list[MethodInfo], class_name: str
     ) -> list[str]:
         return [
             f"    {class_name}({self._format_parameters(method)}){self._method_suffix(method)};"
             for method in methods
         ]
 
-    def _render_destructors(self: HeaderGeneratorContext, methods: list[MethodInfo]) -> list[str]:
+    def _render_destructors(self: HeaderRenderingHost, methods: list[MethodInfo]) -> list[str]:
         return [
             f"    {'virtual ' if method.is_virtual else ''}{self._rendered_method_name(method.name)}()"
             f"{self._method_suffix(method)};"
             for method in methods
         ]
 
-    def _render_regular_methods(
-        self: HeaderGeneratorContext, methods: list[MethodInfo]
-    ) -> list[str]:
+    def _render_regular_methods(self: HeaderRenderingHost, methods: list[MethodInfo]) -> list[str]:
         return [
             f"    {self._method_prefix(method)}{self._unqualify_type_expression(method.return_type)} "
             f"{self._rendered_method_name(method.name)}({self._format_parameters(method)}){self._method_suffix(method)};"
             for method in methods
         ]
 
-    def _render_operators(self: HeaderGeneratorContext, methods: list[MethodInfo]) -> list[str]:
+    def _render_operators(self: HeaderRenderingHost, methods: list[MethodInfo]) -> list[str]:
         lines = []
         for method in methods:
             prefix = self._method_prefix(method)
@@ -127,7 +122,7 @@ class HeaderMethodRenderingMixin:
                 )
         return lines
 
-    def _rendered_method_name(self: HeaderGeneratorContext, method_name: str) -> str:
+    def _rendered_method_name(self: HeaderRenderingHost, method_name: str) -> str:
         """Remove recovered explicit template ids and unavailable enclosing scopes."""
         if method_name.startswith("operator "):
             return "operator " + self._unqualify_type_expression(method_name[len("operator ") :])
@@ -143,12 +138,12 @@ class HeaderMethodRenderingMixin:
 
         for method in methods:
             parameter_types = tuple(
-                HeaderMethodRenderingMixin._canonical_parameter_type(parameter)
+                HeaderMethodRenderingService._canonical_parameter_type(parameter)
                 for parameter in (method.parameters or [])
                 if parameter.name != "__artificial__"
             )
             signature = (
-                HeaderMethodRenderingMixin._canonical_method_name(method.name),
+                HeaderMethodRenderingService._canonical_method_name(method.name),
                 parameter_types,
                 method.is_static,
                 method.is_const,
@@ -173,7 +168,7 @@ class HeaderMethodRenderingMixin:
         declarator = re.sub(r"\b(?:const|volatile|restrict)\b", "", type_name)
         declarator = re.sub(r"[A-Za-z_]\w*(?:::[A-Za-z_]\w*)*", "", declarator)
         declarator = re.sub(r"\s+", "", declarator)
-        canonical_simple = HeaderMethodRenderingMixin._canonical_simple_type(type_name)
+        canonical_simple = HeaderMethodRenderingService._canonical_simple_type(type_name)
         if canonical_simple is not None:
             return ("name", canonical_simple, qualifiers, declarator)
         return ("terminal", parameter.type_offset, qualifiers, declarator)
@@ -181,14 +176,14 @@ class HeaderMethodRenderingMixin:
     @staticmethod
     def _canonical_simple_type(type_name: str) -> str | None:
         clean_name = re.sub(r"\b(?:const|volatile|restrict)\b\s*", "", type_name).strip()
-        if HeaderMethodRenderingMixin._has_declarator(clean_name):
+        if HeaderMethodRenderingService._has_declarator(clean_name):
             return None
         words = clean_name.split()
-        if not words or not HeaderMethodRenderingMixin._simple_words_are_identifiers(words):
+        if not words or not HeaderMethodRenderingService._simple_words_are_identifiers(words):
             return None
-        if not HeaderMethodRenderingMixin._simple_words_are_allowed(words):
+        if not HeaderMethodRenderingService._simple_words_are_allowed(words):
             return None
-        return HeaderMethodRenderingMixin._canonical_alias(words) or " ".join(words)
+        return HeaderMethodRenderingService._canonical_alias(words) or " ".join(words)
 
     @staticmethod
     def _has_declarator(type_name: str) -> bool:
@@ -303,7 +298,7 @@ class HeaderMethodRenderingMixin:
             suffix += " = default"
         return suffix
 
-    def _format_parameters(self: HeaderGeneratorContext, method: MethodInfo) -> str:
+    def _format_parameters(self: HeaderRenderingHost, method: MethodInfo) -> str:
         """Format method parameters, filtering artificial ones."""
         if not method.parameters:
             return ""

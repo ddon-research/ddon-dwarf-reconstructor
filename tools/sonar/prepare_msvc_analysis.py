@@ -13,6 +13,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from .msvc_validation.publication import write_json_atomic
+
 REQUIRED_MSVC_FLAGS = ("/std:c++latest", "/EHsc", "/W4", "/Zc:__cplusplus")
 TRANSLATION_UNIT_SUFFIXES = (".c", ".cc", ".cpp", ".cxx")
 AGGREGATE_TRANSLATION_UNIT = "compile_all.cpp"
@@ -292,6 +294,7 @@ def prepare_validation_inputs(paths: SonarPaths) -> ValidationInputs:
     manifest_path = paths.validation_directory / "sonar-inputs.json"
     manifest = {
         "schema_version": 1,
+        "validation_scope": "aggregate_sonar_diagnostics",
         "headers": [
             {
                 "path": header.name,
@@ -300,13 +303,13 @@ def prepare_validation_inputs(paths: SonarPaths) -> ValidationInputs:
             for header in headers
         ],
         "translation_units": source_names,
+        "header_file_count": len(headers),
+        "msvc_unit_count": len(source_names),
+        "aggregate_translation_unit_count": 1,
         "aggregate_translation_unit": aggregate_name,
         "validation_script": paths.validation_script.name,
     }
-    _write_generated(
-        manifest_path,
-        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
-    )
+    write_json_atomic(manifest_path, manifest)
     return ValidationInputs(len(headers), len(source_names), manifest_path)
 
 

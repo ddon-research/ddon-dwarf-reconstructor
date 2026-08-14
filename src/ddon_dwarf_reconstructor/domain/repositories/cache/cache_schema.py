@@ -69,8 +69,12 @@ class CacheSchemaMixin:
                         f"({len(data.get('symbol_to_offset', {}))} symbols)"
                     )
                     return data
-        except (json.JSONDecodeError, OSError, ValueError) as e:
-            logger.warning(f"Failed to load cache from {self.cache_file}: {e}", exc_info=e)
+        except (json.JSONDecodeError, OSError, ValueError) as error:
+            logger.info(
+                "Ignoring unreadable source-bound cache; rebuilding from source: %s (%s)",
+                self.cache_file,
+                error,
+            )
 
         # Return empty cache structure
         return self._create_empty_cache()

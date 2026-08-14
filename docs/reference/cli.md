@@ -108,7 +108,8 @@ the other buckets are provisioned as comparison-only alternatives. The measured 
 promoted generation serving path. Normal canonical loading creates and refreshes
 `dwarf_records_opt_name_b8`, and normal generation uses lazy prefetch and the serving projection
 without environment switches. Raw attribute columns remain retained in Doris for exact evidence;
-the complete Season 2 run has now validated the narrowed generation projection for all 289 roots.
+the historical 2026-08-10 Season 2 run validated the narrowed generation projection for all 289
+roots. A post-boundary-refactor rerun must establish fresh parity before this claim is current.
 
 For per-header compiler acceptance, run the external MSVC validator against each published bundle
 root. It creates one translation unit per header and writes the structured report outside the

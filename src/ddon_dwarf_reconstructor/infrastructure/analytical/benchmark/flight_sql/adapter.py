@@ -129,9 +129,6 @@ class _UnparameterizedFlightSqlCursor:
     def fetch_record_batch(self) -> Any:
         return self._cursor.fetch_record_batch()
 
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._cursor, name)
-
 
 class FlightSqlConnection(Protocol):
     """Connection surface needed by :class:`DorisFlightSqlClient`."""

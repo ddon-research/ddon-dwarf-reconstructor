@@ -11,9 +11,6 @@ import pytest
 import ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.doris.optimization as benchmark_optimization_module
 import ddon_dwarf_reconstructor.infrastructure.analytical.doris_optimization as optimization_module
 import ddon_dwarf_reconstructor.infrastructure.analytical.doris_validation as validation_module
-from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.doris import (
-    current_generation as generation_module,
-)
 from ddon_dwarf_reconstructor.infrastructure.analytical.benchmark.doris.optimization import (
     build_optimization_matrix,
     lookup_candidate_sql,
@@ -27,7 +24,6 @@ from ddon_dwarf_reconstructor.infrastructure.analytical.doris_diagnostics_transp
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris_optimization import (
     DorisOptimizationReport,
     DorisQueryTraceConfig,
-    DorisServingVariant,
 )
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris_optimization_utils import (
     configured_ddl_sha256,
@@ -37,6 +33,9 @@ from ddon_dwarf_reconstructor.infrastructure.analytical.doris_optimization_utils
     query_shape,
 )
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris_queries import DorisQueryExecutor
+from ddon_dwarf_reconstructor.infrastructure.analytical.doris_serving_profile import (
+    DorisServingProfile,
+)
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris_statistics import analyze_tables
 from tests.support.doris_statistics import StatisticsConnection
 
@@ -182,8 +181,8 @@ def test_query_trace_marks_evicted_or_unavailable_profile_partial(
 
 
 def test_serving_variant_fingerprint_includes_lookup_tables() -> None:
-    canonical = DorisServingVariant.from_config(DorisConfig())
-    candidate = DorisServingVariant.from_config(
+    canonical = DorisServingProfile.from_config(DorisConfig())
+    candidate = DorisServingProfile.from_config(
         DorisConfig(name_lookup_table="dwarf_records_opt_name_b4"),
         variant_id="name-lookup-b4",
     )
@@ -194,32 +193,44 @@ def test_serving_variant_fingerprint_includes_lookup_tables() -> None:
 
 
 def test_serving_variant_fingerprint_includes_reference_prefetch_policy() -> None:
-    eager = DorisServingVariant.from_config(DorisConfig(reference_prefetch="eager"))
-    lazy = DorisServingVariant.from_config(DorisConfig(reference_prefetch="lazy"))
+    eager = DorisServingProfile.from_config(
+        DorisConfig(reference_prefetch="eager"), variant_id="reference-prefetch-eager"
+    )
+    lazy = DorisServingProfile.from_config(DorisConfig(reference_prefetch="lazy"))
 
     assert eager.configuration_sha256 != lazy.configuration_sha256
     assert lazy.to_dict()["reference_prefetch"] == "lazy"
 
 
 def test_serving_variant_fingerprint_includes_attribute_projection() -> None:
-    full = DorisServingVariant.from_config(DorisConfig(attribute_projection="full"))
-    serving = DorisServingVariant.from_config(DorisConfig(attribute_projection="serving"))
+    full = DorisServingProfile.from_config(
+        DorisConfig(attribute_projection="full"), variant_id="attribute-projection-full"
+    )
+    serving = DorisServingProfile.from_config(DorisConfig(attribute_projection="serving"))
 
     assert full.configuration_sha256 != serving.configuration_sha256
     assert serving.to_dict()["attribute_projection"] == "serving"
 
 
 def test_serving_variant_fingerprint_includes_child_tag_filter() -> None:
-    full = DorisServingVariant.from_config(DorisConfig(child_tag_filter="all"))
-    targeted = DorisServingVariant.from_config(DorisConfig(child_tag_filter="targeted"))
+    full = DorisServingProfile.from_config(
+        DorisConfig(child_tag_filter="all"), variant_id="child-tag-all"
+    )
+    targeted = DorisServingProfile.from_config(
+        DorisConfig(child_tag_filter="targeted"), variant_id="child-tag-targeted"
+    )
 
     assert full.configuration_sha256 != targeted.configuration_sha256
     assert targeted.to_dict()["child_tag_filter"] == "targeted"
 
 
 def test_serving_variant_fingerprint_includes_hydration_scope() -> None:
-    global_scope = DorisServingVariant.from_config(DorisConfig(hydration_scope="global"))
-    unit_scope = DorisServingVariant.from_config(DorisConfig(hydration_scope="unit"))
+    global_scope = DorisServingProfile.from_config(
+        DorisConfig(hydration_scope="global"), variant_id="hydration-global"
+    )
+    unit_scope = DorisServingProfile.from_config(
+        DorisConfig(hydration_scope="unit"), variant_id="hydration-unit"
+    )
 
     assert global_scope.configuration_sha256 != unit_scope.configuration_sha256
     assert unit_scope.to_dict()["hydration_scope"] == "unit"
@@ -235,14 +246,8 @@ def test_serving_policy_configuration_reads_environment(
     monkeypatch.setenv("DDON_DORIS_CHILD_TAG_FILTER", "targeted")
     monkeypatch.setenv("DDON_DORIS_HYDRATION_SCOPE", "unit")
 
-    config = DorisConfig.from_environment()
-
-    assert config.reference_prefetch == "lazy"
-    assert config.attribute_projection == "serving"
-    assert config.effective_name_lookup_table == "dwarf_records_opt_name_b8"
-    assert config.effective_definition_lookup_table == "dwarf_records_opt_name_b8"
-    assert config.child_tag_filter == "targeted"
-    assert config.hydration_scope == "unit"
+    with pytest.raises(ValueError, match="canonical Doris serving policy"):
+        DorisConfig.from_environment()
 
 
 def test_noncanonical_variant_can_override_promoted_runtime_policy(
@@ -260,6 +265,62 @@ def test_noncanonical_variant_can_override_promoted_runtime_policy(
     assert config.effective_name_lookup_table == "dwarf_records_opt_name_b4"
     assert config.reference_prefetch == "eager"
     assert config.attribute_projection == "full"
+
+
+def test_canonical_environment_rejects_statistics_and_lookup_overrides(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DDON_DORIS_STATISTICS_POLICY", "all")
+    with pytest.raises(ValueError, match="canonical Doris serving policy"):
+        DorisConfig.from_environment()
+
+    monkeypatch.delenv("DDON_DORIS_STATISTICS_POLICY")
+    monkeypatch.setenv("DDON_DORIS_METHOD_LOOKUP_TABLE", "optimized_methods")
+    with pytest.raises(ValueError, match="canonical Doris serving policy"):
+        DorisConfig.from_environment()
+
+
+def test_canonical_lookup_override_uses_the_effective_base_table(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DDON_DORIS_TABLE", "alternate_records")
+    monkeypatch.setenv("DDON_DORIS_NAME_LOOKUP_TABLE", "alternate_records_opt_name_b8")
+
+    config = DorisConfig.from_environment()
+
+    assert config.table == "alternate_records"
+    assert config.effective_name_lookup_table == "alternate_records_opt_name_b8"
+
+
+def test_sql_connection_timeouts_are_typed_environment_settings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DDON_DORIS_SQL_CONNECT_TIMEOUT_SECONDS", "4.5")
+    monkeypatch.setenv("DDON_DORIS_SQL_READ_TIMEOUT_SECONDS", "37")
+    monkeypatch.setenv("DDON_DORIS_SQL_WRITE_TIMEOUT_SECONDS", "41")
+
+    config = DorisConfig.from_environment()
+
+    assert config.sql_connect_timeout_seconds == 4.5
+    assert config.sql_read_timeout_seconds == 37.0
+    assert config.sql_write_timeout_seconds == 41.0
+
+
+@pytest.mark.parametrize(
+    "field_name",
+    ("sql_connect_timeout_seconds", "sql_read_timeout_seconds", "sql_write_timeout_seconds"),
+)
+def test_sql_connection_timeouts_must_be_positive(field_name: str) -> None:
+    with pytest.raises(ValueError, match=field_name):
+        DorisConfig(**{field_name: 0.0})
+
+
+def test_canonical_profile_rejects_direct_policy_overrides() -> None:
+    with pytest.raises(ValueError, match="canonical Doris serving profile"):
+        DorisServingProfile.from_config(DorisConfig(reference_prefetch="eager"))
+
+    with pytest.raises(ValueError, match="canonical Doris serving profile"):
+        DorisServingProfile.from_config(DorisConfig(name_lookup_table="dwarf_records_noncanonical"))
 
 
 def test_optimization_matrix_keeps_canonical_and_rejects_inapplicable_paths() -> None:
@@ -304,7 +365,12 @@ def test_query_trace_config_rejects_unbounded_profile_settings(tmp_path: Path) -
 def test_selective_statistics_policy_targets_filter_columns() -> None:
     connection = StatisticsConnection()
     config = DorisConfig(statistics_policy="selective")
-    plan = SimpleNamespace(database="dwarf", table="dwarf_records")
+    plan = SimpleNamespace(
+        database="dwarf",
+        table="dwarf_records",
+        name_lookup_table=None,
+        serving_variant_id="canonical",
+    )
 
     statements = analyze_tables(connection, plan, config)
 
@@ -369,8 +435,8 @@ def test_query_trace_helpers_normalize_shapes_and_profile_metrics() -> None:
         "zero": 0,
         "negative": -2,
     }
-    fallback = configured_ddl_sha256(SimpleNamespace(database="dwarf", table="records"))
-    assert len(fallback) == 64
+    ddl_hash = configured_ddl_sha256(DorisConfig(database="dwarf", table="records"))
+    assert len(ddl_hash) == 64
 
 
 def test_doris_load_plan_validation_is_source_bound_and_terminal(
@@ -530,71 +596,3 @@ def test_candidate_evidence_capture_serializes_rows_and_failures() -> None:
     )
     assert partial["status"] == "partial"
     assert "unavailable" in str(partial["error"])
-
-
-class _GenerationRunner:
-    def __init__(self, *, fail: bool = False) -> None:
-        self.fail = fail
-        self.workloads: list[object] = []
-
-    def run(self, workload: object) -> SimpleNamespace:
-        self.workloads.append(workload)
-        if self.fail:
-            raise RuntimeError("generation child failed")
-        return SimpleNamespace(status=SimpleNamespace(value="observed"), to_dict=lambda: {})
-
-
-def test_generation_child_runner_records_states_and_failures(tmp_path: Path) -> None:
-    runner = _GenerationRunner()
-    runs = generation_module.run_generation_workloads(
-        runner,
-        Path("source.elf"),
-        Path("manifest.json"),
-        tmp_path,
-        ("rLayout",),
-        1,
-        30.0,
-        1,
-        30.0,
-        1,
-        1,
-        1,
-        True,
-        500.0,
-        2,
-    )
-    assert len(runs) == 4
-    assert {run["state"] for run in runs} == {"cold", "warm", "long"}
-    assert all(run["status"] == "partial" for run in runs)
-    assert all(
-        "DDON_DORIS_QUERY_TRACE_PATH" in dict(workload.environment) for workload in runner.workloads
-    )
-
-    workload = generation_module._generation_workload(
-        Path("source.elf"),
-        Path("manifest.json"),
-        tmp_path / "failed",
-        name="failed",
-        symbol="rLayout",
-        state=SimpleNamespace(value="cold"),
-        timeout_seconds=30.0,
-    )
-    blocked = generation_module._run_one(
-        _GenerationRunner(fail=True), workload, tmp_path / "failed", "rLayout", "cold", 1
-    )
-    assert blocked["status"] == "blocked"
-
-
-def test_generation_query_trace_loading_distinguishes_missing_invalid_and_non_object(
-    tmp_path: Path,
-) -> None:
-    missing = generation_module._load_query_trace(tmp_path / "missing.json")
-    invalid_path = tmp_path / "invalid.json"
-    invalid_path.write_text("not-json", encoding="utf-8")
-    invalid = generation_module._load_query_trace(invalid_path)
-    list_path = tmp_path / "list.json"
-    list_path.write_text("[]", encoding="utf-8")
-    non_object = generation_module._load_query_trace(list_path)
-    assert missing["status"] == "not_observed"
-    assert invalid["status"] == "partial"
-    assert non_object["status"] == "partial"

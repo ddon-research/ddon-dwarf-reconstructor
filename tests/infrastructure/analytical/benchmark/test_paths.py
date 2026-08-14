@@ -23,7 +23,14 @@ from ddon_dwarf_reconstructor.infrastructure.analytical.doris import (
     DorisLoader,
     DorisLoadPlan,
 )
+from ddon_dwarf_reconstructor.infrastructure.analytical.doris_layout import _FAMILIES
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris_statistics import _wait_for_analysis
+from ddon_dwarf_reconstructor.infrastructure.analytical.doris_stream_load import (
+    MAX_DIAGNOSTIC_BYTES,
+    DorisStreamLoadClient,
+    StreamLoadOutcome,
+    StreamLoadState,
+)
 
 pytestmark = [pytest.mark.unit, pytest.mark.functional]
 
@@ -58,6 +65,8 @@ def test_loader_executes_native_plan_and_submits_statistics(tmp_path: Path) -> N
         status="complete",
         expected_counts={},
         observed_counts={},
+        serving_variant_id="canonical",
+        serving_variant_configuration_sha256="b" * 64,
     )
     with (
         patch(
@@ -81,10 +90,65 @@ def test_loader_executes_native_plan_and_submits_statistics(tmp_path: Path) -> N
         result = DorisLoader().execute(plan, config)
 
     assert result["status"] == "observed"
+    assert result["load_status"] == "loaded"
+    assert result["load_states"] == ("ok",)
+    assert result["publication_verification"]["row_count_verified"] is True
     assert len(result["analysis"]) == 15
     assert result["lookup_load"]["status"] == "observed"
-    assert cursor.execute.call_count == 19
+    executed = [call.args[0] for call in cursor.execute.call_args_list]
+    assert executed.count("SHOW COLUMNS FROM `test_db`.`dwarf_registry`") == 1
+    assert sum(statement.startswith("ANALYZE TABLE") for statement in executed) == 15
     connection.close.assert_called_once_with()
+
+
+def test_loader_does_not_publish_registry_after_unverified_publish_timeout(
+    tmp_path: Path,
+) -> None:
+    connection, _cursor = _connection()
+    pymysql = MagicMock(connect=MagicMock(return_value=connection))
+    plan = _plan(tmp_path)
+    config = DorisConfig(database="test_db", table="dwarf")
+    manifest = SimpleNamespace(
+        source_identity=SimpleNamespace(sha256="a" * 64),
+        schema_version="1.1",
+        counts={family: 1 for family in _FAMILIES},
+    )
+    verification = {
+        "status": "partial",
+        "source_id": "a" * 64,
+        "expected_counts": {family: 1 for family in _FAMILIES},
+        "observed_counts": {family: 0 for family in _FAMILIES},
+        "attempts": 3,
+        "diagnostics": [],
+        "row_count_verified": False,
+    }
+    with (
+        patch(
+            "ddon_dwarf_reconstructor.infrastructure.analytical.doris.import_optional",
+            return_value=pymysql,
+        ),
+        patch.object(DorisLoader, "_validate_plan"),
+        patch.object(
+            DorisLoader,
+            "_load_native_files",
+            return_value=[{"status": StreamLoadState.PUBLISH_PENDING.value}],
+        ),
+        patch(
+            "ddon_dwarf_reconstructor.infrastructure.analytical.doris._load_manifest",
+            return_value=manifest,
+        ),
+        patch.object(DorisLoader, "_verify_pending_publication", return_value=verification),
+        patch(
+            "ddon_dwarf_reconstructor.infrastructure.analytical.doris.publish_registry"
+        ) as publish,
+    ):
+        result = DorisLoader().execute(plan, config)
+
+    assert result["status"] == "partial"
+    assert result["load_status"] == "publish_pending"
+    assert result["registry"]["status"] == "not_observed"
+    assert result["lookup_load"]["status"] == "not_observed"
+    publish.assert_not_called()
 
 
 def test_analysis_wait_returns_finished_job_evidence() -> None:
@@ -133,12 +197,16 @@ def test_loader_native_file_dispatch_is_source_family_aware(tmp_path: Path) -> N
             "ddon_dwarf_reconstructor.infrastructure.analytical.doris._load_label",
             return_value="label",
         ),
-        patch.object(loader, "_stream_load", return_value={"status": "ok"}) as stream_load,
+        patch.object(
+            DorisStreamLoadClient,
+            "load",
+            return_value=StreamLoadOutcome(parquet_file, StreamLoadState.LOADED, label="label"),
+        ) as stream_load,
     ):
         result = loader._load_native_files(plan, DorisConfig())
 
-    assert result == [{"status": "ok"}]
-    stream_load.assert_called_once_with(parquet_file, DorisConfig(), "dwarf_index", "label")
+    assert result[0]["status"] == "loaded"
+    stream_load.assert_called_once_with(parquet_file, "dwarf_index", "label")
 
 
 def test_loader_can_overlap_independent_native_stream_loads(tmp_path: Path) -> None:
@@ -163,9 +231,11 @@ def test_loader_can_overlap_independent_native_stream_loads(tmp_path: Path) -> N
             side_effect=lambda _plan, _family, path: path.name,
         ),
         patch.object(
-            loader,
-            "_stream_load",
-            side_effect=lambda path, _config, _table, label: {"path": str(path), "label": label},
+            DorisStreamLoadClient,
+            "load",
+            side_effect=lambda path, _table, label: StreamLoadOutcome(
+                path, StreamLoadState.LOADED, label=label
+            ),
         ) as stream_load,
     ):
         result = loader._load_native_files(plan, DorisConfig(stream_load_workers=2))
@@ -174,7 +244,77 @@ def test_loader_can_overlap_independent_native_stream_loads(tmp_path: Path) -> N
     assert stream_load.call_count == len(parquet_files)
 
 
-def test_stream_load_follows_redirect_and_accepts_publish_timeout(tmp_path: Path) -> None:
+def test_loader_reports_partial_concurrent_stream_load_failures(tmp_path: Path) -> None:
+    parquet_files = tuple(
+        tmp_path / "parquet" / "index" / f"part-{index:03}.parquet" for index in range(2)
+    )
+    plan = DorisLoadPlan(
+        "test_db",
+        "dwarf",
+        (),
+        parquet_files,
+        tmp_path / "manifest.json",
+    )
+    outcomes = iter(
+        (
+            StreamLoadOutcome(parquet_files[0], StreamLoadState.LOADED, label="first"),
+            StreamLoadOutcome(
+                parquet_files[1],
+                StreamLoadState.FAILED,
+                label="second",
+                diagnostics="bounded upload failure",
+            ),
+        )
+    )
+    with (
+        patch(
+            "ddon_dwarf_reconstructor.infrastructure.analytical.doris._family_for_file",
+            return_value="index",
+        ),
+        patch(
+            "ddon_dwarf_reconstructor.infrastructure.analytical.doris._load_label",
+            side_effect=lambda _plan, _family, path: path.name,
+        ),
+        patch.object(DorisStreamLoadClient, "load", side_effect=lambda *_args: next(outcomes)),
+        pytest.raises(RuntimeError, match="batch failed"),
+    ):
+        DorisLoader()._load_native_files(plan, DorisConfig(stream_load_workers=2))
+
+
+def test_promoted_lookup_reuses_verified_rows_without_append(tmp_path: Path) -> None:
+    connection, cursor = _connection()
+    cursor.fetchall.side_effect = [[(3,)], [(3,)]]
+    plan = _plan(tmp_path)
+
+    result = DorisLoader._populate_promoted_name_lookup(
+        connection,
+        plan,
+        DorisConfig(database="test_db", table="dwarf"),
+        "a" * 64,
+    )
+
+    assert result["publication"] == "reused_verified_count"
+    assert [call.args[0] for call in cursor.execute.call_args_list][-1].startswith("SELECT COUNT")
+    assert all("INSERT INTO" not in call.args[0] for call in cursor.execute.call_args_list)
+
+
+def test_promoted_lookup_refuses_partial_append_only_state(tmp_path: Path) -> None:
+    connection, cursor = _connection()
+    cursor.fetchall.side_effect = [[(3,)], [(2,)]]
+    plan = _plan(tmp_path)
+
+    with pytest.raises(RuntimeError, match="refusing an append-only repair"):
+        DorisLoader._populate_promoted_name_lookup(
+            connection,
+            plan,
+            DorisConfig(database="test_db", table="dwarf"),
+            "a" * 64,
+        )
+
+    assert all("INSERT INTO" not in call.args[0] for call in cursor.execute.call_args_list)
+
+
+def test_stream_load_follows_redirect_and_marks_publish_timeout_pending(tmp_path: Path) -> None:
     path = tmp_path / "part.parquet"
     path.write_bytes(b"parquet")
     redirect = MagicMock(status=307)
@@ -185,13 +325,14 @@ def test_stream_load_follows_redirect_and_accepts_publish_timeout(tmp_path: Path
     first_connection = MagicMock()
     second_connection = MagicMock()
     with patch.object(
-        DorisLoader,
-        "_send_stream_load",
+        DorisStreamLoadClient,
+        "_send",
         side_effect=[(first_connection, redirect), (second_connection, success)],
     ):
-        result = DorisLoader._stream_load(path, DorisConfig(), "dwarf_index", "label")
+        result = DorisStreamLoadClient(DorisConfig()).load(path, "dwarf_index", "label").to_dict()
 
     assert result["response"] == {"Status": "Publish Timeout"}
+    assert result["status"] == "publish_pending"
     first_connection.close.assert_called_once_with()
     second_connection.close.assert_called_once_with()
 
@@ -202,12 +343,26 @@ def test_stream_load_rejects_doris_error(tmp_path: Path) -> None:
     connection = MagicMock()
     response = MagicMock(status=400)
     response.read.return_value = b"bad request"
-    with (
-        patch.object(DorisLoader, "_send_stream_load", return_value=(connection, response)),
-        pytest.raises(RuntimeError, match="Stream Load failed"),
-    ):
-        DorisLoader._stream_load(path, DorisConfig(), "dwarf_index", "label")
+    with patch.object(DorisStreamLoadClient, "_send", return_value=(connection, response)):
+        result = DorisStreamLoadClient(DorisConfig()).load(path, "dwarf_index", "label")
+    assert result.state is StreamLoadState.FAILED
+    assert "HTTP 400" in (result.diagnostics or "")
     connection.close.assert_called_once_with()
+
+
+def test_stream_load_diagnostics_have_a_hard_byte_bound(tmp_path: Path) -> None:
+    path = tmp_path / "part.parquet"
+    path.write_bytes(b"parquet")
+    connection = MagicMock()
+    response = MagicMock(status=400)
+    response.read.return_value = b"x" * (MAX_DIAGNOSTIC_BYTES + 1)
+
+    with patch.object(DorisStreamLoadClient, "_send", return_value=(connection, response)):
+        result = DorisStreamLoadClient(DorisConfig()).load(path, "dwarf_index", "label")
+
+    assert result.diagnostics is not None
+    assert len(result.diagnostics) <= MAX_DIAGNOSTIC_BYTES
+    assert result.diagnostics.endswith("...[truncated]")
 
 
 def test_stream_load_sender_sets_strict_parquet_headers(tmp_path: Path) -> None:
@@ -216,12 +371,13 @@ def test_stream_load_sender_sets_strict_parquet_headers(tmp_path: Path) -> None:
     connection = MagicMock()
     connection.getresponse.return_value = MagicMock()
     with patch(
-        "ddon_dwarf_reconstructor.infrastructure.analytical.doris.HTTPConnection",
+        "ddon_dwarf_reconstructor.infrastructure.analytical.doris_stream_load.HTTPConnection",
         return_value=connection,
     ):
-        DorisLoader._send_stream_load(
+        DorisStreamLoadClient(
+            DorisConfig(database="test_db", user="root", password="secret")
+        )._send(
             path,
-            DorisConfig(database="test_db", user="root", password="secret"),
             "dwarf_index",
             "http://127.0.0.1:8040/api/test_db/dwarf_index/_stream_load?x=1",
             "label",

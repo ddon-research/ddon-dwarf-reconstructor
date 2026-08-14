@@ -58,6 +58,12 @@ class TestClassParser:
         # Mock finding the DIE - should return the forward declaration
         with patch.object(class_parser, "_find_die_and_cu_by_offset") as mock_find:
             mock_find.return_value = (mock_cu, mock_forward_die)
+            mock_lazy_index.targeted_symbol_search.return_value = SearchResult(
+                SearchStatus.NOT_FOUND,
+                None,
+                0.0,
+                0,
+            )
 
             # Mock dwarf_info to return empty for full scan fallback
             class_parser.dwarf_info.iter_CUs.return_value = []

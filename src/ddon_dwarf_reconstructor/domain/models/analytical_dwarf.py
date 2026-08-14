@@ -203,6 +203,7 @@ class QueryResult:
     items: tuple[Any, ...] = ()
     provenance: tuple[str, ...] = ()
     diagnostics: tuple[str, ...] = ()
+    truncated: bool = False
 
 
 @dataclass(frozen=True, slots=True)

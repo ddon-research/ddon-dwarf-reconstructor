@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from ..models.analytical_dwarf import QueryStatus
 from .definition_selection import DefinitionCandidate
 
 
@@ -31,3 +32,8 @@ class SearchResult:
     def die_offset(self) -> int | None:
         """Return the candidate offset without discarding the evidence status."""
         return self.candidate.die_offset if self.candidate is not None else None
+
+
+def search_status_for_query(status: QueryStatus) -> SearchStatus:
+    """Map analytical completeness to the bounded lookup contract."""
+    return SearchStatus(status.value)

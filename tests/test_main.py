@@ -49,7 +49,9 @@ def test_run_generation_uses_export_knowledge_path(mocker) -> None:
     mock_generator = mocker.MagicMock()
     mock_generator.__enter__.return_value = mock_generator
     mock_generator.platform.value = "ps4"
-    mock_generator.export_knowledge_graph.return_value = Path("output/knowledge/manifest.json")
+    mock_generator.facade.export_knowledge_graph.return_value = Path(
+        "output/knowledge/manifest.json"
+    )
     generator_cls = mocker.patch(
         "ddon_dwarf_reconstructor.main.DwarfGenerator", return_value=mock_generator
     )
@@ -72,7 +74,7 @@ def test_run_generation_uses_export_knowledge_path(mocker) -> None:
         source_hash=source_hash,
         source_identity=ANY,
     )
-    mock_generator.export_knowledge_graph.assert_called_once_with(
+    mock_generator.facade.export_knowledge_graph.assert_called_once_with(
         "rLayout",
         Path("output/knowledge"),
         "ps4-02020005",

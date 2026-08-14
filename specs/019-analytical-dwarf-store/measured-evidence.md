@@ -15,13 +15,103 @@ the CLI. In particular, treat `information_schema.statistics` and
 `information_schema.column_statistics` as empty compatibility views and use `SHOW TABLE STATS`,
 `SHOW COLUMN STATS`, `SHOW ANALYZE`, `SHOW AUTO ANALYZE`, and `__internal_schema.column_statistics`.
 The complete Season 2 generation, standalone bundle validation, and per-header MSVC closure audit
-are now observed against the promoted serving path. IDA/Sonar evidence and byte comparison with
-the unavailable historical approved header remain separate and are not implied by this store
-record.
+were observed against the promoted serving path on 2026-08-10, before the boundary refactor.
+They remain historical observations; fresh post-refactor acceptance is recorded in the dated
+section below. IDA/Sonar evidence and byte comparison with the unavailable historical approved
+header remain separate and are not implied by this store record.
 
 Benchmark rows include source identity, producer/schema/configuration identity, runtime and Python
 identity, cold/warm state, machine metadata, resource metrics, output-manifest identity, and an
 explicit status (`observed`, `partial`, `blocked`, or `not_observed`).
+
+## Boundary-refactor validation (2026-08-11 to 2026-08-13)
+
+The coordinated boundary refactor introduced the typed `GenerationFacade`/`GenerationRuntime`,
+composed `HeaderRenderer`, composed JSONL/Parquet validation adapters, canonical definition
+selection, bounded Doris caches, immutable serving-profile validation, explicit registry migration,
+and staged Stream Load publication. Focused repository evidence covers renderer determinism,
+truncation/status propagation, cache reset, registry mismatch, publication interruption, and
+loader timeout states.
+
+The source-bound Season 2 baseline was captured outside Git at
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\baseline-33b8271`:
+`root_count=289`, `bundle_count=289`, `manifest_count=289`, `header_file_count=2745`,
+`published_file_count=3034`, and `msvc_unit_count=2745`. The pre-fix refactor run recorded
+`root_count=289`, `bundle_count=289`, `manifest_count=289`, `header_file_count=1653`,
+`published_file_count=1942`, and `msvc_unit_count=1653`. It is `partial`: the missing headers
+correspond to roots that were incorrectly allowed to publish unresolved placeholders after Doris
+became unavailable. The code now raises on non-complete root lookup evidence and rejects a pure
+placeholder bundle before publication.
+
+Representative post-refactor bundles are `observed` and byte-exact (`rAIFSM` 11/11 headers;
+`rArchive` and `rTexture` 6/6 each) under the external review directory. The corrected batch-001
+rerun at
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\season2-after-doris-policy4-20260812`
+completed 73/73 roots and 598/598 headers. Comparing every bundle-relative header against the
+immutable baseline produced `header_hash_mismatches=0` and `missing_baseline_headers=0`; its
+aggregate manifest hash is intentionally different because the batch request list contains 73
+roots rather than 289. A fresh targeted `rOcdImmuneParamRes` run published 8/8 headers.
+
+| Surface | Status | Current observation | Evidence boundary |
+| --- | --- | --- | --- |
+| Corrected Season 2 batch 001 | `observed`, partial corpus | 73 roots, 73 bundles, 73 manifests, 598 headers, zero failed roots, and zero compared header SHA-256 mismatches against the baseline | Exact batch evidence only; it does not establish the remaining 216 roots |
+| Full Season 2 attempt 1 | `blocked` | The run reached root 190 (`rOcdImmuneParamRes`) and then the host rebooted at 2026-08-12 21:39:44; no output was published and stderr contains no application exception | Windows WER recorded a BlueScreen/LiveKernelEvent; this is not generator or Doris failure evidence |
+| Full Season 2 attempt 2 | `blocked` | The run started at 2026-08-13 07:32:33 and the host rebooted at 07:42:49; no output was published | Kernel-Power event 41 and WER BlueScreen evidence; the attempt is not a partial accepted result |
+| Targeted post-reboot root | `observed` | `rOcdImmuneParamRes` published 8 headers with zero generation failures in 20.290 s | Single-root smoke/parity evidence, not Season 2 completeness |
+| Independent MSVC closure | `observed`, partial corpus | Visual Studio MSVC `14.51.36231` compiled all 598 batch-001 headers independently; failures=0, timeouts=0, and nine C4201 warnings retained separately | The focused 11/11 probe also passed; full 2,745-unit closure remains pending because the complete post-refactor bundle was not published |
+| Doris availability for fresh full run | `blocked` | After the second reboot, BE could start but FE could not bind host TCP 9030; Windows reports the excluded range 8983-9082 | No alternate port/backend was substituted; current full generation evidence remains blocked |
+| Matched post-refactor performance | `not_observed` | No complete post-refactor 289-root workload and no matched cold/warm performance report were published | Historical 2026-08-09/10 measurements remain historical and do not close the 110% gate |
+
+The full rerun is therefore `blocked` by host stability and the unavailable Doris FE endpoint, not
+by a known application exception. Historical 2026-08-10 Season 2/MSVC and 2026-08-09/10
+performance rows remain valid historical observations but are not fresh evidence for this
+refactor. The corrected Doris configuration now also supplies bounded SQL connect/read/write
+timeouts; focused environment validation and repository gates pass.
+
+## Completed boundary-refactor acceptance (2026-08-14)
+
+The previously blocked full-corpus evidence is now observed. The final source-bound generation log is
+`logs/ddon_reconstructor_17560_20260814T012907_837060+0200.jsonl`, and its output is
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\season2-final-source-cache-early-20260814`.
+It recorded 289 successful roots and zero failures. Machine-derived counts are:
+
+| Metric | Observed |
+| --- | ---: |
+| `root_count` | 289 |
+| `bundle_count` | 289 |
+| `manifest_count` | 289 |
+| `header_file_count` | 2,745 |
+| `published_file_count` | 3,034 |
+| `msvc_unit_count` | 2,745 |
+| Header bytes | 10,009,533 |
+| Header SHA-256 mismatches | 0 |
+| Bundle-manifest SHA-256 mismatches | 0 |
+
+The independent MSVC report at
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\msvc-season2-final-source-cache-early-20260814\msvc-header-validation.json`
+records compiler `14.51.36231`, `passed=2745`, `failed=0`, and `timed_out=0`. Warnings are
+separate (`C4201=124`, `C4309=1`).
+
+The matched Doris performance report is
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\performance-rAIFSM-final-early-3-20260814\current-doris-benchmark.json`.
+After one explicit cold run, three warm exhaustive `rAIFSM` runs were 9.06, 9.06, and 9.07 seconds;
+nearest-rank p50/p95 are 9.06/9.07 seconds and maximum peak RSS is 73.8 MiB. Each output retained
+the approved bundle SHA-256 `1176bd80524391ef2d23fd99541f9a63e04566e2e8a8906dc15670a80ca7f63b`.
+This is below the 110% warm p95 and RSS acceptance boundary relative to the retained canonical
+measurements.
+
+The cache experiment separates two mechanisms. Request-scoped hydration caches reset at each
+root and remain bounded. The persistent selection cache is source/profile-bound and schema
+validated; removing it changed 15 dependency files and 21 header payloads in `rLayout` and
+`rTexture`, so that configuration is rejected for canonical generation. The benchmark's cold versus
+warm Doris query difference was approximately 13 ms versus 6 ms, while the generated-header parity
+difference was structural. Every benchmark child loaded the verified 58-symbol source-bound cache at
+`C:\Users\morph\AppData\Local\ddon-dwarf-reconstructor\DDOORBIS-beced6568432-dwarf-cache.json`.
+The earlier `rAIFSM` degradation is therefore not attributed to an empty transient Doris cache;
+source-bound cache identity and selection-hint reuse are the material cache boundaries. The
+backend restart/no-replica episode was an external `blocked` run that
+failed closed; after remapping the local endpoints, FE/BE remained healthy through the accepted
+full run.
 
 ## 2026-08-09 current live-Doris benchmark
 
@@ -331,7 +421,7 @@ infer CU completeness.
 
 | Surface | Status | Evidence | Boundary |
 | --- | --- | --- | --- |
-| Typed serving variant and optimization report | `observed`, deterministic | `DorisServingVariant`, `DorisQueryObservation`, and `DorisOptimizationReport` serialize source/schema/DDL/configuration identity, complete row counts, cold/warm samples, query traces, output hashes, load/statistics/tablet evidence slots, and rejected/not-applicable decisions. The focused optimization/runtime slice passes 31 tests, including exact JSON serialization, policy configuration, profile mismatch handling, and semantic operation labels. | No live candidate is promoted by deterministic tests alone. |
+| Typed serving profile and optimization report | `observed`, deterministic | `DorisServingProfile`, `DorisQueryObservation`, and `DorisOptimizationReport` serialize source/schema/DDL/configuration identity, complete row counts, cold/warm samples, query traces, output hashes, load/statistics/tablet evidence slots, and rejected/not-applicable decisions. The focused optimization/runtime slice passes 31 tests, including exact JSON serialization, policy configuration, profile mismatch handling, and semantic operation labels. | No live candidate is promoted by deterministic tests alone. |
 | Actual generation query tracing | `partial`, real attribution | The Doris query executor records parameter-free JSONL observations, query-shape digests, semantic operations, local execute/fetch timing, result rows, query IDs, and bounded FE-local profile artifacts. The eager/full/all 2026-08-10 semantic `rAIFSM` trace recorded 754 observations: 85 `hydrate_attributes_by_die` queries (7.786 s execute time), 154 `prefetch_reference_targets` queries (3.233 s), 45 `hydrate_dies_by_offset` queries (2.052 s), and 138 point `die_by_offset` queries (1.486 s). It published the exact 11-header output. The lazy trace recorded 680 observations, including 108 reference-prefetch calls; the serving-projection trace reduced attribute execute time to 5.737 s. | FE profiles for the traced runs were `partial` because the returned text did not contain the requested query ID. Tracing exceeded the 5% wall-time budget and is attribution-only; traced wall time is excluded from performance conclusions. |
 | Post-policy canonical and runtime candidates | `observed`, exact baseline | The canonical report is `C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\canonical-after-policy-20260810\current-doris-benchmark.json`; complete-store `rAIFSM` warm p50/p95 were `19.121/19.127 s` (`n=3`) with bundle hash `0514bdb383121ebc83d8e9193ef0766c7074a4fd90f3e3d00691cea29461b243`. Lazy reference prefetch at `reference-prefetch-confirm-20260810` was exact and improved paired warm p50/p95 by `5.3%`, below the standalone gate. The decoded-serving projection at `attribute-projection-confirm-20260810` was exact, reduced warm p95 RSS by `15.1%`, and did not improve p95 latency; raw columns remain retained in the canonical attribute family. | This is the prior canonical baseline. The three positive behaviors were evaluated together and promoted by the confirmatory interaction result below; b2 and b4 remain comparison-only alternatives. |
 | Unit-bound hydration candidate | `rejected`, exact regression | The fair-path untraced exhaustive `rAIFSM` run under `C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\unit-bound-hydration-fair-rAIFSM-20260810` took `289.048 s` and published the exact approved 11-header bundle. The canonical warm p50/p95 is `19.121/19.127 s`. Its partial attribution trace retained `26,463` complete observations: `9,262` attribute-by-DIE, `7,579` reference-prefetch, and `9,136` child-tag-count calls, versus canonical `85/154/25`. | The known unit predicate split bounded batches into thousands of per-unit requests and increased scheduling fan-out. The candidate was rejected without 3-cold/5-warm confirmation; traced wall time and incomplete FE profiles are not performance evidence. |

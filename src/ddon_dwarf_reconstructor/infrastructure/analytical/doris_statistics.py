@@ -311,18 +311,16 @@ _LOOKUP_SELECTIVE_COLUMNS = (
 
 
 def _plan_lookup_table(plan: Any, config: Any | None) -> str | None:
-    configured = getattr(plan, "name_lookup_table", None)
-    if isinstance(configured, str) and configured:
+    configured = plan.name_lookup_table
+    if configured:
         return configured
-    if getattr(plan, "serving_variant_id", "canonical") != "canonical":
+    if plan.serving_variant_id != "canonical":
         return None
-    table = getattr(plan, "table", None)
-    if not isinstance(table, str) or not table:
+    table = plan.table
+    if not table:
         return None
     if config is not None:
-        effective = getattr(config, "effective_name_lookup_table", None)
-        if isinstance(effective, str) and effective:
-            return effective
+        return config.effective_name_lookup_table
     return f"{table}_opt_name_b8"
 
 

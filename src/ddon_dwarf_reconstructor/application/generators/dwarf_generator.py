@@ -5,31 +5,32 @@
 This is the main generator that orchestrates the modular components:
 - TypeResolver: Type resolution and typedef handling
 - ClassParser: DWARF class parsing
-- HeaderGenerator: C++ header generation
+- HeaderRenderer: C++ header generation
 - HierarchyBuilder: Inheritance hierarchy management
 - PackingAnalyzer: Struct packing analysis
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import logging
 from pathlib import Path
+from time import perf_counter
 
-from ...core.dwarf import DwarfCompilationUnit, DwarfEntry
-from ...core.path_policy import create_header_filename
-from ...domain.models.dwarf import ClassInfo
-from ...domain.models.tool_evidence import ToolExport
-from ...domain.ports.class_parser import ClassParserPort
+from ...core.observability import get_logger, log_event
 from ...domain.ports.disassembly import DisassemblyProducerFactory
-from ...domain.ports.dwarf_lookup import DwarfLookupPort
 from ...domain.ports.source_identity import SourceHashPort, SourceIdentityPort
-from ...domain.ports.type_resolution import TypeResolverPort
 from ...domain.ports.validation_dump import ValidationDumpFactory
-from ...domain.services.generation import HeaderGenerator, HierarchyBuilder
-from .dwarf_generator_setup import DwarfGeneratorSetup
+from ..generation import (
+    GenerationComponentOptions,
+    GenerationFacade,
+    GenerationRuntime,
+    build_generation_runtime,
+    resolve_explicit_validation_dump,
+)
 from .generation_contracts import GenerationRequest, HeaderBundle
-from .generator_workflow import GeneratorWorkflow
 from .session import DwarfSessionFactory
+
+logger = get_logger(__name__)
 
 
 class DwarfGenerator:
@@ -64,7 +65,6 @@ class DwarfGenerator:
         """
         self.session = session_factory(elf_path)
         self.elf_path = elf_path
-        self.dwarf_info = None
         self.platform = self.session.platform
         self.exhaustive_search = exhaustive_search
         self._configured_dwarf_dump_path = dwarf_dump_path
@@ -79,18 +79,89 @@ class DwarfGenerator:
         self.search_timeout = search_timeout
         self.source_hash = source_hash
         self.source_identity = source_identity
-        self.workflow = GeneratorWorkflow(self)
-        self.type_resolver: TypeResolverPort | None = None
-        self.class_parser: ClassParserPort | None = None
-        self.header_generator: HeaderGenerator | None = None
-        self.lazy_index: DwarfLookupPort | None = None
-        self.hierarchy_builder: HierarchyBuilder | None = None
+        self.facade: GenerationFacade | None = None
+        self._runtime: GenerationRuntime | None = None
+
+    @property
+    def runtime(self) -> GenerationRuntime:
+        """Return the ready component graph for the open session."""
+        if self._runtime is None:
+            raise RuntimeError("generation runtime is unavailable outside an open session")
+        return self._runtime
 
     def _resolve_dwarf_dump_path(self, explicit_path: Path | None = None) -> Path | None:
-        return DwarfGeneratorSetup._resolve_dwarf_dump_path(self, explicit_path)
+        return resolve_explicit_validation_dump(self._configured_dwarf_dump_path, explicit_path)
 
     def __enter__(self) -> DwarfGenerator:
-        return DwarfGeneratorSetup.enter(self)
+        active_session = self.session.__enter__()
+        started_at = perf_counter()
+        try:
+            runtime = build_generation_runtime(
+                active_session,
+                GenerationComponentOptions(
+                    elf_path=self.elf_path,
+                    exhaustive_search=self.exhaustive_search,
+                    dwarf_dump_path=self.dwarf_dump_path,
+                    dwarf_index_path=self.dwarf_index_path,
+                    resolve_param_names=self.resolve_param_names,
+                    dump_lookup_factory=self.dump_lookup_factory,
+                    cache_file=self.cache_file,
+                    die_cache_size=self.die_cache_size,
+                    type_cache_size=self.type_cache_size,
+                    search_timeout=self.search_timeout,
+                    source_hash=self.source_hash,
+                    source_identity=self.source_identity,
+                ),
+            )
+            self._runtime = runtime
+            self.platform = runtime.platform
+            self.facade = GenerationFacade(runtime)
+            log_event(
+                logger,
+                logging.INFO,
+                "dwarf_generator_initialized",
+                elf_path=self.elf_path,
+                platform=self.platform.value,
+                exhaustive_search=self.exhaustive_search,
+                dump_lookup_enabled=self.dwarf_dump_path is not None,
+                duration_ms=round((perf_counter() - started_at) * 1000, 3),
+            )
+            return self
+        except Exception as error:
+            log_event(
+                logger,
+                logging.ERROR,
+                "dwarf_generator_initialization_failed",
+                elf_path=self.elf_path,
+                exc_info=error,
+            )
+            self._clear_components()
+            try:
+                self.session.close()
+            except Exception as close_error:
+                log_event(
+                    logger,
+                    logging.ERROR,
+                    "dwarf_generator_cleanup_failed",
+                    elf_path=self.elf_path,
+                    exc_info=close_error,
+                )
+                raise error from close_error
+            raise
+        except BaseException as error:
+            self._clear_components()
+            try:
+                self.session.close()
+            except BaseException as close_error:
+                log_event(
+                    logger,
+                    logging.ERROR,
+                    "dwarf_generator_cleanup_failed",
+                    elf_path=self.elf_path,
+                    exc_info=close_error,
+                )
+                raise error from close_error
+            raise
 
     def __exit__(
         self,
@@ -98,10 +169,65 @@ class DwarfGenerator:
         exc_val: BaseException | None,
         exc_tb: object | None,
     ) -> None:
-        DwarfGeneratorSetup.exit(self, exc_type, exc_val, exc_tb)
+        cache_error: Exception | None = None
+        if self._runtime is not None:
+            try:
+                log_event(
+                    logger,
+                    logging.DEBUG,
+                    "dwarf_cache_save_started",
+                    path=self.cache_file,
+                )
+                self.save_cache()
+                log_event(logger, logging.DEBUG, "dwarf_cache_saved", path=self.cache_file)
+            except Exception as error:
+                cache_error = error
+                log_event(
+                    logger,
+                    logging.ERROR,
+                    "dwarf_cache_save_failed",
+                    path=self.cache_file,
+                    exc_info=error,
+                )
+        close_error: BaseException | None = None
+        try:
+            self.session.__exit__(exc_type, exc_val, exc_tb)
+        except BaseException as error:
+            close_error = error
+            log_event(
+                logger,
+                logging.ERROR,
+                "dwarf_generator_cleanup_failed",
+                elf_path=self.elf_path,
+                exc_info=error,
+            )
+        finally:
+            self._clear_components()
+        if exc_val is not None:
+            return None
+        if close_error is not None:
+            if cache_error is not None:
+                raise cache_error from close_error
+            raise close_error
+        if cache_error is not None:
+            raise cache_error
+        return None
 
-    def _initialize_components(self) -> None:
-        DwarfGeneratorSetup.initialize_components(self)
+    def _clear_components(self) -> None:
+        self._runtime = None
+        self.facade = None
+
+    def save_cache(self) -> None:
+        """Persist the ready lookup component through the lifecycle boundary."""
+        self.runtime.lazy_index.save_cache()
+
+    def begin_root(self, root_symbol: str) -> None:
+        """Start one root-scoped generation request in the owned session."""
+        self.session.begin_root(root_symbol)
+
+    def end_root(self) -> None:
+        """Finish one root-scoped generation request in the owned session."""
+        self.session.end_root()
 
     def generate(self, symbol: str, **options: bool) -> str:
         """Generate one header using a typed request."""
@@ -113,60 +239,9 @@ class DwarfGenerator:
         )
         return self.generate_bundle(request).only()
 
-    def find_class(self, class_name: str) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
-        return self.workflow.find_class(class_name)
-
-    def is_namespace(self, die: DwarfEntry) -> bool:
-        return self.workflow.is_namespace(die)
-
-    def parse_class_info(self, cu: DwarfCompilationUnit, class_die: DwarfEntry) -> ClassInfo:
-        return self.workflow.parse_class_info(cu, class_die)
-
-    def build_inheritance_hierarchy(self, class_name: str) -> list[str]:
-        return self.workflow.build_inheritance_hierarchy(class_name)
-
-    def generate_header(self, class_name: str, include_metadata: bool = True) -> str:
-        return self.workflow.generate_header(class_name, include_metadata)
-
-    def generate_complete_hierarchy_header(
-        self, class_name: str, include_metadata: bool = True
-    ) -> str:
-        return self.workflow.generate_complete_hierarchy_header(class_name, include_metadata)
-
-    def generate_multi_file_hierarchy(
-        self, class_name: str, include_metadata: bool = True
-    ) -> dict[str, str]:
-        return self.workflow.generate_multi_file_hierarchy(class_name, include_metadata)
-
-    def export_knowledge_graph(
-        self,
-        root_symbol: str,
-        output_dir: Path,
-        build_id: str,
-        *,
-        orbis_objdump_path: Path | None = None,
-        tool_exports: Sequence[ToolExport] = (),
-    ) -> Path:
-        return self.workflow.export_knowledge_graph(
-            root_symbol,
-            output_dir,
-            build_id,
-            orbis_objdump_path=orbis_objdump_path,
-            tool_exports=tool_exports,
-        )
-
     def generate_bundle(self, request: GenerationRequest) -> HeaderBundle:
         """Run one typed workflow and adapt its result to a header bundle."""
-        if request.full_hierarchy and not request.single_file:
-            return HeaderBundle(
-                self.workflow.generate_multi_file_hierarchy(
-                    request.symbol, request.include_metadata
-                )
-            )
-        if request.full_hierarchy:
-            content = self.workflow.generate_complete_hierarchy_header(
-                request.symbol, request.include_metadata
-            )
-        else:
-            content = self.workflow.generate_header(request.symbol, request.include_metadata)
-        return HeaderBundle({create_header_filename(request.symbol): content})
+        facade = self.facade
+        if facade is None:
+            raise RuntimeError("generation facade is unavailable outside an open session")
+        return facade.generate(request)

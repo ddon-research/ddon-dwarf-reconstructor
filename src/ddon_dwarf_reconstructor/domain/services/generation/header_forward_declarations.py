@@ -4,19 +4,17 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterator
-from typing import TYPE_CHECKING
 
 from ...models.dwarf import ClassInfo, MemberInfo, StructInfo, TypeReference
 from ..parsing.die_type_classifier import DIETypeClassifier
-from .header_type_planning import HeaderTypePlanningMixin
+from .header_type_planning import HeaderTypePlanningService
+from .rendering.operations import HeaderRenderingHost
+from .rendering.type_policy import TypeExpressionPolicy
 
-if TYPE_CHECKING:
-    from .header_generator_context import HeaderGeneratorContext
 
-
-class HeaderForwardDeclarationMixin:
+class HeaderForwardDeclarationService:
     def _collect_forward_declarations(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_info: ClassInfo,
         typedefs: dict[str, str],
     ) -> set[str]:
@@ -58,70 +56,31 @@ class HeaderForwardDeclarationMixin:
 
     @staticmethod
     def _primitive_names() -> set[str]:
-        return {
-            "int",
-            "char",
-            "float",
-            "double",
-            "void",
-            "bool",
-            "unknown_type",
-            "unsigned",
-            "signed",
-            "short",
-            "long",
-            "u8",
-            "u16",
-            "u32",
-            "u64",
-            "s8",
-            "s16",
-            "s32",
-            "s64",
-            "f32",
-            "f64",
-            "size_t",
-            "uint8_t",
-            "uint16_t",
-            "uint32_t",
-            "uint64_t",
-            "int8_t",
-            "int16_t",
-            "int32_t",
-            "int64_t",
-            "base_type",
-            "subroutine_type",
-            "pointer_type",
-            "ptr_to_member_type",
-            "class_type",
-            "structure_type",
-            "union_type",
-            "enumeration_type",
-        }
+        return TypeExpressionPolicy.primitive_names()
 
     def _referenced_types(
-        self: HeaderGeneratorContext, class_info: ClassInfo
+        self: HeaderRenderingHost, class_info: ClassInfo
     ) -> Iterator[tuple[str | None, int | None, bool]]:
         for member in class_info.members:
             yield member.type_name, member.type_offset, False
-            yield from HeaderForwardDeclarationMixin._template_argument_types(member)
+            yield from HeaderForwardDeclarationService._template_argument_types(member)
         yield from self._nested_struct_types(class_info.nested_structs)
         yield from self._union_types(class_info)
         yield from self._method_types(class_info)
 
     def _nested_struct_types(
-        self: HeaderGeneratorContext, structs: list[StructInfo]
+        self: HeaderRenderingHost, structs: list[StructInfo]
     ) -> Iterator[tuple[str | None, int | None, bool]]:
         for struct in structs:
             yield from self._struct_member_types(struct)
 
     def _union_types(
-        self: HeaderGeneratorContext, class_info: ClassInfo
+        self: HeaderRenderingHost, class_info: ClassInfo
     ) -> Iterator[tuple[str | None, int | None, bool]]:
         for union in class_info.unions:
             for member in union.members:
                 yield member.type_name, member.type_offset, True
-                yield from HeaderForwardDeclarationMixin._template_argument_types(member)
+                yield from HeaderForwardDeclarationService._template_argument_types(member)
             yield from self._nested_struct_types(union.nested_structs)
 
     @staticmethod
@@ -141,7 +100,7 @@ class HeaderForwardDeclarationMixin:
     ) -> Iterator[tuple[str | None, int | None, bool]]:
         for member in struct.members:
             yield member.type_name, member.type_offset, True
-            yield from HeaderForwardDeclarationMixin._template_argument_types(member)
+            yield from HeaderForwardDeclarationService._template_argument_types(member)
 
     @classmethod
     def _template_argument_types(
@@ -159,7 +118,7 @@ class HeaderForwardDeclarationMixin:
             yield from cls._template_reference_types(nested_reference)
 
     def _add_forward_declaration(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         declarations: set[str],
         type_name: str | None,
         type_offset: int | None,
@@ -178,7 +137,7 @@ class HeaderForwardDeclarationMixin:
             declarations.add(declaration)
 
     def _forward_declaration_for_type(
-        self: HeaderGeneratorContext, clean_name: str, type_offset: int | None
+        self: HeaderRenderingHost, clean_name: str, type_offset: int | None
     ) -> str | None:
         if type_offset is None:
             return f"class {clean_name};"
@@ -194,7 +153,7 @@ class HeaderForwardDeclarationMixin:
         return tag_declarations.get(tag, self._aggregate_forward_declaration(clean_name))
 
     def _should_forward_declare(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         type_name: str | None,
         type_offset: int | None,
         allow_textual_pointer: bool,
@@ -213,7 +172,7 @@ class HeaderForwardDeclarationMixin:
         return self._should_forward_declare_die(clean_name, type_offset, excluded_names)
 
     def _should_forward_declare_die(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         clean_name: str,
         type_offset: int,
         excluded_names: set[str],
@@ -235,15 +194,15 @@ class HeaderForwardDeclarationMixin:
 
     @staticmethod
     def _aggregate_forward_declaration(clean_name: str) -> str | None:
-        clean_name = HeaderTypePlanningMixin._normalize_type_name(clean_name)
-        clean_name = HeaderTypePlanningMixin._unqualify_type_expression(clean_name)
+        clean_name = HeaderTypePlanningService._normalize_type_name(clean_name)
+        clean_name = HeaderTypePlanningService._unqualify_type_expression(clean_name)
         if (
             not clean_name
-            or clean_name in HeaderForwardDeclarationMixin._primitive_names()
-            or HeaderTypePlanningMixin._is_builtin_type(clean_name)
+            or clean_name in TypeExpressionPolicy.primitive_names()
+            or TypeExpressionPolicy.is_builtin(clean_name)
         ):
             return None
-        template_declaration = HeaderTypePlanningMixin._template_forward_declaration(clean_name)
+        template_declaration = HeaderTypePlanningService._template_forward_declaration(clean_name)
         if template_declaration is not None:
             return template_declaration
         return f"class {clean_name};"

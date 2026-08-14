@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from ddon_dwarf_reconstructor.application.generators import DwarfGenerator
+from ddon_dwarf_reconstructor.application.generators import DwarfGenerator, GenerationRequest
 from ddon_dwarf_reconstructor.infrastructure.elf_session import ElfDwarfSession
 
 pytestmark = [
@@ -39,14 +39,14 @@ class TestDwarfGeneratorIntegration:
             cache_file=tmp_path / "dwarf-cache.json",
         ) as generator:
             # Test that we can find a known class
-            result = generator.find_class("MtObject")
+            result = generator.runtime.class_parser.find_class("MtObject")
             assert result is not None, "Should find MtObject class in test data"
 
             _, die = result
             assert die.tag == "DW_TAG_class_type"
 
             # Test header generation produces valid content
-            header_content = generator.generate_header("MtObject")
+            header_content = generator.facade.generate(GenerationRequest("MtObject")).only()
 
             # Verify header structure without file I/O
             assert len(header_content) > 100, "Header should have substantial content"
@@ -74,10 +74,10 @@ class TestDwarfGeneratorIntegration:
             cache_file=tmp_path / "dwarf-cache.json",
         ) as generator:
             # Verify we have DWARF info
-            assert generator.dwarf_info is not None
+            assert generator.runtime.dwarf_info is not None
 
             # Verify we can iterate compilation units
-            cus = list(generator.dwarf_info.iter_CUs())
+            cus = list(generator.runtime.dwarf_info.iter_CUs())
             assert len(cus) > 0, "Should have compilation units"
 
             # Verify compilation units have DIEs

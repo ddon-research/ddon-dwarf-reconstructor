@@ -2,17 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from ...models.dwarf import ClassInfo, MemberInfo, StructInfo, UnionInfo
-
-if TYPE_CHECKING:
-    from .header_generator_context import HeaderGeneratorContext
+from .rendering.operations import HeaderRenderingHost
 
 
-class HeaderNestedRenderingMixin:
+class HeaderNestedRenderingService:
     def _nested_type_lines(
-        self: HeaderGeneratorContext, class_info: ClassInfo, include_metadata: bool
+        self: HeaderRenderingHost, class_info: ClassInfo, include_metadata: bool
     ) -> list[str]:
         return [
             *self._nested_type_forward_declarations(class_info),
@@ -21,7 +17,7 @@ class HeaderNestedRenderingMixin:
         ]
 
     def _nested_aggregate_definition_lines(
-        self: HeaderGeneratorContext, class_info: ClassInfo
+        self: HeaderRenderingHost, class_info: ClassInfo
     ) -> list[str]:
         units = self._ordered_nested_aggregates(class_info)
         if not units:
@@ -48,7 +44,7 @@ class HeaderNestedRenderingMixin:
         return lines
 
     def _ordered_nested_aggregates(
-        self: HeaderGeneratorContext, class_info: ClassInfo
+        self: HeaderRenderingHost, class_info: ClassInfo
     ) -> list[tuple[str, ClassInfo | StructInfo | UnionInfo]]:
         units: dict[str, tuple[str, ClassInfo | StructInfo | UnionInfo]] = {}
         for nested_class in self._ordered_nested_classes(class_info.nested_classes):
@@ -73,7 +69,7 @@ class HeaderNestedRenderingMixin:
         return [units[name] for name in ordered_names]
 
     def _nested_aggregate_dependencies(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         kind: str,
         aggregate: ClassInfo | StructInfo | UnionInfo,
         key: str,
@@ -90,7 +86,7 @@ class HeaderNestedRenderingMixin:
         }
 
     def _nested_aggregate_parts(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         kind: str,
         aggregate: ClassInfo | StructInfo | UnionInfo,
     ) -> tuple[list[MemberInfo], list[str]]:
@@ -112,7 +108,7 @@ class HeaderNestedRenderingMixin:
         return members, bases
 
     def _ordered_nested_classes(
-        self: HeaderGeneratorContext, nested_classes: list[ClassInfo]
+        self: HeaderRenderingHost, nested_classes: list[ClassInfo]
     ) -> list[ClassInfo]:
         """Order nested classes by their inheritance and by-value dependencies."""
         candidates: dict[str, ClassInfo] = {}
@@ -135,7 +131,7 @@ class HeaderNestedRenderingMixin:
         return [candidates[name] for name in ordered_names]
 
     def _nested_class_dependencies(
-        self: HeaderGeneratorContext, class_info: ClassInfo, names: set[str]
+        self: HeaderRenderingHost, class_info: ClassInfo, names: set[str]
     ) -> set[str]:
         dependencies: set[str] = set()
         for base_name in class_info.base_classes:
@@ -150,7 +146,7 @@ class HeaderNestedRenderingMixin:
                 dependencies.add(dependency)
         return dependencies
 
-    def _nested_definition_key(self: HeaderGeneratorContext, name: str) -> str:
+    def _nested_definition_key(self: HeaderRenderingHost, name: str) -> str:
         template_info = self._template_rendering_info(name)
         if template_info:
             return template_info[0]
@@ -168,7 +164,7 @@ class HeaderNestedRenderingMixin:
         )
 
     def _nested_type_forward_declarations(
-        self: HeaderGeneratorContext, class_info: ClassInfo
+        self: HeaderRenderingHost, class_info: ClassInfo
     ) -> list[str]:
         declarations = [
             *self._nested_enum_forward_declarations(class_info),
@@ -180,7 +176,7 @@ class HeaderNestedRenderingMixin:
         return ["public:", *declarations] if declarations else []
 
     def _nested_enum_forward_declarations(
-        self: HeaderGeneratorContext, class_info: ClassInfo
+        self: HeaderRenderingHost, class_info: ClassInfo
     ) -> list[str]:
         return [
             f"    enum class {self._unqualify_type_expression(enum.name)};"
@@ -189,7 +185,7 @@ class HeaderNestedRenderingMixin:
         ]
 
     def _nested_struct_forward_declarations(
-        self: HeaderGeneratorContext, class_info: ClassInfo
+        self: HeaderRenderingHost, class_info: ClassInfo
     ) -> list[str]:
         return [
             f"    struct {self._unqualify_type_expression(struct.name)};"
@@ -198,7 +194,7 @@ class HeaderNestedRenderingMixin:
         ]
 
     def _nested_class_forward_declarations(
-        self: HeaderGeneratorContext, class_info: ClassInfo
+        self: HeaderRenderingHost, class_info: ClassInfo
     ) -> list[str]:
         declarations: list[str] = []
         for nested_class in self._ordered_nested_classes(class_info.nested_classes):
@@ -216,7 +212,7 @@ class HeaderNestedRenderingMixin:
         return declarations
 
     def _nested_union_forward_declarations(
-        self: HeaderGeneratorContext, class_info: ClassInfo
+        self: HeaderRenderingHost, class_info: ClassInfo
     ) -> list[str]:
         return [
             f"    union {self._unqualify_type_expression(union.name)};"
@@ -225,7 +221,7 @@ class HeaderNestedRenderingMixin:
         ]
 
     def _enum_lines(
-        self: HeaderGeneratorContext, class_info: ClassInfo, include_metadata: bool
+        self: HeaderRenderingHost, class_info: ClassInfo, include_metadata: bool
     ) -> list[str]:
         if not class_info.enums:
             return []
@@ -234,7 +230,7 @@ class HeaderNestedRenderingMixin:
             lines.extend(self._generate_enum_definition(enum, include_metadata))
         return lines
 
-    def _struct_lines(self: HeaderGeneratorContext, class_info: ClassInfo) -> list[str]:
+    def _struct_lines(self: HeaderRenderingHost, class_info: ClassInfo) -> list[str]:
         if not class_info.nested_structs:
             return []
         lines = ["public:"]
@@ -243,7 +239,7 @@ class HeaderNestedRenderingMixin:
             lines.extend(self._generate_struct_definition(struct, class_info.name, rendered_name))
         return lines
 
-    def _nested_class_lines(self: HeaderGeneratorContext, class_info: ClassInfo) -> list[str]:
+    def _nested_class_lines(self: HeaderRenderingHost, class_info: ClassInfo) -> list[str]:
         if not class_info.nested_classes:
             return []
         lines = ["public:"]
@@ -252,7 +248,7 @@ class HeaderNestedRenderingMixin:
             lines.extend(f"    {line}" if line else "" for line in nested_lines)
         return lines
 
-    def _union_lines(self: HeaderGeneratorContext, class_info: ClassInfo) -> list[str]:
+    def _union_lines(self: HeaderRenderingHost, class_info: ClassInfo) -> list[str]:
         if not class_info.unions:
             return []
         lines = ["public:"]

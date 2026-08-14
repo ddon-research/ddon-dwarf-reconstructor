@@ -10,9 +10,9 @@ documentation rules apply across the layers below.
 | `core` | `DwarfInfo`, CU/DIE wrappers, platform values, logging/path contracts | outer infrastructure implementations |
 | `domain/models` | class, member, method, type/declarator, evidence models | pyelftools, SQLite, CLI |
 | `domain/ports` | cache, lookup, source identity, type resolution, external-tool contracts | adapter details |
-| `domain/services` | DIE traversal, definition selection, type chains, locations, methods, hierarchy, rendering | launchers and concrete filesystem/process code |
-| `application` | generation, export, setup orchestration, typed requests and bundles | direct adapter construction |
-| `infrastructure` | `ElfDwarfSession`, source catalog, SQLite/zstd indexes, atomic publishers, Orbis/process adapters, logging setup | domain policy duplication |
+| `domain/services` | DIE traversal, definition selection, type chains, locations, methods, hierarchy, and composed header rendering | launchers and concrete filesystem/process code |
+| `application` | `GenerationFacade`, `GenerationRuntime`, knowledge export, typed requests, bundles, and resource ownership | direct adapter construction |
+| `infrastructure` | `ElfDwarfSession`, source catalog, Doris serving adapters, composed JSONL/Parquet validation views, SQLite/zstd indexes, atomic publishers, Orbis/process adapters, logging setup | domain policy duplication |
 | composition roots | construction of concrete adapters and CLI wiring | — |
 
 ## Evidence authority
@@ -31,3 +31,9 @@ producer facts.
 - Stable ordering, qualified names, inheritance, layouts, source locations, DIE offsets, and
   generated-header bytes are preserved across warm and fresh runs.
 - Missing or conflicting evidence remains explicit rather than being silently repaired.
+- `GenerationFacade` is the only application entry point for generation; the composition root owns
+  concrete Doris, materialized-view, source, and publication adapters.
+- Canonical Doris serving is distinct from JSONL/Parquet validation projections. Both use the same
+  typed definition-selection policy, but neither projection subclasses the other.
+- A bounded, truncated, unavailable, or publish-pending query is not complete evidence. A
+  source-bound full-hierarchy run cannot publish an unresolved placeholder bundle.

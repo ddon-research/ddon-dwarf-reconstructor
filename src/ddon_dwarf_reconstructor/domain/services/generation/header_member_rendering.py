@@ -3,20 +3,18 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
 
 from ....core.observability import get_logger
 from ...models.dwarf import ClassInfo, MemberInfo
-
-if TYPE_CHECKING:
-    from .header_generator_context import HeaderGeneratorContext
+from .rendering.operations import HeaderRenderingHost
+from .rendering.type_policy import TypeExpressionPolicy
 
 logger = get_logger(__name__)
 
 
-class HeaderMemberRenderingMixin:
+class HeaderMemberRenderingService:
     def _format_member_declaration(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         member: MemberInfo,
         containing_class_name: str | None = None,
     ) -> str:
@@ -44,7 +42,7 @@ class HeaderMemberRenderingMixin:
                 return declaration
         return self._format_scalar_member(member, type_name)
 
-    def _format_inline_member(self: HeaderGeneratorContext, member: MemberInfo) -> str:
+    def _format_inline_member(self: HeaderRenderingHost, member: MemberInfo) -> str:
         lines = ["struct {"]
         assert member.inline_struct is not None
         for nested_member in member.inline_struct.members:
@@ -53,9 +51,7 @@ class HeaderMemberRenderingMixin:
         lines.append(f"}} {member.name}")
         return "\n".join(lines)
 
-    def _format_scalar_member(
-        self: HeaderGeneratorContext, member: MemberInfo, type_name: str
-    ) -> str:
+    def _format_scalar_member(self: HeaderRenderingHost, member: MemberInfo, type_name: str) -> str:
         if (
             "*" not in type_name
             and "&" not in type_name
@@ -70,7 +66,7 @@ class HeaderMemberRenderingMixin:
         return self._with_bitfield(f"{type_name} {member.name}", member)
 
     def _recursive_member_storage(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         member: MemberInfo,
         containing_class_name: str | None,
     ) -> str | None:
@@ -89,7 +85,7 @@ class HeaderMemberRenderingMixin:
             storage_size = max(1, storage_size)
         return f"std::uint8_t {member.name}[{storage_size}]"
 
-    def _format_array_member(self: HeaderGeneratorContext, member: MemberInfo) -> str | None:
+    def _format_array_member(self: HeaderRenderingHost, member: MemberInfo) -> str | None:
         opening = member.type_name.find("[")
         if opening <= 0:
             return None
@@ -116,15 +112,13 @@ class HeaderMemberRenderingMixin:
             cursor = closing + 1
         return cursor == len(dimensions)
 
-    def _opaque_array_member(
-        self: HeaderGeneratorContext, member: MemberInfo, dimensions: str
-    ) -> str:
+    def _opaque_array_member(self: HeaderRenderingHost, member: MemberInfo, dimensions: str) -> str:
         storage_size = self._array_storage_size(dimensions)
         rendered = f"std::uint8_t {member.name}[{storage_size}]"
         return f"static {rendered}" if member.is_static else rendered
 
     def _unknown_array_member(
-        self: HeaderGeneratorContext, member: MemberInfo, base_type: str, dimensions: str
+        self: HeaderRenderingHost, member: MemberInfo, base_type: str, dimensions: str
     ) -> str:
         if "[]" in dimensions:
             rendered = f"{base_type} {member.name}{dimensions}"
@@ -134,7 +128,7 @@ class HeaderMemberRenderingMixin:
         return f"static {rendered}" if member.is_static else rendered
 
     def _known_array_member(
-        self: HeaderGeneratorContext, member: MemberInfo, base_type: str, dimensions: str
+        self: HeaderRenderingHost, member: MemberInfo, base_type: str, dimensions: str
     ) -> str:
         if member.is_static:
             type_name = self._const_type(base_type, member)
@@ -149,15 +143,15 @@ class HeaderMemberRenderingMixin:
             storage_size *= size
         return storage_size
 
-    def _is_known_render_type(self: HeaderGeneratorContext, type_name: str) -> bool:
+    def _is_known_render_type(self: HeaderRenderingHost, type_name: str) -> bool:
         if self._is_builtin_type(type_name) or type_name.startswith("std::"):
             return True
         if re.fullmatch(r"[A-Za-z_]\w*(?:::[A-Za-z_]\w*)*\s*<.+>", type_name):
             return True
-        known_names = getattr(self, "_known_render_type_names", set())
+        known_names = self._known_render_type_names
         return type_name in known_names or self._nested_definition_key(type_name) in known_names
 
-    def _format_static_member(self: HeaderGeneratorContext, member: MemberInfo) -> str:
+    def _format_static_member(self: HeaderRenderingHost, member: MemberInfo) -> str:
         type_name = self._unqualify_type_expression(member.type_name)
         type_name = self._const_type(type_name, member)
         value_part = f" = {member.const_value}" if member.const_value is not None else ""
@@ -175,35 +169,7 @@ class HeaderMemberRenderingMixin:
 
     @staticmethod
     def _is_integral_type(type_name: str) -> bool:
-        clean_name = re.sub(r"\b(?:const|volatile|restrict)\b", "", type_name)
-        words = set(re.findall(r"[A-Za-z_]\w*", clean_name))
-        integral_words = {
-            "bool",
-            "char",
-            "short",
-            "int",
-            "long",
-            "signed",
-            "unsigned",
-            "wchar_t",
-            "u8",
-            "u16",
-            "u32",
-            "u64",
-            "s8",
-            "s16",
-            "s32",
-            "s64",
-            "int8_t",
-            "int16_t",
-            "int32_t",
-            "int64_t",
-            "uint8_t",
-            "uint16_t",
-            "uint32_t",
-            "uint64_t",
-        }
-        return bool(words) and words <= integral_words
+        return TypeExpressionPolicy.is_integral(type_name)
 
     @classmethod
     def _opaque_bitfield_declaration(cls, member: MemberInfo, type_name: str) -> str | None:
@@ -227,7 +193,7 @@ class HeaderMemberRenderingMixin:
         return declaration
 
     def _template_rendering_info(
-        self: HeaderGeneratorContext, class_name: str
+        self: HeaderRenderingHost, class_name: str
     ) -> tuple[str, str, str] | None:
         """Return primary name and argument names for a recovered specialization."""
         opening = class_name.find("<")
@@ -265,7 +231,7 @@ class HeaderMemberRenderingMixin:
         return rendered
 
     def _generate_single_class(
-        self: HeaderGeneratorContext, class_info: ClassInfo, include_metadata: bool
+        self: HeaderRenderingHost, class_info: ClassInfo, include_metadata: bool
     ) -> list[str]:
         """Generate a single class definition."""
         class_name = class_info.name
@@ -286,7 +252,7 @@ class HeaderMemberRenderingMixin:
         return lines
 
     def _class_header_lines(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         class_info: ClassInfo,
         include_metadata: bool,
         template_info: tuple[str, str, str] | None,
@@ -310,11 +276,11 @@ class HeaderMemberRenderingMixin:
         lines.extend([f"{aggregate_kind}{alignment} {declaration_name}{inheritance}", "{"])
         return lines
 
-    def _rendered_base_names(self: HeaderGeneratorContext, class_info: ClassInfo) -> list[str]:
+    def _rendered_base_names(self: HeaderRenderingHost, class_info: ClassInfo) -> list[str]:
         """Render nested base types with their containing aggregate qualification."""
-        qualified_names = getattr(self, "_base_type_names", {})
+        qualified_names = self._base_type_names
         return [
-            qualified_names.get(offset, self._unqualify_type_expression(base_name))
+            qualified_names.get(offset) or self._unqualify_type_expression(base_name)
             if offset is not None
             else self._unqualify_type_expression(base_name)
             for base_name, offset in zip(
@@ -328,7 +294,7 @@ class HeaderMemberRenderingMixin:
         ]
 
     def _class_metadata_lines(
-        self: HeaderGeneratorContext, class_info: ClassInfo, include_metadata: bool
+        self: HeaderRenderingHost, class_info: ClassInfo, include_metadata: bool
     ) -> list[str]:
         if not include_metadata:
             return []
@@ -363,7 +329,7 @@ class HeaderMemberRenderingMixin:
         return lines
 
     def _method_lines(
-        self: HeaderGeneratorContext, class_info: ClassInfo, class_name: str
+        self: HeaderRenderingHost, class_info: ClassInfo, class_name: str
     ) -> list[str]:
         lines: list[str] = []
         methods = self._deduplicate_rendered_methods(self._deduplicate_methods(class_info.methods))
@@ -373,7 +339,7 @@ class HeaderMemberRenderingMixin:
                 lines.extend([f"{access}:", *self._generate_methods(access_methods, class_name)])
         return lines
 
-    def _member_lines(self: HeaderGeneratorContext, class_info: ClassInfo) -> list[str]:
+    def _member_lines(self: HeaderRenderingHost, class_info: ClassInfo) -> list[str]:
         lines: list[str] = []
         for access in ("public", "protected", "private"):
             access_members = [member for member in class_info.members if member.access == access]
@@ -387,7 +353,7 @@ class HeaderMemberRenderingMixin:
         return lines
 
     def _render_access_members(
-        self: HeaderGeneratorContext,
+        self: HeaderRenderingHost,
         members: list[MemberInfo],
         containing_class_name: str | None = None,
     ) -> list[str]:

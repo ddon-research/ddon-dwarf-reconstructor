@@ -9,14 +9,16 @@ from ...core.observability import get_logger
 from ...domain.models.tool_evidence import ToolExport
 from ...domain.ports.dwarf_lookup import DwarfLookupPort
 from ...domain.services.parsing.die_type_classifier import DIETypeClassifier
-from .dwarf_generator_context import DwarfGeneratorContext
+from ..generation.runtime import GenerationRuntime
+from .dwarf_header_generation import HeaderGenerationService
 
 logger = get_logger(__name__)
 
 
 class KnowledgeExportService:
+    @staticmethod
     def export_knowledge_graph(
-        self: DwarfGeneratorContext,
+        context: GenerationRuntime,
         root_symbol: str,
         output_dir: Path,
         build_id: str,
@@ -38,19 +40,19 @@ class KnowledgeExportService:
         """
         from ...application.exporters.knowledge_exporter import KnowledgeExporter
 
-        self.workflow.expand_typedef_search(full_hierarchy=True)
+        HeaderGenerationService._expand_typedef_search(context, full_hierarchy=True)
         # Knowledge export keeps method declarations but uses structural closure
         # so signature-only types cannot trigger an unbounded cold CU search.
-        class_infos, hierarchy_order = self.workflow.build_hierarchy_with_timing(
+        class_infos, hierarchy_order = HeaderGenerationService._build_hierarchy_with_timing(
+            context,
             root_symbol,
             include_method_signatures=False,
         )
-        if not self.workflow.validate_hierarchy(class_infos, root_symbol):
+        if not HeaderGenerationService._validate_hierarchy(context, class_infos, root_symbol):
             raise ValueError(f"No classes found in hierarchy for {root_symbol}")
 
-        all_typedefs = self.workflow.collect_typedefs_and_packing(class_infos)
-        assert self.header_generator is not None
-        reconstructed_cpp = self.header_generator.generate_single_file_hierarchy_header(
+        all_typedefs = HeaderGenerationService._collect_typedefs_and_packing(context, class_infos)
+        reconstructed_cpp = context.header_renderer.generate_single_file_hierarchy_header(
             class_infos,
             hierarchy_order,
             root_symbol,
@@ -59,20 +61,20 @@ class KnowledgeExportService:
 
         disassembly_report = None
         if orbis_objdump_path is not None:
-            if self.disassembly_factory is None:
+            if context.disassembly_factory is None:
                 raise RuntimeError("No disassembly producer configured")
-            disassembly_report = self.disassembly_factory(orbis_objdump_path).produce(
-                self.elf_path, root_symbol
+            disassembly_report = context.disassembly_factory(orbis_objdump_path).produce(
+                context.elf_path, root_symbol
             )
 
-        if self.source_hash is None:
+        if context.source_hash is None:
             raise RuntimeError("Knowledge export requires a source identity service")
         exporter = KnowledgeExporter(
-            self.elf_path,
+            context.elf_path,
             build_id,
-            source_hash=self.source_hash,
+            source_hash=context.source_hash,
             requires_resolution=lambda offset: KnowledgeExportService._requires_resolution(
-                getattr(self, "lazy_index", None), offset
+                context.lazy_index, offset
             ),
         )
         return exporter.export(

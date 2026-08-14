@@ -191,13 +191,13 @@ def test_process_symbol_saves_cache_after_header_output(tmp_path: Path) -> None:
     config = Mock(output_dir=tmp_path, verbose=False)
     generator = Mock(platform=ELFPlatform.PS4)
     generator.generate_bundle.return_value = HeaderBundle.single("A", "header")
-    generator.lazy_index = Mock()
+    generator.save_cache = Mock()
     logger = Mock()
 
     cli_main._process_symbol(options, config, generator, "A", ["A"], logger)
 
     assert (tmp_path / "ps4" / "A.h").exists()
-    generator.lazy_index.save_cache.assert_called_once_with()
+    generator.save_cache.assert_called_once_with()
 
 
 @pytest.mark.unit
@@ -209,7 +209,7 @@ def test_run_generation_publishes_one_bundle_for_all_symbols(tmp_path: Path, moc
     )
     generator = mocker.MagicMock(platform=ELFPlatform.PS4)
     generator.__enter__.return_value = generator
-    generator.lazy_index = Mock()
+    generator.save_cache = Mock()
     mocker.patch.object(
         cli_main.DwarfRuntimeConfig,
         "from_environment",
@@ -262,7 +262,7 @@ def test_run_generation_publishes_separate_bundles_for_full_hierarchy_roots(
     )
     generator = mocker.MagicMock(platform=ELFPlatform.PS4)
     generator.__enter__.return_value = generator
-    generator.lazy_index = Mock()
+    generator.save_cache = Mock()
     mocker.patch.object(
         cli_main.DwarfRuntimeConfig,
         "from_environment",

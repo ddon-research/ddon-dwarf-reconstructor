@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, Mock
 
 import pytest
 
+from ddon_dwarf_reconstructor.core.platform import ELFPlatform
 from tests.test_main_paths import _options
 
 cli_main = importlib.import_module("ddon_dwarf_reconstructor.main")
@@ -52,7 +53,6 @@ def test_header_collision_aborts_batch_at_first_conflict(mocker) -> None:
     logger = Mock()
     generator = MagicMock()
     generator.__enter__.return_value = generator
-    generator.lazy_index = None
     mocker.patch.object(cli_main, "DwarfGenerator", return_value=generator)
     build_headers = mocker.patch.object(
         cli_main,
@@ -67,9 +67,37 @@ def test_header_collision_aborts_batch_at_first_conflict(mocker) -> None:
 
 
 @pytest.mark.unit
+def test_source_bound_full_hierarchy_rejects_placeholder_bundle(mocker) -> None:
+    options = _options(
+        full_hierarchy=True,
+        dwarf_store_manifest=Path("store/manifest.json"),
+    )
+    mocker.patch.object(
+        cli_main,
+        "_build_headers",
+        return_value={
+            "UncategorizedDefinitions.h": "// Class 'A' not found in DWARF information\n"
+        },
+    )
+
+    with pytest.raises(RuntimeError, match="unresolved placeholder"):
+        cli_main._generate_symbol_headers(
+            options,
+            Mock(),
+            Mock(),
+            ["A"],
+            Mock(),
+            (),
+            cli_main._GenerationState(True),
+            1,
+            "A",
+        )
+
+
+@pytest.mark.unit
 def test_diagnostics_cover_unknown_platform_preview_and_failed_summary(tmp_path: Path) -> None:
     config = Mock(output_dir=tmp_path, verbose=False)
-    generator = Mock(platform=None)
+    generator = Mock(platform=ELFPlatform.UNKNOWN)
     logger = Mock()
     assert cli_main._write_headers(config, generator, {"A.h": "content"}, logger) == 7
 

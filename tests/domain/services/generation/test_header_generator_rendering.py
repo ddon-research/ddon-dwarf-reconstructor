@@ -13,7 +13,7 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import (
     MethodInfo,
     ParameterInfo,
 )
-from ddon_dwarf_reconstructor.domain.services.generation import HeaderGenerator
+from ddon_dwarf_reconstructor.domain.services.generation import HeaderRenderer
 
 
 class TestHeaderGenerator:
@@ -27,7 +27,7 @@ class TestHeaderGenerator:
     @pytest.fixture
     def header_generator(self, mock_dwarf_index):
         """HeaderGenerator instance with mock dwarf_index."""
-        return HeaderGenerator(mock_dwarf_index)
+        return HeaderRenderer(mock_dwarf_index)
 
     @pytest.fixture
     def sample_class(self):
@@ -314,7 +314,7 @@ def test_generate_header_marks_unreturning_methods() -> None:
         die_offset=None,
     )
 
-    header = HeaderGenerator(Mock()).generate_header(class_info)
+    header = HeaderRenderer(Mock()).generate_header(class_info)
 
     assert "// - DIE Offset: unavailable" in header
     assert "[[noreturn]] void abort();" in header

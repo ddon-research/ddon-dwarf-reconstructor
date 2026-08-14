@@ -75,7 +75,14 @@ def test_run_validation_records_unobserved_units_and_report(
     report = validator.run_validation([bundle], tmp_path / "validation", 10)
 
     assert report["header_count"] == 2
-    assert report["counts"] == {"passed": 1, "not_observed": 1}
+    assert report["counts"] == {
+        "failed": 0,
+        "not_observed": 1,
+        "passed": 1,
+        "timed_out": 0,
+    }
+    assert report["validation_scope"] == "season2_header_closures"
+    assert report["msvc_unit_count"] == 2
     saved = json.loads(
         (tmp_path / "validation" / "msvc-header-validation.json").read_text(encoding="utf-8")
     )

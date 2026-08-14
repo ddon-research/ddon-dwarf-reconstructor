@@ -208,7 +208,7 @@ context only. The b8 table is now part of the canonical load plan and is refresh
 source-bound index after the fourteen family loads. b2 and b4 remain comparison-only candidates;
 the canonical fourteen-family physical model and registry row contract remain unchanged.
 
-#### Full Season 2 header-generation and MSVC closure audit
+#### Historical full Season 2 header-generation and MSVC closure audit
 
 The complete `resources/season2-resources.txt` suite was rerun against the source-bound manifest
 on 2026-08-10 in four external generation batches under
@@ -249,6 +249,57 @@ image/configuration, source publication, candidate variant, or representative wo
 Candidate reports and all raw traces/profiles are external artifacts. `--no-cache` disables Doris
 query cache for a session; it is not an operating-system storage-cache eviction, so cold and warm
 labels remain separate and must not be conflated.
+
+### 2026-08-13 boundary-refactor performance status
+
+The boundary refactor retained byte-exact representative output for `rAIFSM`, `rArchive`, and
+`rTexture`. The corrected batch-001 run completed 73/73 roots and 598/598 headers, and its
+independent MSVC audit passed all 598 units. The full 289-root rerun remains `blocked`: two host
+reboots interrupted the attempts, and the Doris FE cannot currently bind its configured 9030
+endpoint because Windows excludes TCP ports 8983-9082. No incomplete output was accepted or used
+as a performance workload. No matched warm p95 or peak-RSS comparison was accepted, so the
+110%-of-baseline gate remains `not_observed` until the same source, runtime, backend, profile, and
+cache-state workload runs to completion. The older 2026-08-09/10 measurements above remain
+historical controls only.
+
+### 2026-08-14 completed boundary-refactor acceptance
+
+The source-bound baseline and complete post-refactor run are now observed. The final output root is
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\season2-final-source-cache-early-20260814`;
+its generation log is `logs/ddon_reconstructor_17560_20260814T012907_837060+0200.jsonl` and records
+289 successful roots with zero failed roots, 289 bundles, 2,745 headers, and 3,034 published files.
+The 2,745 header SHA-256 values and all 289 bundle-manifest SHA-256 values match the immutable baseline at
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\baseline-33b8271`.
+The normalized counts are therefore `root_count=289`, `bundle_count=289`,
+`manifest_count=289`, `header_file_count=2745`, `published_file_count=3034`, and
+`msvc_unit_count=2745`.
+
+Independent MSVC validation is retained at
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\msvc-season2-final-source-cache-early-20260814\msvc-header-validation.json`.
+Visual Studio MSVC `14.51.36231` passed all 2,745 translation units with zero failures and zero
+timeouts. Warnings remain separate: `C4201=124` and `C4309=1`.
+
+The cache diagnosis is also now evidence-backed. Request-scoped Doris hydration caches are
+intentionally reset at each Season 2 root and were bounded during the full run; the process RSS
+remained approximately 288--424 MiB as the corpus progressed. The persistent selection cache is
+different: it is source/profile-bound, fingerprint-validated, and supplies deterministic
+definition-selection hints. Removing it changed 15 dependency headers and 21 header payloads in
+`rLayout`/`rTexture`, so that experiment was rejected for the canonical path. It is not a generic
+compatibility fallback.
+
+The final benchmark report is
+`C:\Users\morph\AppData\Local\Temp\ddon-dwarf-reconstructor-review\performance-rAIFSM-final-early-3-20260814\current-doris-benchmark.json`.
+After one explicit cold `rAIFSM --full-hierarchy --exhaustive` run, three warm repetitions measured
+9.06, 9.06, and 9.07 seconds (p50 `9.06 s`, p95 `9.07 s`) with peak RSS at most 73.8 MiB. Every
+run produced the approved bundle SHA-256
+`1176bd80524391ef2d23fd99541f9a63e04566e2e8a8906dc15670a80ca7f63b`. The bounded Doris query
+screen observed complete results; its largest bounded `find_definitions` query was about 13 ms cold
+and 6 ms warm. Every generation child loaded the verified 58-symbol source-bound cache
+`C:\Users\morph\AppData\Local\ddon-dwarf-reconstructor\DDOORBIS-beced6568432-dwarf-cache.json`.
+The measured Doris cache warm-up is therefore milliseconds, while source-bound DWARF cache identity
+changes which deterministic selection hints are available. An empty transient Doris query cache is
+not the observed cause of the earlier apparent degradation. The final full-corpus run took about
+39 minutes; root size varies substantially, so that total is not a per-root latency budget.
 
 ## Flight SQL evaluation
 

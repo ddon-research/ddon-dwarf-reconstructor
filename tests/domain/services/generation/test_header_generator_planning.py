@@ -14,7 +14,7 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import (
     TypeDeclarator,
     TypeReference,
 )
-from ddon_dwarf_reconstructor.domain.services.generation import HeaderGenerator
+from ddon_dwarf_reconstructor.domain.services.generation import HeaderRenderer
 
 
 class TestHeaderGenerator:
@@ -28,7 +28,7 @@ class TestHeaderGenerator:
     @pytest.fixture
     def header_generator(self, mock_dwarf_index):
         """HeaderGenerator instance with mock dwarf_index."""
-        return HeaderGenerator(mock_dwarf_index)
+        return HeaderRenderer(mock_dwarf_index)
 
     @pytest.fixture
     def sample_class(self):
@@ -351,14 +351,14 @@ class TestHeaderGenerator:
 
 @pytest.mark.unit
 def test_template_forward_declaration_matches_multiple_argument_arity() -> None:
-    declaration = HeaderGenerator._template_forward_declaration("Box<Pair<int, float>, 4>")
+    declaration = HeaderRenderer._template_forward_declaration("Box<Pair<int, float>, 4>")
 
     assert declaration == "template <typename T, auto N1> class Box;"
 
 
 @pytest.mark.unit
 def test_nested_template_arguments_use_template_forward_declarations() -> None:
-    declarations = HeaderGenerator._template_argument_forward_declarations(
+    declarations = HeaderRenderer._template_argument_forward_declarations(
         "MtStlVector<s8, MtStlAllocator<signed char>>", set()
     )
 

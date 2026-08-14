@@ -44,13 +44,31 @@ classDiagram
         +generate_bundle(request) HeaderBundle
         +export_knowledge_graph(request) KnowledgeBundle
     }
-    class GeneratorWorkflow {
-        +generate(request) HeaderBundle
-        +export_knowledge(request) KnowledgeBundle
+    class GenerationFacade {
+        +generate_bundle(request) HeaderBundle
+        +export_knowledge_graph(request) KnowledgeBundle
     }
-    class HeaderGenerator {
+    class GenerationRuntime {
+        +begin_root(symbol)
+        +end_root()
+        +close()
+    }
+    class HeaderRenderer {
         +generate_single(class_info)
         +generate_hierarchy(hierarchy)
+    }
+    class DorisDwarfStore {
+        +find_primary_definition(name) QueryResult
+        +begin_root(symbol)
+        +end_root()
+    }
+    class MaterializedStorePort {
+        <<protocol>>
+        +find_definitions(name) QueryResult
+        +children_for_die(offset)
+    }
+    class DorisLoader {
+        +execute(plan) LoadReport
     }
     class ElfDwarfSession {
         +open(source)
@@ -71,12 +89,16 @@ classDiagram
     }
 
     CLI --> DwarfGenerator : composition root
-    DwarfGenerator --> GeneratorWorkflow
-    GeneratorWorkflow --> HeaderGenerator
-    GeneratorWorkflow --> ElfDwarfSession
+    DwarfGenerator --> GenerationFacade
+    GenerationFacade --> GenerationRuntime
+    GenerationRuntime --> HeaderRenderer
+    GenerationRuntime --> DorisDwarfStore
+    GenerationRuntime --> MaterializedStorePort : validation only
+    GenerationFacade --> ElfDwarfSession
     ElfDwarfSession --> SourceIdentityCatalog
-    GeneratorWorkflow --> AtomicHeaderPublisher
-    DwarfSpecPipeline ..> GeneratorWorkflow : separate project boundary
+    GenerationFacade --> AtomicHeaderPublisher
+    DorisLoader --> MaterializedStorePort : loads canonical rows
+    DwarfSpecPipeline ..> GenerationFacade : separate project boundary
 ```
 
 The `core` package contains technology-neutral contracts and observability/path boundaries.

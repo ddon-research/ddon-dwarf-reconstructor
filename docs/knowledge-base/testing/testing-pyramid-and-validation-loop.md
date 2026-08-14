@@ -74,6 +74,25 @@ The executable contract lives in:
 - `pyproject.toml` and the root `justfile`;
 - `specs/008-testing-pyramid-validation/contracts/testing-policy.md`.
 
+## Boundary-refactor evidence rule
+
+The 2026-08-11 boundary refactor added focused tests for truncated and unavailable analytical
+lookups, source mismatch, cache lifecycle, registry/publication failure, and placeholder rejection.
+Those tests establish error semantics; they do not establish full Season 2, Doris, MSVC, or warm
+performance evidence. Full-corpus reports must use the machine-derived fields
+`root_count`, `bundle_count`, `manifest_count`, `header_file_count`, `published_file_count`, and
+`msvc_unit_count`, and must keep incomplete or blocked external surfaces separate from repository
+test results. A root that emits only `UncategorizedDefinitions.h` is an error for source-bound
+full-hierarchy generation, not a successful low-count bundle.
+
+The completed 2026-08-14 acceptance run demonstrates the required separation: 289 roots and
+2,745 headers were compared byte-for-byte against the external baseline, then 2,745 headers were
+compiled independently with MSVC. The generation and compiler reports are external evidence, not
+replacements for the deterministic repository gates. Cache experiments must also preserve this
+boundary: a transient Doris query-cache miss may affect a query timing sample, but a validated
+source-bound selection cache affects definition choice and therefore must be included in any
+byte-parity performance workload.
+
 ## References
 
 - [The Practical Test Pyramid](https://martinfowler.com/articles/practical-test-pyramid.html)

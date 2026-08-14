@@ -3,11 +3,20 @@
 from __future__ import annotations
 
 import re
+from dataclasses import fields
 from pathlib import Path
 from re import Pattern
 
 import pytest
 from archunitpython import CheckOptions, assert_passes, project_files
+
+from ddon_dwarf_reconstructor.application.generation.runtime import GenerationComponentOptions
+from ddon_dwarf_reconstructor.domain.services.generation.rendering.engine import (
+    HeaderRenderingComponents,
+    HeaderRenderingEngine,
+)
+from ddon_dwarf_reconstructor.infrastructure.analytical.jsonl_store import JsonlDwarfStore
+from ddon_dwarf_reconstructor.infrastructure.analytical.parquet_store import ParquetDwarfStore
 
 pytestmark = [pytest.mark.unit, pytest.mark.non_functional, pytest.mark.quality]
 
@@ -124,3 +133,20 @@ def test_positive_empty_selector_is_rejected(source_files) -> None:
     rule = source_files.in_folder(missing_layer).should().have_no_cycles()
     violations = rule.check(_options(ignore_type_checking_imports=True))
     assert any(type(violation).__name__ == "EmptyTestViolation" for violation in violations)
+
+
+def test_header_rendering_uses_explicit_composition_without_mixin_inheritance() -> None:
+    assert HeaderRenderingEngine.__bases__ == (object,)
+    assert len(fields(HeaderRenderingComponents)) == 9
+    components = HeaderRenderingComponents.create()
+    assert all(
+        type(getattr(components, field.name)).__bases__ == (object,) for field in fields(components)
+    )
+
+
+def test_materialized_adapters_are_composed_not_inherited() -> None:
+    assert not issubclass(ParquetDwarfStore, JsonlDwarfStore)
+
+
+def test_generation_component_options_are_immutable() -> None:
+    assert GenerationComponentOptions.__dataclass_params__.frozen is True

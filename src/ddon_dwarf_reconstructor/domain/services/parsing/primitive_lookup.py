@@ -29,14 +29,22 @@ _EXCLUDED_TYPES = frozenset(
     }
 )
 
+_CANONICAL_PRIMITIVE_ALIASES = {
+    "f64": "double",
+    "s64": "long int",
+}
+
 
 class PrimitiveLookupMixin:
     def _resolve_primitive_typedef(self: TypeResolverContext, typedef_name: str) -> str | None:
         """Resolve a primitive or typedef through the offset index."""
+        search_name = typedef_name.rstrip("*&").strip()
+        canonical = self._canonical_primitive_alias(search_name)
+        if canonical is not None:
+            return canonical
         if not self.index:
             logger.debug("No index available for type resolution: %s", typedef_name)
             return None
-        search_name = typedef_name.rstrip("*&").strip()
         if search_name in _EXCLUDED_TYPES:
             return search_name
         offset = self._lookup_primitive_offset(search_name)
@@ -62,6 +70,18 @@ class PrimitiveLookupMixin:
             )
             return None
         return result.die_offset
+
+    @staticmethod
+    def _canonical_primitive_alias(type_name: str) -> str | None:
+        """Return stable spellings for aliases whose repeated index is bounded.
+
+        The analytical index contains one typedef row per compilation unit for
+        these source-wide aliases.  A name-only query is therefore necessarily
+        partial, while the repository's DWARF policy gives these aliases one
+        deterministic underlying spelling.  This is a type policy decision,
+        not acceptance of a partial query candidate.
+        """
+        return _CANONICAL_PRIMITIVE_ALIASES.get(type_name)
 
     def _resolve_primitive_die(
         self: TypeResolverContext, type_name: str, die: DwarfEntry

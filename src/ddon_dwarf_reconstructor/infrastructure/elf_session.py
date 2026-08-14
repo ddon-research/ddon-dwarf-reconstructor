@@ -11,6 +11,8 @@ from elftools.elf.elffile import ELFFile
 from ..core.dwarf import DwarfInfo
 from ..core.observability import get_logger, log_event
 from ..core.platform import ELFPlatform
+from ..domain.ports.analytical_store import DwarfQueryPort
+from ..domain.ports.dwarf_lookup import DwarfLookupPort
 from ..utils.elf_patches import patch_pyelftools_for_ps4
 from .elf_platform import PlatformDetector
 
@@ -26,6 +28,8 @@ class ElfDwarfSession:
         self.elf_file: ELFFile | None = None
         self.dwarf_info: DwarfInfo | None = None
         self.platform = ELFPlatform.UNKNOWN
+        self.query_port: DwarfQueryPort | None = None
+        self.query_index: DwarfLookupPort | None = None
 
     def __enter__(self) -> ElfDwarfSession:
         patch_pyelftools_for_ps4()
@@ -76,3 +80,9 @@ class ElfDwarfSession:
             log_event(logger, logging.DEBUG, "elf_closed", elf_path=self.elf_path)
         self.elf_file = None
         self.dwarf_info = None
+
+    def begin_root(self, root_symbol: str) -> None:
+        del root_symbol
+
+    def end_root(self) -> None:
+        return
