@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .application.generators import GenerationOutcome
+from .domain.models.implementation_evidence import ImplementationDiscoveryReport
 
 
 @dataclass(slots=True)
@@ -18,3 +19,7 @@ class GenerationState:
     pending_headers: dict[str, str] = field(default_factory=dict)
     pending_header_sources: dict[str, str] = field(default_factory=dict)
     pending_bundles: list[tuple[int, str, dict[str, str]]] = field(default_factory=list)
+    implementation_reports: list[tuple[int, str, ImplementationDiscoveryReport]] = field(
+        default_factory=list
+    )
+    implementation_inputs: list[tuple[int, str, dict[str, str]]] = field(default_factory=list)

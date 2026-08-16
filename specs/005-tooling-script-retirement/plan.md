@@ -7,7 +7,7 @@
 - Replace the Sonar PowerShell entry point with `tools/sonar/prepare_msvc_analysis.py`; it remains
   a Windows-specific checkout tool and does not enter the runtime wheel.
 - Keep runtime packaging rooted at `src/ddon_dwarf_reconstructor` with the existing Typer console
-  script and exact CPython 3.14.6 requirement.
+  script and exact current CPython 3.14.7 requirement.
 
 ## Task-runner and packaging changes
 

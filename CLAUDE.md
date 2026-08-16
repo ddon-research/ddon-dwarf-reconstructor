@@ -98,8 +98,11 @@ before changing CI.
   whenever public commands, configuration, or validation behavior changes. Keep Mermaid/UML
   diagrams in Markdown, use C4 context/container/component views plus native UML or runtime views
   at the smallest useful abstraction, keep one Diátaxis page intent per page, use the applicable
-  arc42 sections for architecture, and run `uv run just docs-check` for Markdown, Mermaid, and
-  strict site validation after `uv run just docs-tools-install` on a fresh checkout.
+  arc42 sections for architecture. For Python module changes, refresh the source-derived pages
+  with `uv run just docs-api`; run `uv run just docs-api-check` and `uv run just docs-check` for
+  Markdown, Mermaid, generated API, and strict site validation after
+  `uv run just docs-tools-install` on a fresh checkout. Zensical's mkdocstrings support is
+  preliminary, so unresolved directives and backlink assumptions are failures.
 - Root tests use one scope (`unit`, `integration`, or `acceptance`) plus a purpose
   (`functional`, `regression`, or `non_functional`). Collection enforces the taxonomy; qualify
   performance, slow, real-asset, packaging, and quality work explicitly.

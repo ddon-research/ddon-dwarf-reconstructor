@@ -33,7 +33,8 @@ resources are out of scope because the input is DWARF rather than a source-langu
 
 Format-specific DWARF deduplication work such as `dwz` is useful comparative evidence, not proof
 that a generic graph-isomorphism pass fits this producer. Generic Python tips are hypotheses only;
-measurements on CPython 3.14.6 and this workload are authoritative.
+the dated CPython 3.14.6 measurements on this workload are authoritative for that historical run,
+not an active runtime pin.
 
 ## Citations
 

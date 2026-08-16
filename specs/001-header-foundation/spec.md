@@ -4,10 +4,28 @@
 
 **Created**: 2026-08-01
 
-**Status**: Draft
+**Status**: Observed-partial; header publication and host MSVC closure are complete for the
+current real-asset run, while PS4 ABI, instruction-effect, NID, static-parity, and live-behavior
+dimensions remain open.
 
 **Input**: Establish a trustworthy first header-reconstruction tier from PS4 ELF
 DWARF evidence, with deterministic source-bound artifacts and assembly validation.
+
+## Current evidence boundary (2026-08-16)
+
+The current implementation record is
+[`acceptance-season2-assembly-20260816.md`](acceptance-season2-assembly-20260816.md). It covers
+289 roots, 2,760 source-derived headers, independent 2,760/2,760 MSVC translation-unit passes,
+and 1,150 clean source-bound assembly bundles. These observations establish deterministic
+publication, host declaration/closure acceptance, and bounded artifact integrity; they do not
+establish PS4 ABI/register-stack safety, complete source-bound NID-name coverage,
+instruction-effect closure,
+compiler transformation equivalence, static target-object equivalence, or live PS4 behavior.
+
+The serving and validator record is
+[`measured-evidence.md`](../019-analytical-dwarf-store/measured-evidence.md). Doris remains the
+normal analytical runtime. IDA remains post-generation cross-validation only and cannot repair or
+promote generated evidence.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -29,6 +47,11 @@ DWARF evidence, with deterministic source-bound artifacts and assembly validatio
 As a reverse engineer, I want to select a type from a PS4 ELF and receive a
 compilable C++ header that preserves the recoverable layout and declaration facts,
 so I can use the result as a reliable basis for analysis and later source recovery.
+
+When requested, the completed header is also the input to a separate implementation-discovery
+follow-up. That follow-up must not change header bytes, header ordering, header manifests, or
+header success/failure semantics. It may produce explicit method implementation and Orbis
+assembly evidence states after header publication.
 
 **Why this priority**: A trustworthy header is the first usable artifact and
 provides the contract that later assembly and method-reconstruction work depends on.
@@ -103,6 +126,37 @@ ownership, or member-offset hypotheses produce traceable diagnostics.
 3. **Given** a local IDA pseudo-header for a comparison anchor, **When** the generated
   declarations are compared, **Then** recoverable facts are classified as matching,
   conflicting, or unavailable, while IDA-only presentation details remain separate.
+
+---
+
+### User Story 4 - Preserve PS4 method reconstruction evidence (Priority: P3)
+
+As a reverse engineer, I want a completed header to feed a separate Orbis evidence chain and,
+only for uniquely associated methods, produce canonical assembly/object artifacts for a later
+agentic C++ translation workflow while retaining all raw and structured context in one canonical
+source-bound report.
+
+**Independent Test**: Run a fixture with unique, ambiguous, indirect-call, and unavailable
+methods; assert that headers and their SHA-256 remain unchanged, every candidate and consumed
+profile invocation is retained, and only the unique method receives `.s`/`.o` artifacts.
+
+**Acceptance Scenarios**:
+
+1. **Given** a successful header bundle and `--extract-assembly`, **When** Orbis discovery times
+   out or reports an unsupported profile, **Then** the header manifest remains published and the
+   implementation report records the unavailable evidence.
+2. **Given** `--emit-implementation-sources` without `--extract-assembly`, **When** generation is
+   requested, **Then** the CLI rejects the incompatible options before generation.
+3. **Given** one unique DWARF candidate, valid range, and unique Orbis function, **When** source
+   emission is enabled, **Then** the bundle contains exact-byte `.s` evidence and an accepted `.o`
+   when `orbis-as` is available, while raw text, bytes, references, and hashes remain in the
+   canonical JSON report.
+4. **Given** an ambiguous, partial, unresolved, deleted, defaulted, or unavailable method,
+   **When** source emission is enabled, **Then** no C++ definition is emitted and all candidates
+   and status diagnostics remain in the JSON index.
+5. **Given** `--llvm-objdump` and a requested target triple, **When** a per-method slice succeeds,
+   fails, times out, or is unsupported, **Then** the exact target invocation and compact
+   address/byte comparison status are retained without changing Orbis output or the header bundle.
 
 ---
 
@@ -187,6 +241,85 @@ ownership, or member-offset hypotheses produce traceable diagnostics.
 - **FR-019**: The verification workflow MUST report when IDA method-body pseudocode
   is unavailable and MUST NOT claim behavioral or body-level agreement from
   pseudo-header declarations alone.
+- **FR-020**: Header publication MUST complete before optional implementation or
+  Orbis discovery starts; a follow-up failure MUST NOT prevent a valid header
+  bundle and manifest from remaining published.
+- **FR-021**: `--emit-implementation-sources` MUST require `--extract-assembly` and MUST emit a
+  bounded original `.raw.asm` evidence file, a canonical exact-byte `.s` compiler input, a
+  deterministic `.context.json` packet, and an SDK-produced `.o` only when `orbis-as` accepts the
+  `.s` for a unique, complete DWARF-to-Orbis method match. `.raw.asm` MUST never be passed to the
+  assembler. The core pipeline MUST NOT emit C++, empty, reference, or diagnostic placeholders.
+- **FR-022**: Orbis evidence MUST retain exact profile flags, command, return status,
+  tool identity, duration, stdout/stderr paths and hashes, source line/discriminator,
+  file offset, relocation, direct/indirect call or branch, data reference, and
+  unresolved operand evidence.
+- **FR-023**: Generated `.s` MUST be a clean recompilable, exact-byte compiler input and MUST
+  preserve instruction bytes without synthesizing untyped external declarations or claiming MSVC,
+  ABI, clobber, stack-safety, or behavioral portability. `.raw.asm` is evidence only. C++
+  translation is a later workflow and no C++ file is emitted by this pipeline.
+- **FR-024**: Implementation source bundles and their JSON indexes MUST publish
+  atomically, reject duplicate stable method IDs and invalid header mappings, and
+  preserve all ineligible method candidates and diagnostics.
+- **FR-025**: The implementation report MUST use schema `4.2` and the bundle manifest MUST use
+  schema `3.1`. Artifact descriptors MUST include kind, role, content type, byte length, producer,
+  relative path, and SHA-256. The report MUST serialize instruction-owned references only once,
+  retain exact method-range raw text, and expose structured limitations for ABI, semantic, and
+  external-declaration boundaries. Each eligible method MUST have an
+  `implementation-context/1.0` packet that references, rather than duplicates, `.raw.asm`.
+- **FR-026**: When `--llvm-objdump` is supplied with `--extract-assembly`, the system MUST run
+  independently cached method-range slices with `x86_64-scei-ps4` by default, retain the exact
+  capability probe and command evidence, and store only compact comparison summaries in the
+  implementation report. LLVM failure or disagreement MUST NOT change Orbis instruction authority,
+  method eligibility, header bytes, or generated assembly selection.
+- **FR-027**: The generic `llvm-readobj` profile MUST remain target-neutral and record its target
+  status as `not_applicable`; `llvm-tli-checker` MUST remain outside the ELF extraction path.
+- **FR-028**: SDK-derived PS4 definitions MUST be typed, source-hash-bound, and preserve unknown
+  numeric SCE tags and relocation codes. The runtime MUST distinguish standard `PT_GNU_RELRO` from
+  the absent official `PT_SCE_RELRO` definition and MUST NOT apply relocations or synthesize
+  external declarations.
+- **FR-026a**: The source-bundle manifest MUST be a minimal publication envelope containing
+  report/header/source identities, hashes, bundle digest, file count, and status; it MUST NOT
+  duplicate method evidence or per-method indexes.
+- **FR-027a**: Orbis standard-relocation (`-r`) output MAY be retained as an independent
+  cross-check. The known-invalid `-R` profile and the rejected `-t -T` symbol combination MUST be
+  capability-filtered before execution and documented once rather than emitted as repeated
+  unavailable runtime diagnostics.
+- **FR-028a**: The SCE metadata reader MUST validate `PT_SCE_DYNLIBDATA`-relative ranges and decode
+  `DT_SCE_RELA` and `DT_SCE_JMPREL` 24-byte RELA entries, preserving raw fields, signed addends,
+  unknown vendor values, symbol resolution status, and stable relocation IDs without applying
+  relocations or synthesizing declarations. LLVM structural cross-checks MUST remain opt-in and
+  additive to Orbis instruction evidence.
+- **FR-029**: `artifacts validate-implementation` MUST be read-only, source-bound, and publish a
+  versioned report with independent relocation, NID, ABI/CFI, instruction-safety, compiler/object,
+  static-parity, and live-behavior statuses. It MUST require an explicit original-address or
+  aligned load-base policy and MUST never infer a runtime base from an IDA/Ghidra default.
+- **FR-030**: The validator MUST map relocation targets through PT_LOAD, use
+  PT_SCE_DYNLIBDATA only for SCE metadata geometry, check alignment/coverage/overflow/target
+  bytes, and preserve opaque NIDs, encoded symbols, and module/library identities. It MAY accept
+  a community-derived mapping as external candidate evidence when its path/hash and provenance
+  are retained. A community name MUST remain partial until its NID hash and encoded
+  library/module context verify; malformed, missing, conflicting, or mismatched evidence MUST
+  fail closed.
+- **FR-031**: A complete analytical store MAY supply method DIE/CU identity, object-pointer and
+  artificial/hidden-parameter facts, parameter/return/frame-base locations, and CFI. Missing or
+  conflicting CFI MUST prevent safety promotion. The instruction analyzer MUST fail closed for
+  unknown instructions, unbalanced stack paths, indirect calls, and unpreserved callee-saved
+  registers.
+- **FR-031a**: Implementation validation MUST obtain method-specific analytical rows through the
+  source-bound Doris serving publication. The supplied manifest is a publication and source
+  identity pin only; the validator MUST NOT read Parquet or JSONL rows directly or silently fall
+  back to a file-backed adapter. The Doris model MUST retain the normalized typed family contract
+  and push CFI range-overlap filtering to the serving engine.
+- **FR-032**: The validator MUST emit canonical `.s` and `.o` artifacts only after Orbis assembler
+  acceptance and MUST record bounded Orbis clang probe, compiler flags, target triple, object
+  metadata, diagnostics, tool hashes, and output hashes. C++ inline-assembly wrappers remain
+  unavailable unless their constraints, clobbers, returns, dialect, and compiler acceptance are
+  independently derived.
+- **FR-033**: target-object-equivalent MUST require observed relocation-normalized bytes, CFG,
+  branch/call/external-edge identity, an observed non-conflicting NID/import/export identity
+  (including community_verified where a community map supplies the name), ABI/register/stack/CFI
+  effects, and accepted Orbis target objects. Live execution and behavioral equivalence MUST remain
+  separately reported and `not_observed` without a PS4 execution environment.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -200,6 +333,24 @@ ownership, or member-offset hypotheses produce traceable diagnostics.
   diagnostics for the requested closure.
 - **Validation Diagnostic**: A structured explanation of missing, conflicting, or
   unsupported evidence linked to the affected entity and source identifiers.
+- **Orbis Reference**: A resolved or unresolved call, branch, data, or relocation
+  operand with raw text, address/name evidence, and resolution status.
+- **Orbis Tool Invocation**: One exact profile command and its retained output,
+  hashes, status, timing, and tool identity.
+- **Orbis Dynamic Tag**: A numeric SCE dynamic tag, optional known name, and raw value.
+- **Orbis Relocation Table/Entry**: A validated SCE table descriptor and one raw 24-byte RELA
+  record with decoded `r_info`, signed addend, optional symbol name, resolution status, and
+  method/instruction links.
+- **Orbis Structural Cross-Check**: An optional LLVM `llvm-readobj` result with exact command,
+  output hash, unknown numeric SCE tags, and an additive availability status.
+- **Orbis Targeted Cross-Check**: An optional per-method `llvm-objdump` result with requested and
+  effective target triple, capability status, range cache identities, and address/byte comparison
+  totals; complete output remains in the external evidence cache.
+- **Implementation Source Bundle**: A source-bound versioned JSON evidence index, a minimal
+  publication manifest, and optional per-method exact-byte `.s`/`.o` derived views emitted after
+  header commit.
+- **Implementation Artifact Descriptor**: A typed derived-view kind, safe relative path, and
+  content hash owned by the corresponding method record.
 
 ## Success Criteria *(mandatory)*
 
@@ -245,6 +396,36 @@ ownership, or member-offset hypotheses produce traceable diagnostics.
 - **SC-012**: Declaration-only, partial, unresolved, and conflicting states propagate
   into deterministic diagnostics that identify the affected type/dependency and state
   whether compilation is blocked.
+- **SC-013**: An explicitly configured timeout or failed Orbis profile leaves the previously
+  committed header manifest and header bytes unchanged. Known-invalid SDK profiles are not run.
+- **SC-014**: Source emission produces exactly one stable method directory per unique eligible
+  match with bounded `.raw.asm`, exact-byte `.s`, and `.context.json` artifacts, plus an `.o`
+  artifact only when `orbis-as` accepts the `.s`. `.raw.asm` is never assembler input. It emits no
+  C++, reference, notes, empty, or unstructured diagnostic files, and emits no artifacts for every
+  seeded ambiguous, partial, unsupported, unresolved, deleted, defaulted, pure-virtual, or
+  unavailable method.
+- **SC-015**: Two fresh source-emission runs over identical header, DWARF, ELF, and Orbis evidence
+  produce byte-identical report, method IDs, artifact descriptors, `.raw.asm`/`.s`/`.o`/
+  `.context.json` files, and manifests; a partial publication leaves no staging files and a
+  successful report-only run retires the stale source bundle.
+- **SC-016**: The canonical report preserves every decoded instruction, raw byte sequence,
+  source/file-offset relationship, reference, candidate, and tool-invocation fact previously
+  available from the redundant derived files.
+- **SC-017**: A PS4 fixture with SCE dynamic metadata records the useful `-r` cross-check and
+  capability-filtered status of unsupported SDK profiles, validates `DT_SCE_RELA`/`DT_SCE_JMPREL`
+  counts from their sizes and entry size, preserves signed addends and unknown codes, and exposes
+  only method-relevant relocation entries in the report while retaining the complete producer
+  cache.
+- **SC-018**: When `--llvm-readobj` is supplied, the exact JSON command and output hash are retained,
+  unknown numeric `0x610000xx` tags remain visible, and an LLVM failure leaves the header and the
+  Orbis/SCE evidence outcome unchanged.
+- **SC-019**: When `--llvm-objdump` is supplied, the capability probe and every method-range command
+  retain `x86_64-scei-ps4` (or the explicit requested triple), cache identity, range, output hashes,
+  and comparison totals; a target profile failure leaves the header, Orbis evidence, method IDs,
+  and source artifacts unchanged.
+- **SC-020**: The SDK-definition identity preserves the four source-file hashes, complete useful
+  SCE dynamic-tag names, relocation-40 properties, target/page-size facts, and the absence of an
+  official `PT_SCE_RELRO` definition.
 
 ## Current Verification Baseline
 
@@ -301,3 +482,19 @@ The verified MSVC/IDA run establishes the following current state:
   warning conventions are recorded.
 - Real game binaries and expanded dumps remain local and opt-in; fixtures represent
   their structure without embedding those assets in the repository.
+- Orbis binutils is the only instruction-decoding authority. LLVM `llvm-readobj` is an opt-in
+  generic structural cross-check and LLVM `llvm-objdump` is an opt-in target-aware structural
+  comparison using `x86_64-scei-ps4`; the in-repository SCE reader is the relocation authority for
+  `PT_SCE_DYNLIBDATA` metadata. `llvm-tli-checker` is not part of ELF extraction.
+- Conventional Orbis relocation output may be empty while SCE relocation tables are present. The
+  current observed counts are 172,404 `DT_SCE_RELA` entries and 539 `DT_SCE_JMPREL` entries; the
+  complete table belongs in the source-bound JSONL cache and only method-relevant rows belong in
+  the implementation report.
+- The SCE reader does not apply runtime relocation bases, resolve NIDs through an assumed database,
+  infer ABI/register clobbers, or synthesize `extern` declarations. Optimized/inlined line mappings,
+  host GNU/Clang acceptance of the Orbis dialect, and semantic equivalence remain open.
+- `ps4_module_loader` and GhidraOrbis are research references only; neither is vendored or a runtime
+  dependency. Their layouts must be revalidated against the target ELF and tool version.
+- The accepted LLVM triple does not establish Sony ABI, relocation application, or semantic
+  correctness. Host GNU/Clang acceptance of the recovered Orbis dialect and a future PS4 compiler
+  validation environment remain open.

@@ -122,7 +122,8 @@ public:
 ```
 
 
-DONE: Upgrade Python to 3.14.6, I already installed it via uv. Enforce it at all levels.
+DONE (historical): Upgrade Python to 3.14.6, I already installed it via uv. This was superseded by
+the current CPython 3.14.7 / uv 0.12.3 pin.
 --
 DONE: 
 Review the tooling setup and check for best practices outlined here:

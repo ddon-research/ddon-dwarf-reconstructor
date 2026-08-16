@@ -31,6 +31,10 @@ class MethodInfo:
     is_defaulted: bool = False
     is_declaration: bool = False
     declared_return_type_offset: int | None = None  # Immediate typedef DIE offset, when present
+    die_offset: int | None = None
+    cu_offset: int | None = None
+    owner_die_offset: int | None = None
+    linkage_name: str | None = None
 
     def __post_init__(self) -> None:
         if self.parameters is None:

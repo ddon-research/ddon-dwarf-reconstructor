@@ -19,7 +19,8 @@
     "tools/documentation/README.md"
   ],
   "ignores": [
-    "docs/knowledge-base/dwarf-specification/generated/**/*.md"
+    "docs/knowledge-base/dwarf-specification/generated/**/*.md",
+    "docs/api/generated/**/*.md"
   ],
   "noBanner": true,
   "noProgress": true

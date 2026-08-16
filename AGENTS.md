@@ -270,7 +270,8 @@ uv run just test
 `uv run just check` includes Markdownlint, Mermaid CLI rendering, and the strict Zensical build.
 Use `uv run just docs-serve` for a local preview and keep Mermaid diagrams in Markdown source
 rather than generated images. Run `uv run just docs-tools-install` once before the first local
-check on a fresh checkout.
+check on a fresh checkout. The source-derived Python API pages are refreshed with
+`uv run just docs-api` and validated with `uv run just docs-api-check`.
 
 Before handoff, also run `uv run just test`, `uv run just coverage-ci`, and `uv run just audit`.
 For distribution changes, also run `uv run just package` and `uv run just package-smoke`.
@@ -322,7 +323,11 @@ security advisory when a patched lock entry is available.
   explanations, and research notes distinct; link between them rather than mixing purposes.
 - For current behavior, inspect source and tests; for intended behavior, cite the active spec; for
   research, preserve the source and authority. Remove obsolete duplicate prose instead of creating
-  a second contract. Use `uv run just docs-check` and then `uv run just check` for site changes.
+  a second contract. The exhaustive API inventory includes internal modules but does not promise
+  public stability; generated pages are not hand-edited. Use `uv run just docs-api-check` and then
+  `uv run just docs-check` and `uv run just check` for site changes. Zensical's mkdocstrings
+  support is preliminary, so unresolved directives or unsupported backlink assumptions are failed
+  evidence rather than a fallback trigger.
 - Keep knowledge-graph infrastructure deferred until the explicit `KG-001` task defines the
   versioned loader, deterministic query fixtures, provenance rules, and acceptance evidence.
 

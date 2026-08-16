@@ -13,8 +13,9 @@
   constraints. They are optional query stages, not prerequisites for importing the canonical
   bundle.
 - The official system-requirements page documents precompiled Python wheels through CPython 3.11,
-  while the current local `uv` probe resolved `ladybug` 0.19.0 and imported it under CPython 3.14.6.
-  This discrepancy is an acceptance gate and must be recorded as observed evidence, not assumed
+  while a dated local `uv` probe resolved `ladybug` 0.19.0 and imported it under CPython 3.14.6.
+  That historical probe is not the current contract. The compatibility gate must be rerun under
+  the pinned CPython 3.14.7 environment and recorded as observed evidence, not assumed
   compatibility.
 
 ## Research sources

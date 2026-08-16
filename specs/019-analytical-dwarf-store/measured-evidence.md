@@ -8,9 +8,10 @@ The promoted durable v1.1 store is
 diagnostics. The versioned Temp paths and database names below remain historical evidence labels;
 they are not the current durable store or service identity.
 
-The active backend is native Doris over direct Parquet. Iceberg/PyIceberg rows are retained as
-historical compatibility and performance evidence only, after the runtime/dependency removal.
-For current Doris evidence, use the checked-out `D:\Apache-Doris-version-4.x-docs` pages alongside
+The active serving backend is native Doris loaded once from the typed Parquet publication.
+Generation and validation do not read Parquet directly; Parquet is retained as the immutable
+producer/load artifact, while Iceberg/PyIceberg rows are historical compatibility and performance
+evidence only after the runtime/dependency removal. For current Doris evidence, use the checked-out `D:\Apache-Doris-version-4.x-docs` pages alongside
 the CLI. In particular, treat `information_schema.statistics` and
 `information_schema.column_statistics` as empty compatibility views and use `SHOW TABLE STATS`,
 `SHOW COLUMN STATS`, `SHOW ANALYZE`, `SHOW AUTO ANALYZE`, and `__internal_schema.column_statistics`.
@@ -20,9 +21,135 @@ They remain historical observations; fresh post-refactor acceptance is recorded 
 section below. IDA/Sonar evidence and byte comparison with the unavailable historical approved
 header remain separate and are not implied by this store record.
 
+### Supersession table
+
+| Evidence boundary | Scope | Status and use |
+| --- | --- | --- |
+| Historical pre-refactor run | 2,745 headers and 2,745/2,745 MSVC units | Dated comparison only; superseded for current status |
+| Blocked boundary-refactor attempts | 1,653 headers at most | Partial/blocked; not complete evidence |
+| Current Season 2 run | 2,760 headers, 2,760/2,760 MSVC units, 1,150 clean bundles | Current observed-partial real-asset record owned by Feature 001 |
+| Historical complete validator | 1,150 method requests | Dated pre-T087 serving/validator evidence; ABI, compiler transformation, parity, and live behavior remain open |
+| Current bounded T087 validator | 1,037 method requests | Corrected post-effects/parity pilot; report is failed/partial and target-object acceptance is not observed |
+
 Benchmark rows include source identity, producer/schema/configuration identity, runtime and Python
 identity, cold/warm state, machine metadata, resource metrics, output-manifest identity, and an
 explicit status (`observed`, `partial`, `blocked`, or `not_observed`).
+
+## Latest Season 2 implementation-generation validation (2026-08-16)
+
+The latest full resource-class run used the complete Doris publication above, the PS4 ELF, and
+Orbis SDK 8.000 tools. The 289 nonblank roots were split into four bounded batches; all four
+completed with zero generation failures and published 289 header manifests plus 289 implementation
+reports. The external machine-readable audit is
+`C:\Users\morph\AppData\Local\Temp\ddon-season2-validation-20260816\season2-validation-audit.json`.
+
+| Surface | Observed result | Status boundary |
+| --- | --- | --- |
+| Root/header coverage | 289/289 roots; 2,760 header entries; 10,093,364 bytes; 2,760/2,760 descriptor hashes and lengths; 289/289 manifests with `failed=0` | Header publication and file integrity are observed; this is not MSVC or semantic closure |
+| MSVC header closure | 2,760/2,760 translation units passed across 289 bundles; zero failures and zero timeouts; `C4201` ×125 and `C4309` ×1 | Host declaration/closure acceptance is observed; it is not PS4 ABI or assembly evidence |
+| Implementation reports | 84,553 method rows; 9,429 candidates; 55,575 instructions; 1,350 matched, 758 ambiguous, 6,463 unsupported, 75,982 not observed | DWARF/ELF association remains partial: 138 roots have matches, 150 have methods without a match, and `rAcquirement` has no method rows |
+| Clean assembly bundles | 1,150 `.raw.asm`, `.s`, `.o`, and `implementation-context/1.0` packets; zero C++/placeholder/legacy artifacts | Raw/report parity and object `.text` parity are 1,150/1,150; object acceptance is not semantic equivalence |
+| Doris/runtime boundary | Reports and contexts bind to Doris, manifest schema `1.1`, and the ELF identity; runtime generation did not open Parquet/JSONL | Parquet is the one-time producer/load artifact; Doris is the normal analytical read path |
+| Tool profiles | 511 observed invocations, 138 explicit empty observations, zero known-invalid `-R`/`-T` profiles, zero timeout diagnostics | Empty profile results are evidence status, not retained retry noise |
+| IDA completeness audit | 84,553 report rows compared with 108,412 IDA named bodies; 21,459 exact, 3,516 ambiguous, 20,363 IDA bodies without generated assembly | IDA is post-generation cross-validation only and cannot repair or promote production evidence |
+
+The concurrent run exposed and then repaired a cache identity gap: JSON-persisted SDK identity
+lists were compared with in-memory tuples, preventing SCE metadata cache reuse and allowing one
+cache publication contention diagnostic for `rLoadingParam`. Cache matching now compares canonical
+JSON values and the disassembly key includes `SCE_METADATA_PARSER_VERSION`; a clean isolated rerun
+of `rLoadingParam` observed all 172,943 SCE relocation entries with no diagnostics. The original
+contended root is excluded from final counts.
+
+This run remains `observed-partial`. ABI/register-stack safety, complete source-bound NID-name
+coverage, static
+semantic parity, C++/Orbis-clang transformation acceptance, and live PS4 behavior remain separate
+evidence dimensions. The pre-batching static validator baseline remained CPU-active without an
+atomic report for more than one hour; the subsequent bounded implementation-validation run is
+recorded below. The dated acceptance record is
+`specs/001-header-foundation/acceptance-season2-assembly-20260816.md`.
+
+## Bounded implementation-validation projection (2026-08-16)
+
+The first follow-up implementation replaces the validator's repeated method-specific Doris
+lookups with bounded requests over the typed `die`, `attribute`, `reference`, `location`, and
+`frame` families. A read-only batch view supplies the existing ABI/CFI evidence code, while
+relocation and relocation-ID/NID indexes are built once for the run. The projection uses only the
+columns required for method context and remains Doris-only at runtime; Parquet and JSONL are not
+opened.
+
+The batching-focused analytical and implementation tests plus the initial unit gate passed
+(`864 passed, 7 deselected`). The retained `rLayout` pilot published an atomic schema-4.0 report for 1,037
+methods in approximately 28.6 seconds. The full 1,150-method Season 2 validator then published an
+atomic failed schema-4.0 report in approximately 85.8 seconds at
+`C:\Users\morph\AppData\Local\Temp\ddon-implementation-validation-season2-20260816-batched\implementation-validation-4236f598acc8f158.json`
+with SHA-256 `97a83535c366f2b8d7e6015fda7f2a9177fda45d1b0621402ba79e77552ac71b`. The Doris context
+projection completed in 3 batches for 1,150 requests. Relocation and opaque NID evidence were
+observed for all methods; no community NID map or provenance manifest was supplied, so named
+NID coverage was not re-evaluated. ABI was partial for all; effects were 711 observed, 397 partial, and 42
+failed; compiler acceptance was not observed; and parity remained 1,108 partial and 42 failed.
+This is a measured algorithmic improvement over the pre-batching run that remained CPU-active for
+more than one hour without an atomic report. No arbitrary timeout was configured.
+
+The subsequent context-fidelity correction decodes Doris `expression_json` location values and
+retains the ABI-facts map in validation packets. Its focused tests and live one-method Doris probe
+passed; the current repository gates are `876` tests, `5` deselected, `80.50%` total coverage, and
+zero Prospector findings. The full report hash above predates that serializer correction and the
+later diagnostic-policy slice; it is retained as the batching/status baseline. Runtime validation
+now accepts an explicit tool timeout and emits no raw SDK stdout/stderr files; unset timeout means
+no imposed limit. No method `.cpp` placeholders are part of the current artifact contract.
+
+### Current bounded T087 rerun after effects/parity changes
+
+The post-T086 bounded pilot reran the retained `rLayout` report with the active local Doris
+Compose endpoint explicitly mapped to FE SQL `127.0.0.1:19030` (FE HTTP `18030`, BE HTTP `18040`).
+The exact command, SDK identities, and source/manifest hashes are recorded in the dated Feature
+001 acceptance record. The run published
+`C:\Users\morph\AppData\Local\Temp\ddon-plan-t087-20260816-corrected\implementation-validation-4236f598acc8f158.json`
+(schema `4.0`, SHA-256
+`7900e5ead99a18a44f1e8bfe534fb5aed3a996add6ff9dfb86e33bbb7bdb9fee`) in approximately 36.5
+seconds. The Doris model was `complete`, source-bound to manifest schema `1.1`, canonical serving
+variant, and three context batches.
+
+| Dimension | Current bounded result | Promotion boundary |
+| --- | --- | --- |
+| Method requests/context | 1,037 requests; `die=3,337`, `attribute=11,360`, `reference=2,779`, `location=419`, `frame=72,999` | Serving completeness observed for this pilot |
+| Relocation/NID | 26/1,011 relocation observed/not observed; 1,037 NID rows observed | No community mapping was supplied; named NID coverage remains unverified |
+| ABI/CFI | ABI partial for 1,037; CFI observed where context covered the range | ABI/register/stack closure remains open |
+| Effects | 17 observed, 8 partial, 1 failed, 1,011 not observed | Unknown/conflicting effects remain non-promotable |
+| Orbis compiler/object | 8/8 bounded clang ABI probes observed; method-specific object acceptance not observed | `orbis-as`/`readelf`/`objdump` target stage was not reached |
+| Parity/live | 1 failed and 1,036 partial; live behavior `not_observed` | No `target-object-equivalent` or behavioral promotion |
+
+This run is the current source-bound validator evidence and remains `failed` by design. The full
+Season 2 rerun is deferred until the bounded representative gate observes every required dimension;
+the validator did not modify headers or canonical `.s`/`.o` eligibility.
+
+### Community NID mapping follow-up (2026-08-17)
+
+The bounded `rLayout` source-bound generation was rerun against the complete Doris publication
+with the community-derived `aerolib.csv` mapping downloaded from commit
+`657f9d380abfec9097bc4bddbc63551b3cd5e47b`. The external mapping contains 97,623 lines,
+8,925,192 bytes, and SHA-256
+`b80fd57038f66a222548f07fbf78124237e5f3b3abb8645218fd88895e817a95`; its provenance manifest
+also pins the PS4 default NID suffix `518D64A635DED8C1E6B039B1C3E55230`.
+
+Generation published a byte-identical `rLayout.h` (82,548 bytes, SHA-256
+`30c8eab2e6c624c0f31013bcefa79c28db5f07983aa931c142019670a623817e`) and a fresh schema-4.2
+implementation report with 1,037 method rows. The schema-4.1 validation report at
+`C:\Users\morph\AppData\Local\ddon-dwarf-reconstructor\external-evidence\validation-20260817-rLayout-aerolib-v2\implementation-validation-4236f598acc8f158.json`
+has SHA-256 `b93e57de17ac3cc80335b9c8011d7e63879d8344ba4a49888a468c7c1e255423` and records:
+
+| Dimension | Observation | Boundary |
+| --- | --- | --- |
+| NID bindings | 1,209 `community_verified`; 103 opaque dynamic-identity records; 1,037/1,037 method-level NID statuses observed | Community evidence is not official authority; full Season 2 named coverage remains unobserved |
+| NID hash/context | All 1,209 mapped bindings have observed hash and dynamic library/module context | Context uses upper SCE dynamic-tag table IDs; malformed or conflicting paths remain non-promotable |
+| Overall validator | `failed`; ABI partial for 1,037, effects `17/8/1/1,011` observed/partial/failed/not observed, parity `1,036 partial` and `1 failed` | No target-object-equivalent or live-behavior promotion |
+
+The first implementation of context checking compared NID multi-character IDs such as `BM` and
+`k` with dynamic-tag string offsets. The corrected implementation compares the upper table IDs and
+adds a focused `#BM#k` regression. This is additive validator evidence and does not change the
+canonical analytical store, generated header bytes, or assembly eligibility. The full Season 2
+validator remains deferred while ABI, effects, compiler transformation, parity, and live behavior
+remain open.
 
 ## Boundary-refactor validation (2026-08-11 to 2026-08-13)
 
@@ -277,7 +404,7 @@ Permitted statuses are `observed`, `partial`, `blocked`, and `not_observed`. Ski
 | Surface | Status | Evidence | Boundary |
 | --- | --- | --- | --- |
 | Doris skills/CLI optimization evidence — current v9 serving fixture | `observed`, serving-only | The current `apache/doris-skills` checkout (`aeeb2fe31071918257846b3d58ac09ffa151d4c1`) was applied with the local `doriscli 0.1.2` binary from `apache/doris-cli` commit `e32ef58b48e0ef88c829177f3944574eadade47a`. `auth status --format json` reports connected MySQL/HTTP endpoints, one alive BE, and the Compose Doris 4.1.3 service. CLI tablet detail reports `full_index` as eight NORMAL tablets, 452.8 MiB, skew 1.10. The profiled base `rLayout` lookup is 224 ms with 145 scanned/returned rows, 33,492-byte peak memory, and zero spills; the optional name-candidate projection is 123 ms, one of four tablets, 145 scanned/returned rows, 29,952-byte peak memory, and zero spills. | The evidence supports keeping source-first Duplicate-key families, ZSTD, Bloom/inverted indexes, explicit statistics, and the candidate projection as an opt-in serving comparison. It does not authorize an MV, N-Gram index, bucket rewrite, or session tuning before complete-corpus profiles; v9 Parquet is rejected as canonical because of its independent payload validation failure. |
-| Analytical dependency baseline | `observed` | Refreshed root and isolated C: temp Python 3.14.6 environments report `pyarrow==25.0.0`, `pyiceberg==0.11.1`, `pyiceberg-core==0.8.0`, `PyMySQL==1.2.0`, `SQLAlchemy==2.0.51`, and `pyelftools==0.33`; the lock file resolves the same versions | The long real-ELF producer remains isolated in its already-started exact-version environment; fixtures and service checks use the refreshed root environment |
+| Analytical dependency baseline | `observed` | Dated root and isolated C: temp Python 3.14.6 environments reported `pyarrow==25.0.0`, `pyiceberg==0.11.1`, `pyiceberg-core==0.8.0`, `PyMySQL==1.2.0`, `SQLAlchemy==2.0.51`, and `pyelftools==0.33`; the lock file resolves the same package versions | This row is historical compatibility evidence. The active root contract is CPython 3.14.7 with uv 0.12.3; the long real-ELF producer remains isolated in its already-started exact-version environment |
 | Arrow Flight SQL evaluation harness | `partial`: preflight/transport `observed`, fallback `observed`, parameterized contract `blocked`, exact parity/performance `partial` | The optional lock group resolves `adbc-driver-manager==1.12.0` and `adbc-driver-flightsql==1.12.0` against `pyarrow==25.0.0`; the explicit group environment imports both ADBC packages successfully and the focused Flight suite passes 19 tests. The first live containers were labeled with the base Compose file plus a temporary `!override` port file, which suppressed Flight host mappings. Recreating FE/BE with the base and Flight overlay published FE `8030`/`8070`/`9030` and BE `8040`/`8050`; preflight v2 observed FE `127.0.0.1:8070`, FE public socket `192.168.178.81:8070`, BE public socket `127.0.0.1:8050`, both exact startup markers, base SHA-256 `ba6a6169e7ad352e635b0fac32fe23e4af8c4073b187a1464a0691681581a127`, overlay SHA-256 `1b328f3a81a480bc97e6af2ad64bd7874d891bfb1f5cd3d5b2c631156f50c51f`, and rendered-config SHA-256 `4b01984a8d404afa56574f0dd1d3ad9d426c428b2ddf4da119624eab333a5c0a`. The complete current reused-only report is `C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\analytical-flight\full-fallback-reused-v3\doris-flight-report.json` with ADBC 1.12.0, PyArrow 25.0.0, query timeout 30 s, fetch timeout 300 s, and `WITH_MAX_MSG_SIZE=16 MiB`. The required qmark probe remains `blocked` with `NotSupportedError: NOT_IMPLEMENTED: [FlightSQL] acceptPutPreparedStatementQuery unimplemented (Unimplemented; ExecuteQuery)`; the explicit fallback then renders supported qmark values as checked literals and completes both symbols. The matrix compares 76 common row-mode reports: 54 strict digests match and 22 differ only because PyMySQL returns Doris `BOOLEAN` as Python `int` while Arrow returns Python `bool`; row counts, order, schema, nulls, values, and hydration digests match. For 10,000-row DIE arrays, Flight rows are about 0.182--0.184 s warm versus PyMySQL 0.120 s, while Flight Arrow-table/RecordBatch/reducer modes are about 0.089--0.092/0.089--0.090/0.026--0.028 s; 10,000-row attribute RecordBatch is about 0.264--0.277 s versus PyMySQL rows about 0.266 s. Reused point lookups are about 0.0068--0.0148 s through Flight versus 0.0013--0.0018 s through MySQL. N+1 hydration is 3.22 s versus 2.36 s for `rLayout` and 19.57 s versus 24.65 s for `MtObject`; bounded hydration is 3.14 s versus 2.28 s and 10.29 s versus 8.95 s, respectively. Client reduction versus Doris aggregation is exact for `name_counts` and intentionally non-exact for `child_tag_counts` because the bounded raw input stops at 100,001 rows while the grouped query covers the full bounded unit. The post-hint FE/BE log check found no `DoGet` timeout or connection-refused messages. | Keep this path benchmark-only. The fallback is a diagnostic compatibility path, not a parameterization substitute. Exact Python type parity, FE-local result-location routing, cold-connection p95, Doris scanned/profile/message-size evidence, and the 110% p95/20% Arrow-native acceptance gates remain open. |
 | Performance artifact default path | `observed`, corrected | The default raw-profiler root now uses `%TEMP%\\ddon-dwarf-reconstructor\\performance` on Windows; an explicit `DDON_PERFORMANCE_ARTIFACT_DIR` remains supported. A focused path-policy test prevents fallback to durable `%LOCALAPPDATA%`. | Existing profiles outside the new default remain valid historical evidence; future real-asset profiles must use the Temp root or an explicit C: Temp path |
 | Typed records, source binding, one-CU fixture traversal, null DIEs, offset `0`, reference resolution | `observed` | Focused analytical tests — 51 passed on the exact analytical environment on 2026-08-06; includes typed round trips for range, location, line, macro, frame, abbreviation, and name families, a guard that forbids cross-CU pyelftools reference navigation, unsigned 64-bit and exact decimal round trips, source-aware Doris DDL assertions, Stream Load behavior including optional concurrent labeled loads, source-bound Doris query chaining, fail-closed store discovery, scalar `DW_FORM_data1` location handling, and unit-bucket partition derivation before normalization | Deterministic fixture; not full-corpus coverage |

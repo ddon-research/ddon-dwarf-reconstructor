@@ -54,8 +54,10 @@ $env:DDON_DORIS_SQL_PORT = '19030'
 docker compose --file ops/analytical-dwarf/compose.yaml up -d
 ```
 
-Use the same host-side values for the application configuration and health checks. This is a
-transport remap only; it is not a different Doris backend or a serving-policy variant.
+Use the same host-side values for the application configuration and health checks. The
+application default remains `127.0.0.1:9030`; when this remap is active, set
+`DDON_DORIS_SQL_HOST=127.0.0.1` and `DDON_DORIS_SQL_PORT=19030` in the generation shell. This is
+a transport remap only; it is not a different Doris backend or a serving-policy variant.
 
 The analytical CLI uses `DDON_DORIS_HTTP_URL`, `DDON_DORIS_STREAM_LOAD_URL`,
 `DDON_DORIS_SQL_HOST`, `DDON_DORIS_SQL_PORT`, `DDON_DORIS_DATABASE`,

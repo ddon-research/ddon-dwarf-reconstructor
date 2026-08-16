@@ -1,6 +1,9 @@
 # PS4 ELF Constants and Extensions
 
-Source: GhidraOrbis (<https://github.com/astrelsky/GhidraOrbis>)
+Sources: [GhidraOrbis](https://github.com/astrelsky/GhidraOrbis/tree/2d6e3fac23ae9830e941c32826e97100ed603311) at commit
+`2d6e3fac23ae9830e941c32826e97100ed603311` for research comparison and the
+local official Orbis binutils source package `binutils-orbis-2_22_1-src-SDK6500-n267` for the
+runtime definition subset.
 
 ## ELF Types (e_type values)
 
@@ -21,15 +24,17 @@ ET_SCE_KERNEL = 2             // Kernel module
 PS4 defines custom program segment types:
 
 ```java
-PT_SCE_RELA = 0x60000000           // SCE relocations
 PT_SCE_DYNLIBDATA = 0x61000000     // Dynamic library data
 PT_SCE_PROCPARAM = 0x61000001      // Process parameters
-PT_SCE_MODULEPARAM = 0x61000002    // Module parameters
-PT_SCE_RELRO = 0x61000010          // Read-only after relocation
 PT_SCE_COMMENT = 0x6FFFFF00        // Comment
 PT_SCE_LIBVERSION = 0x6FFFFF01     // Library version
-PT_SCE_SEGSYM = 0x700000A8         // Segment symbols
+PT_GNU_RELRO = 0x6474E552           // Standard GNU read-only-after-relocation segment
 ```
+
+The official SDK source defines the four `PT_SCE_*` values above and standard `PT_GNU_RELRO`.
+It does not define `PT_SCE_RELRO`; the latter, along with `PT_SCE_RELA`,
+`PT_SCE_MODULEPARAM`, and `PT_SCE_SEGSYM`, remains a Ghidra/loader research label rather than a
+runtime parser definition in this project.
 
 ## Dynamic Section Tags (d_tag values)
 
@@ -93,6 +98,27 @@ DT_SCE_HASHSZ = 0x6100003D      // SCE hash table size
 DT_SCE_IDTABENTSZ = 0x61000005  // ID table entry size
 DT_SCE_HIOS = 0x6FFFF000        // High OS-specific value
 ```
+
+The complete useful SDK table is preserved in the typed `orbis_sdk_definitions` module, including
+the import/export, stub, hash, relocation, string, symbol, and fingerprint tags. Unknown numeric
+values remain numeric.
+
+## Orbis target facts
+
+The SDK source configures `x86_64-orbis-freebsd9`, maps the BFD target to
+`elf64-x86-64-freebsd`, uses `EM_X86_64` (`0x3e`) with `ELFOSABI_FREEBSD` (`9`), and sets both
+minimum and common page sizes to `0x4000`. It also defines
+`R_X86_64_ORBIS_GOTPCREL_LOAD` as relocation code `40`: a four-byte, signed 32-bit PC-relative
+GOT-load relocation whose final instruction/linker behavior is Sony-specific. The parser preserves
+these facts. `artifacts validate-implementation` applies only pure, source-bound formulas after
+an explicit original-address or aligned load-base selection; it does not mutate the ELF or infer
+a base from IDA/Ghidra defaults.
+
+The standard x86-64 relocation names and widths are reproduced from the SDK's `x86-64.h` and
+formula behavior is kept in the versioned evaluator. GOT/PLT, TLS, indirect-relative, and code
+`0x28` cases retain their formula and an unresolved status when the required loader/linker state
+is absent. Target bytes are read through `PT_LOAD`, while `PT_SCE_DYNLIBDATA` is used only for
+SCE metadata tables.
 
 ## Key Differences from Standard ELF
 

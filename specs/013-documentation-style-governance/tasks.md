@@ -23,8 +23,6 @@
 
 ## Deferred knowledge-graph task
 
-- [ ] KG-001 Define and implement a versioned loader over the existing JSONL bundle with
-  deterministic query fixtures, provenance-preserving authority rules, LadybugDB-first compatibility
-  evidence, and acceptance evidence. The authoritative task record is the [KG-001 feature
-  record](../015-ladybugdb-knowledge-graph/tasks.md); do not start live LadybugDB/API/browser
-  integration until that contract is verified.
+- [x] KG-001 Pointer synchronized with the authoritative [Feature 015 task record](../015-ladybugdb-knowledge-graph/tasks.md).
+  The loader, compatibility, provenance, and acceptance work remains deferred and is not owned or
+  implemented by this documentation feature.

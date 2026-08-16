@@ -6,7 +6,7 @@ from .class_info import ClassInfo
 from .enum_info import EnumeratorInfo, EnumInfo
 from .member_info import MemberInfo
 from .method_info import MethodInfo
-from .parameter_info import ParameterInfo
+from .parameter_info import ParameterInfo, real_parameters
 from .struct_info import StructInfo
 from .tag_constants import (
     FORWARD_DECLARABLE_TYPES,
@@ -27,6 +27,7 @@ __all__ = [
     "MethodInfo",
     "NAMED_TERMINAL_TYPES",
     "ParameterInfo",
+    "real_parameters",
     "PRIMITIVE_TYPE_NAMES",
     "StructInfo",
     "TemplateTypeParam",

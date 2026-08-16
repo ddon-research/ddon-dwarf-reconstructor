@@ -2,7 +2,7 @@
 
 from ....core.dwarf import DwarfEntry, decode_dwarf_string
 from ....core.observability import get_logger
-from ...models.dwarf import ParameterInfo
+from ...models.dwarf import ParameterInfo, real_parameters
 
 logger = get_logger(__name__)
 
@@ -58,7 +58,7 @@ def _implementation_parameter_names(implementation: DwarfEntry) -> list[str]:
 
 
 def _declaration_parameters(declaration_parameters: list[ParameterInfo]) -> list[ParameterInfo]:
-    return [parameter for parameter in declaration_parameters if parameter.name != "__artificial__"]
+    return list(real_parameters(declaration_parameters))
 
 
 def _log_parameter_count(

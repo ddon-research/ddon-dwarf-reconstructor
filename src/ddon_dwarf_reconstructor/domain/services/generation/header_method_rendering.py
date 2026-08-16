@@ -5,7 +5,13 @@ from __future__ import annotations
 import re
 
 from ....core.observability import get_logger
-from ...models.dwarf import MethodInfo, ParameterInfo
+from ...models.dwarf import MethodInfo, ParameterInfo, real_parameters
+from .method_signature_policy import (
+    is_conversion_operator,
+    method_declaration_suffix,
+    operator_return_type,
+    rendered_method_name,
+)
 from .rendering.operations import HeaderRenderingHost
 
 logger = get_logger(__name__)
@@ -40,8 +46,7 @@ class HeaderMethodRenderingService:
                 self._canonical_method_name(self._rendered_method_name(method.name)),
                 tuple(
                     self._canonical_parameter_type(parameter)
-                    for parameter in (method.parameters or [])
-                    if parameter.name != "__artificial__"
+                    for parameter in real_parameters(method.parameters)
                 ),
                 method.is_const,
                 method.is_volatile,
@@ -111,24 +116,17 @@ class HeaderMethodRenderingService:
                     f"    {prefix}{self._rendered_method_name(method.name)}({params}){suffix};"
                 )
             else:
-                return_type = (
-                    self._unqualify_type_expression(method.return_type)
-                    if method.return_type and method.return_type != "void"
-                    else "void"
-                )
+                return_type = operator_return_type(method)
                 lines.append(
                     f"    {prefix}{return_type} {self._rendered_method_name(method.name)}"
                     f"({params}){suffix};"
                 )
         return lines
 
-    def _rendered_method_name(self: HeaderRenderingHost, method_name: str) -> str:
+    @staticmethod
+    def _rendered_method_name(method_name: str) -> str:
         """Remove recovered explicit template ids and unavailable enclosing scopes."""
-        if method_name.startswith("operator "):
-            return "operator " + self._unqualify_type_expression(method_name[len("operator ") :])
-        if method_name.startswith("operator"):
-            return method_name
-        return method_name.split("<", 1)[0].strip()
+        return rendered_method_name(method_name)
 
     @staticmethod
     def _deduplicate_methods(methods: list[MethodInfo]) -> list[MethodInfo]:
@@ -139,8 +137,7 @@ class HeaderMethodRenderingService:
         for method in methods:
             parameter_types = tuple(
                 HeaderMethodRenderingService._canonical_parameter_type(parameter)
-                for parameter in (method.parameters or [])
-                if parameter.name != "__artificial__"
+                for parameter in real_parameters(method.parameters)
             )
             signature = (
                 HeaderMethodRenderingService._canonical_method_name(method.name),
@@ -261,10 +258,7 @@ class HeaderMethodRenderingService:
     @staticmethod
     def _is_conversion_operator(method_name: str) -> bool:
         """Identify conversion operators whose declaration has no return type."""
-        if not method_name.startswith("operator "):
-            return False
-        target = method_name[len("operator ") :].strip()
-        return target not in {"new", "new[]", "delete", "delete[]"}
+        return is_conversion_operator(method_name)
 
     @staticmethod
     def _method_prefix(method: MethodInfo) -> str:
@@ -281,22 +275,7 @@ class HeaderMethodRenderingService:
     @staticmethod
     def _method_suffix(method: MethodInfo) -> str:
         """Return cv/ref/noexcept and special method declaration suffixes."""
-        suffix = ""
-        if method.is_const:
-            suffix += " const"
-        if method.is_volatile:
-            suffix += " volatile"
-        if method.ref_qualifier:
-            suffix += f" {method.ref_qualifier}"
-        if method.is_noexcept:
-            suffix += " noexcept"
-        if method.is_pure_virtual:
-            suffix += " = 0"
-        elif method.is_deleted:
-            suffix += " = delete"
-        elif method.is_defaulted:
-            suffix += " = default"
-        return suffix
+        return method_declaration_suffix(method)
 
     def _format_parameters(self: HeaderRenderingHost, method: MethodInfo) -> str:
         """Format method parameters, filtering artificial ones."""
@@ -304,11 +283,7 @@ class HeaderMethodRenderingService:
             return ""
 
         param_list = []
-        for param in method.parameters:
-            # Skip artificial parameters (like 'this')
-            if param.name == "__artificial__":
-                continue
-
+        for param in real_parameters(method.parameters):
             param_type = self._unqualify_type_expression(param.type_name)
             param_str = f"{param_type} {param.name}"
             if param.default_value:

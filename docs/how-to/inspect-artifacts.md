@@ -61,3 +61,16 @@ help before using maintenance commands against a large input.
 
 The [durable artifact reference](../reference/artifacts.md) explains identity keys, reuse, and
 publication invariants.
+
+## Transient cleanup
+
+Do not use a broad cleanup command for this repository. The explicit recipe below removes only
+known rebuildable test/coverage/site outputs:
+
+```powershell
+just clean-transient
+```
+
+It does not remove `output/`, `resources/`, `logs/`, source-bound caches, durable analytical
+stores, or external reports. The complete path classification is in the
+[artifact retention contract](https://github.com/ddon-research/ddon-dwarf-reconstructor/blob/main/specs/001-header-foundation/contracts/artifact-retention.md).

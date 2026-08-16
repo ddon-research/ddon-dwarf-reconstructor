@@ -6,8 +6,10 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from ...domain.models.implementation_evidence import ImplementationDiscoveryReport
 from ...domain.models.tool_evidence import ToolExport
 from ..generators.dwarf_header_generation import HeaderGenerationService
+from ..generators.dwarf_implementation import ImplementationDiscoveryService
 from ..generators.dwarf_knowledge import KnowledgeExportService
 from ..generators.dwarf_multi_file import MultiFileGenerationService
 from ..generators.generation_contracts import GenerationRequest, HeaderBundle
@@ -64,4 +66,19 @@ class GenerationFacade:
             build_id,
             orbis_objdump_path=orbis_objdump_path,
             tool_exports=tool_exports,
+        )
+
+    def discover_implementations(
+        self,
+        root_symbol: str,
+        header_bundle: HeaderBundle,
+        *,
+        orbis_objdump_path: Path | None = None,
+    ) -> ImplementationDiscoveryReport:
+        """Run the post-header implementation discovery chain."""
+        return ImplementationDiscoveryService.discover(
+            self._runtime,
+            root_symbol,
+            header_bundle,
+            orbis_objdump_path=orbis_objdump_path,
         )

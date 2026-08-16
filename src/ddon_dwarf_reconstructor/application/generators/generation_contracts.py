@@ -8,6 +8,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Literal
 
+from ...core.content_hash import header_bundle_sha256
 from ...core.path_policy import create_header_filename
 
 
@@ -84,3 +85,8 @@ class HeaderBundle:
         if len(self.headers) != 1:
             raise ValueError("HeaderBundle.only() requires exactly one generated header")
         return next(iter(self.headers.values()))
+
+    @property
+    def sha256(self) -> str:
+        """Return a deterministic digest of filenames and UTF-8 header bytes."""
+        return header_bundle_sha256(self.headers)

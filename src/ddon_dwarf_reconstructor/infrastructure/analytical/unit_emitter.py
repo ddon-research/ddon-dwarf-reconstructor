@@ -144,25 +144,24 @@ class DwarfUnitEmitter:
             )
         if getattr(die, "tag", None) != "DW_TAG_subprogram":
             return
-        specification = (
-            attributes.get("DW_AT_specification") if isinstance(attributes, Mapping) else None
-        )
-        if specification is None:
-            return
-        target_offset, status = _reference_target(cu, specification, unit_offset)
-        self.writer.write(
-            {
-                "record_type": DwarfRecordKind.INDEX.value,
-                "index_type": "method_implementation",
-                "source_id": self.source_id,
-                "unit_offset": unit_offset,
-                "die_offset": die_offset,
-                "name": _text_value(name_value) if name_value is not None else None,
-                "raw_target": tag_value(getattr(specification, "value", None)),
-                "target_offset": target_offset,
-                "resolution_status": status.value,
-            }
-        )
+        for relation_name in ("DW_AT_specification", "DW_AT_abstract_origin"):
+            relation = attributes.get(relation_name) if isinstance(attributes, Mapping) else None
+            if relation is None:
+                continue
+            target_offset, status = _reference_target(cu, relation, unit_offset)
+            self.writer.write(
+                {
+                    "record_type": DwarfRecordKind.INDEX.value,
+                    "index_type": "method_implementation",
+                    "source_id": self.source_id,
+                    "unit_offset": unit_offset,
+                    "die_offset": die_offset,
+                    "name": _text_value(name_value) if name_value is not None else None,
+                    "raw_target": tag_value(getattr(relation, "value", None)),
+                    "target_offset": target_offset,
+                    "resolution_status": status.value,
+                }
+            )
 
     def _write_attributes(self, cu: Any, die: Any, unit_offset: int, die_offset: int) -> None:
         attributes = getattr(die, "attributes", {})

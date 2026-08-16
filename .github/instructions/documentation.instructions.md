@@ -35,6 +35,9 @@ repeatable authoring loop. Keep this adapter short enough to apply to every page
   Use an explicit prohibition when it protects data, evidence, or security.
 - Do not copy source code or generated specifications into prose. Summarize the behavior, link to
   the authoritative path, and let tests or manifests carry exact detail.
+- The Python API reference is source-derived. When module paths change, update the generator or
+  landing-page contract as needed, run `uv run just docs-api`, and never hand-edit
+  `docs/api/generated/` declaration pages.
 
 ## Preserve evidence and uncertainty
 
@@ -70,7 +73,9 @@ repeatable authoring loop. Keep this adapter short enough to apply to every page
 - Update `zensical.toml` navigation, the relevant README, Spec Kit feature, roadmap entry, and
   instruction adapter when a public workflow or documentation contract changes.
 - Run `uv run just docs-tools-install` after checkout or a documentation-tool lockfile change,
-  then run `uv run just docs-check` for every site change and `uv run just check` before handoff.
+  then run `uv run just docs-api-check` and `uv run just docs-check` for every site change and
+  `uv run just check` before handoff. Do not add an in-page TOC marker; the configured sidebar TOC
+  and permalink anchors provide the API page navigation.
   Run focused tests and the nested project's checks when the changed page describes those
   contracts.
 - Review internal links, headings, code fences, diagram semantics, source paths, dates, version

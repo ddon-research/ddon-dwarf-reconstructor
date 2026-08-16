@@ -34,8 +34,9 @@ evidence.
 - [Python API](https://docs.ladybugdb.com/client-apis/python/) documents `Database` and
   `Connection` integration, including synchronous and asynchronous client surfaces.
 - [System requirements](https://docs.ladybugdb.com/system-requirements/) documents Windows support
-  for the CLI and precompiled Python wheels through CPython 3.11. The repository is pinned to
-  CPython 3.14.6, so this is a compatibility gate rather than a satisfied prerequisite.
+  for the CLI and precompiled Python wheels through CPython 3.11. The dated probe used CPython
+  3.14.6; the current repository pin is 3.14.7, so this remains a compatibility gate rather than
+  a satisfied prerequisite.
 - [Cypher differences](https://docs.ladybugdb.com/cypher/difference/) confirms that Neo4j syntax
   and behavior cannot be treated as a drop-in schema/query contract.
 - [Native JSON and JSON extension](https://docs.ladybugdb.com/extensions/json/) support retaining

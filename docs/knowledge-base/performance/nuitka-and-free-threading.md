@@ -1,6 +1,7 @@
 # Nuitka and free-threaded runtime evaluation
 
-This research note records the current Windows 11 / CPython 3.14.6 evidence. It is not a default
+This research note records dated Windows 11 / CPython 3.14.6 evidence. The active repository
+runtime is CPython 3.14.7 with uv 0.12.3. It is not a default
 deployment recommendation.
 
 ## Decision

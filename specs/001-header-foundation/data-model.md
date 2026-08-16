@@ -101,6 +101,110 @@ Represents the durable lookup sidecar.
 - class definition rows: name, CU offset, DIE offset, nested-type counts, size, score.
 - method implementation rows: declaration DIE offset to implementation DIE offset.
 
+## Orbis Implementation Evidence
+
+The post-header report uses implementation-report schema `4.2` and is source-bound to the
+generated header bundle SHA-256, published header-manifest SHA-256 when available, the ELF
+identity, and the Orbis evidence artifact key. It stores:
+
+- `OrbisReference`: `kind` (`direct_call`, `indirect_call`, `direct_branch`,
+  `indirect_branch`, `data`, or `relocation`), target address, resolved name,
+  raw operand, relocation text, and resolution status;
+- `OrbisToolInvocation`: profile name, exact command and flags, return status,
+  observed/empty/unavailable status, stdout/stderr paths and SHA-256 values,
+  tool identity, duration, and bounded diagnostics;
+- `OrbisDynamicTag`: numeric SCE tag, optional known name, and raw value;
+- `OrbisSceSegment`: relevant SCE program-header type and file/virtual geometry used for bounded
+  address-to-file conversion;
+- `OrbisRelocationTable`: `DT_SCE_RELA` or `DT_SCE_JMPREL` descriptor, virtual/file range, entry
+  size, count, and `observed`/`partial`/`malformed`/`not_observed` status;
+- `OrbisRelocationEntry`: stable table-local ID, raw `offset`, `info`, signed `addend`, symbol
+  index, relocation code/name, raw bytes, optional symbol name, resolution status, and optional
+  instruction addresses. Complete entries are stored in the source/tool/parser-bound JSONL cache;
+  the implementation report contains only method-relevant entries and links;
+- `OrbisStructuralCrossCheck`: optional LLVM `llvm-readobj` profile identity, status, output hash,
+  unknown numeric SCE tags, and bounded diagnostics. It is additive and never outranks Orbis
+  instruction evidence or the SCE reader;
+- `OrbisTargetedDisassemblyCrossCheck`: optional per-method LLVM `llvm-objdump` projection with
+  requested/effective triple, capability status, slice counts, cache identities, address/byte
+  comparison totals, and bounded diagnostics. Complete slice output is cache-owned and is not
+  duplicated in this report;
+- SDK-definition identity: typed package/version, target triple, BFD target, and source file
+  hashes for the reproduced Orbis definitions. The official table contains no `PT_SCE_RELRO`;
+  standard `PT_GNU_RELRO` remains separate;
+- instruction provenance: address, raw bytes, source file/line, discriminator,
+  file offset, and instruction-owned references. The exact method-range Orbis text
+  is retained once per method; aggregate references are derived views and are not
+  serialized a second time;
+- source-artifact metadata: stable method ID, generation status, declaring-header
+  includes, generic typed artifact descriptors, content hashes, and eligibility diagnostics;
+- structured bundle limitations, including ABI/clobber uncertainty, unvalidated
+  semantic equivalence, and the absence of synthesized external declarations.
+- deterministic DWARF-derived disassembly target manifest, target-scope hash and policy, valid
+  range-list provenance, every retained ELF function candidate, and address/range/name match
+  reasons. IDA audit observations are not fields in this production index.
+
+### Implementation-generation validation
+
+artifacts validate-implementation publishes a separate schema-4.1 validation report. Its
+`LoadImageProfile` records either the explicit original-address policy or an explicit aligned
+load base; DWARF range-list bases are never reused as ELF load bias. `MappedSegment` records map
+relocation targets through `PT_LOAD`, while `PT_SCE_DYNLIBDATA` remains metadata-table geometry
+only. `RelocationApplication` is a pure formula result with original/evaluated target bytes,
+width, overflow status, and an unresolved reason when loader state is absent. `NidBinding` keeps
+opaque module/library/version/NID identities and carries the original encoded symbol. A
+non-community source-bound database may provide a resolved name directly; a community-derived
+mapping is retained as a candidate until its pinned provenance, NID hash, and encoded
+library/module context verify. NidBinding records NidResolution, encoded table indexes, and
+separate hash/context statuses so demangled spelling, name mapping, and PS4 identity are not
+conflated. Conflicts remain failed and are never promoted.
+
+`AbiEvidence` and `InstructionEffects` retain calling-convention/location/CFI and
+register/flags/memory/call/stack summaries independently. Missing or conflicting CFI prevents
+safety promotion. `CompilerEvidence` records tool hashes, commands, object paths, output hashes,
+and stdout/stderr content hashes for the Orbis ABI probe matrix and canonical assembly replay;
+implementation validation does not publish raw tool streams or stream paths. A configured timeout
+is optional; when a tool actually times out, the evidence retains only the tool, stage, elapsed
+time, and configured limit. `SemanticParity` keeps byte,
+CFG, external-edge, effect, and live-behavior statuses separate; compilation or matching bytes
+alone cannot produce `target-object-equivalent`. Every method also carries a `MethodContextPacket`
+joining declaration/implementation DIE/CU identity, ranges, locations, CFI, disassembly,
+relocations, NIDs, and bounded diagnostics.
+
+For validation, these packets are served by a `DorisImplementationEvidenceModel`. The complete
+analytical manifest pins the source identity and Doris registry publication, while the model
+queries typed `die`, `attribute`, `reference`, `range`, `location`, and `frame` families. The
+validator never reads Parquet or JSONL rows directly. Parquet generation and native Doris loading
+remain one-time producer operations, so the physical model is selected for Doris column pruning,
+source/offset key access, and server-side CFI range predicates before the expensive materializer
+is run.
+
+The canonical default artifact profile is `canonical-assembly`. For each eligible method it emits
+bounded original `.raw.asm` evidence, one exact-byte `.s` compiler input, a deterministic
+`implementation-context/1.0` `.context.json` packet, and an SDK-produced `.o` object when
+`orbis-as` accepts the `.s`. `.raw.asm` is never assembler input; the context references it rather
+than duplicating its text. The core pipeline emits no empty, reference, diagnostic, or `.cpp`
+placeholder; a later agentic workflow translates assembly into C++ after the independent evidence
+gates. The source-bound Orbis cache remains the authority for complete profile stdout/stderr.
+
+### Implementation Artifact Descriptor
+
+Each generated method artifact is described by:
+
+- `kind`: `raw-assembly`, `canonical-assembly`, `object`, or `context`;
+- `path`: a safe path relative to the implementation bundle;
+- `sha256`: the exact generated artifact hash;
+- `role`, `content_type`, `byte_length`, and optional `producer` identity.
+
+The bundle manifest is a publication envelope rather than another evidence index. It records the
+artifact profile, report/header/source identities, report hash, aggregate bundle digest, file
+count, and publication status. Method evidence remains only in the canonical report.
+
+The cache key includes the schema, parser, source/tool identities, root symbol, and consumed
+profile flags, including the standard relocation profile, generic and target-aware LLVM
+identities/triples, and the SDK-definition fingerprint. Known-invalid SDK profiles are excluded
+from the execution plan and documented once; they are not retained as repeated unavailable rows.
+
 State transitions:
 
 1. Missing: no sidecar exists.

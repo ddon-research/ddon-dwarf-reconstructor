@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from time import perf_counter
 
 from ...core.dwarf import DwarfInfo
 from ...core.observability import get_logger, log_event
 from ...core.platform import ELFPlatform
+from ...domain.models.dwarf import ClassInfo
 from ...domain.ports.class_parser import ClassParserPort
 from ...domain.ports.disassembly import DisassemblyProducerFactory
 from ...domain.ports.dwarf_lookup import DwarfLookupPort
@@ -22,6 +23,8 @@ from ...domain.services.parsing.type_resolver import LazyTypeResolver
 from ..generators.session import DwarfSession
 
 logger = get_logger(__name__)
+
+HeaderHierarchyCacheKey = tuple[str, int, bool]
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,6 +69,9 @@ class GenerationRuntime:
     disassembly_factory: DisassemblyProducerFactory | None
     source_hash: SourceHashPort | None
     source_identity: SourceIdentityPort | None
+    header_hierarchies: dict[HeaderHierarchyCacheKey, dict[str, ClassInfo]] = field(
+        default_factory=dict
+    )
 
 
 def resolve_explicit_validation_dump(

@@ -72,15 +72,18 @@ For a docs-only change, run at least:
 
 ```powershell
 uv run just docs-tools-install
+uv run just docs-api-check
 uv run just docs-check
 uv run just check
 ```
 
-Run `docs-tools-install` once after checkout or a documentation-tool lockfile change. `docs-check`
-validates every Mermaid fence by rendering it to a temporary SVG and lints the authored site
-Markdown with the locked `markdownlint-cli2` configuration before building `site/`. Review the
-generated site locally, then remove or leave the ignored build output as convenient. The GitHub
-Pages workflow repeats all three checks from the lockfiles.
+Run `docs-tools-install` once after checkout or a documentation-tool lockfile change. Run
+`docs-api` when source modules are added, removed, or moved; `docs-api-check` then fails on stale,
+missing, duplicate, or unexpectedly grouped generated pages. `docs-check` repeats that check,
+validates every Mermaid fence by rendering it to a temporary SVG, lints the authored site Markdown
+with the locked `markdownlint-cli2` configuration, and builds `site/` strictly. Review the generated
+site locally, then remove or leave the ignored build output as convenient. The GitHub Pages workflow
+repeats the same locked checks.
 
 ## Documentation review
 

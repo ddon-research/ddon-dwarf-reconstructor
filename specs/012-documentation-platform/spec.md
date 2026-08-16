@@ -48,7 +48,7 @@ LadybugDB-first loader evaluation is tracked separately in the [KG-001 feature r
 
 ## Acceptance scenarios
 
-1. A fresh checkout can run `uv sync --python 3.14.6` and `uv run just docs-build` to produce
+1. A fresh checkout can run `uv sync --python 3.14.7 --locked` and `uv run just docs-build` to produce
    `site/` without strict-build errors.
 2. A reader can navigate from the site home to a tutorial, a task guide, architecture diagrams,
    a CLI contract, the knowledge-graph boundary, and the Spec Kit roadmap.

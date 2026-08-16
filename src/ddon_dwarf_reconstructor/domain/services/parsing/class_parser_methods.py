@@ -30,6 +30,8 @@ class ClassParserMethodsMixin:
         declared_return_type_offset = TypeChainTraverser.get_declared_type_offset(method_die)
         is_virtual, vtable_index = self._virtual_method_info(method_die)
         parent_name = self._parent_name(method_die)
+        parent_die = method_die.get_parent()
+        cu = getattr(method_die, "cu", None)
         parameters = self._parse_method_parameters(method_die)
         is_declaration = method_die.attributes.get("DW_AT_declaration") is not None
         if self.resolve_param_names and is_declaration and parameters:
@@ -61,7 +63,19 @@ class ClassParserMethodsMixin:
             is_defaulted="DW_AT_defaulted" in method_die.attributes,
             is_declaration=is_declaration,
             declared_return_type_offset=declared_return_type_offset,
+            die_offset=method_die.offset,
+            cu_offset=getattr(cu, "cu_offset", None),
+            owner_die_offset=getattr(parent_die, "offset", None),
+            linkage_name=self._linkage_name(method_die),
         )
+
+    @staticmethod
+    def _linkage_name(method_die: DwarfEntry) -> str | None:
+        for attribute_name in ("DW_AT_linkage_name", "DW_AT_MIPS_linkage_name"):
+            attribute = method_die.attributes.get(attribute_name)
+            if attribute is not None:
+                return decode_dwarf_string(attribute.value)
+        return None
 
     def _virtual_method_info(
         self: ClassParserContext, method_die: DwarfEntry
@@ -193,6 +207,9 @@ class ClassParserMethodsMixin:
             type_offset=type_offset,  # Store terminal type offset
             default_value=default_value,
             declared_type_offset=declared_type_offset,
+            die_offset=param_die.offset,
+            cu_offset=getattr(getattr(param_die, "cu", None), "cu_offset", None),
+            is_artificial=is_artificial,
         )
 
     def _resolve_parameter_names_from_implementation(

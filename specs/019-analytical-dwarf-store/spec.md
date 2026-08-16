@@ -1,5 +1,8 @@
 # Feature 019: Analytical DWARF Store and Runtime Replacement
 
+**Status:** Doris serving promoted; file-backed runtime replacement, Flight SQL, and semantic
+validation remain partial, unresolved, or explicitly not observed.
+
 ## Goal 1: research and design
 
 | Field | Contract |

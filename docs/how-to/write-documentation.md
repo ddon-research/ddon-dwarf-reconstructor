@@ -29,6 +29,11 @@ Read these in order:
 4. The active `specs/<feature>/` record for intent, tasks, and validation.
 5. The relevant knowledge-base note or external source for research evidence.
 
+For a Python API reference change, also inspect `tools/documentation/generate_api_reference.py`,
+the affected source modules, and the checked-in pages under `docs/api/generated/`. Generated API
+pages are outputs of the source inventory; edit the landing page or generator contract instead of
+editing a generated declaration by hand.
+
 For current behavior, source and tests outrank stale prose. For intended behavior, the active spec
 outranks an unimplemented page. Record assumptions instead of silently filling evidence gaps.
 
@@ -68,6 +73,7 @@ stated.
 When the change affects a public workflow or contract, update the smallest affected set:
 
 - `zensical.toml` navigation and the relevant `docs/` page;
+- `docs/api/index.md` and generated API pages when a Python module is added, removed, or moved;
 - `README.md` when the entry point or contributor workflow changes;
 - the active Spec Kit feature and `docs/roadmap/index.md`;
 - `AGENTS.md`, `.github/copilot-instructions.md`, `CLAUDE.md`, or path-specific instructions when
@@ -82,9 +88,15 @@ Run the site build and repository gate:
 
 ```powershell
 uv run just docs-tools-install  # once after checkout or lockfile changes
+uv run just docs-api-check
 uv run just docs-check
 uv run just check
 ```
+
+Run `uv run just docs-api` before `docs-api-check` when a Python module path changed. The generator
+uses only the standard library, emits one deterministic `:::` directive per source module, and
+does not import the application package or create HTML. Do not add an in-page TOC marker: Zensical's
+sidebar TOC and permalink anchors are already configured for the API pages.
 
 Run focused tests when the page describes a changed contract. Use the nested project boundary for
 specification-pipeline commands. Review links, code fences, headings, diagram semantics, and exact

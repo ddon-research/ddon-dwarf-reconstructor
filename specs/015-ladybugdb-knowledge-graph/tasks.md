@@ -4,7 +4,7 @@
 
 - [ ] T001 Record official LadybugDB capabilities, version constraints, schema differences,
   concurrency limitations, and secondary-source authority labels in `research.md`.
-- [ ] T002 Probe the pinned CPython 3.14.6/Windows environment with the exact `ladybug` package
+- [ ] T002 Probe the pinned CPython 3.14.7/Windows environment with the exact `ladybug` package
   version and record import, on-disk, JSON, FTS, and vector-extension results.
 - [ ] T003 Install or locate the standalone `lbug` CLI separately, record its version, and verify
   read-only open plus deterministic JSONL output. A missing CLI remains a concrete external blocker.

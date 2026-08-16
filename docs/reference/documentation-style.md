@@ -28,6 +28,20 @@ Specs are the intent and roadmap record, not a fifth Diátaxis page type. A spec
 requirements, exact paths, tasks, and validation evidence. The site should link to it rather than
 copy its requirements.
 
+## Source-derived Python API pages
+
+The [Python API reference](../api/index.md) is a reference page backed by source and generated
+declarations. `tools/documentation/generate_api_reference.py` must discover every `.py` file under
+`src/ddon_dwarf_reconstructor`, convert `__init__.py` paths to package identifiers, group modules
+deterministically, and emit exactly one `:::` directive per module. The generator must not import
+the package or produce HTML. Generated output belongs under `docs/api/generated/` and is refreshed
+with `uv run just docs-api`; `uv run just docs-api-check` is the stale-output gate.
+
+The API landing page must distinguish exhaustive module inventory from stable public API. Keep
+Zensical's sidebar TOC and permalink anchors; do not add an in-page TOC block. Because Zensical's
+mkdocstrings support is preliminary, a strict build failure or unresolved directive is a failed
+documentation change, not a reason to introduce a second API system.
+
 When a page seems to need two types, split it. A how-to can link to an explanation for “why” and a
 reference page for exact options. A tutorial can link forward without becoming a textbook.
 
@@ -138,9 +152,11 @@ when the Mermaid source is the maintainable artifact.
    architecture abstraction levels and UML/sequence/state diagrams for code or runtime detail.
    Explain each diagram in nearby text.
 6. **Label.** Attach implementation status, evidence, authority, uncertainty, and the next step.
-7. **Synchronize.** Update navigation, README, roadmap/spec, and applicable instruction adapters.
-8. **Validate.** Run `uv run just docs-check`, then `uv run just check` and relevant tests. For
-   nested tooling use `uv run --directory tools/dwarf_spec_pipeline ...`.
+7. **Synchronize.** Update navigation, README, roadmap/spec, generated API output when source
+   modules change, and applicable instruction adapters.
+8. **Validate.** Run `uv run just docs-api-check` when applicable, then `uv run just docs-check`,
+   `uv run just check`, and relevant tests. For nested tooling use
+   `uv run --directory tools/dwarf_spec_pipeline ...`.
 9. **Retire.** Remove obsolete duplicate pages and stale links. Git history is the archive.
 
 The review is complete only when the page is findable, internally linked, source-backed, readable

@@ -1,5 +1,8 @@
 # Measured evidence: Nuitka and runtime comparison
 
+The runtime rows below are dated CPython 3.14.6 compatibility evidence. The active repository
+runtime is CPython 3.14.7 with uv 0.12.3.
+
 ## Build and output fidelity
 
 | Evidence | Result |

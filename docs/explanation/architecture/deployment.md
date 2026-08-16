@@ -90,11 +90,18 @@ the unavailable historical approved header remain separate evidence surfaces.
 
 ## Documentation deployment
 
-Zensical builds the checked-in `docs/` tree into `site/`. The repository's Pages workflow installs
-the locked Node documentation validators, runs the local `uv run just docs-check` contract, uploads
-`site`, and deploys it through GitHub Pages. The workflow pins every external action to a full
-commit SHA and uses both `uv.lock` and `tools/documentation/package-lock.json` as dependency
-contracts.
+Zensical builds the checked-in `docs/` tree, including the generated `docs/api/generated/` Markdown,
+into `site/`. The repository's Pages workflow remains unchanged: it installs the locked Node
+documentation validators, runs the local `uv run just docs-check` contract, uploads `site`, and
+deploys it through GitHub Pages. `docs-check` first proves that the API pages match every source
+module, then runs Markdownlint, Mermaid validation, and the strict build. The workflow pins every
+external action to a full commit SHA and uses both `uv.lock` and
+`tools/documentation/package-lock.json` as dependency contracts.
+
+The docs dependency group locks the currently validated Zensical and `mkdocstrings-python`
+combination. Zensical marks this handler integration as preliminary, so publication depends on
+the strict build resolving every `:::` directive; no unsupported backlinks or fallback API site
+are treated as evidence.
 
 Developer-only observability and quality tooling is deliberately separate from this runtime
 deployment. [Langfuse](../../how-to/observability/langfuse.md) runs as a loopback Docker stack for
@@ -111,5 +118,5 @@ and neither is a substitute for deterministic producer or repository acceptance 
 | unmeasured Doris fan-out or query attribution | source-bound lookup candidates and opt-in generation query traces | external optimization report |
 | incomplete or conflicting DIE evidence | typed status/provenance and authority rules | deterministic tests |
 | generated header closure failures | exact manifests plus the complete per-header MSVC audit; optional IDA/Sonar evidence | local acceptance only |
-| documentation drift | strict Zensical build in `just check` and source-backed pages | docs CI build |
+| documentation drift | source-derived API check plus strict Zensical build in `just check` | docs CI build |
 | graph semantics overclaiming | JSONL projection documented as current; live ingestion on roadmap | knowledge bundle manifest |

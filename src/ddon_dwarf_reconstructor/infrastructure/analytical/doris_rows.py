@@ -47,8 +47,9 @@ def restore_row(row: dict[str, Any]) -> dict[str, Any]:
         result["details"] = _json_load(row.get("details_json"), None)
         result.pop("details_json", None)
         for field in _UNSIGNED_FIELDS:
-            if isinstance(result.get(field), Decimal):
-                result[field] = int(result[field])
+            integer = _integer_value(result.get(field))
+            if integer is not None:
+                result[field] = integer
     return result
 
 

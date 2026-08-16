@@ -19,6 +19,17 @@ progressive abstraction levels; flowcharts, sequence/state diagrams, ER diagrams
 diagrams answer narrower boundary, runtime, data, and code questions. Each diagram is reviewed
 beside the explanatory text.
 
+The [Python API reference](../api/index.md) is a source-derived reference surface. The standard
+library generator walks every `.py` file below `src/ddon_dwarf_reconstructor`, maps package
+`__init__.py` files to dotted package identifiers, and writes six deterministic Markdown group
+pages under `docs/api/generated/`. The pages are exhaustive for module discovery, including parser
+and infrastructure internals; their inventory is not a public-API stability promise.
+
+Zensical's [mkdocstrings integration](https://zensical.org/docs/setup/extensions/mkdocstrings/) is
+preliminary. The exact Zensical/mkdocstrings-python combination is locked in `uv.lock` and
+validated by the strict site build. The configuration does not rely on unsupported backlink
+behavior or a second documentation generator.
+
 ## Source-of-truth order
 
 For a claim about current behavior, use this order:
@@ -63,8 +74,10 @@ For every cross-module change:
 2. update the smallest affected Diátaxis page and relevant arc42 compartment;
 3. update the active spec, roadmap, and instruction adapter when the contract changes;
 4. label evidence, uncertainty, and deferred work;
-5. run `uv run just docs-check` and the applicable repository gates.
+5. refresh source-derived API pages when module paths change, run `uv run just docs-api-check`, and
+   then run `uv run just docs-check` with the applicable repository gates.
 
-`docs-check` validates Markdown and Mermaid source before the strict site build. It is part of
-`uv run just check`. Git history is the archive for retired prose; active navigation should contain
-one maintained explanation of each contract.
+`docs-api-check` fails on missing, stale, duplicate, or unexpectedly grouped source modules.
+`docs-check` runs that check before validating Markdown and Mermaid source and the strict site
+build. It is part of `uv run just check`. Git history is the archive for retired prose; active
+navigation should contain one maintained explanation of each contract.

@@ -1,5 +1,22 @@
 # Tasks
 
+## Current evidence and supersession boundary (2026-08-16)
+
+The current records distinguish historical throughput and blocked attempts from the accepted
+source-bound run. Counts must not be combined across rows:
+
+| Evidence slice | Scope and result | Status |
+| --- | --- | --- |
+| Historical full boundary | 289 roots, 2,745 headers, and 2,745/2,745 independent MSVC units | Historical observation; superseded by the current header count, retained for comparison |
+| Boundary-refactor attempts | Up to 1,653 headers before Doris/host failure or restart | Blocked/partial; never complete evidence |
+| Current Season 2 implementation record | 289 roots, 2,760 headers, 2,760/2,760 MSVC units, and 1,150 clean assembly bundles | Current observed-partial real-asset record |
+| Historical complete implementation validator | 1,150 method requests with per-dimension status counts | Dated pre-T087 measured validator record; ABI, compiler, parity, and live behavior remain non-promoted |
+| Current bounded T087 implementation validator | 1,037 method requests with corrected effects/parity gates | Failed/partial current pilot; target-object acceptance and live behavior remain non-promoted |
+
+The 2,745 and 1,653 figures are historical or blocked boundaries, not missing rows to be merged
+into the current 2,760-header run. This feature owns the Doris serving/validator evidence; the
+real-asset header and assembly acceptance narrative is owned by Feature 001.
+
 - [x] Establish goal contracts and authority matrix.
 - [x] Add typed analytical records and query/materialization ports.
 - [x] Implement one-pass typed Parquet/raw-section publication with opt-in JSONL audit output.

@@ -113,6 +113,40 @@ checkpoints, bounded probes, profiler output, and crash evidence only. A checkpo
 publication is diagnostic and requires `--allow-incomplete`; it is not a generation or Doris
 input.
 
+The implementation-validation command follows the same serving boundary. Its `--dwarf-store`
+argument is a manifest/provenance pin; it constructs the read-only Doris analytical model and
+queries the native `die`, `attribute`, `reference`, `range`, `location`, and `frame` families.
+It does not use the Parquet adapter, read Parquet row groups, or fall back to JSONL. The physical
+Parquet write and native Doris load are intentionally separate one-time producer operations. The
+Doris model keeps the row contract columnar: equality lookups use source/offset keys and blooms,
+only required columns are projected, and CFI range overlap is pushed to the server.
+
+Doris is the only normal analytical read path for generation and implementation validation. The
+initial typed Parquet publication is a one-time producer/load operation; runtime validation does
+not open Parquet files or JSONL projections. This boundary is enforced by the source-bound
+manifest and Doris registry checks, so a missing, stale, incomplete, or source-mismatched
+publication fails closed rather than falling back to a file adapter.
+
+### Implementation-validation context projection
+
+Implementation validation builds a bounded logical projection over the existing Doris family
+tables. Stable method requests are ordered and grouped in batches of 512; each batch retrieves the
+method and formal-parameter DIEs, object-pointer reference targets, the typed attribute columns
+needed for ABI evidence, method locations, and the CFI envelope. A read-only in-process view
+serves the evidence model after the batch query, so validation does not issue one Doris lookup per
+method. Relocation entries and relocation-ID/NID bindings are indexed once per validation run.
+
+Location rows retain their logical typed expression, including Doris's `expression_json` form, and
+the recovered ABI-facts map is copied into the method context packet. This keeps frame-base,
+parameter, object-pointer, artificial/hidden-parameter, and return-location cues source-bound;
+missing facts remain explicit rather than being replaced with inferred ABI values.
+
+This is a query shape, not a new Parquet or JSONL serving path. The complete source-bound Doris
+registry remains mandatory, and a partial/unavailable batch keeps the corresponding evidence
+non-promotable. The 1,037-method `rLayout` pilot and 1,150-method Season 2 validator both published
+atomic reports after this change; the optimization is measured runtime evidence, while the failed
+method-level ABI/compiler/parity dimensions remain non-promoted.
+
 ## Projection and query policy
 
 Parquet uses one nullable typed schema per record family. Offsets, names, forms, relations, and

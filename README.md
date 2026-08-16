@@ -17,6 +17,10 @@ Dragon's Dogma Online research and modding.
 - Knowledge-graph exports with explicit producer and Orbis evidence provenance.
 - Bounded one-time exports from Orbis, LLVM, GNU Binutils, elfutils, and libdwarf profiles, with
   source/tool/output hashes and authority metadata.
+- An exhaustive, source-derived Python module reference grouped by package layer; indexed modules
+  include implementation internals and are not all stable public API.
+- Source-bound implementation validation with explicit load-image, relocation, NID, ABI/CFI,
+  register/stack, Orbis target-object, and static-parity evidence dimensions.
 - Typed CLI, locked uv dependencies, Ruff, Pyrefly, deptry, and just automation.
 
 ## Requirements and setup
@@ -28,6 +32,15 @@ Dragon's Dogma Online research and modding.
 ```text
 uv sync --python 3.14.7 --locked
 uv run just test-unit
+```
+
+The documentation environment is the locked Zensical docs group with the preliminary
+`mkdocstrings-python` integration. Regenerate the source-derived Python API pages after adding or
+moving a module, then verify them before the strict site build:
+
+```powershell
+uv run just docs-api
+uv run just docs-api-check
 ```
 
 The analytical projection and serving runtime is part of the default project environment. Its
@@ -105,6 +118,16 @@ uv run ddon-dwarf-reconstructor export-knowledge resources/DDOORBIS.elf \
   --dwarf-store output/analytical-dwarf/main/store-<source-sha16>/manifest.json \
   --symbol rLayout --output-dir output/rLayout --build-id ps4-02020005 \
   --orbis-objdump 'D:/SCE/ORBIS SDKs/8.000/host_tools/bin/orbis-objdump.exe'
+
+# Optional PS4 method evidence and guarded reconstruction artifacts
+uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf \
+  --dwarf-store output/analytical-dwarf/main/store-<source-sha16>/manifest.json \
+  --symbol rLayout --extract-assembly --emit-implementation-sources \
+  --orbis-objdump 'D:/SCE/ORBIS SDKs/8.000/host_tools/bin/orbis-objdump.exe' \
+  --orbis-as 'D:/SCE/ORBIS SDKs/8.000/host_tools/bin/orbis-as.exe' \
+  --llvm-readobj 'C:/msys64/ucrt64/bin/llvm-readobj.exe' \
+  --llvm-objdump 'C:/msys64/ucrt64/bin/llvm-objdump.exe' \
+  --llvm-target-triple x86_64-scei-ps4
 ```
 
 When `--symbols-file` is combined with `--full-hierarchy` and multiple roots, generation writes
@@ -119,6 +142,87 @@ complete source publication in Doris; a missing, stale, incomplete, unavailable,
 count-mismatched publication fails closed. They never perform an implicit CU traversal or read
 Parquet/JSONL at runtime. `--dwarf-dump` and `--dwarf-index` remain explicit validation-only
 inputs for the legacy cross-check workflow.
+
+The assembly command publishes `output/ps4/header-bundle.manifest.json` and `rLayout.h` before
+writing `output/ps4/implementations/0001-rLayout.json`. That JSON is the canonical source-bound
+implementation index: it retains raw method disassembly, decoded instructions, references,
+source/file offsets, candidates, tool invocations, and explicit limitations. With source emission
+enabled, uniquely matched methods receive a bounded `.raw.asm` evidence file, exact-byte `.s`
+compiler input, an `implementation-context/1.0` `.context.json` packet, and, when `orbis-as` is
+available, an accepted `.o` file plus a minimal atomic bundle manifest. `.raw.asm` is never passed
+to the assembler; `.s` is the clean recompilable handoff for the later agentic C++ workflow. The
+core pipeline emits no `.cpp`, empty, reference, or diagnostic placeholder files. Ambiguous and
+unavailable methods remain evidence only.
+
+The latest full Season 2 rerun covered all 289 roots, checked 2,760 header files, and emitted
+1,150 complete assembly handoff bundles with exact raw/report and object/text parity. It remains
+`observed-partial` until the independent Doris-backed relocation, NID, ABI/CFI, safety, and static
+parity gates are observed; independent MSVC declaration closure passed 2,760/2,760 units, and
+live PS4 behavior is not observed. See the
+[`Season 2 acceptance record`](specs/001-header-foundation/acceptance-season2-assembly-20260816.md)
+for measured counts, the cache repair, and the isolated IDA completeness audit.
+
+Run the read-only validator against the complete analytical store when method-specific DWARF
+locations and CFI are needed. Keep the address policy explicit; `--original-addresses` uses ELF
+virtual addresses, while `--load-base` must be aligned to the PS4 image policy. The validator
+emits canonical `.s` files and accepted `.o` files only in the external validation directory;
+it reports CFG/call-edge parity, unresolved loader state, and live behavior separately rather than
+promoting them. Supply `--orbis-objdump` to observe normalized generated-object edges; `--orbis-ld`
+is optional and records a relocatable link result.
+The supplied analytical manifest pins the source-bound publication; method DIE, location, and CFI
+rows are queried from Doris, never read directly from Parquet/JSONL. Set the existing
+`DDON_DORIS_SQL_HOST`, `DDON_DORIS_SQL_PORT`, `DDON_DORIS_DATABASE`, and `DDON_DORIS_TABLE`
+settings before running the command.
+
+Validation hydrates method context through deterministic Doris batches of 512 requests and builds
+relocation/NID indexes once per run. The retained `rLayout` pilot and full Season 2 validator now
+publish atomically; the full report remains failed because ABI, compiler, effect, and parity gates
+are incomplete. No arbitrary timeout is used as completion evidence.
+
+```powershell
+uv run ddon-dwarf-reconstructor artifacts validate-implementation resources/DDOORBIS.elf `
+  --implementation-report output/ps4/implementations/0001-rLayout.json `
+  --dwarf-store output/analytical-dwarf/main/store-<source-sha16>/manifest.json `
+  --output-dir $env:TEMP/ddon-implementation-validation `
+  --original-addresses `
+  --sdk-root 'D:/SCE/ORBIS SDKs/8.000'
+```
+
+Use `--tool-timeout-seconds <positive-seconds>` only for an explicitly bounded SDK validation
+run. The default has no arbitrary tool timeout and the validator keeps hashes/statuses rather than
+per-tool stdout/stderr files. No method `.cpp` files are generated; the optional ABI probe matrix
+may retain its eight small compiler probe sources, while the method handoff remains `.raw.asm`,
+`.s`, `.o`, and `.context.json`.
+
+The implementation report is schema `4.2` and includes the DWARF-derived target manifest, scope
+hash, all retained function candidates, and match reasons. IDA is isolated to a post-generation
+completeness audit:
+
+```powershell
+uv run ddon-dwarf-reconstructor artifacts audit-implementation-coverage `
+  --implementation-report output/ps4/implementations/0001-rLayout.json `
+  --ida-c-dump <ida-export.c> --elf resources/DDOORBIS.elf `
+  --output-dir $env:TEMP/ddon-implementation-audit
+```
+
+The audit cannot modify Doris targets, production names/addresses, caches, compiler inputs, or
+statuses; an IDA body absence is not evidence of DWARF method absence.
+
+The evidence chain has three boundaries: Orbis binutils is authoritative for PS4 instruction
+decoding and demangling; optional LLVM `llvm-readobj` metadata and `llvm-objdump --triple` slices
+are additive generic/structural cross-checks; and the in-repository SCE metadata reader decodes
+`PT_SCE_DYNLIBDATA` and 24-byte RELA tables. Conventional Orbis relocation output being empty and
+the SDK dynamic-relocation limitation do not mean the ELF has no relocations; the unsupported
+profile is capability-filtered from normal runs. Complete
+SCE entries remain in the source-bound JSONL cache, while the implementation report projects only
+method-relevant entries. The SDK dynamic-relocation limitation is capability-filtered from normal
+generation and documented rather than retried. `llvm-tli-checker` is not used for ELF extraction.
+
+When the analytical-dwarf Compose stack remaps the FE SQL port on the workstation, keep the
+application endpoint aligned with that host mapping. For example, the container may still listen
+on `9030` while Windows publishes it as `19030`; set `DDON_DORIS_SQL_HOST=127.0.0.1` and
+`DDON_DORIS_SQL_PORT=19030` before generation. A refusal at the default `9030` is an endpoint
+configuration failure, not evidence that the running Doris service is unavailable.
 
 ## Logging and diagnostics
 
@@ -173,6 +277,11 @@ uv run ddon-dwarf-reconstructor artifacts repair-catalog
 `purge-dump-index` requires `--confirm-index-path` containing the exact resolved sidecar path.
 Repair, rebuild, and purge operations never broaden their target beyond the explicitly selected
 artifact. The former `ddon-dwarf-artifacts` executable is intentionally removed.
+
+Transient test and documentation outputs are separate from durable evidence. Review the
+[artifact retention contract](specs/001-header-foundation/contracts/artifact-retention.md) before
+cleanup; the only repository cleanup recipe is the narrow, explicit `just clean-transient`, which
+does not target `output/`, `resources/`, `logs/`, source-bound caches, or retained external reports.
 
 The source catalog uses a relocation-stable metadata key (size, mtime, device, and inode) to
 reuse a verified SHA-256 when an immutable input is moved. It retains ctime and recorded paths as
@@ -325,6 +434,8 @@ uv run just analytical-compose-config # validate the local Doris Compose file
 uv run just reconstructor-container-config # validate Linux profiling Compose files
 uv run just performance-history # export tracked benchmark history
 uv run just docs-tools-install # install locked Markdown/Mermaid validators
+uv run just docs-api          # regenerate source-derived Python API pages
+uv run just docs-api-check    # fail when generated API pages are stale or incomplete
 uv run just docs-serve       # local Zensical preview
 uv run just docs-lint        # lint authored Markdown
 uv run just docs-diagrams    # render Mermaid fences to temporary SVGs
@@ -364,6 +475,7 @@ contract, security integrations, and Pages build.
 
 - [Documentation site](docs/index.md)
 - [Documentation style and authoring loop](docs/reference/documentation-style.md)
+- [Python API reference](docs/api/index.md)
 - [Architecture overview](docs/explanation/architecture/index.md)
 - [Component boundaries](docs/explanation/architecture/components.md)
 - [Generation runtime](docs/explanation/architecture/runtime.md)

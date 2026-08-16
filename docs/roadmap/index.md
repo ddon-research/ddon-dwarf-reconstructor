@@ -6,7 +6,7 @@ tasks remain visible.
 
 | Feature | Current status | Roadmap focus |
 | --- | --- | --- |
-| [001 Header foundation](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/001-header-foundation) | Draft; 29 unchecked tasks | ABI-oriented header reconstruction and explicit MSVC/IDA evidence |
+| [001 Header foundation](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/001-header-foundation) | Observed-partial; 31 unchecked tasks | ABI-oriented header reconstruction and explicit MSVC/IDA/assembly evidence |
 | [002 Maintainability and architecture](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/002-maintainability-architecture) | Implemented and acceptance-verified | maintainability limits and architecture policy |
 | [003 DWARF specification pipeline](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/003-dwarf-specification-pipeline) | Implemented | canonical JSON/Markdown specifications and manifests |
 | [004 Tooling modernization](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/004-tooling-modernization) | Implemented; 1 deferred task | typed CLI and reproducible root/nested tooling |
@@ -23,19 +23,20 @@ tasks remain visible.
 | [015 LadybugDB knowledge graph](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/015-ladybugdb-knowledge-graph) | Draft; LadybugDB-first evaluation gate | versioned JSONL loader, import fidelity, deterministic queries, provenance, and operational evidence |
 | [016 Performance profiling](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/016-performance-profiling) | Implemented; fixture and explicit real-asset evidence recorded | source-bound CPU/RAM/I/O/method evidence, SQLite history, and static exports |
 | [017 Nuitka and runtime comparison](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/017-nuitka-runtime-comparison) | Evaluation slice implemented; free-threaded Nuitka blocked upstream | runtime-aware CPython/Nuitka/free-threaded comparison and compiler/dependency evidence |
-| [018 Performance and algorithm audit](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/018-performance-algorithm-audit) | Evidence and implementation slice complete; repository gates pending | source-bound warm/cold traces, candidate decisions, and deterministic optimization evidence |
-| [019 Analytical DWARF store](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/019-analytical-dwarf-store) | Promoted v1.1 serving path; full Season 2 generation and per-header MSVC closure observed | one-pass lossless materialization, native serving evidence, query parity, exact header closure, and measured runtime replacement |
+| [018 Performance and algorithm audit](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/018-performance-algorithm-audit) | Complete; implementation, evidence, and repository gates pass | source-bound warm/cold traces, candidate decisions, and deterministic optimization evidence |
+| [019 Analytical DWARF store](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/019-analytical-dwarf-store) | Doris serving promoted; file-backed replacement, Flight SQL, and semantic validation partial/unresolved | one-pass lossless materialization, native serving evidence, query parity, and explicit replacement gates |
+| [020 Documentation API reference](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/020-documentation-api-reference) | Implemented; 305 modules and local repository gates verified | exhaustive source-derived Python module reference with deterministic generation and fail-closed docs validation |
 
 ## Next best step
 
-The documentation architecture refinement, feature 016 profiling evidence, feature 017 runtime
-evaluation, and the Feature 018 audit are published as evidence slices; Feature 018's repository
-gates remain visible in its task list. Feature 019 is the current technical integration: finish
-the deterministic analytical-store loop, then collect explicit real-ELF, LLVM, and Doris evidence
-before accepting a runtime replacement. The next independent graph step remains the LadybugDB-first
-`KG-001` evaluation: define a versioned loader over the existing JSONL bundle, verify import
-fidelity, and add deterministic query fixtures. Complete deferred real-asset/compiler evidence in
-features 001, 004, 007, and 009 as separate evidence slices.
+The current tranche is evidence-led convergence. Feature 001 is the real-asset implementation
+record: header publication and host MSVC closure are observed, while ABI, instruction effects,
+NIDs, static parity, and live behavior remain independent gates. Feature 019 is the serving and
+validator record: Doris is the normal analytical runtime, while file-backed replacement, Flight
+SQL, and semantic validation remain partial or unresolved. The next implementation slice is the
+bounded Feature 001 T086--T088 sequence, followed by a full source-bound rerun only after its
+representative gate passes. `KG-001` remains deferred and is owned only by Feature 015; Features
+013 and 014 retain pointers to that record.
 
 ## Status discipline
 

@@ -84,8 +84,9 @@ through the repository's `src` directory.
   [the documentation style reference](../../docs/reference/documentation-style.md), use one
   Diátaxis page intent, arc42 architecture sections, and Mermaid/UML diagrams as Markdown code.
   Run `uv run just docs-tools-install` after checkout or a lockfile change, then run `uv run just
-  docs-check` when behavior, commands, architecture, or validation guidance changes. Keep Python
-  docstrings factual and concise; link to the site for extended explanation.
+  docs-api-check` and `docs-check` when behavior, commands, architecture, or validation guidance
+  changes. Keep Python docstrings factual and concise, use the existing Google-style `Args`,
+  `Returns`, and `Raises` sections for API rendering, and link to the site for extended explanation.
 - The committed Pyrefly configuration is explicit and authoritative. If a new checkout has no
   `[tool.pyrefly]` section, run `uv run pyrefly init pyproject.toml` once, then review and commit
   the explicit configuration; do not add a second type-checker configuration or broad

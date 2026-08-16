@@ -193,6 +193,44 @@ class DorisQueryExecutor:
                 tags.append(tag)
         return tuple(tags)
 
+    def find_method_implementation_rows(
+        self,
+        declaration_offsets: Sequence[int],
+        *,
+        limit: int = 100_000,
+    ) -> BoundedRows:
+        """Return a deterministic, bounded implementation-index batch."""
+        offsets = tuple(
+            sorted({offset for offset in declaration_offsets if isinstance(offset, int)})
+        )
+        if not offsets:
+            return BoundedRows((), False)
+        if limit < 1:
+            raise ValueError("limit must be positive")
+        rows = self.family_rows(
+            "index",
+            {
+                "index_type": "method_implementation",
+                "target_offset": offsets,
+                "resolution_status": "complete",
+            },
+            columns=(
+                "source_id",
+                "unit_offset",
+                "die_offset",
+                "index_type",
+                "name",
+                "tag",
+                "target_offset",
+                "resolution_status",
+            ),
+            order_by=("target_offset", "unit_offset", "die_offset"),
+            limit=limit + 1,
+            table_name=self._config.method_lookup_table,
+            operation="method_implementation_rows_batch",
+        )
+        return BoundedRows(rows[:limit], len(rows) > limit)
+
     def family_rows(
         self,
         family: str,
@@ -214,6 +252,36 @@ class DorisQueryExecutor:
         query = f"SELECT {selected} FROM {table} WHERE {' AND '.join(conditions)}"
         query = _append_order_and_limit(query, order_by, limit)
         return self._fetch_rows(query, params, family=family, operation=operation)
+
+    def frame_rows_overlapping(
+        self,
+        start_address: int,
+        end_address: int,
+        *,
+        columns: Sequence[str] = (),
+        order_by: Sequence[str] = (),
+        limit: int | None = None,
+    ) -> tuple[dict[str, object], ...]:
+        """Push one CFI range join into Doris instead of scanning its result in Python."""
+        if end_address <= start_address:
+            return ()
+        _validate_limit(limit)
+        selected = ", ".join(_identifier(column) for column in columns)
+        if not selected:
+            selected = _all_columns("frame")
+        table = _qualified_table(self._config, "frame")
+        query = (
+            f"SELECT {selected} FROM {table} WHERE `source_id` = %s "
+            "AND `initial_address` < %s "
+            "AND `initial_address` + `address_range` > %s"
+        )
+        query = _append_order_and_limit(query, order_by, limit)
+        return self._fetch_rows(
+            query,
+            (self._source_id, end_address, start_address),
+            family="frame",
+            operation="frame_rows_overlapping",
+        )
 
     def _fetch_rows(
         self,

@@ -8,6 +8,7 @@ commands, but are not imported while a normal generation session is composed.
 from importlib import import_module
 from typing import Any
 
+from .doris_connection import DorisConnectionError
 from .doris_index import DorisDwarfIndex
 from .doris_store import DorisDwarfStore
 from .session import AnalyticalDwarfSession
@@ -15,6 +16,7 @@ from .session import AnalyticalDwarfSession
 __all__ = [
     "AnalyticalDwarfSession",
     "DorisDwarfIndex",
+    "DorisConnectionError",
     "DorisDwarfStore",
     "DwarfMaterializer",
     "JsonlDwarfStore",

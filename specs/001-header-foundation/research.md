@@ -134,3 +134,95 @@ the aggregate multi-header translation unit, which exits with code 2. Repeated s
 declarations are the current root-cause hypothesis only; the raw compiler stdout and
 stderr were not retained, so no C2011 or other duplicate-declaration diagnostic is
 confirmed.
+
+## Decision: Use one canonical implementation evidence index
+
+The implementation report is the sole structured evidence authority for the post-header chain. It
+retains all DWARF candidates, status transitions, exact method-range Orbis text, decoded
+instructions, raw bytes, source/file offsets, instruction-owned references, tool invocations, and
+structured limitations. The source-bound Orbis cache remains the authority for complete profile
+stdout/stderr.
+
+The default derived profile is `canonical-assembly`. It emits bounded original Orbis text as
+`.raw.asm`, one exact-byte `.s` compiler input, a deterministic `implementation-context/1.0`
+`.context.json` packet, and an SDK-produced `.o` when `orbis-as` accepts it, together with a
+schema-`3.1` atomic publication manifest. `.raw.asm` is evidence only and is never passed to
+`orbis-as`. It does not emit duplicate disassembly, reference JSON, free-form notes, empty files,
+or `.cpp` files. A later agentic workflow can translate the canonical assembly into C++ without
+rerunning Orbis.
+
+This removes the previous duplication observed in the `rLayout` bundle: the report already held
+the raw disassembly and structured references while the sibling files repeated them. The manifest
+is intentionally retained because it binds the report hash, header identity, source identity, and
+aggregate bundle digest for atomic publication; it is not a second evidence index.
+
+Open points remain explicit: Orbis-to-GNU/Clang inline-assembly acceptance is not established;
+the known-invalid combined symbol/dynamic-relocation profiles and the redundant full DWARF info
+profile are documented capability decisions rather than runtime evidence; optimized source-line
+mappings may be imprecise; external declarations and PS4 ABI/semantic equivalence are not inferred.
+The context packet is now a bounded JSON sibling that records those unavailable dimensions rather
+than inventing them.
+
+## Decision: Use dual-authority PS4 ELF evidence
+
+The target ELF contains SCE relocation metadata even though it does not expose conventional
+`.rel.*` or `.rela.*` sections. Orbis `-r -C -w -F` is therefore an independent conventional
+relocation cross-check and is `empty` for the current file. Orbis `-R -C -w -F` is known to return
+`Invalid operation` in the observed Orbis SDK and is capability-filtered from normal generation.
+Neither the documented limitation nor an empty conventional relocation view is evidence that the
+ELF lacks relocations.
+
+The implementation uses three authorities plus an additive target-aware cross-check:
+
+1. Matching Orbis binutils owns PS4 instruction decoding, demangling, and textual disassembly.
+2. LLVM 22.1.8 `llvm-readobj` is an opt-in generic ELF/DWARF structural cross-check. Its JSON
+   output preserves unknown numeric `0x610000xx` SCE tags, but it does not replace Orbis output.
+3. The in-repository `OrbisSceMetadataReader` reads `PT_SCE_DYNLIBDATA`, `.dynamic`, SCE tags,
+   and 24-byte RELA records, validates segment/file ranges, and preserves raw fields, signed
+   addends, unknown codes, and symbol resolution status without applying relocations.
+4. LLVM 22.1.8 `llvm-objdump` is an opt-in per-method comparison producer invoked with
+   `--triple=x86_64-scei-ps4`; it contributes address/byte comparison summaries only.
+
+The local LLVM 22.1.8 help surface accepts `--triple` for `llvm-objdump` and rejects it for
+`llvm-readobj`. Therefore `llvm-readobj` remains generic (`not_applicable` target status), while
+target-aware slices are independently cached with their capability probe, range, command, output
+hashes, and diagnostics. `llvm-tli-checker` is not used for ELF extraction because it checks target
+library availability rather than decoding ELF methods.
+
+The official SDK6500/n267 source was inspected directly. It defines
+`PT_SCE_DYNLIBDATA=0x61000000`, `PT_SCE_PROCPARAM=0x61000001`, `PT_SCE_COMMENT=0x6fffff00`,
+`PT_SCE_LIBVERSION=0x6fffff01`, standard `PT_GNU_RELRO`, and
+`R_X86_64_ORBIS_GOTPCREL_LOAD=40` with four-byte signed 32-bit PC-relative GOT-load properties.
+It does not define `PT_SCE_RELRO`. The typed runtime definitions retain source hashes for
+`common.h`, `x86-64.h`, `elf64-x86-64.c`, and `README-ORBIS`; the source package is research input,
+not a runtime dependency.
+
+The current ELF reports `DT_SCE_RELASZ / DT_SCE_RELAENT = 172404` and
+`DT_SCE_PLTRELSZ / DT_SCE_RELAENT = 539`, or `172943` complete cache entries. The complete table
+is a source/tool/parser-bound streaming JSONL projection; the historical implementation report
+schema was `3.2`; the schema-`4.0` validation report contains table descriptors and only
+method-relevant entries linked by stable IDs. The Orbis cache
+schema is `2.4` with parser identity `orbis-objdump-text-v7`; the SCE parser identity is
+`orbis-sce-metadata-v3`. The cache key also contains the typed SDK-definition identity, so a
+definition change invalidates the parsed relocation evidence.
+
+Research references are [ps4_module_loader](https://github.com/SocraticBliss/ps4_module_loader/tree/657f9d380abfec9097bc4bddbc63551b3cd5e47b)
+at commit `657f9d380abfec9097bc4bddbc63551b3cd5e47b`, path `ps4_module.py`, license `GPL-3.0`,
+for SCE tag/segment and RELA conventions, and [GhidraOrbis](https://github.com/astrelsky/GhidraOrbis/tree/2d6e3fac23ae9830e941c32826e97100ed603311)
+at commit `2d6e3fac23ae9830e941c32826e97100ed603311`, path `OrbisElfHeader.java`, license `GPL-3.0`,
+for independent Orbis ELF-header handling. The SDK 8.0 source package at
+`D:\SCE\ORBIS SDKs\8.000\license\src_package\binutils-orbis-2_22_1-src-SDK6500-n267`
+is the local authority for the adopted ELF and relocation definitions. These external references
+remain optional validation concepts, not runtime dependencies or vendored code; loader rebasing
+and IDA calling-convention settings are not adopted. The aerolib.csv names may be ingested as
+source-pinned community candidate evidence, but they are not official NID authority and require
+NID hash and encoded library/module context checks before promotion.
+
+Remaining uncertainty is intentionally narrower: runtime relocation base/application and loader
+mutation, NID authority, optimized/inlined source-line precision, ABI/register/stack behavior,
+host compiler acceptance of the Orbis dialect, semantic equivalence, and whether a newer Orbis
+tool exposes `-R` or useful DWARF payloads. Additional open points are whether LLVM's accepted
+target triple models Sony-specific ABI/relocations (it is not assumed to), whether host GNU/Clang
+accepts the recovered Orbis operand dialect, whether a future agent workflow needs isolated
+per-method context packets, and whether an Orbis-specific compiler validation environment becomes
+available. `llvm-tli-checker` remains deferred until an SDK library/sysroot is explicitly supplied.

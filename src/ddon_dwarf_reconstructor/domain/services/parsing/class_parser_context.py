@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, TypeVar
 
 from ....core.dwarf import DwarfCompilationUnit, DwarfEntry, DwarfInfo
+from ...models.analytical_dwarf import QueryResult
 from ...models.dwarf import (
     ClassInfo,
     EnumeratorInfo,
@@ -41,6 +42,22 @@ class ClassParserImplementationContext(Protocol):
     def _find_implementation_in_store(
         self, declaration_offset: int, method_name: str
     ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...
+
+    def find_method_implementation_candidates(
+        self, declaration_offset: int, method_name: str
+    ) -> QueryResult: ...
+
+    def _find_candidates_in_store(
+        self, declaration_offset: int, method_name: str
+    ) -> QueryResult: ...
+
+    def _hydrate_method_candidate(
+        self, item: object
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...
+
+    def _scan_method_implementation_candidates(
+        self, declaration_offset: int, method_name: str
+    ) -> QueryResult: ...
 
 
 class ClassParserOperations(ClassParserImplementationContext, Protocol):
@@ -297,6 +314,9 @@ class ClassParserOperations(ClassParserImplementationContext, Protocol):
     def _parent_name(self, method_die: DwarfEntry) -> str: ...
 
     @staticmethod
+    def _linkage_name(method_die: DwarfEntry) -> str | None: ...
+
+    @staticmethod
     def _has_noexcept_evidence(method_die: DwarfEntry) -> bool: ...
 
     def _parse_vtable_index(self, attribute: object) -> int | None: ...
@@ -342,6 +362,8 @@ class ClassParserContext(ClassParserOperations, Protocol):
         method_name: str,
         best_impl: tuple[DwarfCompilationUnit, DwarfEntry] | None,
         best_score: int,
+        *,
+        deadline: float | None = None,
     ) -> tuple[tuple[DwarfCompilationUnit, DwarfEntry] | None, int, bool]: ...
 
     def _resolve_parameter_names_from_implementation(

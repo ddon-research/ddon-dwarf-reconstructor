@@ -26,6 +26,10 @@ sequenceDiagram
     Parser-->>Runtime: typed evidence model
     Runtime->>Publisher: stage headers + manifest
     Publisher-->>Runtime: committed HeaderBundle
+    Runtime->>Runtime: optional follow-up begins after commit
+    Runtime->>Runtime: rediscover methods and Orbis profiles
+    Runtime->>Publisher: stage report/source bundle
+    Publisher-->>Runtime: committed implementation index
     Runtime-->>Facade: typed outcome
     Facade-->>CLI: JSON/result path
 ```
@@ -45,18 +49,119 @@ flowchart LR
     External["IDA/Sonar or approved baseline"] --> Decision
 ```
 
+The optional method-body evidence path is also downstream of the completed header bundle:
+
+```mermaid
+flowchart LR
+    Header["Completed HeaderBundle"] --> Identity["Method DIE/CU identity"]
+    Identity --> Candidates["All specification/abstract-origin candidates"]
+    Candidates --> Ranges["Validated DWARF code ranges"]
+    Ranges --> Orbis{"Orbis objdump available?"}
+    Orbis -->|yes| Match["Unique range association"]
+    Orbis -->|no| NotObserved["not_observed assembly evidence"]
+    Match --> Instructions["Selected function instructions"]
+    Instructions --> References["Calls, branches, data, relocations, source/file offsets"]
+    Candidates --> States["matched / ambiguous / unsupported / partial"]
+    References --> Report["Separate implementation report"]
+    NotObserved --> Report
+    States --> Report
+    Report --> Sources{"--emit-implementation-sources?"}
+    Sources -->|eligible only| Bundle["Atomic bundle + per-method .raw.asm/.s/.o/.context.json"]
+    Sources -->|no| Index["JSON evidence index"]
+```
+
+The implementation evidence boundary is additive and explicit:
+
+```mermaid
+flowchart LR
+    Orbis["Orbis binutils\nPS4 instruction authority"] --> Report["Canonical report schema 4.2"]
+    LLVM["Optional llvm-readobj\ngeneric structural cross-check"] --> Report
+    LLVMObjdump["Optional llvm-objdump\nx86_64-scei-ps4 range cross-check"] --> Report
+    SCE["SCE metadata reader\nPT_SCE_DYNLIBDATA + RELA"] --> Report
+    SCE --> Cache["Complete source/tool/parser-bound JSONL cache"]
+    Cache --> Report
+    Report --> Validate["validate-implementation\nDoris-backed static evidence"]
+    Validate --> Objects["Canonical .s + accepted .o\nraw/context siblings"]
+    Report --> Audit["IDA completeness audit\nread-only cross-validation"]
+    Audit -. never feeds production .-> Report
+```
+
+The absence of conventional Orbis relocation rows and the documented SDK dynamic-relocation
+limitation are separate tool facts. The invalid profile is capability-filtered and is not invoked
+on normal runs. These facts do not establish that an ELF has no relocations: SCE
+dynamic metadata is parsed independently, with `observed`, `partial`, `malformed`, or
+`not_observed` status retained in the report.
+
+The LLVM target profile is never a prerequisite for header publication and cannot change Orbis
+method eligibility or generated source selection. Its requested/effective triple, capability
+status, range, cache key, and address/byte comparison counts are report metadata; its raw output
+and diagnostics remain in the source-bound external cache.
+
+The implementation report is the canonical additive evidence index. It retains exact method-range
+text, decoded instructions, instruction-owned references, source/file offsets, all candidates,
+tool invocations, and structured limitations. Source emission is a clean assembly handoff, not
+behavioral C++ recovery: an inline method without a unique standalone executable range remains
+explicit rather than being assigned a caller or thunk by name alone. Each eligible method may
+receive bounded `.raw.asm` evidence, canonical `.s`, an accepted `.o`, and a deterministic
+`.context.json` transformation packet. `.raw.asm` is never compiler input; `.s` is the only
+assembly source passed to `orbis-as`. `artifacts
+validate-implementation` is the separate Doris-backed, source-bound static workflow: it requires an explicit
+original-address or load-base policy, evaluates relocation formulas without mutating the ELF,
+retains opaque NIDs, joins CFI and conservative instruction effects, runs optional Orbis ABI
+probes, and emits canonical `.s`/`.o` artifacts. It does not claim PS4 ABI, clobber, stack-safety,
+CFG/external-edge parity, or live semantic correctness unless each dimension is independently
+observed. The bundle manifest is only an atomic-publication envelope.
+
+The implementation report is schema `4.2` and includes the deterministic DWARF-derived target
+manifest, scope hash, every retained ELF function candidate, and match reasons. The optional
+`audit-implementation-coverage` command consumes that completed report only as a post-generation
+IDA completeness check; IDA observations cannot add targets, names, addresses, cache entries, or
+status promotion.
+
+Implementation validation uses a dedicated `DorisImplementationEvidenceModel`. The complete
+materialization manifest is read only for source identity, schema, and publication provenance;
+the model delegates method DIE hydration, parameter/object locations, and CFI reads to the
+source-bound Doris family tables. The normalized typed rows are loaded into Doris once after the
+one-time materialization step, and the validator does not read Parquet or JSONL. CFI overlap is
+filtered in Doris before the bounded result is returned. If Doris cannot validate the registry
+publication, method-specific ABI and CFI evidence remains unavailable.
+
 The historical 2026-08-10 Season 2 report passed all 2,760 headers. Warning-only compiler
 diagnostics remain evidence; they do not become generated code or runtime dependencies. The
 boundary-review baseline is separately normalized to 289 roots, 289 bundles, 289 manifests, 2,745
 headers, 3,034 published files, and 2,745 MSVC units. The corrected post-refactor batch-001 run
 matched all 598 compared header hashes, and its independent MSVC audit passed 598/598 units (the
 focused 11/11 probe also passed). A fresh
-full-corpus run is tracked separately and remains blocked by two host reboots; after the second
-reboot Doris FE cannot bind its configured 9030 port because Windows excludes that port range.
+full-corpus run is tracked separately and was blocked by two host reboots; its configured
+workstation endpoint did not reach the Compose FE at that time.
 That historical blocked state was closed by the completed post-refactor run on 2026-08-13; the
 fresh run published all 289 roots and matched every baseline header and bundle manifest. The
 independent MSVC closure passed 2,745/2,745 units with zero failures and zero timeouts. Incomplete
 counts remain separate from this accepted full-corpus evidence.
+
+For the PS4 assembly follow-up, the current Compose stack uses the same container FE port but may
+publish it on a different workstation port. The 2026-08-15 `rLayout` revalidation reached Doris
+on `127.0.0.1:19030` after aligning `DDON_DORIS_SQL_PORT`; the earlier refusal at `9030` was an
+endpoint mismatch, not a Doris availability result. The connection boundary records the attempted
+endpoint explicitly and never substitutes an unrequested probe.
+
+The completed 2026-08-16 Season 2 rerun covered all 289 resource roots: 2,760 header files were
+checked without a root generation failure, and 1,150 methods received the clean
+`.raw.asm`/`.s`/`.o`/`.context.json` handoff. A concurrent-run cache defect was found and fixed
+by comparing SDK identities after JSON round-tripping and versioning the disassembly cache key;
+the affected `rLoadingParam` root was rerun with observed SCE metadata and no diagnostics. The
+independent MSVC header closure passed 2,760/2,760 units with zero failures and zero timeouts. The
+run remains `observed-partial` because ABI/CFI, register/stack safety, relocation/NID promotion,
+static parity, and live behavior are separate gates. The exact counts and external audit links
+are in the [Season 2 acceptance record](https://github.com/ddon-research/ddon-dwarf-reconstructor/blob/main/specs/001-header-foundation/acceptance-season2-assembly-20260816.md).
+
+The follow-up validator path now treats Doris as a bounded analytical projection: stable method
+requests are fetched in 512-row batches for DIE, parameter, reference, attribute, location, and
+CFI context, then served through a read-only context view. Relocation and NID evidence is indexed
+once rather than rescanned for every method. This removes the identified algorithmic round-trip
+gap. The retained `rLayout` pilot and full Season 2 report both published atomically in the
+follow-up run; the full report remains failed because ABI, compiler, instruction-effect, and
+semantic-parity gates are incomplete. No arbitrary timeout is used to declare completion.
 
 ## Knowledge export
 

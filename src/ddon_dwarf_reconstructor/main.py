@@ -11,7 +11,25 @@ from time import perf_counter
 from uuid import uuid4
 
 from .application.generation.completeness import reject_source_bound_placeholder
-from .application.generation.options import GenerationOptions
+from .application.generation.implementation_workflow import (
+    discover_implementations_after_headers as _discover_implementations_after_headers,
+)
+from .application.generation.implementation_workflow import (
+    publish_implementation_reports as _publish_implementation_reports,
+)
+from .application.generation.logging_workflow import (
+    generation_mode,
+)
+from .application.generation.logging_workflow import (
+    log_generation_options as _log_options,
+)
+from .application.generation.logging_workflow import log_generation_summary as _log_summary
+from .application.generation.options import (
+    GenerationOptions,
+)
+from .application.generation.options import (
+    validate_implementation_options as _validate_implementation_options,
+)
 from .application.generators import (
     DwarfGenerator,
     GenerationOutcome,
@@ -24,18 +42,25 @@ from .domain.models.tool_evidence import ToolExport
 from .generation_state import GenerationState as _GenerationState
 from .infrastructure.artifacts import SourceIdentityCatalog
 from .infrastructure.composition import (
-    create_disassembly_producer,
+    create_disassembly_factory,
+    create_disassembly_producer,  # noqa: F401 - compatibility export for callers/tests
     create_dump_lookup,
     create_dwarf_session,
 )
 from .infrastructure.config import Config, DwarfRuntimeConfig, get_cache_file_path
 from .infrastructure.header_output import AtomicHeaderPublisher
+from .infrastructure.implementation_output import AtomicImplementationReportPublisher
 from .infrastructure.logging import LoggerSetup
 from .infrastructure.toolchain_exports import load_tool_exports
 
 
 class HeaderCollisionError(ValueError):
     """Raised when aggregate output would merge different header contents."""
+
+
+def _generation_mode(options: GenerationOptions) -> str:
+    """Retain the mode helper used by command-level diagnostics and tests."""
+    return generation_mode(options)
 
 
 def _load_config(options: GenerationOptions) -> Config:
@@ -100,36 +125,6 @@ def _read_symbol_file(path: Path, logger: Logger) -> list[str]:
         raise ValueError(f"Error reading symbols file: {error}") from error
 
 
-def _log_options(
-    options: GenerationOptions, config: Config, symbols: list[str], logger: Logger
-) -> None:
-    generation_mode = _generation_mode(options)
-    search_mode = "exhaustive" if options.exhaustive else "fast (early-exit)"
-    log_event(
-        logger,
-        20,
-        "generation_options",
-        symbol_count=len(symbols),
-        input_path=config.elf_file_path,
-        output_path=config.output_dir,
-        generation_mode=generation_mode,
-        search_mode=search_mode,
-        parameter_name_resolution=options.resolve_param_names,
-        dwarf_dump=options.dwarf_dump,
-        dwarf_index=options.dwarf_index,
-        dwarf_store_manifest=options.dwarf_store_manifest,
-        export_knowledge=options.export_knowledge,
-        tool_export_manifest_count=len(options.tool_export_manifests),
-        tool_export_manifests=options.tool_export_manifests,
-    )
-
-
-def _generation_mode(options: GenerationOptions) -> str:
-    if not options.full_hierarchy:
-        return "single-header"
-    return "full-hierarchy (single-file)" if options.single_file else "full-hierarchy (multi-file)"
-
-
 def _run_generation(
     options: GenerationOptions, config: Config, symbols: list[str], logger: Logger
 ) -> tuple[int, list[tuple[str, str]]]:
@@ -161,7 +156,11 @@ def _run_generation_impl(
         dwarf_index_path=options.dwarf_index,
         resolve_param_names=options.resolve_param_names,
         dump_lookup_factory=create_dump_lookup,
-        disassembly_factory=create_disassembly_producer,
+        disassembly_factory=create_disassembly_factory(
+            options.llvm_readobj,
+            options.llvm_objdump,
+            options.llvm_target_triple,
+        ),
         cache_file=get_cache_file_path(str(config.elf_file_path)),
         die_cache_size=dwarf_config.die_cache_size,
         type_cache_size=dwarf_config.type_cache_size,
@@ -183,6 +182,18 @@ def _run_generation_impl(
                 state.pending_bundles,
                 state.separate_symbol_bundles,
             )
+            if options.extract_assembly:
+                _discover_implementations_after_headers(options, generator, logger, state)
+                _publish_implementation_reports(
+                    config.output_dir,
+                    generator.platform,
+                    logger,
+                    state,
+                    AtomicImplementationReportPublisher(
+                        assembler=_implementation_assembler(options),
+                    ),
+                    emit_sources=options.emit_implementation_sources,
+                )
         log_event(
             logger,
             20 if not state.failed_symbols else 30,
@@ -190,6 +201,20 @@ def _run_generation_impl(
             fields=report.to_dict(),
         )
         return state.success_count, state.failed_symbols
+
+
+def _implementation_assembler(options: GenerationOptions) -> Path | None:
+    """Resolve the explicit assembler or the SDK sibling of Orbis objdump."""
+    if options.orbis_as is not None:
+        return options.orbis_as
+    if options.orbis_objdump is None:
+        return None
+    parent = options.orbis_objdump.parent
+    for name in ("orbis-as.exe", "orbis-as"):
+        candidate = parent / name
+        if candidate.is_file():
+            return candidate
+    return None
 
 
 def _generate_symbols(
@@ -287,6 +312,8 @@ def _generate_symbol_headers(
             symbol_name,
         )
     generator.save_cache()
+    if options.extract_assembly:
+        state.implementation_inputs.append((index, symbol_name, generated_headers))
     return generated_headers
 
 
@@ -522,24 +549,6 @@ def _record_failure(
     failed_symbols.append((symbol_name, str(error)))
 
 
-def _log_summary(
-    symbols: list[str],
-    success_count: int,
-    failed_symbols: list[tuple[str, str]],
-    logger: Logger,
-) -> None:
-    log_event(
-        logger,
-        20 if not failed_symbols else 30,
-        "generation_summary",
-        total_symbols=len(symbols),
-        succeeded=success_count,
-        failed=len(failed_symbols),
-        failures=[{"symbol": symbol, "error": error} for symbol, error in failed_symbols[:20]],
-        failures_truncated=len(failed_symbols) > 20,
-    )
-
-
 def run_generation(options: GenerationOptions) -> int:
     """Run one typed generation or knowledge-export request."""
     logger = get_logger(__name__)
@@ -557,7 +566,8 @@ def run_generation(options: GenerationOptions) -> int:
             config.ensure_output_dir()
             symbols = _read_symbols(options, logger)
             _validate_store_options(options)
-            _log_options(options, config, symbols, logger)
+            _validate_implementation_options(options)
+            _log_options(options, config.elf_file_path, config.output_dir, symbols, logger)
             success_count, failed_symbols = _run_generation(options, config, symbols, logger)
             _log_summary(symbols, success_count, failed_symbols, logger)
             return 0 if not failed_symbols else 1

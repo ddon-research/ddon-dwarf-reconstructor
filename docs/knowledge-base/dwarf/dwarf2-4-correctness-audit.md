@@ -53,6 +53,36 @@ The audit repaired these concrete issues:
 6. Explicit evidence commands were added for all-CU ELF headers/producers and streaming LLVM dump
    headers/producers. They are opt-in and do not add a full scan to ordinary generation.
 
+## Header-to-implementation follow-up boundary
+
+Header discovery and implementation discovery are now separate chains. A normal header run keeps
+the existing `HeaderBundle` contract and does not invoke an assembly producer. An opt-in
+`generate --extract-assembly` run first commits the header bundle and then performs a second,
+additive traversal for the same root. `--emit-implementation-sources` is a stricter opt-in that
+requires assembly extraction. The report and, when eligible, the source bundle are written below
+`<output>/<platform>/implementations/`; they are not merged into the header files or header
+manifest.
+
+The follow-up retains method DIE and CU offsets, containing-class identity, linkage names, and the
+declaration-to-definition relation. It returns all source-bound `DW_AT_specification` and
+`DW_AT_abstract_origin` candidates, with a bounded source scan after a complete analytical-index
+miss. Code ranges use validated `DW_AT_low_pc`/`DW_AT_high_pc` pairs or materialized/decoded
+`DW_AT_ranges` records. Orbis instructions are selected only for a unique function whose symbol
+start exactly matches a DWARF range, or whose complete symbol range is contained by one range.
+`matched`, `ambiguous`, `unsupported`, `not_observed`, `unavailable`, and `partial` remain
+explicit report states.
+
+This is assembly/disassembly evidence, not recovered C++ source or proof of inline-assembly
+semantics. A method with no standalone executable range, an unresolved range base, an unavailable
+Orbis executable, or competing definitions remains unobserved/unsupported rather than being
+assigned a plausible body. Only unique matches receive non-executable `.cpp` scaffolds. The
+read-only validator separately evaluates explicit address policy, relocation/NID evidence,
+DWARF ABI/CFI context, instruction effects, Orbis target objects, and static parity. The
+canonical JSON report retains raw method text, decoded bytes, references, hashes, and explicit
+limitations; the optional bundle manifest only proves atomic publication. Header byte parity and
+standalone compiler closure remain independent acceptance gates. CFG/external-edge parity and
+live PS4 behavior remain separately reported and are not inferred from compilation.
+
 ## Reproducible commands
 
 ```text
@@ -84,12 +114,21 @@ or logs in source control.
   producing a validated five-entry MSVC compilation database. The generated aggregate unit remains
   optional evidence because it reports duplicate declarations across independent header closures.
 - The documented Orbis tool exists at `D:\SCE\ORBIS SDKs\8.000\host_tools\bin\orbis-objdump.exe`.
-  A final assembly/disassembly comparison is still separate acceptance evidence.
+  A final assembly/disassembly comparison is still separate acceptance evidence. The local profile
+  attempts retain resolved calls/branches, RIP-relative data, source discriminators, file offsets,
+  and explicit `-S`/debug unavailability; they do not establish ABI or behavioral equivalence.
+  Conventional Orbis relocation output is empty, the Orbis dynamic-relocation option is
+  unavailable, and PS4/SCE relocation metadata is present and decoded by the source-bound
+  `OrbisSceMetadataReader`. The complete SCE tables are cache evidence, not applied relocations.
 - DWARF3 is indexed and tested as a compatibility vocabulary, but no identified PS4 producer asset
   in this checkout establishes a DWARF3 target baseline.
 - The implementation supports the exercised producer subset, not every tag/form/operation in the
   normative specifications. Unsupported or ambiguous evidence must remain explicit rather than be
   silently promoted to a complete relationship.
+- Inline instances without a unique standalone Orbis function are not yet reconstructed as source
+  inline assembly. Overload/thunk/clone classification beyond unique range identity remains an
+  additive follow-up, and no live PS4 Orbis extraction is claimed until a retained tool/source
+  evidence manifest exists.
 
 ## Source provenance
 

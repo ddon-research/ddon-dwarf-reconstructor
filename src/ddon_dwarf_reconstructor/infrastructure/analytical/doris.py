@@ -10,6 +10,7 @@ from typing import Any
 
 from ...domain.models.analytical_dwarf import MaterializationManifest
 from .doris_config import DorisConfig
+from .doris_connection import connect_sql
 from .doris_ddl import (
     _FAMILY_BLOOM_COLUMNS,
     _FAMILY_DISTRIBUTION,
@@ -150,16 +151,9 @@ class DorisLoader:
     def execute(self, plan: DorisLoadPlan, config: DorisConfig | None = None) -> dict[str, object]:
         config = config or DorisConfig.from_environment()
         self._validate_plan(plan, config)
-        pymysql = import_optional("pymysql", "analytical")
-        connection = pymysql.connect(
-            host=config.sql_host,
-            port=config.sql_port,
-            user=config.user,
-            password=config.password,
-            autocommit=True,
-            connect_timeout=config.sql_connect_timeout_seconds,
-            read_timeout=config.sql_read_timeout_seconds,
-            write_timeout=config.sql_write_timeout_seconds,
+        connection = connect_sql(
+            config,
+            dependency_loader=import_optional,
         )
         try:
             self._execute_sql(connection, plan)

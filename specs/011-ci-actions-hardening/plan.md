@@ -18,7 +18,7 @@ Read-only local and GitHub evidence on 2026-08-03 established:
 
 ## Design
 
-- Add `.github/actions/setup-python-uv/action.yml` for Python 3.14.6, setup-uv v9, lockfile-keyed
+- Add `.github/actions/setup-python-uv/action.yml` for the pinned Python 3.14.7, setup-uv v9, lockfile-keyed
   caching, and frozen installation.
 - Update the three existing workflows with manual dispatch, concurrency cancellation, timeouts,
   shallow credential-free checkout, and the composite setup action.

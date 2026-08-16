@@ -23,6 +23,8 @@ publication, and compiler evidence remain separate evidence surfaces; the promot
 historical Doris measurements do not imply byte parity with the unavailable historical approved
 header baseline. IDA/Sonar observations remain separate. Versioned v9/v27/v28 Temp paths and
 database names below are historical evidence labels, not current path or service defaults.
+The current root contract is CPython 3.14.7 with uv 0.12.3; any CPython 3.14.6 reference below is
+dated compatibility evidence, not an active runtime contract.
 
 ### Season 2 compiler-closure result
 
@@ -111,7 +113,7 @@ FE-local `SET` result exchange.
 
 | Surface | Status | Evidence | Decision |
 | --- | --- | --- | --- |
-| Arrow/PyArrow | `confirmed`, `observed` | [Arrow Python docs](https://arrow.apache.org/docs/python/index.html), the local `D:\PyArrow-25.0-python-docs` reference, the installed Python 3.14.6 environment, and the lock resolve `pyarrow==25.0.0`; the runtime reports the `mimalloc` memory-pool backend. | Use explicit per-family schemas, `ParquetWriter` with bounded row groups, capped `Table.from_pylist` inputs, and `pyarrow.dataset` projection/filter/to-batch scans. Treat Arrow memory-pool counters as telemetry rather than whole-process RSS, and consult the local reference before changing these boundaries. |
+| Arrow/PyArrow | `confirmed`, `observed` | [Arrow Python docs](https://arrow.apache.org/docs/python/index.html), the local `D:\PyArrow-25.0-python-docs` reference, a dated Python 3.14.6 compatibility environment, and the lock resolve `pyarrow==25.0.0`; the runtime reports the `mimalloc` memory-pool backend. | Use explicit per-family schemas, `ParquetWriter` with bounded row groups, capped `Table.from_pylist` inputs, and `pyarrow.dataset` projection/filter/to-batch scans. Treat Arrow memory-pool counters as telemetry rather than whole-process RSS, and consult the local reference before changing these boundaries. |
 | Iceberg/PyIceberg | `historical`, retired from active runtime | [PyIceberg reference](https://py.iceberg.apache.org/reference/pyiceberg/) and the historical lock/evidence resolve `pyiceberg==0.11.1` with `pyiceberg-core==0.8.0`. | Retain prior compatibility measurements only; do not use Iceberg format, catalogs, or services in the active runtime. |
 | Doris server | `observed` | Pinned 4.1.3 FE/BE images were pulled and the Compose cluster is healthy with immutable digests recorded in `ops/analytical-dwarf/images.lock.json`. | Use native Doris 4.1.3 with the repository-local ignored warehouse and the promoted main store; Temp is diagnostic only. Do not reuse old versioned service state. |
 | Doris Docker references | `supported`, `observed` | The [runtime tree](https://github.com/apache/doris/tree/master/docker/runtime), [demo](https://github.com/apache/doris/tree/master/docker/runtime/docker-compose-demo), and [doris-compose](https://github.com/apache/doris/tree/master/docker/runtime/doris-compose) were reviewed. | Keep the small pinned Compose file for reproducible evidence; upstream samples remain operational reference. |
@@ -176,7 +178,7 @@ secondary index helps a tiny fixture.
 
 ## Compatibility gates
 
-- `[confirmed]` pyelftools 0.33 imports under CPython 3.14.6 and retains the required CU/DIE API behavior.
+- `[confirmed, historical]` pyelftools 0.33 imported under CPython 3.14.6 and retained the required CU/DIE API behavior; the current 3.14.7 compatibility gate remains separate.
 - `[observed]` JSONL records round-trip without lossy stringification on fixtures.
 - `[observed]` Parquet and Iceberg outputs preserve fixture counts, offsets, forms, and ordering.
 - `[observed]` Doris native and Iceberg current v9 fixture query suites execute; full real-corpus query parity is still pending.

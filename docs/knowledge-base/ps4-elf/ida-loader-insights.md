@@ -1,6 +1,9 @@
 # IDA Pro PS4 Module Loader Insights
 
-Source: ps4_module_loader by SocraticBliss (<https://github.com/SocraticBliss/ps4_module_loader>)
+Source: [ps4_module_loader](https://github.com/SocraticBliss/ps4_module_loader/tree/657f9d380abfec9097bc4bddbc63551b3cd5e47b)
+by SocraticBliss, commit `657f9d380abfec9097bc4bddbc63551b3cd5e47b`, path `ps4_module.py`;
+license `GPL-3.0`. These are research/reference observations and are not treated as official
+Orbis definitions.
 
 ## Key Findings
 
@@ -24,8 +27,8 @@ PS4 segment types recognized:
 ```python
 PT_SCE_DYNLIBDATA = 0x61000000   # Dynamic library data
 PT_SCE_PROCPARAM = 0x61000001    # Process parameters
-PT_SCE_MODULEPARAM = 0x61000002  # Module parameters
-PT_SCE_RELRO = 0x61000010        # Read-only after relocation
+PT_SCE_MODULEPARAM = 0x61000002  # Research loader label; not in the SDK binutils table
+PT_SCE_RELRO = 0x61000010        # Research loader label; not an official SDK definition
 PT_GNU_EH_FRAME = 0x6474E550     # Exception handling frame
 PT_GNU_STACK = 0x6474E551        # Stack info
 PT_SCE_COMMENT = 0x6FFFFF00      # Comment
@@ -109,6 +112,11 @@ The loader specifically checks for and handles:
 - Non-zero file addresses vs memory addresses
 - Custom alignment requirements
 
+The local official SDK source does not define `PT_SCE_RELRO`; the runtime parser therefore keeps
+standard `PT_GNU_RELRO` separate from `PT_SCE_DYNLIBDATA`. The loader's base-address choices and
+alignment observations are useful hypotheses only. No relocation base, NID mapping, ABI behavior,
+or loader mutation is inferred by the offline evidence path.
+
 ## Integration Notes for Python Parser
 
 Key takeaways for our Python implementation:
@@ -118,3 +126,12 @@ Key takeaways for our Python implementation:
 3. Need to map PS4-specific segment types to meaningful names
 4. Should validate x86-64 architecture
 5. Must handle both absolute and relocatable modules
+
+The repository integrates these observations only as parser fixtures and a cross-source
+comparison. `artifacts validate-implementation` requires an explicit original-address or
+aligned load-base policy, validates `PT_LOAD` coverage and `p_align`, and never applies IDA's
+rebasing or calling-convention settings. The loader's `aerolib.csv` NID names are admissible
+external candidate evidence when the local file hash and source URL/commit are retained; they
+remain non-authoritative for PS4 ABI or loader behavior. The validator verifies the NID hash and
+encoded library/module context where the required suffix and dynamic-table facts are available.
+Unverified community names remain partial and NIDs remain opaque for promotion purposes.

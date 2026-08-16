@@ -9,6 +9,10 @@ from unittest.mock import Mock
 import pytest
 
 from ddon_dwarf_reconstructor.application.generators import HeaderBundle
+from ddon_dwarf_reconstructor.domain.models.implementation_evidence import (
+    ImplementationDiscoveryReport,
+    ImplementationStatus,
+)
 from ddon_dwarf_reconstructor.infrastructure.elf_platform import ELFPlatform
 from ddon_dwarf_reconstructor.main import GenerationOptions
 
@@ -43,6 +47,37 @@ def test_generation_mode_reports_single_and_multi_file_modes() -> None:
         "full-hierarchy (single-file"
     )
     assert cli_main._generation_mode(_options(full_hierarchy=True)).endswith("multi-file)")
+
+
+@pytest.mark.unit
+def test_source_emission_requires_assembly_extraction() -> None:
+    with pytest.raises(ValueError, match="requires --extract-assembly"):
+        cli_main._validate_implementation_options(
+            _options(emit_implementation_sources=True, extract_assembly=False)
+        )
+
+
+@pytest.mark.unit
+def test_targeted_llvm_options_require_assembly_and_an_executable() -> None:
+    with pytest.raises(ValueError, match="--orbis-objdump requires"):
+        cli_main._validate_implementation_options(_options(orbis_objdump=Path("orbis-objdump")))
+    with pytest.raises(ValueError, match="--llvm-objdump requires"):
+        cli_main._validate_implementation_options(
+            _options(llvm_objdump=Path("llvm-objdump"), extract_assembly=False)
+        )
+    with pytest.raises(ValueError, match="requires --llvm-objdump"):
+        cli_main._validate_implementation_options(_options(llvm_target_triple="x86_64-pc-freebsd"))
+    with pytest.raises(ValueError, match="--llvm-readobj requires"):
+        cli_main._validate_implementation_options(
+            _options(llvm_readobj=Path("llvm-readobj"), extract_assembly=False)
+        )
+    with pytest.raises(ValueError, match="require --orbis-objdump"):
+        cli_main._validate_implementation_options(
+            _options(
+                llvm_objdump=Path("llvm-objdump"),
+                extract_assembly=True,
+            )
+        )
 
 
 @pytest.mark.unit
@@ -249,6 +284,54 @@ def test_run_generation_publishes_one_bundle_for_all_symbols(tmp_path: Path, moc
         {"symbol": "A", "status": "success", "headers": ["A.h"]},
         {"symbol": "B", "status": "success", "headers": ["B.h"]},
     ]
+
+
+@pytest.mark.unit
+def test_assembly_follow_up_runs_after_header_build_without_changing_header_publish(
+    tmp_path: Path, mocker
+) -> None:
+    config = Mock(output_dir=tmp_path, elf_file_path=Path("input.elf"), verbose=False)
+    generator = mocker.MagicMock(platform=ELFPlatform.PS4)
+    generator.__enter__.return_value = generator
+    report = ImplementationDiscoveryReport(
+        "A",
+        HeaderBundle.single("A", "header").sha256,
+        ImplementationStatus.NOT_OBSERVED,
+        (),
+    )
+    events: list[str] = []
+    mocker.patch.object(
+        cli_main.DwarfRuntimeConfig,
+        "from_environment",
+        return_value=Mock(die_cache_size=1, type_cache_size=1, search_timeout_seconds=1.0),
+    )
+    mocker.patch.object(cli_main, "SourceIdentityCatalog", return_value=Mock(sha256=Mock()))
+    mocker.patch.object(cli_main, "get_cache_file_path", return_value=tmp_path / "cache.json")
+    mocker.patch.object(cli_main, "DwarfGenerator", return_value=generator)
+    mocker.patch.object(
+        cli_main,
+        "_build_headers",
+        side_effect=lambda *_args: events.append("header-build") or {"A.h": "header"},
+    )
+    generator.discover_implementations.side_effect = lambda *args, **kwargs: (
+        events.append("implementation-discovery") or report
+    )
+    mocker.patch.object(
+        cli_main,
+        "_write_headers",
+        side_effect=lambda *_args, **_kwargs: events.append("header-publish") or 6,
+    )
+    mocker.patch.object(cli_main, "_publish_implementation_reports")
+
+    success, failures = cli_main._run_generation(
+        _options(symbols=("A",), extract_assembly=True), config, ["A"], Mock()
+    )
+
+    assert (success, failures) == (1, [])
+    assert events == ["header-build", "header-publish", "implementation-discovery"]
+    generator.discover_implementations.assert_called_once_with(
+        "A", HeaderBundle({"A.h": "header"}), orbis_objdump_path=None
+    )
 
 
 @pytest.mark.unit

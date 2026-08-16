@@ -25,6 +25,7 @@ def _generator(tmp_path: Path) -> SimpleNamespace:
         dump_lookup_factory=None,
         disassembly_factory=None,
         source_identity=None,
+        header_hierarchies={},
     )
     return generator
 

@@ -44,6 +44,45 @@ class QueryStatus(StrEnum):
     UNAVAILABLE = "unavailable"
 
 
+@dataclass(frozen=True, slots=True)
+class MethodContextRequest:
+    """One bounded implementation-context lookup request."""
+
+    key: int
+    die_offsets: tuple[int, ...]
+    start_address: int | None = None
+    end_address: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.key < 0:
+            raise ValueError("method-context request key must be non-negative")
+        if tuple(dict.fromkeys(self.die_offsets)) != self.die_offsets:
+            raise ValueError("method-context DIE offsets must be unique and ordered")
+        if any(offset < 0 for offset in self.die_offsets):
+            raise ValueError("method-context DIE offsets must be non-negative")
+        if (self.start_address is None) != (self.end_address is None):
+            raise ValueError("method-context range must contain both endpoints or neither")
+        if (
+            self.start_address is not None
+            and self.end_address is not None
+            and (self.start_address < 0 or self.end_address <= self.start_address)
+        ):
+            raise ValueError("method-context range must be a positive half-open interval")
+
+
+@dataclass(frozen=True, slots=True)
+class MethodContextBatch:
+    """Rows returned by one source-bound bounded Doris context projection."""
+
+    die_rows: tuple[dict[str, Any], ...] = ()
+    attribute_rows: tuple[dict[str, Any], ...] = ()
+    reference_rows: tuple[dict[str, Any], ...] = ()
+    location_rows: tuple[dict[str, Any], ...] = ()
+    frame_rows: tuple[dict[str, Any], ...] = ()
+    status: QueryStatus = QueryStatus.COMPLETE
+    diagnostics: tuple[str, ...] = ()
+
+
 PARQUET_LAYOUTS = frozenset({"family", "bucketed"})
 
 

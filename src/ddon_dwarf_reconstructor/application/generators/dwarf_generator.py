@@ -17,6 +17,7 @@ from pathlib import Path
 from time import perf_counter
 
 from ...core.observability import get_logger, log_event
+from ...domain.models.implementation_evidence import ImplementationDiscoveryReport
 from ...domain.ports.disassembly import DisassemblyProducerFactory
 from ...domain.ports.source_identity import SourceHashPort, SourceIdentityPort
 from ...domain.ports.validation_dump import ValidationDumpFactory
@@ -105,6 +106,7 @@ class DwarfGenerator:
                     dwarf_index_path=self.dwarf_index_path,
                     resolve_param_names=self.resolve_param_names,
                     dump_lookup_factory=self.dump_lookup_factory,
+                    disassembly_factory=self.disassembly_factory,
                     cache_file=self.cache_file,
                     die_cache_size=self.die_cache_size,
                     type_cache_size=self.type_cache_size,
@@ -245,3 +247,20 @@ class DwarfGenerator:
         if facade is None:
             raise RuntimeError("generation facade is unavailable outside an open session")
         return facade.generate(request)
+
+    def discover_implementations(
+        self,
+        root_symbol: str,
+        header_bundle: HeaderBundle,
+        *,
+        orbis_objdump_path: Path | None = None,
+    ) -> ImplementationDiscoveryReport:
+        """Run additive implementation discovery after header generation."""
+        facade = self.facade
+        if facade is None:
+            raise RuntimeError("generation facade is unavailable outside an open session")
+        return facade.discover_implementations(
+            root_symbol,
+            header_bundle,
+            orbis_objdump_path=orbis_objdump_path,
+        )

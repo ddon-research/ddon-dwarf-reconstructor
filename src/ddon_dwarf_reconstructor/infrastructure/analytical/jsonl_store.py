@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 from time import perf_counter
 from typing import Any
@@ -23,6 +23,7 @@ from ...domain.ports.cache import SymbolCachePort
 from ...domain.services.definition_selection import NestedTypeCounts
 from ...domain.services.search_result import SearchResult, search_status_for_query
 from ..artifacts import SourceIdentityCatalog
+from . import materialized_selection as _selection
 from .bounded_query_cache import BoundedQueryCache
 from .json_codec import untag_value
 from .jsonl_models import DieData
@@ -40,24 +41,7 @@ from .manifest import (
     validate_manifest_files,
     validate_schema_version,
 )
-from .materialized_selection import (
-    DEFINITION_QUERY_LIMIT as _DEFINITION_QUERY_LIMIT,
-)
-from .materialized_selection import (
-    definition_candidate as _definition_candidate,
-)
-from .materialized_selection import (
-    definition_matches as _definition_matches,
-)
-from .materialized_selection import (
-    definition_sort_key as _definition_sort_key,
-)
-from .materialized_selection import (
-    query_status as _query_status,
-)
-from .materialized_selection import (
-    result as _result,
-)
+from .materialized_method_queries import method_implementation_rows
 from .store_selection import load_selection_cache, prefer_cached_definition
 
 
@@ -85,9 +69,13 @@ class JsonlDwarfStore:
         self._attribute_targets: dict[tuple[int, str], int] = {}
         self._references: dict[int, list[dict[str, Any]]] = defaultdict(list)
         self._line_records: dict[int, list[dict[str, Any]]] = defaultdict(list)
+        self._range_records: dict[int, list[dict[str, Any]]] = defaultdict(list)
+        self._location_records: dict[int, list[dict[str, Any]]] = defaultdict(list)
+        self._frame_records: list[dict[str, Any]] = []
         self._derived_definitions: dict[str, list[int]] = defaultdict(list)
         self._derived_methods: dict[int, list[int]] = defaultdict(list)
         self._definitions: dict[str, list[StoreDie]] = defaultdict(list)
+        self._method_candidates: dict[int, tuple[StoreDie, ...]] = {}
         self._methods: dict[int, StoreDie] = {}
         self._definition_query_cache = BoundedQueryCache()
         self.dwarf_info = StoreDwarfInfo(self)
@@ -191,10 +179,12 @@ class JsonlDwarfStore:
 
     def get_compilation_unit(self, unit_offset: int) -> QueryResult:
         unit = self._units.get(unit_offset)
-        return _result(unit, self.manifest_path, self.manifest.status)
+        return _selection.result(unit, self.manifest_path, self.manifest.status)
 
     def get_die(self, die_offset: int) -> QueryResult:
-        return _result(self._dies.get(die_offset), self.manifest_path, self.manifest.status)
+        return _selection.result(
+            self._dies.get(die_offset), self.manifest_path, self.manifest.status
+        )
 
     def find_definitions(
         self,
@@ -212,12 +202,12 @@ class JsonlDwarfStore:
         candidates = tuple(
             die
             for die in self._definitions.get(name, ())
-            if _definition_matches(die, qualified_name, tags)
+            if _selection.definition_matches(die, qualified_name, tags)
         )
-        truncated = len(candidates) > _DEFINITION_QUERY_LIMIT
-        candidates = candidates[:_DEFINITION_QUERY_LIMIT]
+        truncated = len(candidates) > _selection.DEFINITION_QUERY_LIMIT
+        candidates = candidates[: _selection.DEFINITION_QUERY_LIMIT]
         items = prefer_cached_definition(name, candidates, self._selection_cache)
-        status = _query_status(bool(items), self.manifest.status, truncated=truncated)
+        status = _selection.query_status(bool(items), self.manifest.status, truncated=truncated)
         diagnostics = ("definition query reached its safety bound",) if truncated else ()
         result = QueryResult(
             status,
@@ -246,22 +236,67 @@ class JsonlDwarfStore:
         )
 
     def find_method_implementation(self, declaration_offset: int) -> QueryResult:
-        item = self._methods.get(declaration_offset)
-        return _result(item, self.manifest_path, self.manifest.status)
+        query = self.find_method_implementations(declaration_offset)
+        return QueryResult(
+            query.status,
+            query.items[:1],
+            query.provenance,
+            query.diagnostics,
+            query.truncated,
+        )
+
+    def find_method_implementations(self, declaration_offset: int) -> QueryResult:
+        items = self._method_candidates.get(declaration_offset, ())
+        status = _selection.query_status(bool(items), self.manifest.status)
+        return QueryResult(status, items, (str(self.manifest_path),))
+
+    def find_method_implementation_rows(self, declaration_offsets: Sequence[int]) -> QueryResult:
+        """Return a bounded implementation-index projection for audit tooling."""
+        return method_implementation_rows(
+            self.manifest,
+            self._method_candidates,
+            declaration_offsets,
+            provenance=str(self.manifest_path),
+        )
+
+    def find_code_ranges(self, die_offset: int) -> QueryResult:
+        items = tuple(sorted(self._range_records.get(die_offset, ()), key=_range_record_sort_key))
+        status = _selection.query_status(bool(items), self.manifest.status)
+        return QueryResult(status, items, (str(self.manifest_path),))
+
+    def find_locations(self, die_offset: int, *, attribute_name: str | None = None) -> QueryResult:
+        items = tuple(
+            record
+            for record in self._location_records.get(die_offset, ())
+            if attribute_name is None or record.get("attribute_name") == attribute_name
+        )
+        status = _selection.query_status(bool(items), self.manifest.status)
+        return QueryResult(status, items, (str(self.manifest_path),))
+
+    def find_frames(
+        self, *, start_address: int | None = None, end_address: int | None = None
+    ) -> QueryResult:
+        items = tuple(
+            record
+            for record in self._frame_records
+            if _frame_overlaps(record, start_address, end_address)
+        )
+        status = _selection.query_status(bool(items), self.manifest.status)
+        return QueryResult(status, items, (str(self.manifest_path),))
 
     def children(self, die_offset: int) -> QueryResult:
         items = tuple(self._children.get(die_offset, ()))
-        status = _query_status(bool(items), self.manifest.status)
+        status = _selection.query_status(bool(items), self.manifest.status)
         return QueryResult(status, items, (str(self.manifest_path),))
 
     def parent(self, die_offset: int) -> QueryResult:
         die = self._dies.get(die_offset)
         parent = die.get_parent() if die is not None else None
-        return _result(parent, self.manifest_path, self.manifest.status)
+        return _selection.result(parent, self.manifest_path, self.manifest.status)
 
     def references(self, die_offset: int) -> QueryResult:
         items = tuple(self._references.get(die_offset, ()))
-        status = _query_status(bool(items), self.manifest.status)
+        status = _selection.query_status(bool(items), self.manifest.status)
         return QueryResult(status, items, (str(self.manifest_path),))
 
     def _load_records(self) -> None:
@@ -287,6 +322,9 @@ class JsonlDwarfStore:
             "reference": self._accept_reference,
             "index": self._accept_index,
             "line": self._accept_line,
+            "range": self._accept_range,
+            "location": self._accept_location,
+            "frame": self._accept_frame,
         }
         handler = handlers.get(kind)
         if handler is not None:
@@ -337,6 +375,19 @@ class JsonlDwarfStore:
         if isinstance(unit_offset, int) and not isinstance(unit_offset, bool):
             self._line_records[unit_offset].append(record)
 
+    def _accept_range(self, record: dict[str, Any]) -> None:
+        die_offset = record.get("die_offset")
+        if isinstance(die_offset, int) and not isinstance(die_offset, bool):
+            self._range_records[die_offset].append(record)
+
+    def _accept_location(self, record: dict[str, Any]) -> None:
+        die_offset = record.get("die_offset")
+        if isinstance(die_offset, int) and not isinstance(die_offset, bool):
+            self._location_records[die_offset].append(record)
+
+    def _accept_frame(self, record: dict[str, Any]) -> None:
+        self._frame_records.append(record)
+
     def _accept_definition_index(self, record: dict[str, Any]) -> None:
         self._derived_definitions[record["name"]].append(int(record.get("die_offset", 0)))
 
@@ -380,7 +431,7 @@ class JsonlDwarfStore:
         else:
             self._build_legacy_methods()
         for name, values in self._definitions.items():
-            self._definitions[name] = sorted(values, key=_definition_sort_key)
+            self._definitions[name] = sorted(values, key=_selection.definition_sort_key)
 
     def _build_derived_definitions(self) -> None:
         for name, offsets in self._derived_definitions.items():
@@ -398,16 +449,33 @@ class JsonlDwarfStore:
 
     def _build_derived_methods(self) -> None:
         for declaration_offset, implementation_offsets in self._derived_methods.items():
-            for implementation_offset in implementation_offsets:
-                implementation = self._dies.get(implementation_offset)
-                if implementation is not None:
-                    self._methods[declaration_offset] = implementation
+            candidates = tuple(
+                implementation
+                for implementation_offset in sorted(set(implementation_offsets))
+                if (implementation := self._dies.get(implementation_offset)) is not None
+            )
+            if candidates:
+                self._method_candidates[declaration_offset] = candidates
+                self._methods[declaration_offset] = candidates[0]
 
     def _build_legacy_methods(self) -> None:
+        candidates: dict[int, list[StoreDie]] = defaultdict(list)
         for die in self._dies.values():
-            specification = die.get_DIE_from_attribute("DW_AT_specification")
-            if specification is not None and die.tag == "DW_TAG_subprogram":
-                self._methods[specification.offset] = die
+            if die.tag != "DW_TAG_subprogram":
+                continue
+            targets = {
+                target.offset: target
+                for relation in ("DW_AT_specification", "DW_AT_abstract_origin")
+                if (target := die.get_DIE_from_attribute(relation)) is not None
+            }
+            for target in targets.values():
+                candidates[target.offset].append(die)
+        for declaration_offset, items in candidates.items():
+            ordered = tuple(
+                sorted({item.offset: item for item in items}.values(), key=lambda item: item.offset)
+            )
+            self._method_candidates[declaration_offset] = ordered
+            self._methods[declaration_offset] = ordered[0]
 
     def as_dwarf_info(self) -> DwarfInfo:
         return self.dwarf_info
@@ -467,7 +535,7 @@ class MaterializedDwarfIndex:
 
     @staticmethod
     def _candidate(symbol_name: str, die: StoreDie):
-        return _definition_candidate(symbol_name, die)
+        return _selection.definition_candidate(symbol_name, die)
 
 
 def _verify_source_binding(
@@ -488,6 +556,30 @@ def _optional_int(value: Any) -> int | None:
 
 def _is_complete_definition(die: StoreDie) -> bool:
     return "DW_AT_declaration" not in die.attributes
+
+
+def _range_record_sort_key(record: dict[str, Any]) -> tuple[int, int]:
+    ordinal = record.get("ordinal")
+    unit_offset = record.get("unit_offset")
+    return (
+        ordinal if isinstance(ordinal, int) else 0,
+        unit_offset if isinstance(unit_offset, int) else 0,
+    )
+
+
+def _frame_overlaps(
+    record: dict[str, Any], start_address: int | None, end_address: int | None
+) -> bool:
+    if start_address is None or end_address is None:
+        return True
+    initial = record.get("initial_address")
+    span = record.get("address_range")
+    return (
+        isinstance(initial, int)
+        and isinstance(span, int)
+        and initial < end_address
+        and initial + span > start_address
+    )
 
 
 def _text(value: Any) -> str:

@@ -47,6 +47,9 @@ test-performance-real-assets:
 test-performance:
     uv run pytest -m performance
 
+clean-transient:
+    powershell -NoProfile -Command "$root = (Get-Location).Path; $paths = @('.pytest_cache', 'htmlcov', '.coverage', 'coverage.json', 'coverage.xml', 'test-results.xml', 'site'); foreach ($relative in $paths) { $target = Join-Path $root $relative; if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force } }"
+
 performance-tools-install:
     uv sync --locked --group performance
 
@@ -165,10 +168,16 @@ docs-lint:
 docs-diagrams:
     npm --prefix tools/documentation run validate:mermaid
 
-docs-build:
+docs-api:
+    uv run python tools/documentation/generate_api_reference.py
+
+docs-api-check:
+    uv run python tools/documentation/generate_api_reference.py --check
+
+docs-build: docs-api-check
     uv run zensical build --strict
 
-docs-check: docs-lint docs-diagrams docs-build
+docs-check: docs-api-check docs-lint docs-diagrams docs-build
 
 audit:
     uv run prospector --profile .prospector.yml --tool pylint --tool pyflakes --tool mccabe src

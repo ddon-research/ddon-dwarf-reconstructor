@@ -7,6 +7,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from ...core.content_hash import sha256_file
 from ...core.dwarf import DwarfInfo
 from ...core.observability import get_logger, log_event
 from ...domain.models.analytical_dwarf import (
@@ -20,6 +21,7 @@ from ..artifacts import SourceIdentityCatalog
 from .bounded_query_cache import BoundedQueryCache
 from .doris import DorisConfig
 from .doris_cache import DorisCache
+from .doris_connection import connect_sql
 from .doris_hydration import (
     attribute_projection_columns,
     attributes_by_die,
@@ -28,6 +30,7 @@ from .doris_hydration import (
     prefetch_references,
     reference_candidates,
 )
+from .doris_method_queries import DorisMethodQueries
 from .doris_models import (
     DorisCompilationUnit,
     DorisDie,
@@ -48,13 +51,12 @@ from .manifest import (
     load_manifest,
     validate_schema_version,
 )
-from .optional import import_optional
 from .store_selection import load_selection_cache
 
 logger = get_logger(__name__)
 
 
-class DorisDwarfStore:
+class DorisDwarfStore(DorisMethodQueries):
     """Lazy, source-bound query façade over normalized Doris family tables."""
 
     def __init__(
@@ -69,6 +71,7 @@ class DorisDwarfStore:
     ) -> None:
         self.manifest_path = manifest_path.resolve()
         self.manifest = manifest
+        self.manifest_sha256 = sha256_file(self.manifest_path)
         self._connection = connection
         self._config = config
         self._source_id = manifest.source_identity.sha256
@@ -116,17 +119,9 @@ class DorisDwarfStore:
         if verify_source:
             _verify_source_binding(manifest, source_path)
         config = config or DorisConfig.from_environment()
-        pymysql = import_optional("pymysql", "analytical")
-        connection = pymysql.connect(
-            host=config.sql_host,
-            port=config.sql_port,
-            user=config.user,
-            password=config.password,
+        connection = connect_sql(
+            config,
             database=config.database,
-            autocommit=True,
-            connect_timeout=config.sql_connect_timeout_seconds,
-            read_timeout=config.sql_read_timeout_seconds,
-            write_timeout=config.sql_write_timeout_seconds,
         )
         try:
             serving_variant = DorisServingProfile.from_config(
@@ -244,9 +239,6 @@ class DorisDwarfStore:
     def definition_tags(self, name: str) -> tuple[str, ...]:
         """Return complete aggregate-tag metadata for one source-bound name."""
         return self._queries.find_definition_tags(name)
-
-    def find_method_implementation(self, declaration_offset: int) -> QueryResult:
-        return self._query_operations.find_method_implementation(declaration_offset)
 
     def children(self, die_offset: int) -> QueryResult:
         return self._query_operations.children(die_offset)

@@ -10,6 +10,7 @@ from ..models.analytical_dwarf import (
     DwarfMaterializationRequest,
     MaterializationManifest,
     MaterializedUnit,
+    MethodContextRequest,
     QueryResult,
 )
 
@@ -24,6 +25,8 @@ class DwarfQueryPort(Protocol):
     """Read-only queries required by generation and knowledge export."""
 
     manifest: MaterializationManifest
+    manifest_path: Path
+    manifest_sha256: str
 
     def iter_compilation_units(self) -> Iterable[MaterializedUnit]: ...
 
@@ -55,6 +58,32 @@ class DwarfQueryPort(Protocol):
 
     def find_method_implementation(self, declaration_offset: int) -> QueryResult:
         """Resolve an implementation through DWARF specification references."""
+        ...
+
+    def find_method_implementations(self, declaration_offset: int) -> QueryResult:
+        """Return every complete implementation candidate for a declaration."""
+        ...
+
+    def find_method_implementation_rows(self, declaration_offsets: Sequence[int]) -> QueryResult:
+        """Return a bounded batch of source-bound implementation index rows."""
+        ...
+
+    def find_method_context_batch(self, requests: Sequence[MethodContextRequest]) -> QueryResult:
+        """Return bounded DIE, location, reference, and CFI context rows."""
+        ...
+
+    def find_code_ranges(self, die_offset: int) -> QueryResult:
+        """Return materialized range records for one DIE in source order."""
+        ...
+
+    def find_locations(self, die_offset: int, *, attribute_name: str | None = None) -> QueryResult:
+        """Return parameter/object locations for one DIE."""
+        ...
+
+    def find_frames(
+        self, *, start_address: int | None = None, end_address: int | None = None
+    ) -> QueryResult:
+        """Return CFI records overlapping an optional method range."""
         ...
 
     def children(self, die_offset: int) -> QueryResult: ...

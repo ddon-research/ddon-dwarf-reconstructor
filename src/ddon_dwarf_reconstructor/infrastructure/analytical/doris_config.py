@@ -66,6 +66,7 @@ class DorisConfig:
     capture_statistics_evidence: bool = False
 
     def __post_init__(self) -> None:
+        _validate_sql_endpoint(self)
         if self.analyze_wait_seconds < 0:
             raise ValueError("analyze_wait_seconds must not be negative")
         if self.stream_load_workers < 1:
@@ -92,6 +93,11 @@ class DorisConfig:
         """Return the hash of the exact canonical DDL emitted by this configuration."""
         ddl = "\n".join(_native_sql(self))
         return hashlib.sha256(ddl.encode("utf-8")).hexdigest()
+
+    @property
+    def sql_endpoint(self) -> str:
+        """Return the configured FE SQL endpoint without exposing credentials."""
+        return f"{self.sql_host}:{self.sql_port}"
 
     @property
     def effective_definition_lookup_table(self) -> str:
@@ -305,6 +311,13 @@ def _validate_sql_timeouts(config: DorisConfig) -> None:
     ):
         if timeout <= 0:
             raise ValueError(f"{field_name} must be positive")
+
+
+def _validate_sql_endpoint(config: DorisConfig) -> None:
+    if not config.sql_host.strip():
+        raise ValueError("sql_host must not be empty")
+    if config.sql_port < 1 or config.sql_port > 65535:
+        raise ValueError("sql_port must be a valid TCP port")
 
 
 def _positive_environment_int(name: str, default: int) -> int:

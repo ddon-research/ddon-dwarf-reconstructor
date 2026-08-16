@@ -2,7 +2,8 @@
 
 All raw profiles, sidecars, and proprietary inputs are external artifacts. The source identity for
 the named compressed dump is recorded in every manifest. Profiler timings are attribution evidence
-and are not compared as uninstrumented performance baselines.
+and are not compared as uninstrumented performance baselines. The measurements below are dated
+CPython 3.14.6 evidence; the active repository runtime is CPython 3.14.7 with uv 0.12.3.
 
 ## Environment and source identity
 

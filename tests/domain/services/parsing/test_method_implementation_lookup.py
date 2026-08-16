@@ -114,3 +114,68 @@ def test_live_lookup_finds_perfect_specification_match() -> None:
     parser = ClassParser(Mock(), dwarf_info)
 
     assert parser._find_method_implementation(0x80, "load") == (cu, implementation)
+
+
+@pytest.mark.unit
+def test_plural_lookup_scans_abstract_origin_after_an_index_miss() -> None:
+    dwarf_info = Mock()
+    query_port = Mock()
+    query_port.find_method_implementations.return_value = QueryResult(QueryStatus.NOT_FOUND)
+    cu = Mock(cu_offset=0x100)
+    specification = Mock(value=0x80)
+    abstract_origin = Mock(value=0x80)
+    first = Mock(
+        offset=0x210,
+        cu=cu,
+        tag="DW_TAG_subprogram",
+        attributes={"DW_AT_specification": specification},
+    )
+    second = Mock(
+        offset=0x220,
+        cu=cu,
+        tag="DW_TAG_subprogram",
+        attributes={"DW_AT_abstract_origin": abstract_origin},
+    )
+    first.get_DIE_from_attribute.return_value = Mock(offset=0x80)
+    second.get_DIE_from_attribute.return_value = Mock(offset=0x80)
+    cu.iter_DIEs.return_value = [second, first]
+    dwarf_info.iter_CUs.return_value = [cu]
+    parser = ClassParser(Mock(), dwarf_info, query_port=query_port)
+
+    result = parser.find_method_implementation_candidates(0x80, "load")
+
+    assert result.status is QueryStatus.COMPLETE
+    assert [die.offset for _cu, die in result.items] == [0x210, 0x220]
+    assert "analytical index miss" in result.diagnostics[0]
+
+
+@pytest.mark.unit
+def test_indexed_lookup_keeps_a_complete_negative_result_without_cu_scan() -> None:
+    dwarf_info = Mock()
+    query_port = Mock()
+    query_port.find_method_implementations.return_value = QueryResult(QueryStatus.NOT_FOUND)
+    parser = ClassParser(Mock(), dwarf_info, query_port=query_port)
+
+    result = parser.find_method_implementation_candidates_indexed(0x80, "load")
+
+    assert result.status is QueryStatus.NOT_FOUND
+    dwarf_info.iter_CUs.assert_not_called()
+
+
+@pytest.mark.unit
+def test_plural_lookup_preserves_partial_scan_without_candidates() -> None:
+    parser = ClassParser(Mock(), Mock(), query_port=Mock())
+    parser.query_port.find_method_implementations.return_value = QueryResult(QueryStatus.NOT_FOUND)
+    parser._scan_method_implementation_candidates = Mock(
+        return_value=QueryResult(
+            QueryStatus.PARTIAL,
+            diagnostics=("implementation scan timed out",),
+            truncated=True,
+        )
+    )
+
+    result = parser.find_method_implementation_candidates(0x80, "load")
+
+    assert result.status is QueryStatus.PARTIAL
+    assert result.truncated is True
+    assert "implementation scan timed out" in result.diagnostics

@@ -74,6 +74,7 @@ class HeaderGenerationSupportMixin:
             order_count=len(hierarchy_order),
             include_method_signatures=include_method_signatures,
         )
+        context.header_hierarchies[(class_name, max_depth, include_method_signatures)] = class_infos
         return class_infos, hierarchy_order
 
     @staticmethod

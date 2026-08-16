@@ -76,6 +76,37 @@ def test_complete_definition_window_reports_its_safety_ceiling() -> None:
     assert "LIMIT 2" in cursor.executed[0]
 
 
+def test_method_implementation_batch_is_source_bound_and_deterministic() -> None:
+    cursor = _Cursor(
+        (
+            ("a" * 64, 2, 20, "method_implementation", "load", "DW_TAG_subprogram", 1, "complete"),
+            ("a" * 64, 3, 30, "method_implementation", "load", "DW_TAG_subprogram", 2, "complete"),
+        )
+    )
+    cursor.description = (
+        ("source_id",),
+        ("unit_offset",),
+        ("die_offset",),
+        ("index_type",),
+        ("name",),
+        ("tag",),
+        ("target_offset",),
+        ("resolution_status",),
+    )
+    executor = DorisQueryExecutor(_Connection(cursor), DorisConfig(database="analytical"), "a" * 64)
+
+    result = executor.find_method_implementation_rows((5, 2, 5), limit=100_000)
+
+    assert [row["target_offset"] for row in result.rows] == [1, 2]
+    assert result.truncated is False
+    assert cursor.executed is not None
+    query, params = cursor.executed
+    assert "method_implementation" in params
+    assert "target_offset" in query and "IN" in query
+    assert "LIMIT 100001" in query
+    assert params[0] == "a" * 64
+
+
 def test_primary_selection_retries_a_truncated_query_with_complete_rows() -> None:
     store = Mock()
     store.manifest_path = Path("manifest.json")

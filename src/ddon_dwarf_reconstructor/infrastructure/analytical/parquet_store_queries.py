@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -301,6 +301,16 @@ class ParquetStoreQueries(_ParquetStoreAccess):
         )
 
     def find_method_implementation(self, declaration_offset: int) -> QueryResult:
+        query = self.find_method_implementations(declaration_offset)
+        return QueryResult(
+            query.status,
+            query.items[:1],
+            query.provenance,
+            query.diagnostics,
+            query.truncated,
+        )
+
+    def find_method_implementations(self, declaration_offset: int) -> QueryResult:
         try:
             records = sorted(
                 self._payload_rows(
@@ -312,22 +322,116 @@ class ParquetStoreQueries(_ParquetStoreAccess):
                 ),
                 key=_record_sort_key,
             )
+            items_by_offset: dict[int, StoreDie] = {}
             for record in records:
-                if (
-                    _optional_int(record.get("die_offset")) is not None
-                    and record.get("resolution_status") == QueryStatus.COMPLETE.value
-                ):
-                    die = self._die_for_index_record(record)
-                    if die is None:
-                        continue
-                    return QueryResult(
-                        _query_status(True, self.manifest.status),
-                        (die,),
-                        (str(self.manifest_path),),
-                    )
+                if _optional_int(record.get("die_offset")) is None:
+                    continue
+                if record.get("resolution_status") != QueryStatus.COMPLETE.value:
+                    continue
+                die = self._die_for_index_record(record)
+                if die is not None:
+                    items_by_offset[die.offset] = die
+            items = tuple(items_by_offset.values())
             return QueryResult(
-                _query_status(False, self.manifest.status),
-                (),
+                _query_status(bool(items), self.manifest.status),
+                items,
+                (str(self.manifest_path),),
+            )
+        except Exception as error:
+            return _unavailable(error, self.manifest_path)
+
+    def find_method_implementation_rows(self, declaration_offsets: Sequence[int]) -> QueryResult:
+        """Return the bounded implementation-index projection for artifact tooling.
+
+        This adapter is intentionally not part of normal generation. Doris is the
+        serving authority; keeping the projection here only preserves the common
+        query-port contract for explicit Parquet inspection and migration checks.
+        """
+        offsets = tuple(
+            sorted({offset for offset in declaration_offsets if isinstance(offset, int)})
+        )
+        if not offsets:
+            return QueryResult(QueryStatus.NOT_FOUND, (), (str(self.manifest_path),))
+        try:
+            records = self._payload_rows(
+                {
+                    "record_type": "index",
+                    "index_type": "method_implementation",
+                    "target_offset": offsets,
+                    "resolution_status": QueryStatus.COMPLETE.value,
+                },
+                limit=100_001,
+                order_key=_record_sort_key,
+            )
+            truncated = len(records) > 100_000
+            rows = tuple(
+                {
+                    key: record.get(key)
+                    for key in (
+                        "source_id",
+                        "unit_offset",
+                        "die_offset",
+                        "index_type",
+                        "name",
+                        "tag",
+                        "target_offset",
+                        "resolution_status",
+                    )
+                }
+                for record in records[:100_000]
+            )
+            diagnostics = (
+                ("method implementation batch reached its safety bound",) if truncated else ()
+            )
+            return QueryResult(
+                _query_status(bool(rows), self.manifest.status, truncated=truncated),
+                rows,
+                (str(self.manifest_path),),
+                diagnostics,
+                truncated,
+            )
+        except Exception as error:
+            return _unavailable(error, self.manifest_path)
+
+    def find_code_ranges(self, die_offset: int) -> QueryResult:
+        try:
+            rows = self._payload_rows(
+                {"record_type": "range", "die_offset": die_offset},
+                order_key=_record_sort_key,
+            )
+            return QueryResult(
+                _query_status(bool(rows), self.manifest.status),
+                tuple(rows),
+                (str(self.manifest_path),),
+            )
+        except Exception as error:
+            return _unavailable(error, self.manifest_path)
+
+    def find_locations(self, die_offset: int, *, attribute_name: str | None = None) -> QueryResult:
+        try:
+            filters: dict[str, Any] = {"record_type": "location", "die_offset": die_offset}
+            if attribute_name is not None:
+                filters["attribute_name"] = attribute_name
+            rows = self._payload_rows(filters, order_key=_record_sort_key)
+            return QueryResult(
+                _query_status(bool(rows), self.manifest.status),
+                tuple(rows),
+                (str(self.manifest_path),),
+            )
+        except Exception as error:
+            return _unavailable(error, self.manifest_path)
+
+    def find_frames(
+        self, *, start_address: int | None = None, end_address: int | None = None
+    ) -> QueryResult:
+        try:
+            rows = self._payload_rows({"record_type": "frame"}, order_key=_record_sort_key)
+            filtered = tuple(
+                row for row in rows if _frame_overlaps(row, start_address, end_address)
+            )
+            return QueryResult(
+                _query_status(bool(filtered), self.manifest.status),
+                filtered,
                 (str(self.manifest_path),),
             )
         except Exception as error:
@@ -397,3 +501,18 @@ class ParquetStoreQueries(_ParquetStoreAccess):
             return self.compilation_unit_by_offset(unit_offset)
         except KeyError:
             return None
+
+
+def _frame_overlaps(
+    row: dict[str, Any], start_address: int | None, end_address: int | None
+) -> bool:
+    if start_address is None or end_address is None:
+        return True
+    initial = _optional_int(row.get("initial_address"))
+    span = _optional_int(row.get("address_range"))
+    return (
+        initial is not None
+        and span is not None
+        and initial < end_address
+        and initial + span > start_address
+    )

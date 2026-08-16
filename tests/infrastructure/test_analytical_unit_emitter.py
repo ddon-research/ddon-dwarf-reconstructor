@@ -35,6 +35,13 @@ class _Die:
         return self._null
 
 
+class _Attribute:
+    def __init__(self, value: int) -> None:
+        self.value = value
+        self.raw_value = value
+        self.form = "DW_FORM_ref_addr"
+
+
 class _CompilationUnit:
     cu_offset = 0
     header = {"unit_length": 32}
@@ -102,3 +109,21 @@ def test_malformed_abbreviation_is_emitted_as_partial_raw_diagnostic(tmp_path: P
     )
     assert abbreviation["record_offset"] == 0x125
     assert abbreviation["abbrev_code"] == 2261
+
+
+def test_method_index_emits_specification_and_abstract_origin_candidates(tmp_path: Path) -> None:
+    method = _Die("DW_TAG_subprogram", 0x300)
+    method.attributes = {
+        "DW_AT_specification": _Attribute(0x100),
+        "DW_AT_abstract_origin": _Attribute(0x200),
+    }
+    writer = _CaptureWriter()
+
+    DwarfUnitEmitter("a" * 64, writer, tmp_path).write_unit(_CompilationUnit([method]))
+
+    indexes = [
+        row
+        for row in writer.records
+        if row["record_type"] == "index" and row["index_type"] == "method_implementation"
+    ]
+    assert [row["target_offset"] for row in indexes] == [0x100, 0x200]

@@ -91,6 +91,42 @@ _PROFILES = (
         description="Machine-readable standard ELF metadata; SCE values remain additive only.",
     ),
     ToolExportProfile(
+        name="llvm-elf-metadata-relocations-json",
+        tool_name="llvm-readobj",
+        arguments=(
+            "--elf-output-style=JSON",
+            "--file-header",
+            "--program-headers",
+            "--sections",
+            "--dynamic-table",
+            "--relocations",
+            "--dyn-relocations",
+        ),
+        output_format="json",
+        authority="generic_elf_cross_check",
+        description=(
+            "Opt-in LLVM ELF/DWARF structural cross-check retaining numeric SCE dynamic tags."
+        ),
+    ),
+    ToolExportProfile(
+        name="llvm-ps4-disassembly",
+        tool_name="llvm-objdump",
+        arguments=(
+            "--triple=x86_64-scei-ps4",
+            "-d",
+            "-l",
+            "-C",
+            "--symbolize-operands",
+        ),
+        output_format="text",
+        authority="llvm_target_cross_check",
+        description=(
+            "Opt-in LLVM x86-64 disassembly cross-check; Orbis binutils remains the PS4 "
+            "instruction authority."
+        ),
+        max_output_bytes=64 * 1024 * 1024,
+    ),
+    ToolExportProfile(
         name="llvm-debug-info-summary",
         tool_name="llvm-debuginfo-analyzer",
         arguments=("--print=summary",),

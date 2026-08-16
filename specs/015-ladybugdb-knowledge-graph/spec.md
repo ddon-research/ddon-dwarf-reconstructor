@@ -64,8 +64,8 @@ graph API, or interactive graph browser is added until the acceptance evidence b
   simultaneous write or CLI operation MUST produce a bounded lock diagnostic and leave the
   published artifact intact. The design follows the documented
   [LadybugDB connection and concurrency model](https://docs.ladybugdb.com/concurrency/).
-- **KG-001-10 Compatibility gate:** The Python client MUST be tested with the repository's pinned
-  CPython 3.14.6 environment and Windows acceptance environment. The standalone `lbug` CLI MUST be
+- **KG-001-10 Compatibility gate:** The Python client MUST be tested with the repository's current
+  pinned CPython 3.14.7 environment and Windows acceptance environment. The standalone `lbug` CLI MUST be
   tested separately; the Python package MUST NOT be assumed to provide the CLI executable.
 - **KG-001-11 Documentation evidence:** The feature MUST record exact LadybugDB, Python client,
   CLI, extension, operating-system, and configuration versions used by each acceptance run.

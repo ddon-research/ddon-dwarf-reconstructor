@@ -44,6 +44,7 @@ def _generator(tmp_path: Path) -> SimpleNamespace:
         disassembly_factory=None,
         source_hash=None,
         source_identity=None,
+        header_hierarchies={},
     )
     generator.class_parser.find_class.return_value = None
     return generator

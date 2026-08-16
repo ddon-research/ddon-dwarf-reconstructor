@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
+import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -74,6 +76,14 @@ class HeaderUnit:
     def key(self) -> str:
         return f"u{self.sequence:05d}"
 
+    @property
+    def stdout_log(self) -> Path:
+        return self.diagnostic_log.with_name(f"{self.diagnostic_log.stem}.stdout.log")
+
+    @property
+    def stderr_log(self) -> Path:
+        return self.diagnostic_log.with_name(f"{self.diagnostic_log.stem}.stderr.log")
+
 
 def _utc_now() -> str:
     return datetime.now(UTC).isoformat()
@@ -124,15 +134,22 @@ def discover_units(
     except ValueError as error:
         raise HeaderValidationError(str(error)) from error
     units: list[HeaderUnit] = []
+    used_translation_names: set[str] = set()
     for sequence, entry in enumerate(catalog.entries, start=1):
         bundle = entry.bundle
+        translation_name = _translation_unit_name(entry.header, sequence, used_translation_names)
+        used_translation_names.add(translation_name.lower())
         unit = HeaderUnit(
             sequence=sequence,
             bundle=bundle,
             header=entry.header,
-            translation_unit=validation_directory / "translation-units" / f"u{sequence:05d}.cpp",
-            object_file=validation_directory / "objects" / f"u{sequence:05d}.obj",
-            diagnostic_log=validation_directory / "diagnostics" / f"u{sequence:05d}.log",
+            translation_unit=validation_directory / "translation-units" / translation_name,
+            object_file=validation_directory
+            / "objects"
+            / Path(translation_name).with_suffix(".obj"),
+            diagnostic_log=validation_directory
+            / "diagnostics"
+            / Path(translation_name).with_suffix(".log"),
             header_sha256=entry.sha256,
             header_bytes=entry.byte_count,
         )
@@ -143,14 +160,37 @@ def discover_units(
     return bundles, units
 
 
+def _translation_unit_name(header: Path, sequence: int, used: set[str]) -> str:
+    """Use the established tutorial name while keeping duplicate bundles collision-safe."""
+    candidate = (
+        "compile_tutorial.cpp"
+        if header.name == "rTutorialDialogMessage.h"
+        else f"u{sequence:05d}.cpp"
+    )
+    return candidate if candidate.lower() not in used else f"u{sequence:05d}.cpp"
+
+
 def _batch_command(unit: HeaderUnit) -> str:
     flags = " ".join(MSVC_FLAGS)
     return (
         f'cl.exe /nologo {flags} /I"{unit.bundle}" /c '
-        f'"%ROOT%translation-units\\{unit.key}.cpp" '
-        f'/Fo"%ROOT%objects\\{unit.key}.obj" '
-        f'>"%ROOT%diagnostics\\{unit.key}.log" 2>&1'
+        f'"%ROOT%translation-units\\{unit.translation_unit.name}" '
+        f'/Fo"%ROOT%objects\\{unit.object_file.name}" '
+        f'>"%ROOT%diagnostics\\{unit.stdout_log.name}" '
+        f'2>"%ROOT%diagnostics\\{unit.stderr_log.name}"'
     )
+
+
+def _write_aggregate_source(validation_directory: Path, units: list[HeaderUnit]) -> Path:
+    path = validation_directory / "translation-units" / "compile_all.cpp"
+    includes = [f'#include "{str(unit.header).replace(chr(92), "/")}"' for unit in units]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "// Generated aggregate acceptance translation unit.\n" + "\n".join(includes) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    return path
 
 
 def write_validation_script(
@@ -158,6 +198,10 @@ def write_validation_script(
 ) -> Path:
     """Write a continuing batch script with per-unit result markers."""
     script = validation_directory / "validate_headers.cmd"
+    aggregate_source = _write_aggregate_source(validation_directory, units)
+    aggregate_object = validation_directory / "objects" / "compile_all.obj"
+    aggregate_stdout = validation_directory / "diagnostics" / "compile_all.stdout.log"
+    aggregate_stderr = validation_directory / "diagnostics" / "compile_all.stderr.log"
     lines = [
         "@echo off",
         "setlocal EnableExtensions EnableDelayedExpansion",
@@ -178,6 +222,20 @@ def write_validation_script(
                 'if not "!UNIT_EXIT!"=="0" set "EXIT_CODE=1"',
             ]
         )
+    include_paths = " ".join(f'/I"{unit.bundle}"' for unit in units)
+    lines.extend(
+        [
+            "echo DDON_AGGREGATE_START^|compile_all.cpp",
+            f"cl.exe /nologo {' '.join(MSVC_FLAGS)} {include_paths} /c "
+            f'"%ROOT%translation-units\\{aggregate_source.name}" '
+            f'/Fo"%ROOT%objects\\{aggregate_object.name}" '
+            f'>"%ROOT%diagnostics\\{aggregate_stdout.name}" '
+            f'2>"%ROOT%diagnostics\\{aggregate_stderr.name}"',
+            'set "AGGREGATE_EXIT=!ERRORLEVEL!"',
+            "echo DDON_AGGREGATE_RESULT^|compile_all.cpp^|!AGGREGATE_EXIT!",
+            'if not "!AGGREGATE_EXIT!"=="0" set "EXIT_CODE=1"',
+        ]
+    )
     lines.extend(["endlocal & exit /b %EXIT_CODE%", ""])
     validation_directory.mkdir(parents=True, exist_ok=True)
     script.write_text("\r\n".join(lines), encoding="utf-8", newline="")
@@ -213,24 +271,55 @@ def _read_result_markers(output: str) -> dict[str, int]:
     return results
 
 
+def _read_aggregate_marker(output: str) -> int | None:
+    for line in output.splitlines():
+        parts = line.strip().split("|")
+        if (
+            len(parts) == 3
+            and parts[0] == "DDON_AGGREGATE_RESULT"
+            and parts[1] == "compile_all.cpp"
+        ):
+            try:
+                return int(parts[2])
+            except ValueError:
+                return None
+    return None
+
+
+def _read_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8", errors="replace") if path.is_file() else ""
+
+
+def _sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _object_status(path: Path, exit_code: int | None) -> str:
+    if exit_code is None:
+        return "not_observed"
+    return "present" if path.is_file() else "missing"
+
+
 def _unit_result(
     unit: HeaderUnit, exit_code: int | None, process_timed_out: bool
 ) -> dict[str, Any]:
-    log_text = (
-        unit.diagnostic_log.read_text(encoding="utf-8", errors="replace")
-        if unit.diagnostic_log.is_file()
-        else ""
-    )
+    stdout = _read_text(unit.stdout_log)
+    stderr = _read_text(unit.stderr_log)
+    log_text = stdout + stderr
     codes = _diagnostic_codes(log_text)
+    object_status = _object_status(unit.object_file, exit_code)
     if process_timed_out and exit_code is None:
         status = "timed_out"
         failure_class = "incomplete"
     elif exit_code is None:
         status = "not_observed"
         failure_class = "incomplete"
-    elif exit_code == 0:
+    elif exit_code == 0 and object_status == "present":
         status = "passed"
         failure_class = "none"
+    elif exit_code == 0:
+        status = "failed"
+        failure_class = "object_missing"
     else:
         status = "failed"
         failure_class = _classify_failure(codes)
@@ -242,12 +331,84 @@ def _unit_result(
         "header_bytes": unit.header_bytes,
         "translation_unit": str(unit.translation_unit),
         "diagnostic_log": str(unit.diagnostic_log),
+        "stdout_log": str(unit.stdout_log),
+        "stderr_log": str(unit.stderr_log),
+        "stdout_sha256": _sha256_text(stdout),
+        "stderr_sha256": _sha256_text(stderr),
         "compiler_exit_code": exit_code,
+        "object_file": str(unit.object_file),
+        "object_status": object_status,
         "status": status,
         "failure_class": failure_class,
         "diagnostic_codes": codes,
         "diagnostic_excerpt": _diagnostic_excerpt(log_text),
     }
+
+
+def _aggregate_result(
+    validation_directory: Path, exit_code: int | None, process_timed_out: bool
+) -> dict[str, Any]:
+    object_file = validation_directory / "objects" / "compile_all.obj"
+    stdout_log = validation_directory / "diagnostics" / "compile_all.stdout.log"
+    stderr_log = validation_directory / "diagnostics" / "compile_all.stderr.log"
+    stdout = _read_text(stdout_log)
+    stderr = _read_text(stderr_log)
+    object_status = _object_status(object_file, exit_code)
+    if process_timed_out and exit_code is None:
+        status, failure_class = "timed_out", "incomplete"
+    elif exit_code is None:
+        status, failure_class = "not_observed", "incomplete"
+    elif exit_code == 0 and object_status == "present":
+        status, failure_class = "passed", "none"
+    elif exit_code == 0:
+        status, failure_class = "failed", "object_missing"
+    else:
+        codes = _diagnostic_codes(stdout + stderr)
+        status, failure_class = "failed", _classify_failure(codes)
+    return {
+        "translation_unit": "compile_all.cpp",
+        "source": str(validation_directory / "translation-units" / "compile_all.cpp"),
+        "object_file": str(object_file),
+        "object_status": object_status,
+        "stdout_log": str(stdout_log),
+        "stderr_log": str(stderr_log),
+        "stdout_sha256": _sha256_text(stdout),
+        "stderr_sha256": _sha256_text(stderr),
+        "compiler_exit_code": exit_code,
+        "status": status,
+        "failure_class": failure_class,
+        "diagnostic_codes": _diagnostic_codes(stdout + stderr),
+        "diagnostic_excerpt": _diagnostic_excerpt(stdout + stderr),
+    }
+
+
+def _compiler_metadata(compiler: str) -> dict[str, object]:
+    path = Path(compiler)
+    metadata: dict[str, object] = {
+        "compiler_path": compiler,
+        "compiler_sha256": hashlib.sha256(path.read_bytes()).hexdigest()
+        if path.is_file()
+        else None,
+        "compiler_version": None,
+        "compiler_version_status": "not_observed",
+    }
+    if not path.is_file():
+        return metadata
+    try:
+        result = subprocess.run(
+            (str(path), "/Bv"),
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    except OSError, subprocess.TimeoutExpired:
+        return metadata
+    output = (result.stdout or "") + (result.stderr or "")
+    metadata["compiler_version_status"] = "observed" if output else "not_observed"
+    metadata["compiler_version"] = output.strip()[:512] if output.strip() else None
+    metadata["compiler_version_output_sha256"] = _sha256_text(output)
+    return metadata
 
 
 def _run_script(script: Path, timeout_seconds: int) -> tuple[int | None, str, bool]:
@@ -267,10 +428,12 @@ def run_validation(
     bundles, units = discover_units(input_roots, validation_directory)
     developer_command_file = get_visual_studio_developer_command_file()
     compiler = test_msvc_toolchain(developer_command_file)
+    compiler_metadata = _compiler_metadata(compiler)
     script = write_validation_script(validation_directory, developer_command_file, units)
     process_exit_code, output, timed_out = _run_script(script, timeout_seconds)
     markers = _read_result_markers(output)
     results = [_unit_result(unit, markers.get(unit.key), timed_out) for unit in units]
+    aggregate = _aggregate_result(validation_directory, _read_aggregate_marker(output), timed_out)
     counts = validation_counts(results)
     failure_classes: dict[str, int] = {}
     diagnostic_codes: dict[str, int] = {}
@@ -280,12 +443,12 @@ def run_validation(
         for code in result["diagnostic_codes"]:
             diagnostic_codes[str(code)] = diagnostic_codes.get(str(code), 0) + 1
     report = {
-        "schema_version": 1,
+        "schema_version": 2,
         "tool": "tools.sonar.validate_header_bundle",
         "validation_scope": "season2_header_closures",
         "started_at": started,
         "finished_at": _utc_now(),
-        "compiler_path": compiler,
+        **compiler_metadata,
         "msvc_flags": list(MSVC_FLAGS),
         "input_roots": [str(path.expanduser().resolve()) for path in input_roots],
         "validation_directory": str(validation_directory),
@@ -297,9 +460,16 @@ def run_validation(
         "process_exit_code": process_exit_code,
         "process_timed_out": timed_out,
         "counts": counts.to_dict(),
-        "status": "observed" if counts.complete and not timed_out else "partial",
+        "standalone_status": "observed" if counts.complete and not timed_out else "partial",
+        "aggregate_status": aggregate["status"],
+        "status": (
+            "observed"
+            if counts.complete and not timed_out and aggregate["status"] == "passed"
+            else "partial"
+        ),
         "failure_classes": failure_classes,
         "diagnostic_code_counts": dict(sorted(diagnostic_codes.items())),
+        "aggregate": aggregate,
         "units": results,
     }
     write_json_atomic(validation_directory / "msvc-header-validation.json", report)
@@ -331,11 +501,14 @@ def main(argv: list[str] | None = None) -> int:
         key: report[key]
         for key in (
             "compiler_path",
+            "compiler_version",
             "bundle_count",
             "header_count",
             "process_exit_code",
             "process_timed_out",
             "counts",
+            "standalone_status",
+            "aggregate_status",
             "failure_classes",
             "diagnostic_code_counts",
         )

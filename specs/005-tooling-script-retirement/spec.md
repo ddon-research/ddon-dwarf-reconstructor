@@ -17,7 +17,7 @@ usable as an isolated uv-installed command-line tool.
   MUST be invokable as Python modules from the checkout.
 - **TSR-003**: Sonar/MSVC preparation MUST preserve wrapper discovery, Visual Studio discovery,
   validation-directory defaults, compilation-database checks, and truthful failure behavior.
-- **TSR-004**: `uv tool install . --python 3.14.6` MUST expose the packaged
+- **TSR-004**: `uv tool install . --python 3.14.7` MUST expose the packaged
   `ddon-dwarf-reconstructor` command independently of the checkout source path.
 - **TSR-005**: Active instructions, documentation, CI, tests, and Spec Kit artifacts MUST use the
   same just/Python/module-based workflow.

@@ -5,7 +5,9 @@ from __future__ import annotations
 from typing import Protocol
 
 from ...core.dwarf import DwarfCompilationUnit, DwarfEntry
+from ..models.analytical_dwarf import QueryResult
 from ..models.dwarf import ClassInfo
+from .analytical_store import DwarfQueryPort
 from .type_resolution import TypeNameResolver
 
 
@@ -14,6 +16,7 @@ class ClassParserPort(Protocol):
 
     timed_out_symbols: set[str]
     type_resolver: TypeNameResolver
+    query_port: DwarfQueryPort | None
 
     def find_class(
         self, class_name: str, exhaustive_override: bool | None = None
@@ -24,3 +27,11 @@ class ClassParserPort(Protocol):
     def _find_die_and_cu_by_offset(
         self, offset: int
     ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...
+
+    def find_method_implementation_candidates(
+        self, declaration_offset: int, method_name: str
+    ) -> QueryResult: ...
+
+    def find_method_implementation_candidates_indexed(
+        self, declaration_offset: int, method_name: str
+    ) -> QueryResult: ...

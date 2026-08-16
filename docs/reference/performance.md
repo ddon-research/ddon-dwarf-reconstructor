@@ -254,10 +254,10 @@ labels remain separate and must not be conflated.
 
 The boundary refactor retained byte-exact representative output for `rAIFSM`, `rArchive`, and
 `rTexture`. The corrected batch-001 run completed 73/73 roots and 598/598 headers, and its
-independent MSVC audit passed all 598 units. The full 289-root rerun remains `blocked`: two host
-reboots interrupted the attempts, and the Doris FE cannot currently bind its configured 9030
-endpoint because Windows excludes TCP ports 8983-9082. No incomplete output was accepted or used
-as a performance workload. No matched warm p95 or peak-RSS comparison was accepted, so the
+independent MSVC audit passed all 598 units. The full 289-root rerun was `blocked` at that time:
+two host reboots interrupted the attempts, and the configured workstation endpoint did not reach
+the Compose FE. No incomplete output was accepted or used as a performance workload. No matched
+warm p95 or peak-RSS comparison was accepted, so the
 110%-of-baseline gate remains `not_observed` until the same source, runtime, backend, profile, and
 cache-state workload runs to completion. The older 2026-08-09/10 measurements above remain
 historical controls only.

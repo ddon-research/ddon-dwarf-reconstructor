@@ -18,8 +18,10 @@ from .bounded_query_cache import BoundedQueryCache
 from .doris import DorisConfig
 from .doris_hydration import _DorisHydrationStore, hydrate_dies_by_keys, prime_child_tag_counts
 from .doris_index import DorisCandidateStore, build_doris_candidate
+from .doris_method_context import query_method_context_batch
 from .doris_models import DorisCompilationUnit, DorisDie
 from .doris_queries import DorisQueryExecutor
+from .doris_rows import restore_row
 from .doris_store_helpers import (
     bounded_query_diagnostic,
     definition_has_name,
@@ -290,6 +292,16 @@ class DorisStoreQueryOperations:
         return die if definition_has_name(die, name) else None
 
     def find_method_implementation(self, declaration_offset: int) -> QueryResult:
+        query = self.find_method_implementations(declaration_offset)
+        return QueryResult(
+            query.status,
+            query.items[:1],
+            query.provenance,
+            query.diagnostics,
+            query.truncated,
+        )
+
+    def find_method_implementations(self, declaration_offset: int) -> QueryResult:
         store = self._store
         try:
             records = store._rows(
@@ -312,11 +324,140 @@ class DorisStoreQueryOperations:
                 order_by=("unit_offset", "die_offset"),
                 table_name=store._config.method_lookup_table,
             )
+            items_by_offset: dict[int, DorisDie] = {}
             for record in records:
                 die = store._die_from_index_record(record)
                 if die is not None:
-                    return result(die, store.manifest_path, store.manifest.status)
-            return result(None, store.manifest_path, store.manifest.status)
+                    items_by_offset[die.offset] = die
+            items = tuple(items_by_offset.values())
+            return QueryResult(
+                query_status(bool(items), store.manifest.status),
+                items,
+                (str(store.manifest_path),),
+            )
+        except Exception as error:
+            return unavailable(error, store.manifest_path)
+
+    def find_method_implementation_rows(self, declaration_offsets: Sequence[int]) -> QueryResult:
+        store = self._store
+        try:
+            bounded = store._queries.find_method_implementation_rows(declaration_offsets)
+            status = query_status(
+                bool(bounded.rows),
+                store.manifest.status,
+                truncated=bounded.truncated,
+            )
+            diagnostics = (
+                ("method implementation batch reached its safety bound",)
+                if bounded.truncated
+                else ()
+            )
+            return QueryResult(
+                status,
+                bounded.rows,
+                (str(store.manifest_path),),
+                diagnostics,
+                bounded.truncated,
+            )
+        except Exception as error:
+            return unavailable(error, store.manifest_path)
+
+    def find_method_context_batch(self, requests: Sequence[Any]) -> QueryResult:
+        """Read all validation context families for one bounded request batch."""
+        store = self._store
+        try:
+            return query_method_context_batch(store, requests)
+        except Exception as error:
+            return unavailable(error, store.manifest_path, prefix="Doris context batch unavailable")
+
+    def find_code_ranges(self, die_offset: int) -> QueryResult:
+        store = self._store
+        try:
+            rows = store._rows(
+                "range",
+                {"die_offset": die_offset},
+                columns=(
+                    "unit_offset",
+                    "die_offset",
+                    "ordinal",
+                    "entry_kind",
+                    "start_address",
+                    "end_address",
+                    "base_address",
+                    "is_absolute",
+                    "parser_status",
+                    "details_json",
+                ),
+                order_by=("ordinal",),
+            )
+            return QueryResult(
+                query_status(bool(rows), store.manifest.status),
+                rows,
+                (str(store.manifest_path),),
+            )
+        except Exception as error:
+            return unavailable(error, store.manifest_path)
+
+    def find_locations(self, die_offset: int, *, attribute_name: str | None = None) -> QueryResult:
+        store = self._store
+        try:
+            filters: dict[str, object] = {"die_offset": die_offset}
+            if attribute_name is not None:
+                filters["attribute_name"] = attribute_name
+            rows = store._rows(
+                "location",
+                filters,
+                order_by=("ordinal", "record_offset"),
+            )
+            return QueryResult(
+                query_status(bool(rows), store.manifest.status),
+                rows,
+                (str(store.manifest_path),),
+            )
+        except Exception as error:
+            return unavailable(error, store.manifest_path)
+
+    def find_frames(
+        self, *, start_address: int | None = None, end_address: int | None = None
+    ) -> QueryResult:
+        store = self._store
+        try:
+            columns = (
+                "record_type",
+                "section_name",
+                "record_offset",
+                "record_length",
+                "frame_kind",
+                "initial_address",
+                "address_range",
+                "parser_status",
+                "details_json",
+            )
+            rows: tuple[dict[str, object], ...]
+            if start_address is not None and end_address is not None:
+                rows = tuple(
+                    restore_row(dict(row))
+                    for row in store._queries.frame_rows_overlapping(
+                        start_address,
+                        end_address,
+                        columns=columns,
+                        order_by=("section_name", "record_offset"),
+                    )
+                )
+            else:
+                rows = store._rows(
+                    "frame",
+                    columns=columns,
+                    order_by=("section_name", "record_offset"),
+                )
+            filtered = tuple(
+                row for row in rows if _frame_overlaps(row, start_address, end_address)
+            )
+            return QueryResult(
+                query_status(bool(filtered), store.manifest.status),
+                filtered,
+                (str(store.manifest_path),),
+            )
         except Exception as error:
             return unavailable(error, store.manifest_path)
 
@@ -380,6 +521,21 @@ class DorisStoreQueryOperations:
         )
         store._child_tag_counts[die_offset] = result_value
         return result_value
+
+
+def _frame_overlaps(
+    row: Mapping[str, object], start_address: int | None, end_address: int | None
+) -> bool:
+    if start_address is None or end_address is None:
+        return True
+    initial = optional_int(row.get("initial_address"))
+    span = optional_int(row.get("address_range"))
+    return (
+        initial is not None
+        and span is not None
+        and initial < end_address
+        and initial + span > start_address
+    )
 
 
 def _definition_sort_key(store: DorisStoreQueryPort, die: DorisDie) -> tuple[int, int, int, int]:
