@@ -18,6 +18,7 @@ class EvidenceStatus(StrEnum):
     UNAVAILABLE = "unavailable"
     NOT_OBSERVED = "not_observed"
     BLOCKED = "blocked"
+    FAILED = "failed"
 
 
 class ColdWarmState(StrEnum):
@@ -200,6 +201,43 @@ class ProfileArtifact:
 
 
 @dataclass(frozen=True, slots=True)
+class AssemblyAnalysisEvidence:
+    """External llvm-mca output for one marked compiler assembly input."""
+
+    input_path: Path
+    input_sha256: str
+    tool: Path
+    tool_sha256: str
+    tool_version: str
+    command: tuple[str, ...]
+    status: EvidenceStatus
+    output_path: Path | None = None
+    output_sha256: str | None = None
+    manifest_path: Path | None = None
+    regions: tuple[str, ...] = ()
+    diagnostics: tuple[str, ...] = ()
+    schema_version: str = "1.0"
+
+    def to_dict(self) -> dict[str, object]:
+        """Return a stable performance-analysis manifest."""
+        return {
+            "schema_version": self.schema_version,
+            "input_path": str(self.input_path),
+            "input_sha256": self.input_sha256,
+            "tool": str(self.tool),
+            "tool_sha256": self.tool_sha256,
+            "tool_version": self.tool_version,
+            "command": list(self.command),
+            "status": self.status.value,
+            "output_path": None if self.output_path is None else str(self.output_path),
+            "output_sha256": self.output_sha256,
+            "manifest_path": None if self.manifest_path is None else str(self.manifest_path),
+            "regions": list(self.regions),
+            "diagnostics": list(self.diagnostics),
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class ToolAvailability:
     """Result of probing one optional profiling tool."""
 
@@ -286,14 +324,15 @@ PerformanceRun = RunSummary
 
 
 __all__ = [
+    "AssemblyAnalysisEvidence",
     "ColdWarmState",
     "EvidenceStatus",
-    "MetricRecord",
     "MethodSummary",
+    "MetricRecord",
     "PerformanceRun",
     "PerformanceWorkload",
     "ProfileArtifact",
-    "RuntimeDescriptor",
     "RunSummary",
+    "RuntimeDescriptor",
     "ToolAvailability",
 ]

@@ -16,6 +16,12 @@ from ...domain.services.definition_selection import (
 )
 from .bounded_query_cache import BoundedQueryCache
 from .doris import DorisConfig
+from .doris_child_tag_queries import (
+    cache_child_tag_counts,
+    cached_child_tag_counts,
+    child_tag_count_unit,
+    load_child_tag_counts,
+)
 from .doris_hydration import _DorisHydrationStore, hydrate_dies_by_keys, prime_child_tag_counts
 from .doris_index import DorisCandidateStore, build_doris_candidate
 from .doris_method_context import query_method_context_batch
@@ -44,8 +50,8 @@ class DorisStoreQueryPort(_DorisHydrationStore, DorisCandidateStore, Protocol):
     _definition_query_cache: BoundedQueryCache[
         tuple[str, str | None, frozenset[str] | None], QueryResult
     ]
-    _die_unit_offsets: dict[int, int]
-    _child_tag_counts: dict[int, NestedTypeCounts]
+    _die_unit_offsets: BoundedQueryCache[int, int]
+    _child_tag_counts: BoundedQueryCache[int, NestedTypeCounts]
     _selection_cache: SymbolCachePort | None
 
     def record_cache_hit(self) -> None: ...
@@ -54,9 +60,13 @@ class DorisStoreQueryPort(_DorisHydrationStore, DorisCandidateStore, Protocol):
 
     def compilation_unit_by_offset(self, unit_offset: int) -> DorisCompilationUnit: ...
 
-    def die_by_offset(self, die_offset: int | None) -> DorisDie | None: ...
+    def die_by_offset(
+        self, die_offset: int | None, unit_offset: int | None = None
+    ) -> DorisDie | None: ...
 
-    def children_for_die(self, die_offset: int) -> Iterable[DorisDie]: ...
+    def children_for_die(
+        self, die_offset: int, unit_offset: int | None = None
+    ) -> Iterable[DorisDie]: ...
 
     def _die_from_index_record(self, record: dict[str, object]) -> DorisDie | None: ...
 
@@ -215,7 +225,7 @@ class DorisStoreQueryOperations:
             has_children=candidate.has_children,
             is_declaration=candidate.is_declaration,
             has_type_reference=candidate.has_type_reference,
-            nested=store.child_tag_counts(die.offset),
+            nested=store.child_tag_counts(die.offset, die.cu.cu_offset),
         )
         if not is_early_exit_candidate(signals, candidate.score):
             return None
@@ -324,12 +334,21 @@ class DorisStoreQueryOperations:
                 order_by=("unit_offset", "die_offset"),
                 table_name=store._config.method_lookup_table,
             )
-            items_by_offset: dict[int, DorisDie] = {}
+            keys = tuple(
+                dict.fromkeys(
+                    (unit_offset, die_offset)
+                    for record in records
+                    if (unit_offset := optional_int(record.get("unit_offset"))) is not None
+                    and (die_offset := optional_int(record.get("die_offset"))) is not None
+                )
+            )
+            hydrate_dies_by_keys(store, keys)
+            items_by_key: dict[tuple[int, int], DorisDie] = {}
             for record in records:
                 die = store._die_from_index_record(record)
                 if die is not None:
-                    items_by_offset[die.offset] = die
-            items = tuple(items_by_offset.values())
+                    items_by_key[(die.cu.cu_offset, die.offset)] = die
+            items = tuple(items_by_key[key] for key in keys if key in items_by_key)
             return QueryResult(
                 query_status(bool(items), store.manifest.status),
                 items,
@@ -501,25 +520,16 @@ class DorisStoreQueryOperations:
         except Exception as error:
             return unavailable(error, store.manifest_path)
 
-    def child_tag_counts(self, die_offset: int) -> NestedTypeCounts:
+    def child_tag_counts(self, die_offset: int, unit_offset: int | None = None) -> NestedTypeCounts:
         store = self._store
-        cached = store._child_tag_counts.get(die_offset)
+        resolved_unit = child_tag_count_unit(store, die_offset, unit_offset)
+        cached = cached_child_tag_counts(store, die_offset, resolved_unit)
         if cached is not None:
             store.record_cache_hit()
             return cached
         store.record_cache_miss()
-        rows = store._rows("die", {"parent_offset": die_offset}, columns=("tag", "is_null"))
-        counts = {"DW_TAG_enumeration_type": 0, "DW_TAG_structure_type": 0, "DW_TAG_union_type": 0}
-        for row in rows:
-            tag = row.get("tag")
-            if not row.get("is_null") and tag in counts:
-                counts[tag] += 1
-        result_value = NestedTypeCounts(
-            enums=counts["DW_TAG_enumeration_type"],
-            structs=counts["DW_TAG_structure_type"],
-            unions=counts["DW_TAG_union_type"],
-        )
-        store._child_tag_counts[die_offset] = result_value
+        result_value = load_child_tag_counts(store, die_offset, resolved_unit)
+        cache_child_tag_counts(store, die_offset, resolved_unit, result_value)
         return result_value
 
 

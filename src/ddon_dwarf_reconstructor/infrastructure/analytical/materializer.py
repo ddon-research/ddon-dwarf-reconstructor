@@ -30,7 +30,7 @@ from .manifest import (
     validate_schema_version,
 )
 from .materialization_manifest import build_checkpoint_manifest, build_manifest
-from .record_sink import RecordWriter
+from .record_sink import ParquetSink, RecordWriter
 from .semantic_emitter import DwarfSemanticEmitter
 from .unit_emitter import DwarfUnitEmitter
 
@@ -114,19 +114,29 @@ class DwarfMaterializer:
         if request.write_parquet and "parquet" not in current.files:
             from .parquet import ParquetPublisher, describe_parquet_files
 
+            projection = store_dir / "parquet"
+            if projection.exists():
+                raise ValueError(
+                    "Manifest does not record an existing Parquet projection; "
+                    f"refusing to overwrite or delete it: {projection}"
+                )
             publisher = ParquetPublisher()
-            publisher.publish_from_manifest_path(manifest_path)
-            current = replace(
-                current,
-                files={**current.files, "parquet": "parquet"},
-                configuration={
-                    **current.configuration,
-                    "write_parquet": True,
-                    "parquet_writer_metrics": publisher.last_writer_metrics,
-                },
-                artifacts=describe_parquet_files(store_dir),
-            )
-            _write_json_atomic(manifest_path, current.to_dict())
+            try:
+                publisher.publish_from_manifest_path(manifest_path)
+                current = replace(
+                    current,
+                    files={**current.files, "parquet": "parquet"},
+                    configuration={
+                        **current.configuration,
+                        "write_parquet": True,
+                        "parquet_writer_metrics": publisher.last_writer_metrics,
+                    },
+                    artifacts=describe_parquet_files(store_dir),
+                )
+                _write_json_atomic(manifest_path, current.to_dict())
+            except BaseException:
+                shutil.rmtree(projection, ignore_errors=True)
+                raise
         return current
 
     def _write_store(
@@ -153,11 +163,13 @@ class DwarfMaterializer:
                 request,
                 store_dir,
             )
-        except BaseException:
-            writer.abort()
-            raise
-        else:
             writer.close()
+        except BaseException as error:
+            try:
+                writer.abort()
+            except BaseException as cleanup_error:
+                raise cleanup_error from error
+            raise
         manifest = build_manifest(
             request,
             source_path,
@@ -167,15 +179,13 @@ class DwarfMaterializer:
             writer.counts,
             self.cu_passes,
             parquet_sink is not None,
-            tuple(getattr(parquet_sink, "artifacts", ())),
+            writer.snapshot_artifacts(),
             writer.writer_metrics(),
             parse_error_count,
             recovery,
         )
         if manifest.status != "complete" and parquet_sink is not None:
-            set_status = getattr(parquet_sink, "set_status", None)
-            if callable(set_status):
-                set_status(manifest.status)
+            parquet_sink.set_status(manifest.status)
         manifest_path = store_dir / "manifest.json"
         _write_json_atomic(manifest_path, manifest.to_dict())
         manifest = _publish_projections(manifest, manifest_path, request, parquet_sink)
@@ -448,7 +458,7 @@ def _records_path(request: DwarfMaterializationRequest, store_dir: Path) -> Path
     return store_dir / "records.jsonl" if request.write_jsonl else None
 
 
-def _parquet_sink(request: DwarfMaterializationRequest, store_dir: Path) -> Any:
+def _parquet_sink(request: DwarfMaterializationRequest, store_dir: Path) -> ParquetSink | None:
     if not request.write_parquet:
         return None
     from .parquet import ParquetRecordSink
@@ -464,7 +474,7 @@ def _publish_projections(
     manifest: MaterializationManifest,
     manifest_path: Path,
     request: DwarfMaterializationRequest,
-    parquet_sink: Any,
+    parquet_sink: ParquetSink | None,
 ) -> MaterializationManifest:
     current = manifest
     if parquet_sink is None and request.write_parquet:

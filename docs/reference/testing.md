@@ -47,6 +47,16 @@ The knowledge exporter integration path must remain runnable without proprietary
 PS4/PS3 inputs are environmental evidence and are never silently substituted for deterministic
 tests.
 
+The local Orbis evidence slice has its own explicit acceptance boundary. Focused tests cover the
+SDK 12/SDK 8 contract selector, Sysmodule/NID identity separation, `orbis-bin` parsing and
+fail-closed manifest cases, compiler `.s`/`.o` retention and object metadata, sectioned assembly
+flags, and marker-gated `llvm-mca` provenance. A real-asset run may observe SDK 12 host-tool
+acceptance, `orbis-bin` stack/dynamic-symbol/layout exports, compiler probes, canonical assembly
+bytes, and an `llvm-mca` sample; those observations do not promote method-specific ABI,
+semantic-equivalence, or live PS4 behavior. The current schema-4.4 bounded SDK 12 `rLayout`
+report records 17 `target_object_equivalent` and 9 `not_promoted` dispositions across the 26
+code-bearing methods; the nine ABI-incomplete methods keep the overall gate partial.
+
 For the analytical store, use `uv run just analytical-materialize` and
 `uv run just analytical-benchmark` only with an external output directory. The materializer writes
 direct typed Parquet rows by default; add `--write-jsonl` only for a bounded audit fixture.
@@ -54,13 +64,16 @@ Full real-ELF materialization, LLVM verification, and Doris loading are separate
 evidence. The local Docker daemon and the LLVM source checkout do not count as successful Doris or
 `llvm-dwarfdump --verify` observations without an executable result.
 
-For source-bound Season 2 generation, derive and report `root_count`, `bundle_count`,
-`manifest_count`, `header_file_count`, `published_file_count`, and `msvc_unit_count` separately.
-An output directory containing a manifest or a placeholder header is not evidence of a complete
-root. `complete`, `partial`, `blocked`, and `not_observed` are evidence states; a passing repository
-gate cannot replace unavailable Doris, MSVC, real-asset, or performance observations. A truncated
-or unavailable query must remain non-complete through generation and must not publish a successful
-placeholder bundle.
+For source-bound Season 2 symbol generation, derive and report the manifest's
+`requested_symbols`, `input_list_sha256`, `header_count`, `class_count`, `roots`, `headers`, and
+`implementation.files` fields. Historical batched runs may retain `root_count`, `bundle_count`,
+`manifest_count`, `header_file_count`, `published_file_count`, and `msvc_unit_count`, but those
+fields do not establish the new flat single-pass layout. An output directory containing only a
+manifest or a placeholder header is not evidence of a complete symbol extraction. `complete`, `partial`,
+`blocked`, and `not_observed` are evidence states; a passing repository gate cannot replace
+unavailable Doris, MSVC, real-asset, or performance observations. A truncated or unavailable
+query must remain non-complete through generation and must not publish a successful placeholder
+bundle.
 
 The latest source-bound Season 2 acceptance checked 289 roots and 2,760 header files, published
 1,150 complete assembly handoff bundles, and passed 2,760/2,760 independent MSVC header units.

@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from time import perf_counter
 from typing import Protocol, TypeGuard
 
+import pyarrow as pa
+
 from ...core.observability import get_logger, log_event
 from .doris import DorisConfig
 from .doris_diagnostics_transport import DorisDiagnosticTransport
@@ -20,6 +22,7 @@ from .doris_diagnostics_utils import (
 from .doris_layout import _family_table
 from .doris_optimization import DorisQueryTracer
 from .doris_optimization_utils import profile_metrics as _profile_metrics
+from .doris_query_batches import cursor_record_batches
 from .doris_schema import _FAMILY_COLUMNS
 
 logger = get_logger(__name__)
@@ -37,6 +40,8 @@ class _DorisCursor(Protocol):
     def execute(self, operation: str, params: Sequence[object] = ()) -> object: ...
 
     def fetchall(self) -> Sequence[Sequence[object]]: ...
+
+    def fetchmany(self, size: int) -> Sequence[Sequence[object]]: ...
 
 
 class _DorisConnection(Protocol):
@@ -253,6 +258,36 @@ class DorisQueryExecutor:
         query = _append_order_and_limit(query, order_by, limit)
         return self._fetch_rows(query, params, family=family, operation=operation)
 
+    def family_record_batches(
+        self,
+        family: str,
+        filters: Mapping[str, object] | None = None,
+        *,
+        columns: Sequence[str] = (),
+        order_by: Sequence[str] = (),
+        limit: int | None = None,
+        operation: str = "family_record_batches",
+        table_name: str | None = None,
+        batch_size: int = 512,
+    ) -> tuple[pa.RecordBatch, ...]:
+        """Return a bounded typed batch stream from one source-bound query."""
+        _validate_limit(limit)
+        _validate_limit(batch_size)
+        selected = ", ".join(_identifier(column) for column in columns)
+        if not selected:
+            selected = "*" if table_name is not None else _all_columns(family)
+        conditions, params = _filter_conditions(self._source_id, filters)
+        table = _qualified_table(self._config, family, table_name=table_name)
+        query = f"SELECT {selected} FROM {table} WHERE {' AND '.join(conditions)}"
+        query = _append_order_and_limit(query, order_by, limit)
+        return self._fetch_record_batches(
+            query,
+            params,
+            family=family,
+            operation=operation,
+            batch_size=batch_size,
+        )
+
     def frame_rows_overlapping(
         self,
         start_address: int,
@@ -325,6 +360,51 @@ class DorisQueryExecutor:
         )
         return tuple(dict(zip(columns, row, strict=True)) for row in rows)
 
+    def _fetch_record_batches(
+        self,
+        query: str,
+        params: Sequence[object],
+        *,
+        family: str,
+        operation: str,
+        batch_size: int,
+    ) -> tuple[pa.RecordBatch, ...]:
+        execute_started = perf_counter()
+        execute_seconds = 0.0
+        fetch_seconds = 0.0
+        batches: tuple[pa.RecordBatch, ...] = ()
+        try:
+            with self._connection.cursor() as cursor:
+                cursor.execute(query, params)
+                execute_seconds = perf_counter() - execute_started
+                columns = tuple(str(column[0]) for column in cursor.description)
+                fetch_started = perf_counter()
+                batches = cursor_record_batches(cursor, columns, batch_size, family)
+                fetch_seconds = perf_counter() - fetch_started
+        except Exception as error:
+            execute_seconds = execute_seconds or perf_counter() - execute_started
+            self._record_trace(
+                query,
+                family=family,
+                operation=operation,
+                execute_seconds=execute_seconds,
+                fetch_seconds=fetch_seconds,
+                rows=(),
+                result_rows=0,
+                error=error,
+            )
+            raise
+        self._record_trace(
+            query,
+            family=family,
+            operation=operation,
+            execute_seconds=execute_seconds,
+            fetch_seconds=fetch_seconds,
+            rows=(),
+            result_rows=sum(batch.num_rows for batch in batches),
+        )
+        return tuple(batches)
+
     def _record_trace(
         self,
         query: str,
@@ -334,6 +414,7 @@ class DorisQueryExecutor:
         execute_seconds: float,
         fetch_seconds: float,
         rows: Sequence[Sequence[object]],
+        result_rows: int | None = None,
         error: Exception | None = None,
     ) -> None:
         """Keep optional tracing from masking query results or failures."""
@@ -348,6 +429,7 @@ class DorisQueryExecutor:
                 execute_seconds=execute_seconds,
                 fetch_seconds=fetch_seconds,
                 rows=rows,
+                result_rows=result_rows,
                 error=error,
             )
         except Exception as trace_error:

@@ -115,10 +115,33 @@ def test_query_trace_records_actual_query_without_parameter_values(
     assert summary["counts"] == {
         "observed_count": 2,
         "partial_count": 0,
+        "profile_attempt_count": 1,
         "profile_count": 1,
         "query_count": 2,
         "shape_count": 1,
     }
+
+
+def test_query_trace_bounds_failed_profile_attempts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def unavailable(_self: object, _query_id: str, *, full: bool) -> DiagnosticTransportResult:
+        assert full is True
+        return DiagnosticTransportResult("unavailable", "fake-fe", error="profile evicted")
+
+    monkeypatch.setattr(DorisDiagnosticTransport, "profile", unavailable)
+    trace_path = tmp_path / "bounded" / "queries.jsonl"
+    config = DorisConfig(query_trace=DorisQueryTraceConfig(trace_path, max_profile_instances=2))
+    executor = DorisQueryExecutor(_Connection(), config, "e" * 64)
+
+    for _ in range(20):
+        executor.family_rows("index", {"name": "symbol"}, columns=("name",))
+    executor.close()
+
+    summary = json.loads(trace_path.with_suffix(".json").read_text(encoding="utf-8"))
+    assert summary["counts"]["query_count"] == 20
+    assert summary["counts"]["profile_attempt_count"] == 1
+    assert summary["counts"]["profile_count"] == 0
 
 
 def test_query_trace_marks_profile_id_mismatch_partial(
@@ -573,26 +596,3 @@ def test_runtime_only_candidate_does_not_require_table_provisioning(
 
     assert report["status"] == "observed"
     assert report["optimization"]["provisioning"]["status"] == "not_applicable"
-
-
-def test_candidate_evidence_capture_serializes_rows_and_failures() -> None:
-    observed = benchmark_optimization_module._capture_candidate_rows(
-        _Cursor(_Connection()), "SHOW TABLE STATS dwarf.records"
-    )
-    assert observed["status"] == "observed"
-    assert observed["rows"] == [{"name": "value"}]
-
-    class FailingCursor:
-        description: tuple[tuple[str], ...] = ()
-
-        def execute(self, _statement: str) -> None:
-            raise RuntimeError("candidate stats unavailable")
-
-        def fetchall(self) -> list[tuple[object, ...]]:
-            return []
-
-    partial = benchmark_optimization_module._capture_candidate_rows(
-        FailingCursor(), "SHOW TABLETS FROM dwarf.records"
-    )
-    assert partial["status"] == "partial"
-    assert "unavailable" in str(partial["error"])

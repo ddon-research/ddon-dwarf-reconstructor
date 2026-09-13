@@ -27,6 +27,7 @@ from ...ports.validation_dump import DumpDefinitionLocation, ValidationDumpPort
 
 if TYPE_CHECKING:
     from .class_parser_children import ParsedClassChildren
+    from .type_chain_traverser import TypeChainTraverser
 from .class_parser_scan_state import ScanState
 
 T = TypeVar("T")
@@ -101,12 +102,23 @@ class ClassParserOperations(ClassParserImplementationContext, Protocol):
         self, type_die: DwarfEntry | None
     ) -> tuple[TypeReference, ...]: ...
 
+    def _template_argument_references_from_die(
+        self,
+        type_resolver: TypeNameResolver,
+        type_die: DwarfEntry | None,
+        visited_offsets: set[int],
+    ) -> tuple[TypeReference, ...]: ...
+
     def _find_class_full_scan(
         self, class_name: str, exhaustive_override: bool | None = None
     ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...
 
     def _find_class_from_store(
         self, class_name: str
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...
+
+    def _find_class_uncached(
+        self, class_name: str, exhaustive_override: bool | None = None
     ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...
 
     def find_class(
@@ -128,6 +140,10 @@ class ClassParserOperations(ClassParserImplementationContext, Protocol):
     ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...
 
     def _find_die_and_cu_by_offset(
+        self, offset: int
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...
+
+    def _lookup_die_and_cu_by_offset(
         self, offset: int
     ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...
 
@@ -332,6 +348,7 @@ class ClassParserContext(ClassParserOperations, Protocol):
     """State and cross-cutting operations shared by parser responsibilities."""
 
     type_resolver: TypeNameResolver
+    type_chain_traverser: TypeChainTraverser
     dwarf_info: DwarfInfo
     lazy_index: DwarfLookupPort | None
     full_scan_timeout: float
@@ -342,6 +359,10 @@ class ClassParserContext(ClassParserOperations, Protocol):
     resolve_param_names: bool
     timed_out_symbols: set[str]
     _class_info_cache: dict[tuple[int, int], ClassInfo]
+    _found_class_cache: dict[
+        tuple[str, bool | None], tuple[DwarfCompilationUnit, DwarfEntry] | None
+    ]
+    _die_and_cu_offset_cache: dict[int, tuple[DwarfCompilationUnit, DwarfEntry] | None]
     _implementation_cache: dict[int, tuple[DwarfCompilationUnit, DwarfEntry] | None]
     _dump_parser: ValidationDumpPort | None
     _dump_lookup_authoritative_miss: bool

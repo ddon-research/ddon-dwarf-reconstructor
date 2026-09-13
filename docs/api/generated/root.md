@@ -24,4 +24,6 @@ This page indexes every source module in the **root modules** group. It is an im
 
 ::: ddon_dwarf_reconstructor.performance_doris_optimization_cli
 
+::: ddon_dwarf_reconstructor.performance_llvm_mca_cli
+
 ::: ddon_dwarf_reconstructor.performance_materializer_cli

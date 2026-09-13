@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import platform
 import subprocess
 import tempfile
 from pathlib import Path
+
+from ...core.content_hash import sha256_file
+from ..artifact_io import atomic_write_text
 
 
 def get_performance_artifact_dir() -> Path:
@@ -30,30 +32,6 @@ def get_performance_database_path(repository_root: Path | None = None) -> Path:
     """Return the tracked history database path for the current checkout."""
     root = repository_root or Path.cwd()
     return root / "resources" / "performance" / "benchmarks.sqlite3"
-
-
-def sha256_file(path: Path) -> str:
-    """Hash a published evidence file in bounded chunks."""
-    digest = hashlib.sha256()
-    with path.open("rb") as source:
-        for chunk in iter(lambda: source.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def atomic_write_text(path: Path, content: str) -> None:
-    """Publish text through a same-directory replace so manifests are complete."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
-    temporary_path = Path(temporary_name)
-    try:
-        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as output:
-            output.write(content)
-            output.flush()
-            os.fsync(output.fileno())
-        temporary_path.replace(path)
-    finally:
-        temporary_path.unlink(missing_ok=True)
 
 
 def write_json(path: Path, payload: object) -> None:

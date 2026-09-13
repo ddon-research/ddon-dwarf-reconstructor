@@ -9,18 +9,11 @@ import pytest
 
 from ddon_dwarf_reconstructor.domain.models.dwarf import (
     ClassInfo,
-    EnumeratorInfo,
-    EnumInfo,
     MemberInfo,
     MethodInfo,
     ParameterInfo,
-    StructInfo,
 )
 from ddon_dwarf_reconstructor.domain.services.generation import HeaderRenderer
-from ddon_dwarf_reconstructor.domain.services.generation.header_hierarchy import (
-    HierarchyHeaderGenerationService,
-)
-from ddon_dwarf_reconstructor.domain.services.generation.rendering import TypeExpressionPolicy
 
 
 class TestHeaderGenerator:
@@ -116,6 +109,34 @@ class TestHeaderGenerator:
             header_generator.stable_topological_order({"A": {"B"}, "B": {"A"}}, ["A", "B"])
 
     @pytest.mark.unit
+    def test_symbol_cycle_ordering_uses_deterministic_recovery(self, header_generator) -> None:
+        classes = {
+            name: ClassInfo(
+                name=name,
+                byte_size=8,
+                members=[MemberInfo(name="peer", type_name=peer, offset=0)],
+                methods=[],
+                base_classes=[],
+                enums=[],
+                nested_structs=[],
+                unions=[],
+                die_offset=0x5500 + index,
+            )
+            for index, (name, peer) in enumerate((("A", "B"), ("B", "A")))
+        }
+
+        header = header_generator.generate_single_file_hierarchy_header(
+            classes,
+            ["A", "B"],
+            "A",
+            include_metadata=False,
+            allow_cyclic_dependencies=True,
+        )
+
+        assert "class A" in header
+        assert "class B" in header
+
+    @pytest.mark.unit
     def test_hierarchy_declares_opaque_typedef_targets(self, header_generator):
         """Typedefs to external opaque types must be declared before the alias."""
         sample_class = ClassInfo(
@@ -194,144 +215,253 @@ class TestHeaderGenerator:
         assert header.count("cast(const MtDTI& dti);") == 1
 
     @pytest.mark.unit
-    def test_alias_equivalent_method_parameters_are_emitted_once(self, header_generator):
-        class_info = ClassInfo(
-            name="AliasMethods",
+    def test_method_signature_dependency_receives_complete_header_include(self, header_generator):
+        reader = ClassInfo(
+            name="MtDataReader",
             byte_size=8,
             members=[],
-            methods=[
-                MethodInfo(
-                    name="concat",
-                    return_type="void",
-                    parameters=[ParameterInfo("value", "MT_CHAR", type_offset=0x10)],
-                ),
-                MethodInfo(
-                    name="concat",
-                    return_type="void",
-                    parameters=[ParameterInfo("value", "MT_CTSTR", type_offset=0x10)],
-                ),
-            ],
-            base_classes=[],
-            enums=[],
-            nested_structs=[],
-            unions=[],
-            die_offset=0x5510,
-        )
-
-        header = header_generator.generate_header(class_info, include_metadata=False)
-
-        assert header.count("concat(MT_CHAR value);") == 1
-        assert "concat(MT_CTSTR value);" not in header
-
-    @pytest.mark.unit
-    def test_parameter_declarators_remain_distinct(self, header_generator):
-        class_info = ClassInfo(
-            name="QualifiedMethods",
-            byte_size=8,
-            members=[],
-            methods=[
-                MethodInfo(
-                    name="read",
-                    return_type="void",
-                    parameters=[ParameterInfo("value", "Value*", type_offset=0x10)],
-                ),
-                MethodInfo(
-                    name="read",
-                    return_type="void",
-                    parameters=[ParameterInfo("value", "const Value*", type_offset=0x10)],
-                ),
-            ],
+            methods=[],
             base_classes=[],
             enums=[],
             nested_structs=[],
             unions=[],
             die_offset=0x5520,
         )
-
-        header = header_generator.generate_header(class_info, include_metadata=False)
-
-        assert "read(Value* value);" in header
-        assert "read(const Value* value);" in header
-
-    @pytest.mark.unit
-    def test_nested_struct_pointer_members_receive_forward_declarations(self, header_generator):
-        """Pointer-only members in nested structs must name declared aggregate types."""
-        class_info = ClassInfo(
-            name="Layout",
-            byte_size=16,
-            members=[],
-            methods=[],
-            base_classes=[],
-            enums=[],
-            nested_structs=[
-                StructInfo(
-                    name="Buffer",
-                    byte_size=8,
-                    members=[MemberInfo("items", "Item*", offset=0)],
-                )
-            ],
-            unions=[],
-            die_offset=0x5600,
-        )
-
-        header = header_generator.generate_header(class_info, include_metadata=False)
-
-        assert "class Item;" in header
-        assert "Item* items;" in header
-
-    @pytest.mark.unit
-    def test_enum_method_types_are_defined_before_method_users(self, header_generator):
-        """Method signatures using recovered enums must compile without external stubs."""
-        class_info = ClassInfo(
-            name="Texture",
+        owner = ClassInfo(
+            name="rAchievement",
             byte_size=8,
             members=[],
             methods=[
                 MethodInfo(
-                    name="setMode", return_type="void", parameters=[ParameterInfo("mode", "Mode")]
+                    name="load",
+                    return_type="void",
+                    parameters=[ParameterInfo("reader", "MtDataReader&", type_offset=0x5520)],
                 )
             ],
             base_classes=[],
-            enums=[
-                EnumInfo(
-                    name="Mode",
-                    byte_size=4,
-                    enumerators=[EnumeratorInfo(name="MODE_A", value=0)],
-                )
-            ],
+            enums=[],
             nested_structs=[],
             unions=[],
-            die_offset=0x5700,
+            die_offset=0x5530,
         )
 
-        header = header_generator.generate_header(class_info, include_metadata=False)
-
-        assert "enum class Mode" in header
-        assert "void setMode(Mode mode);" in header
-
-    @pytest.mark.unit
-    def test_conflicting_aggregate_forward_declarations_use_source_kind(self):
-        result = HierarchyHeaderGenerationService._preferred_forward_declaration(
-            "stOcdActiveData",
-            ["class stOcdActiveData;", "struct stOcdActiveData;"],
-            {},
+        dependencies = header_generator.external_dependency_headers(
+            {"rAchievement": owner, "MtDataReader": reader},
+            {"rAchievement"},
+            {
+                "rAchievement": "rAchievement/rAchievement.h",
+                "MtDataReader": "../shared/MtDataReader.h",
+            },
         )
 
-        assert result == "struct stOcdActiveData;"
+        assert dependencies == {"MtDataReader": "../shared/MtDataReader.h"}
 
     @pytest.mark.unit
-    def test_ambiguous_typedef_forward_declaration_uses_renderer_policy(self):
-        assert TypeExpressionPolicy.preferred_forward_kind("Texture") == "class"
+    def test_template_base_arguments_are_ordered_before_their_user(self, header_generator):
+        data = ClassInfo(
+            name="cAchievementData",
+            byte_size=8,
+            members=[],
+            methods=[],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x5521,
+        )
+        base = ClassInfo(
+            name="rTbl2<cAchievementData>",
+            byte_size=8,
+            members=[],
+            methods=[],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x5522,
+        )
+        root = ClassInfo(
+            name="rAchievement",
+            byte_size=8,
+            members=[],
+            methods=[],
+            base_classes=["rTbl2<cAchievementData>"],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x5523,
+        )
+
+        header = header_generator.generate_single_file_hierarchy_header(
+            {
+                "rAchievement": root,
+                "rTbl2<cAchievementData>": base,
+                "cAchievementData": data,
+            },
+            ["rAchievement", "rTbl2<cAchievementData>", "cAchievementData"],
+            "rAchievement",
+            include_metadata=False,
+            allow_cyclic_dependencies=True,
+        )
+
+        assert header.index("class cAchievementData") < header.index("class rAchievement")
 
     @pytest.mark.unit
-    def test_template_forward_declarations_survive_kind_deduplication(self):
-        result = HierarchyHeaderGenerationService._preferred_forward_declaration(
-            "rTbl2",
-            [
-                "template <typename T> class rTbl2;",
-                "template <typename T, typename U, typename V> class rTbl2;",
+    def test_pointer_method_types_get_opaque_forward_declarations(self, header_generator):
+        owner = ClassInfo(
+            name="Owner",
+            byte_size=8,
+            members=[],
+            methods=[
+                MethodInfo(
+                    name="load",
+                    return_type="void",
+                    parameters=[ParameterInfo("value", "ExternalType*", type_offset=0x5524)],
+                )
             ],
-            {},
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x5525,
         )
 
-        assert result == "template <typename T, typename U, typename V> class rTbl2;"
+        header = header_generator.generate_header(owner, include_metadata=False)
+
+        assert "class ExternalType;" in header
+
+    @pytest.mark.unit
+    def test_class_does_not_forward_declare_itself(self, header_generator):
+        owner = ClassInfo(
+            name="Owner",
+            byte_size=8,
+            members=[],
+            methods=[
+                MethodInfo(
+                    name="clone",
+                    return_type="Owner*",
+                    parameters=[ParameterInfo("other", "Owner&")],
+                )
+            ],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x5525,
+        )
+
+        header = header_generator.generate_header(owner, include_metadata=False)
+
+        assert "class Owner;" not in header
+        assert "Owner* clone(Owner& other);" in header
+
+    @pytest.mark.unit
+    def test_nested_forward_declarations_stay_inside_the_containing_class(self, header_generator):
+        nested = ClassInfo(
+            name="MyDTI",
+            qualified_name="Owner::MyDTI",
+            containing_type="Owner",
+            byte_size=8,
+            members=[MemberInfo(name="DTI", type_name="MyDTI", is_static=True)],
+            methods=[],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x5526,
+        )
+        owner = ClassInfo(
+            name="Owner",
+            byte_size=8,
+            members=[],
+            methods=[],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            nested_classes=[nested],
+            die_offset=0x5527,
+        )
+
+        header = header_generator.generate_single_file_hierarchy_header(
+            {"Owner": owner}, ["Owner"], "Owner", include_metadata=False
+        )
+
+        assert "\nclass MyDTI;\n" not in header
+        assert "    class MyDTI;" in header
+
+    @pytest.mark.unit
+    def test_typedef_method_pointers_do_not_become_class_forward_declarations(
+        self, header_generator
+    ):
+        owner = ClassInfo(
+            name="Owner",
+            byte_size=8,
+            members=[],
+            methods=[
+                MethodInfo(
+                    name="load",
+                    return_type="void",
+                    parameters=[ParameterInfo("value", "MT_CTSTR*", type_offset=0x5528)],
+                )
+            ],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x5529,
+        )
+
+        header = header_generator.generate_single_file_hierarchy_header(
+            {"Owner": owner},
+            ["Owner"],
+            "Owner",
+            typedefs={"MT_CTSTR": "const char*"},
+            include_metadata=False,
+        )
+
+        assert "typedef const char* MT_CTSTR;" in header
+        assert "class MT_CTSTR;" not in header
+
+    @pytest.mark.unit
+    def test_same_header_later_definition_keeps_required_forward_declaration(
+        self, header_generator
+    ):
+        """A later same-header type must be declared before an earlier method use."""
+        owner = ClassInfo(
+            name="Owner",
+            byte_size=8,
+            members=[],
+            methods=[
+                MethodInfo(
+                    name="setValue",
+                    return_type="void",
+                    parameters=[ParameterInfo("value", "LaterType*")],
+                )
+            ],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x5800,
+        )
+        later = ClassInfo(
+            name="LaterType",
+            byte_size=8,
+            members=[],
+            methods=[],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x5810,
+        )
+
+        header = header_generator.generate_single_file_hierarchy_header(
+            {"Owner": owner, "LaterType": later},
+            ["Owner", "LaterType"],
+            "Owner",
+            include_metadata=False,
+        )
+
+        assert header.index("class LaterType;") < header.index("class Owner")

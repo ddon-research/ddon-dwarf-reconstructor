@@ -28,23 +28,58 @@ The current real-asset record and the serving/validator record are the authority
 counts. Historical output is retained and is not deleted or silently reclassified by this task
 normalization.
 
+### Single-pass symbol extraction convergence (2026-08-18)
+
+- [x] T089 Add the typed symbol request/result contract, facade, generator route, and CLI mode
+  selection in `application/generators/`, `application/generation/`, and `main.py`; make every
+  normal `generate` request use one dependency-resolving operation, deduplicate multi-symbol
+  inputs, and reject `--single-file`.
+- [x] T090 Resolve method-signature dependencies during symbol traversal, including declaration-only
+  class/struct/union DIEs that can lead to a complete named definition; cover the `rAchievement`
+  parameter dependency on `MtDataReader` with synthetic tests.
+- [x] T091 Add deterministic class ownership, include rewriting, collision-safe flat paths, client
+  version inference, atomic version-directory publication, and `symbols.manifest.json` integrity
+  metadata in `dwarf_symbol_generation.py` and `symbol_output.py`.
+- [x] T092 Add one-union implementation discovery and IDA-style semicolon-comment `.asm` rendering;
+  keep source references commented, retain structured/raw evidence in reports/caches, and keep
+  exact-byte `.s`/`.o` emission separate.
+- [x] T093 Add focused unit/integration coverage for symbol activation, ownership, `MtDataReader`,
+  flat publication, manifest hashes/statuses, source comments, deterministic assembly, and the
+  single-root compatibility boundary. Synchronize active CLI, artifact, architecture, testing,
+  contributor documentation, and the default-on `--generate-context`/`--no-generate-context`
+  output contract.
+- [x] T094 Retain the predecessor 289-root run as historical evidence in
+  `acceptance-season2-corpus-20260819.md`; it predates the identity-based symbol extraction
+  repair and is not evidence for the current `symbols.manifest.json` contract.
+- [ ] T095 Run the complete 289-root list against the complete local source-bound store with the
+  repaired symbol route, publish only to a new external output, and record source/list identity,
+  elapsed time, resource measurements, ownership, diagnostics, file hashes, and per-root status
+  in the current symbol acceptance record. The 2026-08-19 run is still `in_progress`; see
+  `acceptance-symbols-assembly-20260819.md`.
+- [ ] T096 Run the separate 289-root assembly-enabled acceptance with the SDK Orbis disassembler;
+  retain the flat `.asm` evidence or record `not_observed`/`partial` when no usable instruction
+  ranges are available. The 2026-08-19 run is still `in_progress`; see
+  `acceptance-symbols-assembly-20260819.md`. Do not promote either external result into the
+  retained generated bundle without an intentional review decision.
+
 ### Gate-convergence disposition (2026-08-16)
 
 - T052 has one canonical checkout-local implementation in `tools/sonar/validate_header_bundle.py`:
   it reports per-unit exit/object/stdout/stderr/compiler metadata and a separate aggregate result.
   Its focused tests pass, but the task remains unchecked until a fresh external MSVC run produces
   the current schema-2 report; the historical 2,760-unit acceptance is not rewritten.
-- T086 now has focused coverage for mnemonic aliases, width normalization, conditional joins,
-  return-immediate cleanup, callee-saved preservation, and CFI gaps. The task remains unchecked
-  pending representative source-bound acceptance; unknown or conflicting paths remain partial or
-  failed.
-- T087 was attempted on the bounded 1,037-method `rLayout` report after the T086 slice. Doris
-  context was complete, but ABI was partial for all methods, so method-specific assembler/object
-  acceptance was `not_observed`; the external report and exact SDK identity are recorded in the
-  dated acceptance and measured-evidence records. The gate is not complete.
-- T088 now requires the normalized byte/CFG/external-edge/effect fields plus relocation, NID, and
-  ABI/CFI dimensions before parity can be observed. The bounded report remains failed/partial and
-  no `target-object-equivalent` result is promoted. Live PS4 behavior remains `not_observed`.
+- T086 is complete for the frozen 26 code-bearing methods: prefix/alias normalization, vector
+  effects, stack/frame transitions, return cleanup, bounded conditional joins, and CFI boundaries
+  are covered by focused tests and the retained SDK 12 report. Unknown or conflicting paths remain
+  non-promoting diagnostics.
+- T087 is complete for the bounded SDK 12 acceptance: all 26 methods retain `.s`, `.o`, and linked
+  `.o` artifacts with source/tool/object hashes and Orbis metadata; six `orbis-bin` profiles and
+  8/8 compiler probes are observed. The compiler probes remain capability evidence and do not
+  replace method-specific ABI facts.
+- T088 is complete as an explicit disposition stage. Schema 4.4 records 17
+  `target_object_equivalent` and 9 `not_promoted` method results; the latter lack complete
+  source-bound return-type/ABI facts. The all-26 promotion gate and live PS4 behavior remain
+  open, so full Season 2 expansion is deferred.
 
 ## Phase 1: Setup
 
@@ -225,13 +260,13 @@ contributing evidence identifiers and leaves the header facts traceable.
   compiler/linker timeout as an explicit caller policy, and retain only concise status, tool,
   configured-limit, timing, and output-hash evidence. The default has no tool timeout, and
   documented-invalid SDK profiles are not re-run.
-- [ ] T086 [US3] Close common x86-64 instruction-effect gaps (mnemonic aliases, conditional paths,
+- [x] T086 [US3] Close common x86-64 instruction-effect gaps (mnemonic aliases, conditional paths,
   return-immediate stack cleanup, and CFI boundary joins) without promoting unknown or conflicting
   evidence.
-- [ ] T087 [US3] Run bounded representative Orbis clang/as/readelf/objdump acceptance after ABI and
+- [x] T087 [US3] Run bounded representative Orbis clang/as/readelf/objdump acceptance after ABI and
   effect closure, capture reproducible tool/object metadata, and expand only after the bounded gate
   is complete.
-- [ ] T088 [US3] Close static parity over normalized bytes, CFG/branches, calls/external edges,
+- [x] T088 [US3] Close static parity over normalized bytes, CFG/branches, calls/external edges,
   NIDs, ABI/CFI/effects, and accepted target objects; keep live behavioral equivalence separate.
 - [ ] T048 [US1] Propagate complete, declaration-only, partial, unresolved, and conflicting completeness through the current parser and generation services; block declaration-only bases and by-value dependencies with deterministic diagnostics. Add unit coverage in `tests/domain/services/parsing/` and `tests/domain/services/generation/`.
 - [ ] T049 [US1] Replace name-only dependency and registry identity with qualified, containing-scope-safe keys in `src/ddon_dwarf_reconstructor/domain/models/dwarf/` and the generation services; preserve nested names such as `cOmControl::InputLot`. Add parser and renderer regressions under `tests/domain/services/`.
@@ -283,3 +318,13 @@ reconstruction.
 Every task names an exact path and a validation target. Real ELF, compressed dumps,
 proprietary tools, generated headers, logs, and caches remain local and are never
 added to feature artifacts or source control.
+
+## SDK 12 disassembly refactor acceptance (2026-08-18)
+
+The baseline-first refactor was regenerated and compared outside the checkout under
+`C:\Users\morph\AppData\Local\Temp\ddon-disassembly-refactor-20260818`. SDK `12.000` was used for
+both runs with the complete source-bound analytical store and 289 roots split 73/73/73/70. The
+strict `disassembly-regression/1` comparison matched zero differences across 2,745 headers,
+83,754 method entries, 4,504 descriptors, 289 reports/source bundles, and 8,116 files. The
+historical 2,760-header/MSVC result remains separate evidence; this acceptance does not close the
+remaining header-completeness, ABI, semantic, IDA, or live-behavior tasks.

@@ -43,7 +43,11 @@ def test_coverage_checker_aggregates_named_high_risk_groups(tmp_path: Path) -> N
 
     assert report["parsing"].line_percent == pytest.approx(96.0)
     assert report["artifact"].branch_percent == pytest.approx(85.0)
-    assert violations(report) == []
+    assert violations(report) == [
+        "generation coverage group contains no executable statements",
+        "orchestration coverage group contains no executable statements",
+        "cpp_reconstruction coverage group contains no executable statements",
+    ]
 
 
 @pytest.mark.unit
@@ -68,3 +72,13 @@ def test_coverage_checker_reports_line_and_branch_threshold_failures(tmp_path: P
     assert "total line coverage 70.0% is below 80.0%" in failures
     assert "parsing line coverage 70.0% is below 80.0%" in failures
     assert "parsing branch coverage 60.0% is below 70.0%" in failures
+
+
+def test_empty_coverage_groups_fail_while_branchless_code_can_pass() -> None:
+    from tests.support.quality.check_coverage import GROUPS, CoverageSummary
+
+    report = {name: CoverageSummary(0, 0, 0, 0) for name in GROUPS}
+    report["total"] = CoverageSummary(0, 0, 0, 0)
+    assert len(violations(report)) == len(GROUPS) + 1
+    report = {name: CoverageSummary(5, 0, 0, 0) for name in (*GROUPS, "total")}
+    assert violations(report) == []

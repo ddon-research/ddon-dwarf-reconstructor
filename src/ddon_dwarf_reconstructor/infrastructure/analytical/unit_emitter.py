@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from ...domain.models.analytical_dwarf import DwarfRecordKind, QueryStatus
+from .dwarf_reference import reference_target_for_attribute
 from .json_codec import tag_value
 from .record_sink import RecordWriter
 from .semantic_emitter import DwarfSemanticEmitter
@@ -373,24 +374,8 @@ def _reference_target(
     cu: Any, attribute: Any, unit_offset: int | None = None
 ) -> tuple[int | None, QueryStatus]:
     """Decode a reference offset without navigating into another CU."""
-    if attribute is None:
-        return None, QueryStatus.NOT_FOUND
-    form = str(getattr(attribute, "form", ""))
-    raw = _integer_or_none(getattr(attribute, "raw_value", None))
-    if raw is None:
-        raw = _integer_or_none(getattr(attribute, "value", None))
-    if raw is None:
-        return None, QueryStatus.PARTIAL
-    if form in {
-        "DW_FORM_ref1",
-        "DW_FORM_ref2",
-        "DW_FORM_ref4",
-        "DW_FORM_ref8",
-        "DW_FORM_ref",
-        "DW_FORM_ref_udata",
-    }:
-        offset = unit_offset if unit_offset is not None else _integer(cu, "cu_offset", 0)
-        return offset + raw, QueryStatus.COMPLETE
-    if form == "DW_FORM_ref_addr":
-        return raw, QueryStatus.COMPLETE
-    return None, QueryStatus.PARTIAL
+    return reference_target_for_attribute(
+        attribute,
+        unit_offset=unit_offset,
+        default_unit_offset=_integer(cu, "cu_offset", 0),
+    )

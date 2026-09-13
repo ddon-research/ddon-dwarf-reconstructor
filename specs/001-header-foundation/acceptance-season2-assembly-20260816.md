@@ -265,6 +265,31 @@ The follow-up repository loop passed 877 deterministic tests with 5 deselected, 
 the focused five-test NID slice, and `docs-check`. These repository gates do not promote the
 remaining PS4 ABI, semantic, or behavioral dimensions.
 
+## Local Orbis SDK 12 CPU/ABI evidence slice (2026-08-17)
+
+The offline CPU/ABI integration was exercised against the local
+`D:\ddon-dwarf-reconstructor\resources\DDOORBIS.elf` (size `800622848`, SHA-256
+`4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0`) with the promoted SDK
+`12.000` host profile. The observed `orbis-bin` identity was SDK 12.00.0.2, tool SHA-256
+`c911af44f77b93fdc96d7ce9def0bba3858fe43dd935a83bdae2cd7a4f8f7763`. All raw exports and probe
+files remain under `C:\Users\morph\AppData\Local\Temp\ddon-orbis-sdk12-*`.
+
+| Observation | Result | External manifest/output evidence |
+| --- | --- | --- |
+| `orbis-bin -dss` | `rLayout::load(MtStream&)` matched exactly at `4504` bytes; 120,239 stack rows parsed | manifest key `c9926958055272864a42495feb7bcb8b9c322a7644c412521443d52d955d2371`; output SHA-256 `acd2e4faabe16bcc727f399ccbc4c6bdc5ad07695450d5fd76ed324587e7a95c` |
+| `orbis-bin --dump-dynsym -v` | 650 dynamic-symbol rows parsed | manifest key `db1e48614f487dc4288cc40ddd7391ead7c99c8d5b450e7bc2e04a87d4a26531`; output SHA-256 `d68ed2f46b35032b912102e826bc396162f9a485e433a3f62209ba6e6084770f` |
+| `orbis-bin -r` | 28,431,184-byte inline relocation display published successfully | manifest key `5c3c0938efd29f546746e5885ba198c55462aef2d041a3ea664982a5fd537cd6`; output SHA-256 `111b045496914a63b21e11d3b3d2f409c5a39d3e397deea3b5f768209c83b48a` |
+| section, memory, and file layout profiles | all three complete and source/tool-bound | keys `e4d93e8a0dfc93b3630f6c2d8ebbd41cc865f516a18d7c1514dfd29d0a1d4e17`, `a23361a3513c09077931872724737e5c673dfe19b07532650068cb6918f8f5c8`, and `4cc17c92583c00180ddc94d96970f34f6c83c96588f13fd90214ad192679576d` |
+| compiler ABI matrix | 8/8 SDK 12 probes observed; each retained `-S` assembly, `-c` object, source hash, command, CFI, `.sce_stack_sizes`, `.debug_aranges`, `.text.<symbol>`, `e_flags=0x04000000`, and object metadata | `C:\Users\morph\AppData\Local\Temp\ddon-orbis-sdk12-probes\compiler-probes-1a0530a0a75911a0.json`; compiler SHA-256 `1a0530a0a75911a0817240e157779de1a70caa9e4e6a7d89520c9455bd704510` |
+| canonical assembly bytes | SDK 12 `orbis-as` accepted the existing canonical `rLayout::load(MtStream&)` byte-replay source; `.text` size `3205`, SHA-256 `6073fe10213d913f4d845a3d49fcc75c9e076ac96c39e2f7f91506c752f21ba2` | source SHA-256 `82b5b1adb9ed1b3aa162cf353bf2ae3310b85fe7fbf0e41df131e50cde69df7b`; reassembled object SHA-256 `abcf7f29eb277b28ae38ab806cfbdae5fa61b411cd4b1e925d7cfbfe12bb253c` |
+| marked `orbis-llvm-mca` sample | one closed region observed with JSON and resource-pressure output; performance-only evidence | input SHA-256 `e63fe2e9da3a7bf2482912656efed127b2c15ba92b93ed0fa6085132c3829dd3`; output SHA-256 `174a15aacb6472c7e66fbd70880761395f010994512af265c7d73721ae2f4db4`; tool SHA-256 `c5e0cb29c4734b63b981b4ac7db3ddf08bf75147a69335279162d4f156523cb3` |
+
+The first inline-relocation attempt used GNU-only `-C -w -F` flags and failed on SDK 12; the
+profile was corrected to Orbis `-r` and rerun successfully. This is retained as tool capability
+evidence, not hidden as a skip. The SDK 12 contract is host-tool evidence only and does not prove
+the ELF's build SDK. Compiler acceptance, `orbis-bin` output, and `llvm-mca` performance modeling
+remain separate from method-specific ABI closure, semantic equivalence, and live PS4 behavior.
+
 ## Remaining open points
 
 - DWARF-to-Orbis association remains incomplete or ambiguous for the method/root statuses above;
@@ -296,3 +321,57 @@ deselected; `check` passed; `test` passed 876 tests with 5 deselected; `coverage
 `docs-api-check`, and `docs-check` passed. The latter validated 305 API modules in six pages and
 17 Mermaid diagrams across 68 Markdown files. These gates validate the implementation and
 documentation, not the unavailable PS4 static or live-behavior dimensions.
+
+## SDK 12 validator and final repository gate follow-up (2026-08-17)
+
+The integrated SDK 12 path was then exercised through the canonical
+`artifacts validate-implementation` command against the same local ELF, complete analytical
+store manifest, six source-bound `orbis-bin` manifests, and the retained 8/8 compiler probe
+manifest. It published the external schema-4.3 report at
+`C:\Users\morph\AppData\Local\Temp\ddon-orbis-sdk12-validation-20260817\implementation-validation-4236f598acc8f158.json`
+with SHA-256
+`8403b96403e334c6fb44eef6143b63979e4e828acdc9584805793877c8d7eb79`. The report selected
+`orbis-sdk12-llvm18`, observed all six `orbis-bin` profiles, 172,943 relocations, 1,312 NID
+bindings, and 8/8 reusable ABI probes across 1,037 methods.
+
+The aggregate status is intentionally `failed`, not normalized to success: method ABI remains
+`partial` for all 1,037 methods; method compiler acceptance is `not_observed`; the Doris model
+was unavailable (`DorisConnectionError`); and the `rLayout::load` effect/parity case retained
+unsupported `vxorps`/`vmovaps`/other listing diagnostics and an incomplete symbolic path. Live
+PS4 execution and behavioral equivalence remain `not_observed`. This is expected bounded evidence
+from the new workflow and does not weaken the method-specific ABI, static-equivalence, or live
+behavior gates.
+
+The final repository loop passed: `test-unit` 889 passed/7 deselected; `check` passed;
+`test` and `coverage-ci` 891 passed/5 deselected; total coverage 80.38% with all named
+high-risk groups above threshold; `audit` reported zero Prospector messages; and
+`docs-api`, `docs-api-check`, and `docs-check` passed for 319 API modules. These repository
+gates validate the implementation and documentation, while the external report preserves the
+unavailable Doris and method-level PS4 dimensions explicitly.
+
+## SDK 12 bounded static-evidence gate, schema 4.4 (2026-08-17)
+
+After the T086 effect normalization, source-bound ABI closure checks, parity normalization, and
+legacy-report migration, the canonical validator was rerun against the same source and complete
+analytical publication. The external report is
+`C:\Users\morph\AppData\Local\Temp\ddon-orbis-sdk12-t087-20260817-final2\implementation-validation-4236f598acc8f158.json`
+with SHA-256
+`752FA0CF923DCD303CDCE34EDD5EEEAAB4F7BD8BF95E516C6D0B6C5F85DD2BFE`. It is schema `4.4`,
+status `partial`, source-bound to ELF SHA-256
+`4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0` and analytical manifest
+SHA-256 `bbe354bf3f838c8a1da6da501b9829a1bedf533f4834f0a4710dcbb574886078`.
+
+| Dimension | Observed result | Boundary |
+| --- | --- | --- |
+| Frozen code-bearing set | 26 methods, 2,639 Orbis instructions | The other 1,011 discovery rows have no complete code range and remain `not_observed`/`not_promoted` |
+| SDK 12 host tools | `orbis-sdk12-llvm18`; six `orbis-bin` profiles observed; 172,943 relocations; 1,312 NID rows; 8/8 compiler probes observed | Host-tool identity does not prove the target ELF build SDK or semantic equivalence |
+| T086 effects | 26/26 method effect summaries observed, including normalized prefixes/aliases, vector effects, stack/frame transitions, and bounded path joins | Unknown, conflicting, indirect, and exhausted paths remain non-promoting diagnostics |
+| ABI | 17 observed, 9 partial | The nine partial rows lack complete source-bound return-type/ABI facts; compiler probes do not substitute for method locations |
+| T087 target objects | 26/26 retained method `.s`, `.o`, and linked `.o` artifacts with source/tool/object hashes, SDK `orbis-as`/`orbis-readelf`/`orbis-objdump` evidence, section metadata, and `e_flags` | Canonical byte-replay remains the default; compiler-generated probe metadata is separate capability evidence |
+| Stack-size utility evidence | `rLayout::load(MtStream&)` observed at 4,504 bytes in the source-bound SDK 12 `orbis-bin -dss` export | The discovery identity is signatureless `rLayout::load`; the full-signature utility row remains additive evidence |
+| Static equivalence | 17 `target_object_equivalent`, 9 `not_promoted` | No `conflicting` or `failed` disposition occurred in the 26-row set; no runtime/behavioral equivalence is claimed |
+
+T086 and T087 implementation/evidence slices are complete for this bounded set. T088 now has an
+explicit per-method disposition, but the gate remains observed-partial because nine methods do not
+meet the ABI/CFI closure required for promotion. Full Season 2 expansion, header completeness,
+MSVC closure, IDA evidence, and live behavioral equivalence remain separate backlog items.

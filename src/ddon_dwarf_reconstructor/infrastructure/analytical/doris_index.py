@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from time import perf_counter
 from typing import TYPE_CHECKING, Protocol
 
@@ -13,6 +14,7 @@ from ...domain.services.definition_selection import (
     build_definition_candidate,
 )
 from ...domain.services.search_result import SearchResult, SearchStatus, search_status_for_query
+from .doris_hydration import hydrate_dies_by_offsets
 from .doris_models import DorisDie
 from .doris_store_helpers import bounded_query_diagnostic
 
@@ -23,7 +25,9 @@ if TYPE_CHECKING:
 class DorisCandidateStore(Protocol):
     """Minimal store surface required by canonical candidate scoring."""
 
-    def child_tag_counts(self, die_offset: int) -> NestedTypeCounts: ...
+    def child_tag_counts(
+        self, die_offset: int, unit_offset: int | None = None
+    ) -> NestedTypeCounts: ...
 
 
 class DorisDwarfIndex:
@@ -34,6 +38,7 @@ class DorisDwarfIndex:
     def __init__(self, store: DorisDwarfStore) -> None:
         self.store = store
         self.persistent_cache = store.persistent_cache
+        self._symbol_offset_cache: dict[str, int | None] = {}
 
     def find_symbol_offset(self, symbol_name: str) -> int | None:
         """Return the source-bound primary offset hint for one symbol.
@@ -42,11 +47,16 @@ class DorisDwarfIndex:
         caller must use :meth:`targeted_symbol_search` when it needs explicit
         search evidence and status.
         """
+        if symbol_name in self._symbol_offset_cache:
+            return self._symbol_offset_cache[symbol_name]
         result = self.store.find_primary_definition(symbol_name)
         if result.status is not QueryStatus.COMPLETE:
+            self._symbol_offset_cache[symbol_name] = None
             return None
         item = result.items[0] if result.items else None
-        return item.offset if isinstance(item, DorisDie) else None
+        offset = item.offset if isinstance(item, DorisDie) else None
+        self._symbol_offset_cache[symbol_name] = offset
+        return offset
 
     def find_definition_tag(self, symbol_name: str) -> QueryResult:
         """Return a tag only when the complete tag aggregate is unambiguous."""
@@ -94,6 +104,10 @@ class DorisDwarfIndex:
     def get_die_by_offset(self, offset: int) -> DorisDie | None:
         return self.store.die_by_offset(offset)
 
+    def prefetch_dies(self, offsets: Sequence[int]) -> tuple[DorisDie, ...]:
+        """Hydrate a bounded dependency frontier before parsing it."""
+        return hydrate_dies_by_offsets(self.store, offsets)
+
     def save_cache(self) -> None:
         return
 
@@ -116,7 +130,7 @@ def build_doris_candidate(symbol_name: str, die: DorisDie, store: DorisCandidate
             has_children=die.has_children,
             is_declaration=declaration,
             has_type_reference="DW_AT_type" in die.attributes,
-            nested=store.child_tag_counts(die.offset),
+            nested=store.child_tag_counts(die.offset, die.cu.cu_offset),
         ),
     )
 

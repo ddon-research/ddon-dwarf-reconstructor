@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import struct
-import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -24,9 +23,11 @@ from ddon_dwarf_reconstructor.domain.models.implementation_validation import (
     SemanticParity,
     ValidationStatus,
 )
+from ddon_dwarf_reconstructor.domain.services.cpp_reconstruction import (
+    instruction_effects as implementation_effects,
+)
 from ddon_dwarf_reconstructor.infrastructure import (
     implementation_abi_probes,
-    implementation_effects,
     implementation_linker,
     implementation_load_image,
     implementation_method_validation,
@@ -42,6 +43,7 @@ from ddon_dwarf_reconstructor.infrastructure.implementation_relocations import (
     evaluate_relocations,
     nid_bindings,
 )
+from ddon_dwarf_reconstructor.infrastructure.toolchain_process import BoundedCaptureResult
 
 
 def _relocation(
@@ -194,9 +196,10 @@ def test_method_validation_joins_all_context_dimensions(
     assert method.context.abi_facts["object_pointer"] == "this"
     assert method.context.abi_facts["parameter_locations"] == ("value:rcx",)
     assert method.abi.target_triple == "x86_64-scei-ps4"
+    assert method.abi.status is ValidationStatus.OBSERVED
     assert method.compiler is compiler
     assert method.parity.status is ValidationStatus.PARTIAL
-    assert any("ABI evidence" in item for item in method.diagnostics)
+    assert method.parity.static_equivalence.value == "not_promoted"
 
 
 @pytest.mark.unit
@@ -393,7 +396,7 @@ def test_toolchain_and_probe_failures_are_retained(tmp_path: Path) -> None:
     malformed_object = tmp_path / "malformed.o"
     malformed_object.write_bytes(b"not-an-elf")
     metadata = implementation_toolchain.collect_object_metadata(
-        malformed_object, tmp_path / "missing-readelf", tmp_path, "malformed"
+        malformed_object, tmp_path / "missing-readelf"
     )
     assert metadata["parser_status"] == "unavailable"
     assert metadata["readelf_status"] == "unavailable"
@@ -416,9 +419,9 @@ def test_toolchain_timeout_and_cfi_status_helpers(
     assembler = tmp_path / "orbis-as"
     assembler.write_bytes(b"tool")
     monkeypatch.setattr(
-        implementation_toolchain.subprocess,
-        "run",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(subprocess.TimeoutExpired("as", 1)),
+        implementation_toolchain,
+        "run_bounded_capture",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(TimeoutError("as")),
     )
     stdout_path = tmp_path / "stdout.txt"
     stderr_path = tmp_path / "stderr.txt"
@@ -461,13 +464,13 @@ def test_linker_evidence_records_optional_success_and_fail_closed_outcomes(
     assert missing["link_status"] == ValidationStatus.UNAVAILABLE.value
     assert missing_path is None
 
-    def successful_run(command: tuple[str, ...], **_kwargs: object) -> SimpleNamespace:
-        if "--version" in command:
-            return SimpleNamespace(returncode=0, stdout="orbis-ld 8.0\n", stderr="")
-        Path(command[3]).write_bytes(b"linked")
-        return SimpleNamespace(returncode=0, stdout="", stderr="")
+    def successful_run(
+        _executable: Path, command: tuple[str, ...], _timeout: float | None, **_kwargs: object
+    ) -> BoundedCaptureResult:
+        Path(command[command.index("-o") + 1]).write_bytes(b"linked")
+        return BoundedCaptureResult(0, "", "", False, False)
 
-    monkeypatch.setattr(implementation_linker.subprocess, "run", successful_run)
+    monkeypatch.setattr(implementation_linker, "run_bounded_capture", successful_run)
     observed, linked_path, _ = implementation_linker.link_object(
         object_path, linker, output_dir, "method", ValidationStatus.OBSERVED
     )
@@ -475,9 +478,9 @@ def test_linker_evidence_records_optional_success_and_fail_closed_outcomes(
     assert linked_path is not None and linked_path.exists()
 
     monkeypatch.setattr(
-        implementation_linker.subprocess,
-        "run",
-        lambda *_args, **_kwargs: SimpleNamespace(returncode=1, stdout="", stderr="bad"),
+        implementation_linker,
+        "run_bounded_capture",
+        lambda *_args, **_kwargs: BoundedCaptureResult(1, "", "bad", False, False),
     )
     failed, failed_path, diagnostics = implementation_linker.link_object(
         object_path, linker, output_dir, "failed", ValidationStatus.OBSERVED
@@ -487,9 +490,9 @@ def test_linker_evidence_records_optional_success_and_fail_closed_outcomes(
     assert diagnostics
 
     monkeypatch.setattr(
-        implementation_linker.subprocess,
-        "run",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(subprocess.TimeoutExpired("ld", 1)),
+        implementation_linker,
+        "run_bounded_capture",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(TimeoutError("ld")),
     )
     blocked, blocked_path, diagnostics = implementation_linker.link_object(
         object_path,

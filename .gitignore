@@ -64,6 +64,7 @@ tools/documentation/node_modules/
 
 # Output
 output/
+/generated/
 site/
 *.out
 logs/

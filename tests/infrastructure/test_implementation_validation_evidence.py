@@ -20,6 +20,12 @@ from ddon_dwarf_reconstructor.domain.models.implementation_validation import (
     MappedSegment,
     ValidationStatus,
 )
+from ddon_dwarf_reconstructor.domain.services.cpp_reconstruction.control_flow import (
+    compare_static_edges,
+)
+from ddon_dwarf_reconstructor.domain.services.cpp_reconstruction.instruction_effects import (
+    analyze_instruction_effects,
+)
 from ddon_dwarf_reconstructor.infrastructure import (
     implementation_dwarf_context,
     implementation_load_image,
@@ -30,10 +36,6 @@ from ddon_dwarf_reconstructor.infrastructure.implementation_dwarf_context import
     dwarf_method_evidence,
     load_doris_validation_model,
 )
-from ddon_dwarf_reconstructor.infrastructure.implementation_effects import (
-    analyze_instruction_effects,
-)
-from ddon_dwarf_reconstructor.infrastructure.implementation_parity import compare_static_edges
 from ddon_dwarf_reconstructor.infrastructure.implementation_relocations import (
     evaluate_relocations,
     nid_bindings,

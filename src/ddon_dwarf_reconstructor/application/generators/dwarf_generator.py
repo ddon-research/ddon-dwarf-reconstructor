@@ -28,7 +28,12 @@ from ..generation import (
     build_generation_runtime,
     resolve_explicit_validation_dump,
 )
-from .generation_contracts import GenerationRequest, HeaderBundle
+from .generation_contracts import (
+    GenerationRequest,
+    HeaderBundle,
+    SymbolExtractionRequest,
+    SymbolExtractionResult,
+)
 from .session import DwarfSessionFactory
 
 logger = get_logger(__name__)
@@ -248,6 +253,13 @@ class DwarfGenerator:
             raise RuntimeError("generation facade is unavailable outside an open session")
         return facade.generate(request)
 
+    def extract_symbols(self, request: SymbolExtractionRequest) -> SymbolExtractionResult:
+        """Run the single- or multi-symbol workflow in the current session."""
+        facade = self.facade
+        if facade is None:
+            raise RuntimeError("generation facade is unavailable outside an open session")
+        return facade.extract_symbols(request)
+
     def discover_implementations(
         self,
         root_symbol: str,
@@ -262,5 +274,22 @@ class DwarfGenerator:
         return facade.discover_implementations(
             root_symbol,
             header_bundle,
+            orbis_objdump_path=orbis_objdump_path,
+        )
+
+    def discover_implementations_for_symbols(
+        self,
+        roots: tuple[str, ...],
+        symbols: SymbolExtractionResult,
+        *,
+        orbis_objdump_path: Path | None = None,
+    ) -> ImplementationDiscoveryReport:
+        """Run one additive implementation discovery request for symbols."""
+        facade = self.facade
+        if facade is None:
+            raise RuntimeError("generation facade is unavailable outside an open session")
+        return facade.discover_implementations_for_symbols(
+            roots,
+            symbols,
             orbis_objdump_path=orbis_objdump_path,
         )

@@ -67,6 +67,12 @@ class TypeResolutionMixin:
                 logger.debug(f"DIE {die.tag} has no {type_attr_name} attribute")
                 return "void"
 
+            reference_offset = _reference_offset(die, type_attr_name)
+            if reference_offset is not None:
+                cached_name = self._type_name_cache.get(reference_offset)
+                if cached_name is not None:
+                    return cached_name
+
             # Use pyelftools' efficient offset resolution
             type_die = die.get_DIE_from_attribute(type_attr_name)
             if type_die is None:
@@ -273,3 +279,15 @@ class TypeResolutionMixin:
             logger.warning("Error collecting typedefs from class: %s", error, exc_info=error)
 
         return used_typedefs
+
+
+def _reference_offset(die: DwarfEntry, attribute_name: str) -> int | None:
+    """Read an adapter-provided reference offset before hydrating its target DIE."""
+    resolver = getattr(die, "get_DIE_offset_from_attribute", None)
+    if not callable(resolver):
+        return None
+    try:
+        offset = resolver(attribute_name)
+    except AttributeError, KeyError, RuntimeError, TypeError, ValueError:
+        return None
+    return offset if isinstance(offset, int) and not isinstance(offset, bool) else None

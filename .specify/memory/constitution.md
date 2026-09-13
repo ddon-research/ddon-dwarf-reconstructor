@@ -1,6 +1,7 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 -> 1.0.1
+- Version change: 1.0.1 -> 1.0.2
+- 2026-09-06 amendment: align Prospector with the blocking AGENTS.md audit gate (Feature 021).
 - Modified principles: replaced all illustrative principles with five DDON reconstruction principles
 - Added sections: Evidence and Artifact Constraints; Development Workflow and Quality Gates
 - Removed sections: illustrative template guidance and unresolved placeholder text
@@ -100,7 +101,7 @@ committed.
 	expanding scope.
 4. Before completion, run the relevant unit tests and `uv run just check`. The
 	blocking check includes locked Ruff, Pyrefly, deptry, structure, and boundary
-	checks; focused Prospector remains a non-blocking audit.
+	checks; focused Prospector is a separate blocking audit (`uv run just audit`).
 5. Documentation MUST be updated when commands, configuration, public contracts,
 	artifact lifecycle, or supported behavior changes. Documentation MUST describe
 	verified behavior rather than historical claims.
@@ -125,4 +126,4 @@ determinism, performance assumptions, validation coverage, and documentation
 consistency. Deferred work MUST be recorded in the relevant Spec Kit task or
 feature artifact rather than hidden in generated output.
 
-**Version**: 1.0.1 | **Ratified**: 2026-08-01 | **Last Amended**: 2026-08-02
+**Version**: 1.0.2 | **Ratified**: 2026-08-01 | **Last Amended**: 2026-09-06

@@ -79,7 +79,7 @@ class LazyTypeResolver(
         self.dwarf_info = dwarf_info
         self.index = lazy_index
 
-        # Runtime caches (offset-based)
+        # Runtime caches (offset-based and name-based)
         self._typedef_cache: dict[int, str] = {}  # offset → resolved typedef
         self._type_name_cache: dict[int, str] = {}  # offset → resolved type name
         self._typedef_chains: dict[str, str] = {}  # name → final resolved type

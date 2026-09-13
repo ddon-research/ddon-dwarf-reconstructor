@@ -165,7 +165,7 @@ class SingleHeaderGenerationService:
         headers = {
             class_dependencies[base_name]
             for base_name in class_info.base_classes
-            if base_name in class_dependencies and class_dependencies[base_name]
+            if class_dependencies.get(base_name)
         }
         if not headers:
             return []

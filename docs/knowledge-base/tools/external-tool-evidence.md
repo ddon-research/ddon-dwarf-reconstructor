@@ -10,7 +10,7 @@ authority, and deterministic artifact key.
 
 | Producer | Local/useful commands | Adopted profile | Authority | Boundary |
 | --- | --- | --- | --- | --- |
-| Sony Orbis 8.0 | `orbis-clang++`, `orbis-as`, `orbis-ld`, `orbis-readelf`, `orbis-objdump`, `orbis-nm`, `orbis-addr2line` | `orbis-abi-probes`, `orbis-target-object`, `orbis-elf-headers`, `orbis-symbols` | PS4 ABI/SCE, target acceptance, and symbols | Match the SDK to the target build; preserve exact target, flags, and tool hashes |
+| Sony Orbis SDK 12.000 (promoted) and SDK 8.000 (historical, explicit) | `orbis-clang++`, `orbis-as`, `orbis-ld`, `orbis-readelf`, `orbis-objdump`, `orbis-bin`, `orbis-nm`, `orbis-addr2line`, `orbis-llvm-mca` | `orbis-bin-stack-sizes`, `orbis-bin-dynamic-symbols`, `orbis-bin-inline-relocations`, `orbis-bin-section-headers`, `orbis-bin-memory-layout`, `orbis-bin-file-layout`, `orbis-abi-probes`, `orbis-target-object`, `orbis-elf-headers`, `orbis-symbols` | PS4 ABI/SCE, target acceptance, symbols, and additive utility views | SDK 12 is the default host profile; SDK 8 requires an explicit path. Preserve exact target, flags, tool hashes, and mixed-family rejection |
 | LLVM | `llvm-readobj`, `llvm-readelf`, `llvm-objdump`, `llvm-dwarfdump`, `llvm-debuginfo-analyzer` | `llvm-elf-metadata-relocations-json`, opt-in `llvm-ps4-disassembly`, `llvm-dwarf-statistics`, `llvm-dwarf-verify`, `llvm-debug-info-summary` | Generic ELF/DWARF and target-aware structural cross-check | Keep unknown SCE values and do not overwrite Orbis facts |
 | GNU Binutils | `readelf`, `objdump`, `nm` | `gnu-elf-headers`, `gnu-symbols` | Generic ELF/symbol cross-check | GNU target naming can omit Orbis-specific ABI semantics |
 | elfutils | `eu-readelf`, `eu-elflint` | `elfutils-elflint` | Generic integrity diagnostics | Diagnostics are not reconstructed layout |
@@ -19,6 +19,31 @@ authority, and deterministic artifact key.
 | LIEF | Optional Python/C++ parser | Not in runtime dependency set | Exploratory comparison | Validate PS4 custom types/segments before adoption |
 | OpenOrbis/readoelf | Reference source and Orbis ELF readers | Reference only | Comparative implementation evidence | Keep source/provenance; do not silently replace Sony output |
 | elfldr | Loader/payload research | Not adopted | None for offline inspection | Never execute or ingest loader behavior in this workflow |
+
+## Local SDK 12 CPU/ABI contract
+
+The promoted `OrbisToolchainContract` is `orbis-sdk12-llvm18` for SDK `12.000`. It records the
+observed compiler/assembler/linker/`llvm-mca` identities, `x86_64-scei-ps4` target, AT&T syntax,
+LLVM integrated-assembler default, PIC/function-data-section/CFI/aranges/frame-pointer/visibility
+defaults, and the reviewed ABI deviations for hidden structure returns, variadic `__m256`,
+`__int128`, stack alignment, register classes, and TLS. It also records
+`EF_FFUNC_DATA_SECS_ENABLED=0x04000000`, `R_X86_64_ORBIS_GOTPCREL_LOAD=0x28`, and
+`.sce_stack_sizes` as typed ELF observations. SDK 8 remains an explicit historical contract; a
+host-tool contract does not establish the build SDK of the inspected ELF.
+
+The contract records local documentation provenance without copying proprietary text:
+
+```text
+D:\SCE\ORBIS\documentation\chm\en\extracted\en\System\Compiling_Linking_and_Building\CPU_Assembler-Guidelines
+D:\SCE\ORBIS\documentation\chm\en\extracted\en\System\Compiling_Linking_and_Building\CPU_Compiler_ABI-Overview
+D:\SCE\ORBIS\documentation\chm\en\extracted\en\System\Generating_and_Using_Dynamic_Libraries\Sysmodule-Reference\ps4-module-ids.html
+D:\SCE\ORBIS\documentation\chm\en\extracted\en\System\Analysis_and_Debugging\Machine_Code_Analyzer-Overview\analyzing-assembly-code-generated-by-the-compiler.html
+```
+
+`orbis-bin` profiles are source-bound and additive. SDK 12 `orbis-bin --help` validates `-r` as
+the relocation display option; GNU objdump-only flags are not included in the inline-relocation
+profile. `orbis-objdump` remains the canonical disassembler until a separately retained
+disassembly comparison proves a replacement safe.
 
 ## PS4 authority matrix
 
@@ -45,6 +70,11 @@ LLVM output is never promoted to the instruction authority. `llvm-readobj` remai
 metadata profile because its local command surface has no `--triple` option; its triple status is
 therefore `not_applicable`. `llvm-tli-checker` is not part of ELF extraction: it diagnoses target
 library availability and needs an explicit SDK library/sysroot input.
+
+`performance analyze-assembly` is a separate `orbis-llvm-mca` workflow. It accepts only marked
+post-compile assembly regions, retains input/tool/output hashes and marker names, and reports
+performance-model evidence independently. Its result cannot satisfy compiler ABI, object parity,
+relocation, or semantic-equivalence dimensions.
 
 The upstream [ps4_module_loader metadata definitions](https://github.com/SocraticBliss/ps4_module_loader/blob/657f9d380abfec9097bc4bddbc63551b3cd5e47b/ps4_module.py#L325-L363)
 and [relocation parser](https://github.com/SocraticBliss/ps4_module_loader/blob/657f9d380abfec9097bc4bddbc63551b3cd5e47b/ps4_module.py#L1141-L1157),
@@ -88,19 +118,24 @@ hashes are part of the SDK-definition identity in cache keys and reports.
 Use the goal handoff record to distinguish confirmed command output, approximate tool behavior,
 blocked SDK/container prerequisites, and unresolved C++ semantics. Declarations and debug metadata
 do not prove method bodies; disassembly remains a separate evidence producer. For generated
-headers, `generate --extract-assembly` consumes the completed header bundle in a follow-up chain
-and writes source-bound implementation reports under `<output>/<platform>/implementations/`.
-The implementation report (schema `4.2`) is the canonical projection of method-range evidence: it
+headers, `generate --extract-assembly` consumes the completed header bundle in a follow-up chain.
+A symbol request performs one union discovery and writes `implementation-report.json` at
+`generated/ps4-<client-version>/` (or its explicit output root), with flat resource/shared `.asm`
+evidence when context generation is enabled. Use `--no-generate-context` for an assembly-only
+handoff without generation JSON.
+The implementation-discovery report (schema `4.2`) is the canonical projection of method-range evidence: it
 preserves all candidates, exact raw method text, selected Orbis instructions, instruction-owned
 references, source/file offsets, and consumed tool invocation metadata. The optional source bundle
 contains bounded `.raw.asm` evidence, exact-byte `.s` compiler input, SDK-produced `.o` objects
 when accepted, and `.context.json` AI transformation/provenance packets, plus a minimal
 publication envelope. `.raw.asm` is never assembler input, and the core pipeline does not emit
 placeholder `.cpp`, reference, or diagnostic files. A later agentic workflow may translate the
-assembly. The report also carries the
+assembly. The separate implementation-validation report is schema `4.4` and also carries the
 deterministic DWARF target manifest, scope policy/hash, retained ELF function candidates, range/name
 match reasons, and range provenance. Missing, partial, ambiguous, and unsupported association
-evidence is retained as status rather than promoted to a body match.
+evidence is retained as status rather than promoted to a body match. Its typed
+static-equivalence disposition is `not_promoted`, `target_object_equivalent`, `conflicting`, or
+`failed`; legacy 4.3 payloads default to `not_promoted` during read.
 
 ## Validated handoff record
 
@@ -119,7 +154,7 @@ tools remain the matching-SDK authority.
 
 The normal implementation chain uses only the profiles whose output is consumed: `-t -C -w
 --special-syms` for symbols; `-EL -d -l -F -C -w --prefix-addresses --show-raw-insn` for bounded
-disassembly; and `-r -C -w -F` for the conventional relocation cross-check. The known-invalid
+disassembly; and `-r` for the Orbis relocation display. The known-invalid
 `-t -T` combination and `-R -C -w -F` dynamic-relocation option are capability-filtered and are
 not invoked. The full `--dwarf=info` pass is not part of generation because Doris is the
 source-bound DWARF serving authority. The historical SDK observations are retained here as
@@ -147,6 +182,13 @@ hashes, and per-method context packets. No C++ view is generated; canonical asse
 are emitted only in the external validation directory. `orbis-objdump` is
 required to observe normalized CFG/call-edge parity; `orbis-ld` is optional. Live PS4 behavior
 remains a separate `not_observed` dimension.
+
+The implementation validator is deliberately an optional feature boundary. Its command, strict
+report projection, compiler-probe entry point, and context adapter are exposed below
+`infrastructure/validation`, which delegates to the dedicated strict evidence adapters; generation
+and artifact publication consume only the neutral context enrichment contract. Removing that
+feature later therefore removes a downstream evidence path, not validation imports from header
+rendering or method discovery.
 
 When `--dwarf-store` is supplied, implementation validation uses the
 `DorisImplementationEvidenceModel`. The manifest is read for source/schema/publication identity
@@ -224,3 +266,20 @@ provenance manifest, and optional NID suffix are recorded. Hash or encoded libra
 conflicts fail closed; an unverified community name cannot promote target-object-equivalent.
 Orbis objdump for PS4 instruction decoding, the SCE reader for metadata discovery, and the
 validator for pure relocation application/effect evidence.
+
+## SDK 12 full-root disassembly refactor evidence
+
+The source-bound SDK `12.000` baseline/post acceptance is retained outside source control at
+`C:\Users\morph\AppData\Local\Temp\ddon-disassembly-refactor-20260818`. It used the complete
+analytical store, the immutable ELF SHA-256
+`4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0`, four root partitions
+73/73/73/70, full hierarchy, `--extract-assembly`, and implementation-source emission. The
+`disassembly-regression/1` manifests and `comparison.json` record the tool/configuration identities;
+SDK 8 was not mixed into this run.
+
+Baseline and post are exact matches with manifest SHA-256
+`db59e07ebaf34ccd582065223b79897b3a75bc64352343497c2f56519cda3533` and zero comparator
+differences. The aggregate is 289 roots, 2,745 headers, 83,754 method entries, 60,117 unique
+method identities, 4,504 artifact descriptors, 289 reports, 289 source bundles, and 8,116 files.
+The comparison treats `orbis-objdump` as canonical disassembly, `orbis-bin` as additive utility
+evidence, and compiler/LLVM observations as non-promoting capability or cross-check evidence.

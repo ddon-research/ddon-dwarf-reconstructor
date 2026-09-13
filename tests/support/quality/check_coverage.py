@@ -17,12 +17,18 @@ GROUPS = {
         "/application/generators/",
         "/main.py",
         "/artifact_cli.py",
+        "/infrastructure/analytical/session.py",
     ),
     "artifact": (
         "/infrastructure/artifacts.py",
+        "/infrastructure/artifact_io.py",
+        "/infrastructure/symbol_output.py",
+        "/infrastructure/toolchain_process.py",
+        "/infrastructure/implementation_abi_facts.py",
         "/infrastructure/orbis_objdump.py",
         "/infrastructure/zstd_dump",
     ),
+    "cpp_reconstruction": ("/domain/services/cpp_reconstruction/",),
 }
 TOTAL_LINE_THRESHOLD = 80.0
 GROUP_LINE_THRESHOLD = 80.0
@@ -99,12 +105,17 @@ def read_report(path: Path) -> dict[str, CoverageSummary]:
 def violations(report: dict[str, CoverageSummary]) -> list[str]:
     failures: list[str] = []
     total = report["total"]
-    if total.line_percent < TOTAL_LINE_THRESHOLD:
+    if total.statements == 0:
+        failures.append("total coverage contains no executable statements")
+    elif total.line_percent < TOTAL_LINE_THRESHOLD:
         failures.append(
             f"total line coverage {total.line_percent:.1f}% is below {TOTAL_LINE_THRESHOLD:.1f}%"
         )
     for name in GROUPS:
         summary = report[name]
+        if summary.statements == 0:
+            failures.append(f"{name} coverage group contains no executable statements")
+            continue
         if summary.line_percent < GROUP_LINE_THRESHOLD:
             failures.append(
                 f"{name} line coverage {summary.line_percent:.1f}% is below "

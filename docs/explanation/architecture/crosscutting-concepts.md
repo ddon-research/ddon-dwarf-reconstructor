@@ -149,6 +149,65 @@ valid bundle available.
 The [durable artifacts reference](../../reference/artifacts.md) and
 [artifact inspection how-to](../../how-to/inspect-artifacts.md) describe the operational contract.
 
+Publication cleanup follows resource ownership: failed temporary text writes remove their new
+temporary file, and failed symbol-directory rollback preserves the backup of the previous bundle
+for recovery. Only a successful replacement permits backup cleanup. Analytical sessions likewise
+close an acquired store if source validation or view/index setup fails, and release their own
+references even if closing the store raises. Failure-path fixtures in
+`tests/infrastructure/test_failure_ownership.py` exercise these boundaries.
+
+Pure instruction-effects, operand semantics, bounded control-flow joins, and static edge parity
+live in `domain/services/cpp_reconstruction/`; control-flow value objects live in
+`domain/models/cpp_reconstruction/`. The mutable per-analysis accumulator remains local to one
+analysis call. CFI acquisition, object assembly, tool-output parsing, and subprocess execution
+remain infrastructure responsibilities. Internal callers import the canonical domain services
+directly; the former infrastructure forwarding modules are removed. Architecture tests prohibit
+domain dependencies on application, subprocess, SQLite, structlog, and Rich, with deliberate
+forbidden-import fixtures. These are module dependency rules, not call-level execution analysis.
+
+Return-type ABI classification uses the same boundary: the infrastructure acquisition adapter
+resolves the existing bounded DWARF chain into a `ReturnTypeEvidence` value, then the pure
+`cpp_reconstruction.abi` service produces `ReturnTypeFacts`. The adapter retains reference-form,
+CU-offset, missing-reference, cycle, and depth-limit handling. Classification owns the existing
+pointer, scalar, aggregate, and hidden-return rules. This separation does not strengthen their
+ABI authority or change the emitted evidence fields and statuses.
+
+Type-chain memoization follows the same source lifetime. Every `ClassParser` constructs its own
+`TypeChainTraverser`; CU/DIE offsets are only meaningful inside that opened DWARF session. The
+traverser keeps its stopping rules and depth bound, and `clear_cache()` is available to release
+cached DIE references when a session ends. A process-global cache is not a valid optimization
+because interleaved sources can reuse the same integer offsets.
+
+Architecture checks also inspect call expressions in the inner layers for unbounded process APIs
+such as `os.system`, `os.popen`, and the legacy `subprocess` convenience calls. Import rules alone
+cannot detect a call reached through an existing import, so the small AST check has both a passing
+repository scan and a deliberate violating fixture. Infrastructure adapters may use the shared
+bounded runner or an explicitly tested process workflow.
+
+The symbol publication is a related atomic boundary. One or many `--symbol` values, including a
+`--symbols-file`, are resolved by one union traversal with method-signature dependencies enabled;
+they do not become separate root jobs. Requested roots own their resource directories, single-root
+dependencies remain there, and dependencies reached from multiple roots are assigned to `shared/`.
+The ownership map uses qualified identity plus CU/DIE provenance, rewrites includes, and gives
+colliding definitions deterministic identity suffixes. The resulting
+`generated/ps4-<client-version>/` tree contains flat headers and flat assembly files. Client-version
+inference and the `unknown` diagnostic are part of `symbols.manifest.json` when context generation
+is enabled, as are the source/list/configuration identity, file hashes, counts, root statuses, and
+unresolved or conflict diagnostics. `--no-generate-context` leaves only C++/assembly files.
+
+Symbol-set `.asm` is a human-readable evidence projection. Its method/type/address/source/file-offset
+metadata, pseudo calls, and source references use semicolon comments. Exact-byte `.s` and accepted
+`.o` output is separate opt-in assembler evidence, and raw/structured disassembly remains in the
+report/cache. Neither readable assembly nor assembler availability promotes header completeness.
+
+Implementation-tool execution has one bounded infrastructure boundary. The shared process runner
+captures stdout and stderr through temporary files, applies explicit byte limits, terminates timed
+out children, and reports truncation or drain failures as incomplete evidence. Version probes use
+that same runner. A `ToolIdentityCache` is created for a single toolchain run and profile; it may
+reuse an executable hash and version within that scope, but it is never a process-global cache and
+does not retain failed observations indefinitely. Assembler, linker, object metadata, objdump, and
+ABI-probe adapters keep their own narrow responsibilities while sharing this lifecycle contract.
+
 ## Evidence authority and provenance
 
 Producer facts and derived observations have different authority:
@@ -159,6 +218,9 @@ Producer facts and derived observations have different authority:
 | `DefinitionCandidate` selection | Reconstructor policy | Prefer complete definitions without silently converting declarations into behavior. |
 | `SearchResult` | Bounded lookup contract | Preserve `complete`, `partial`, `not_found`, and `unavailable`; partial evidence is never complete evidence. |
 | Orbis/LLVM/GNU/other tool export | Additive observation | Keep tool identity, command, version, manifest, and uncertainty; never overwrite producer facts. |
+| Orbis CPU/ABI contract and compiler probe | Local toolchain observation | Bind SDK 12/SDK 8 identity, compiler `.s`/`.o` hashes, object metadata, and documented defaults; do not promote method ABI or semantic equivalence. |
+| Sysmodule catalog | Loader-constant reference | Keep `SysmoduleId` separate from SCE dynamic NID identities; never consult it during general NID resolution. |
+| `llvm-mca` output | Performance-model observation | Require marked post-compile assembly and retain provenance; never merge it into correctness or ABI status. |
 | SonarQube diagnostics | Local quality observation | Report compiler and database evidence separately from generated-header correctness. |
 | JSONL knowledge bundle | Current projection | It is a deterministic export contract, not proof that a live LadybugDB loader exists. |
 
@@ -195,6 +257,12 @@ Doris publication is staged and verified by source-bound family counts. Stream L
 verification proves row-count parity. Request-scoped hydration caches are cleared at each root and
 emit bounded size/hit/miss lifecycle events. Registry schema mismatches fail closed rather than
 falling back to an unversioned compatibility shape.
+
+The Doris loader validates a materialization manifest once per load invocation and carries its
+source identity through every Parquet label calculation. This removes repeated manifest parsing
+without introducing a process-global store cache, changing label bytes, or changing the plan's
+deterministic file order. Destination-table and producer identity remain a separate durable-label
+acceptance question; F037 is not normalized away by this performance fix.
 
 Performance is a separate infrastructure boundary. `PerformanceRunner` samples only an explicit
 child process, while `HistoryStore` writes the v1 ledger at `resources/performance/` and static

@@ -218,9 +218,8 @@ def _latest(rows: tuple[HistoryRow, ...]) -> tuple[HistoryRow, ...]:
 
 
 def _tool_rows(rows: tuple[HistoryRow, ...]) -> list[str]:
-    tools: dict[str, tuple[str, str, str]] = {
-        name: ("not_observed", "—", "no artifact recorded")
-        for name in (
+    tools: dict[str, tuple[str, str, str]] = dict.fromkeys(
+        (
             "process-sampler",
             "cprofile",
             "pyinstrument",
@@ -230,8 +229,9 @@ def _tool_rows(rows: tuple[HistoryRow, ...]) -> list[str]:
             "tracemalloc",
             "psutil",
             "nuitka",
-        )
-    }
+        ),
+        ("not_observed", "—", "no artifact recorded"),
+    )
     for row in rows:
         for artifact in row.artifacts:
             name = str(artifact.get("profiler", "unknown"))

@@ -54,6 +54,7 @@ def _generator(tmp_path: Path) -> SimpleNamespace:
 def test_multi_file_generation_groups_headers(tmp_path: Path, monkeypatch) -> None:
     generator = _generator(tmp_path)
     infos = {"A": _class("A", "one.cpp"), "B": _class("B")}
+    infos["A"].base_classes = ["B"]
     generator.hierarchy_builder.build_full_hierarchy_with_dependencies = Mock(
         return_value=(infos, ["A", "B"])
     )
@@ -70,11 +71,19 @@ def test_multi_file_generation_groups_headers(tmp_path: Path, monkeypatch) -> No
         "A header",
         "B header",
     ]
+    generator.header_renderer.external_dependency_headers_for_group_specs.return_value = {
+        "one.cpp": {"B": "UncategorizedDefinitions.h"},
+        "UncategorizedDefinitions.h": {"A": "one.h"},
+    }
     result = MultiFileGenerationService.generate_multi_file_hierarchy(
         generator, "A", include_metadata=False
     )
 
     assert result == {"one.h": "A header", "UncategorizedDefinitions.h": "B header"}
+    generator.header_renderer.build_dependency_plan.assert_called_once()
+    specs = generator.header_renderer.external_dependency_headers_for_group_specs.call_args.args
+    assert specs[2]["one.cpp"]["B"] == "UncategorizedDefinitions.h"
+    generator.header_renderer.external_dependency_headers.assert_not_called()
 
 
 @pytest.mark.unit

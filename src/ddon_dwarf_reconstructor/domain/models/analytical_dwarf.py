@@ -52,22 +52,52 @@ class MethodContextRequest:
     die_offsets: tuple[int, ...]
     start_address: int | None = None
     end_address: int | None = None
+    unit_offsets: tuple[int | None, ...] = ()
 
     def __post_init__(self) -> None:
-        if self.key < 0:
-            raise ValueError("method-context request key must be non-negative")
-        if tuple(dict.fromkeys(self.die_offsets)) != self.die_offsets:
-            raise ValueError("method-context DIE offsets must be unique and ordered")
-        if any(offset < 0 for offset in self.die_offsets):
-            raise ValueError("method-context DIE offsets must be non-negative")
-        if (self.start_address is None) != (self.end_address is None):
-            raise ValueError("method-context range must contain both endpoints or neither")
-        if (
-            self.start_address is not None
-            and self.end_address is not None
-            and (self.start_address < 0 or self.end_address <= self.start_address)
-        ):
-            raise ValueError("method-context range must be a positive half-open interval")
+        _validate_method_context_identity(self.key, self.die_offsets, self.unit_offsets)
+        _validate_method_context_range(self.start_address, self.end_address)
+
+    @property
+    def die_keys(self) -> tuple[tuple[int | None, int], ...]:
+        """Return source/CU-qualified keys, retaining unknown provenance explicitly."""
+        units = self.unit_offsets or (None,) * len(self.die_offsets)
+        return tuple(zip(units, self.die_offsets, strict=True))
+
+
+def _validate_method_context_identity(
+    key: int,
+    die_offsets: tuple[int, ...],
+    unit_offsets: tuple[int | None, ...],
+) -> None:
+    if key < 0:
+        raise ValueError("method-context request key must be non-negative")
+    _validate_method_context_die_offsets(die_offsets)
+    _validate_method_context_units(unit_offsets, len(die_offsets))
+
+
+def _validate_method_context_die_offsets(die_offsets: tuple[int, ...]) -> None:
+    if tuple(dict.fromkeys(die_offsets)) != die_offsets:
+        raise ValueError("method-context DIE offsets must be unique and ordered")
+    if any(offset < 0 for offset in die_offsets):
+        raise ValueError("method-context DIE offsets must be non-negative")
+
+
+def _validate_method_context_units(unit_offsets: tuple[int | None, ...], die_count: int) -> None:
+    if unit_offsets and len(unit_offsets) != die_count:
+        raise ValueError("method-context unit offsets must align with DIE offsets")
+    if any(
+        unit is not None and (not isinstance(unit, int) or isinstance(unit, bool) or unit < 0)
+        for unit in unit_offsets
+    ):
+        raise ValueError("method-context unit offsets must be non-negative")
+
+
+def _validate_method_context_range(start: int | None, end: int | None) -> None:
+    if (start is None) != (end is None):
+        raise ValueError("method-context range must contain both endpoints or neither")
+    if start is not None and end is not None and (start < 0 or end <= start):
+        raise ValueError("method-context range must be a positive half-open interval")
 
 
 @dataclass(frozen=True, slots=True)

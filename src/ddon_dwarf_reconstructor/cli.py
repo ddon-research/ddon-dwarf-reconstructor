@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+from typing import Any
 
 import typer
 
 from .application.generation.options import DEFAULT_LLVM_TARGET_TRIPLE
 from .artifact_cli import app as artifacts_app
+from .infrastructure.config import Config
 from .main import GenerationOptions, run_generation
 from .performance_cli import app as performance_app
 
@@ -56,6 +58,7 @@ def _options(
     symbols_file: Path | None,
     output: Path | None,
     verbose: bool,
+    generate_context: bool = True,
     full_hierarchy: bool,
     single_file: bool,
     exhaustive: bool,
@@ -80,6 +83,7 @@ def _options(
         symbols_file=symbols_file,
         output=output,
         verbose=verbose,
+        generate_context=generate_context,
         full_hierarchy=full_hierarchy,
         single_file=single_file,
         exhaustive=exhaustive,
@@ -106,9 +110,13 @@ def _run(options: GenerationOptions) -> None:
         raise typer.Exit(code=exit_code)
 
 
-_GENERATE_SYMBOL_HELP = "Symbol to generate; repeat for multiple symbols."
-_GENERATE_SYMBOLS_FILE_HELP = "File containing one symbol per line."
-_GENERATE_OUTPUT_HELP = "Output directory (default: ./output)."
+_GENERATE_SYMBOL_HELP = (
+    "Symbol to generate with its complete dependency closure; repeat for one deduplicated request."
+)
+_GENERATE_SYMBOLS_FILE_HELP = (
+    "File containing one symbol per line; all entries are resolved and deduplicated together."
+)
+_GENERATE_OUTPUT_HELP = "Output directory (default: ./generated for symbol generation)."
 _GENERATE_DUMP_HELP = "Validation-only compressed DWARF dump; rejected for normal generation."
 _GENERATE_INDEX_HELP = "Validation-only DWARF SQLite sidecar; rejected for normal generation."
 _GENERATE_STORE_HELP = (
@@ -134,6 +142,7 @@ _GENERATE_SOURCE_HELP = (
     "matches. C++ translation is a later workflow. Requires --extract-assembly."
 )
 _GENERATE_PARAMS_HELP = "Search method implementations for parameter names."
+_GENERATE_CONTEXT_HELP = "Write generation manifests/reports (default on; --no-generate-context emits only C++/assembly)."
 _EXPORT_OUTPUT_HELP = "Directory in which to publish the knowledge bundle."
 _EXPORT_DUMP_HELP = "Validation-only compressed DWARF dump; rejected for normal export."
 _EXPORT_INDEX_HELP = "Validation-only DWARF SQLite sidecar; rejected for normal export."
@@ -147,18 +156,29 @@ _EXPORT_TOOL_EVIDENCE_HELP = (
 
 @app.command()
 def generate(
-    elf_file: Path = typer.Argument(..., help="Path to the ELF file to analyze."),
+    elf_file: Path | None = typer.Argument(
+        None, help="Path to the ELF file to analyze (defaults to ELF_FILE_PATH in configuration)."
+    ),
     symbol: list[str] = typer.Option([], "--symbol", "-s", help=_GENERATE_SYMBOL_HELP),
     symbols_file: Path | None = typer.Option(
         None, "--symbols-file", metavar="FILE", help=_GENERATE_SYMBOLS_FILE_HELP
     ),
     output: Path | None = typer.Option(None, "--output", "-o", help=_GENERATE_OUTPUT_HELP),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logs."),
+    generate_context: bool = typer.Option(
+        True,
+        "--generate-context/--no-generate-context",
+        help=_GENERATE_CONTEXT_HELP,
+    ),
     full_hierarchy: bool = typer.Option(
-        False, "--full-hierarchy", help="Generate the full hierarchy."
+        False,
+        "--full-hierarchy",
+        help="Compatibility flag; the complete dependency closure is always resolved.",
     ),
     single_file: bool = typer.Option(
-        False, "--single-file", help="Render the full hierarchy into one header."
+        False,
+        "--single-file",
+        help="Rejected for symbol generation; output is always flat multi-file.",
     ),
     exhaustive: bool = typer.Option(
         False, "--exhaustive", help="Search all CUs for the best definition."
@@ -199,16 +219,54 @@ def generate(
         False, "--resolve-param-names", help=_GENERATE_PARAMS_HELP
     ),
 ) -> None:
-    """Generate deterministic C++ headers for one or more symbols."""
-    option_values = locals()
-    option_values["symbols"] = option_values.pop("symbol")
-    _run(_options(**option_values))
+    """Generate flat C++ headers and optional assembly for one or more symbols."""
+    _dispatch_generate(**locals())
+
+
+def _dispatch_generate(**kwargs: Any) -> None:
+    config = Config.from_env()
+    extract_assembly = kwargs["extract_assembly"]
+    effective_elf = kwargs["elf_file"] or config.elf_file_path
+    effective_store = kwargs["dwarf_store_manifest"] or config.dwarf_store_manifest
+    effective_orbis_objdump = (
+        (kwargs["orbis_objdump"] or config.orbis_objdump) if extract_assembly else None
+    )
+    effective_orbis_as = (kwargs["orbis_as"] or config.orbis_as) if extract_assembly else None
+    effective_llvm_readobj = kwargs["llvm_readobj"] or config.llvm_readobj
+    effective_llvm_objdump = kwargs["llvm_objdump"] or config.llvm_objdump
+
+    _run(
+        _options(
+            elf_file=effective_elf,
+            symbols=kwargs["symbol"],
+            symbols_file=kwargs["symbols_file"],
+            output=kwargs["output"],
+            verbose=kwargs["verbose"],
+            generate_context=kwargs["generate_context"],
+            full_hierarchy=kwargs["full_hierarchy"],
+            single_file=kwargs["single_file"],
+            exhaustive=kwargs["exhaustive"],
+            dwarf_dump=kwargs["dwarf_dump"],
+            dwarf_index=kwargs["dwarf_index"],
+            dwarf_store_manifest=effective_store,
+            orbis_objdump=effective_orbis_objdump,
+            orbis_as=effective_orbis_as,
+            llvm_readobj=effective_llvm_readobj,
+            llvm_objdump=effective_llvm_objdump,
+            llvm_target_triple=kwargs["llvm_target_triple"],
+            extract_assembly=extract_assembly,
+            emit_implementation_sources=kwargs["emit_implementation_sources"],
+            resolve_param_names=kwargs["resolve_param_names"],
+        )
+    )
 
 
 @app.command("export-knowledge")
 def export_knowledge(
-    elf_file: Path = typer.Argument(..., help="Path to the ELF file to analyze."),
-    output_dir: Path = typer.Option(..., "--output-dir", help=_EXPORT_OUTPUT_HELP),
+    elf_file: Path | None = typer.Argument(
+        None, help="Path to the ELF file to analyze (defaults to ELF_FILE_PATH in configuration)."
+    ),
+    output_dir: Path | None = typer.Option(None, "--output-dir", help=_EXPORT_OUTPUT_HELP),
     symbol: list[str] = typer.Option([], "--symbol", "-s", help=_GENERATE_SYMBOL_HELP),
     symbols_file: Path | None = typer.Option(
         None, "--symbols-file", metavar="FILE", help=_GENERATE_SYMBOLS_FILE_HELP
@@ -247,27 +305,39 @@ def export_knowledge(
     ),
 ) -> None:
     """Export deterministic evidence for one or more symbols as a knowledge bundle."""
+    _dispatch_export_knowledge(**locals())
+
+
+def _dispatch_export_knowledge(**kwargs: Any) -> None:
+    config = Config.from_env()
+    effective_elf = kwargs["elf_file"] or config.elf_file_path
+    effective_output = kwargs["output_dir"] or config.output_dir
+    effective_store = kwargs["dwarf_store_manifest"] or config.dwarf_store_manifest
+    effective_orbis_objdump = kwargs["orbis_objdump"] or config.orbis_objdump
+    effective_llvm_readobj = kwargs["llvm_readobj"] or config.llvm_readobj
+    effective_llvm_objdump = kwargs["llvm_objdump"] or config.llvm_objdump
+
     _run(
         _options(
-            elf_file=elf_file,
-            symbols=symbol,
-            symbols_file=symbols_file,
-            output=output_dir,
-            verbose=verbose,
+            elf_file=effective_elf,
+            symbols=kwargs["symbol"],
+            symbols_file=kwargs["symbols_file"],
+            output=effective_output,
+            verbose=kwargs["verbose"],
             full_hierarchy=False,
             single_file=False,
-            exhaustive=exhaustive,
-            dwarf_dump=dwarf_dump,
-            dwarf_index=dwarf_index,
-            dwarf_store_manifest=dwarf_store_manifest,
-            export_knowledge=output_dir,
-            build_id=build_id,
-            orbis_objdump=orbis_objdump,
-            llvm_readobj=llvm_readobj,
-            llvm_objdump=llvm_objdump,
-            llvm_target_triple=llvm_target_triple,
-            resolve_param_names=resolve_param_names,
-            tool_export_manifests=tuple(tool_evidence),
+            exhaustive=kwargs["exhaustive"],
+            dwarf_dump=kwargs["dwarf_dump"],
+            dwarf_index=kwargs["dwarf_index"],
+            dwarf_store_manifest=effective_store,
+            export_knowledge=effective_output,
+            build_id=kwargs["build_id"],
+            orbis_objdump=effective_orbis_objdump,
+            llvm_readobj=effective_llvm_readobj,
+            llvm_objdump=effective_llvm_objdump,
+            llvm_target_triple=kwargs["llvm_target_triple"],
+            resolve_param_names=kwargs["resolve_param_names"],
+            tool_export_manifests=tuple(kwargs["tool_evidence"]),
         )
     )
 

@@ -16,6 +16,7 @@ from ddon_dwarf_reconstructor.infrastructure import (
     implementation_validation,
     implementation_validation_cli,
     implementation_validation_summary,
+    toolchain_process,
 )
 
 
@@ -40,6 +41,28 @@ def test_validation_helpers_and_sdk_tool_resolution(
 
 
 @pytest.mark.unit
+@pytest.mark.regression
+def test_validation_status_fails_when_source_hash_is_missing() -> None:
+    observed = SimpleNamespace(status=ValidationStatus.OBSERVED)
+    method = SimpleNamespace(
+        relocation_status=ValidationStatus.OBSERVED,
+        nid_status=ValidationStatus.OBSERVED,
+        abi=observed,
+        effects=observed,
+        compiler=observed,
+        parity=observed,
+    )
+    diagnostics = implementation_validation._source_binding_diagnostics({}, "a" * 64)
+
+    assert (
+        implementation_validation._validation_status(
+            ValidationStatus.OBSERVED, (method,), diagnostics
+        )
+        is ValidationStatus.FAILED
+    )
+
+
+@pytest.mark.unit
 @pytest.mark.functional
 def test_validation_report_publisher_is_atomic_and_cleans_failed_temporary(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -60,6 +83,44 @@ def test_validation_report_publisher_is_atomic_and_cleans_failed_temporary(
     with pytest.raises(OSError, match="replace failed"):
         implementation_report_publisher.write_validation_report(report, tmp_path / "failed")
     assert not list((tmp_path / "failed").glob("*.tmp"))
+
+
+@pytest.mark.unit
+@pytest.mark.functional
+def test_legacy_validation_reports_default_static_equivalence_to_not_promoted(
+    tmp_path: Path,
+) -> None:
+    legacy = tmp_path / "legacy.json"
+    legacy.write_text(
+        json.dumps(
+            {
+                "schema_version": "4.3",
+                "methods": [
+                    {"method_id": "m1", "parity": {"status": "observed"}},
+                    {
+                        "method_id": "m2",
+                        "parity": {
+                            "status": "partial",
+                            "static_equivalence": "target_object_equivalent",
+                        },
+                    },
+                    {"method_id": "m3"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    loaded = implementation_report_publisher.read_validation_report(legacy)
+
+    assert loaded["methods"][0]["parity"]["static_equivalence"] == "not_promoted"
+    assert loaded["methods"][1]["parity"]["static_equivalence"] == "not_promoted"
+    assert "parity" not in loaded["methods"][2]
+
+    current = implementation_report_publisher.normalize_validation_report_payload(
+        {"schema_version": "4.4", "methods": [{"parity": {"status": "observed"}}]}
+    )
+    assert "static_equivalence" not in current["methods"][0]["parity"]
 
 
 @pytest.mark.unit
@@ -212,12 +273,9 @@ def test_toolchain_fail_closed_helpers_cover_invalid_bytes_and_edge_states(
 
     tool = tmp_path / "tool"
     tool.write_bytes(b"tool")
-    monkeypatch.setattr(
-        implementation_toolchain.subprocess,
-        "run",
-        lambda *_args, **_kwargs: SimpleNamespace(returncode=0, stdout="", stderr="tool 8.0\n"),
-    )
-    assert implementation_toolchain._tool_version(tool) == "tool 8.0"
+    monkeypatch.setattr(toolchain_process, "read_tool_version", lambda *_args: "tool 8.0")
+    identity = toolchain_process.ToolIdentityCache().observe(tool)
+    assert identity.version == "tool 8.0"
 
 
 @pytest.mark.unit

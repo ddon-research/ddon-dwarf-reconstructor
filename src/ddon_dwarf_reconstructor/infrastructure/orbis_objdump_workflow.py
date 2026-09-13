@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from time import perf_counter
 from typing import TYPE_CHECKING
 
@@ -16,33 +16,36 @@ from ..domain.models.disassembly import (
     OrbisReference,
     OrbisRelocationEntry,
     OrbisStructuralCrossCheck,
-    OrbisTargetedDisassemblyCrossCheck,
     OrbisToolInvocation,
+)
+from .orbis_objdump_parsing import (
+    group_ranges,
+    parse_instructions,
+    parse_llvm_metadata,
+    parse_relocations,
+    parse_symbols,
+    select_root_symbols,
+    select_target_symbols,
+    slice_function_text,
 )
 from .orbis_objdump_profiles import (
     DISASSEMBLY_FLAGS,
     LLVM_METADATA_FLAGS,
-    PARSER_VERSION,
-    REPORT_SCHEMA_VERSION,
     STANDARD_RELOCATION_FLAGS,
     SYMBOL_FALLBACK_FLAGS,
     SYMBOL_FLAGS,
 )
 from .orbis_objdump_targeted import collect_llvm_targeted_cross_check
-from .orbis_sce_metadata import OrbisSceMetadataReader, SceMetadataReadResult
+from .orbis_report_factory import (
+    OrbisReportEvidence,
+    build_disassembly_report,
+)
+from .orbis_sce_metadata import OrbisSceMetadataReader
 
 if TYPE_CHECKING:
     from .orbis_objdump import OrbisObjdumpProducer, _ProductionContext
 
 logger = get_logger(__name__)
-
-
-@dataclass(frozen=True, slots=True)
-class _AdditionalEvidence:
-    standard_relocations: tuple[OrbisReference, ...]
-    sce_metadata: SceMetadataReadResult
-    llvm_cross_check: OrbisStructuralCrossCheck | None
-    llvm_targeted_cross_check: OrbisTargetedDisassemblyCrossCheck | None
 
 
 def produce_uncached(
@@ -54,10 +57,15 @@ def produce_uncached(
     invocations: list[OrbisToolInvocation] = []
     selected = _select_symbols(producer, context, invocations)
     if not selected:
+        diagnostic = (
+            f"No Orbis function symbols matched the DWARF target scope for {context.root_symbol}"
+            if context.targets
+            else f"No Orbis function symbols found for {context.root_symbol}"
+        )
         report = producer._empty_report(
             context,
             invocations,
-            (f"No Orbis function symbols found for {context.root_symbol}",),
+            (diagnostic,),
         )
         producer._write_cached(context.cache_path, report)
         return report
@@ -71,7 +79,6 @@ def produce_uncached(
         invocations,
     )
     report = _build_report(
-        producer,
         context,
         selected,
         instructions,
@@ -99,22 +106,22 @@ def _select_symbols(
     context: _ProductionContext,
     invocations: list[OrbisToolInvocation],
 ) -> tuple[OrbisFunctionSymbol, ...]:
-    result = producer._run_profile(
+    result = producer._profile_executor.run_profile(
         context,
         "symbols",
         [*SYMBOL_FLAGS, str(context.elf_path)],
         invocations,
     )
-    symbols = producer.parse_symbols(result.stdout)
+    symbols = parse_symbols(result.stdout)
     selected = _select_for_context(producer, symbols, context)
     if not selected and (result.status != "observed" or not symbols):
-        fallback = producer._run_profile(
+        fallback = producer._profile_executor.run_profile(
             context,
             "symbols-fallback",
             [*SYMBOL_FALLBACK_FLAGS, str(context.elf_path)],
             invocations,
         )
-        symbols = producer.parse_symbols(fallback.stdout)
+        symbols = parse_symbols(fallback.stdout)
         selected = _select_for_context(producer, symbols, context)
     log_event(
         logger,
@@ -132,8 +139,8 @@ def _select_for_context(
     context: _ProductionContext,
 ) -> tuple[OrbisFunctionSymbol, ...]:
     if context.scope_policy == "root-prefix-v1":
-        return producer.select_root_symbols(symbols, context.root_symbol)
-    return producer.select_target_symbols(symbols, context.targets)
+        return select_root_symbols(symbols, context.root_symbol)
+    return select_target_symbols(symbols, context.targets)
 
 
 def _collect_ranges(
@@ -144,7 +151,7 @@ def _collect_ranges(
 ) -> tuple[dict[int, OrbisInstruction], list[tuple[int, int, str]]]:
     instructions: dict[int, OrbisInstruction] = {}
     range_outputs: list[tuple[int, int, str]] = []
-    ranges = producer._group_ranges(selected)
+    ranges = group_ranges(selected)
     log_event(
         logger,
         logging.DEBUG,
@@ -160,9 +167,11 @@ def _collect_ranges(
             f"--stop-address=0x{stop_address:x}",
             str(context.elf_path),
         ]
-        result = producer._run_profile(context, "disassembly", range_arguments, invocations)
+        result = producer._profile_executor.run_profile(
+            context, "disassembly", range_arguments, invocations
+        )
         range_outputs.append((start_address, stop_address, result.stdout))
-        for instruction in producer.parse_instructions(result.stdout):
+        for instruction in parse_instructions(result.stdout):
             instructions[instruction.address] = instruction
     return instructions, range_outputs
 
@@ -173,21 +182,21 @@ def _collect_additional_profiles(
     selected: tuple[OrbisFunctionSymbol, ...],
     instructions: dict[int, OrbisInstruction],
     invocations: list[OrbisToolInvocation],
-) -> _AdditionalEvidence:
-    standard_result = producer._run_profile(
+) -> OrbisReportEvidence:
+    standard_result = producer._profile_executor.run_profile(
         context,
         "standard-relocations",
         [*STANDARD_RELOCATION_FLAGS, str(context.elf_path)],
         invocations,
     )
-    relocations = producer.parse_relocations(standard_result.stdout)
+    relocations = parse_relocations(standard_result.stdout)
     if not relocations and standard_result.status == "observed":
         _mark_profile_empty(invocations, "standard-relocations")
     sce_metadata = OrbisSceMetadataReader().read(
         context.elf_path,
         source_sha256=context.elf_sha256,
         tool=context.tool,
-        cache_dir=producer._shared_profile_dir(context),
+        cache_dir=producer._profile_executor.shared_profile_dir(context),
         sdk_definition_identity=context.sdk_definition_identity,
         relevant_ranges=_relevant_relocation_ranges(selected, instructions),
     )
@@ -199,11 +208,12 @@ def _collect_additional_profiles(
         instructions,
         invocations,
     )
-    return _AdditionalEvidence(
+    return OrbisReportEvidence.from_profiles(
         relocations,
         sce_metadata,
         llvm_cross_check,
         llvm_targeted_cross_check,
+        relocation_entries=sce_metadata.relocation_entries,
     )
 
 
@@ -241,7 +251,7 @@ def _collect_llvm_cross_check(
 ) -> OrbisStructuralCrossCheck | None:
     if context.llvm_readobj_path is None:
         return None
-    result = producer._run_profile(
+    result = producer._profile_executor.run_profile(
         context,
         "llvm-elf-metadata-json",
         [*LLVM_METADATA_FLAGS, str(context.elf_path)],
@@ -254,7 +264,7 @@ def _collect_llvm_cross_check(
     status = result.status
     if result.stdout:
         try:
-            unknown_tags, parse_diagnostics = producer.parse_llvm_metadata(result.stdout)
+            unknown_tags, parse_diagnostics = parse_llvm_metadata(result.stdout)
             diagnostics.extend(parse_diagnostics)
             if parse_diagnostics:
                 status = "partial"
@@ -278,12 +288,11 @@ def _collect_llvm_cross_check(
 
 
 def _build_report(
-    producer: OrbisObjdumpProducer,
     context: _ProductionContext,
     selected: tuple[OrbisFunctionSymbol, ...],
     instructions: dict[int, OrbisInstruction],
     range_outputs: list[tuple[int, int, str]],
-    additional: _AdditionalEvidence,
+    additional: OrbisReportEvidence,
     invocations: list[OrbisToolInvocation],
 ) -> OrbisDisassemblyReport:
     functions = tuple(
@@ -294,49 +303,31 @@ def _build_report(
                 for address in sorted(instructions)
                 if symbol.address <= address < symbol.end_address
             ),
-            raw_text=producer._raw_function_text(range_outputs, symbol),
+            raw_text=_raw_function_text(range_outputs, symbol),
         )
         for symbol in selected
     )
     functions, relocation_entries = _link_relocations(
         functions,
-        additional.sce_metadata.relocation_entries,
+        additional.relocation_entries,
     )
     diagnostics = tuple(
         diagnostic for invocation in invocations for diagnostic in invocation.diagnostics
     )
-    statuses = {invocation.status for invocation in invocations}
-    if additional.sce_metadata.status not in {"observed"}:
-        statuses.add(additional.sce_metadata.status)
-    return OrbisDisassemblyReport(
-        artifact_key=context.artifact_key,
-        build_root=context.root_symbol,
-        elf_sha256=context.elf_sha256,
-        tool=context.tool,
-        flags=DISASSEMBLY_FLAGS,
-        parser_version=PARSER_VERSION,
-        functions=functions,
-        schema_version=REPORT_SCHEMA_VERSION,
-        invocations=tuple(invocations),
-        relocations=additional.standard_relocations,
-        dynamic_tags=additional.sce_metadata.dynamic_tags,
-        sce_segments=additional.sce_metadata.sce_segments,
-        relocation_tables=additional.sce_metadata.relocation_tables,
-        relocation_entries=relocation_entries,
-        relocation_cache_path=additional.sce_metadata.cache_path,
-        relocation_cache_sha256=additional.sce_metadata.cache_sha256,
-        relocation_cache_entry_count=additional.sce_metadata.cache_entry_count,
-        sce_metadata_status=additional.sce_metadata.status,
-        sce_metadata_diagnostics=additional.sce_metadata.diagnostics,
-        llvm_cross_check=additional.llvm_cross_check,
-        llvm_targeted_cross_check=additional.llvm_targeted_cross_check,
-        sdk_definition_identity=context.sdk_definition_identity,
-        diagnostics=tuple((*diagnostics, *additional.sce_metadata.diagnostics)),
-        status="partial" if statuses - {"observed"} else "observed",
-        scope_hash=context.scope_hash,
-        scope_policy=context.scope_policy,
-        target_count=context.target_count,
+    return build_disassembly_report(
+        context,
+        functions,
+        invocations,
+        replace(additional, relocation_entries=relocation_entries),
+        diagnostics,
     )
+
+
+def _raw_function_text(outputs: list[tuple[int, int, str]], symbol: OrbisFunctionSymbol) -> str:
+    for start, stop, output in outputs:
+        if start <= symbol.address < stop:
+            return slice_function_text(output, symbol.address, symbol.end_address)
+    return ""
 
 
 def _link_relocations(

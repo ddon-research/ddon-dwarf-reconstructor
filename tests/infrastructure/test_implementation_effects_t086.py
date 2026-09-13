@@ -1,64 +1,42 @@
-"""Focused T086 instruction-effect and CFI evidence coverage."""
-
-from __future__ import annotations
+"""CFI acquisition remains an infrastructure evidence boundary."""
 
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from ddon_dwarf_reconstructor.domain.models.disassembly import OrbisInstruction, OrbisReference
 from ddon_dwarf_reconstructor.domain.models.implementation_validation import ValidationStatus
-from ddon_dwarf_reconstructor.infrastructure import implementation_effects
+from ddon_dwarf_reconstructor.infrastructure import implementation_cfi
 
 pytestmark = [pytest.mark.unit, pytest.mark.functional]
 
 
-def test_effect_analyzer_normalizes_aliases_widths_and_return_cleanup() -> None:
-    result = implementation_effects.analyze_instruction_effects(
-        (
-            OrbisInstruction(0, "4154", "pushq", "%r12d"),
-            OrbisInstruction(2, "415c", "popq", "%r12"),
-            OrbisInstruction(4, "c21000", "retq", "$16"),
-        )
+def test_cfi_boundary_join_keeps_incomplete_rows_non_promoting() -> None:
+    from ddon_dwarf_reconstructor.infrastructure.implementation_dwarf_context import (
+        store_cfi_status,
     )
 
-    assert result.status is ValidationStatus.OBSERVED
-    assert result.stack_delta_min == -8
-    assert result.stack_delta_max == 24
-    assert result.stack_balanced is True
-    assert result.callee_saved_preserved is True
-    assert "r12" in result.writes
-
-
-def test_effect_analyzer_joins_equal_conditional_stack_paths() -> None:
-    branch = OrbisReference(kind="direct_branch", address=4, resolution_status="resolved")
-    jump = OrbisReference(kind="direct_branch", address=5, resolution_status="resolved")
-    result = implementation_effects.analyze_instruction_effects(
+    observed = store_cfi_status(
         (
-            OrbisInstruction(0, "53", "push", "%rbx"),
-            OrbisInstruction(1, "7402", "je", "0x4", references=(branch,)),
-            OrbisInstruction(2, "5b", "pop", "%rbx"),
-            OrbisInstruction(3, "eb01", "jmp", "0x5", references=(jump,)),
-            OrbisInstruction(4, "5b", "pop", "%rbx"),
-            OrbisInstruction(5, "c3", "ret", ""),
-        )
+            {"parser_status": "complete", "initial_address": 0x100},
+            {"parser_status": "complete", "initial_address": 0x120},
+        ),
+        (),
     )
-
-    assert result.status is ValidationStatus.OBSERVED
-    assert result.stack_balanced is True
-    assert result.stack_delta_max == 8
-    assert not any("conditional control-flow" in item for item in result.diagnostics)
+    partial = store_cfi_status(({"parser_status": "partial"},), ())
+    assert observed.status is ValidationStatus.OBSERVED
+    assert observed.details["covering_entries"] == 2
+    assert partial.status is ValidationStatus.PARTIAL
 
 
 def test_cfi_inspection_reports_empty_unavailable_and_observed_paths(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     assert (
-        implementation_effects.inspect_cfi(tmp_path / "missing.elf", 0, 0).status
+        implementation_cfi.inspect_cfi(tmp_path / "missing.elf", 0, 0).status
         is ValidationStatus.NOT_OBSERVED
     )
-    missing = implementation_effects.inspect_cfi(tmp_path / "missing.elf", 0, 8)
+    missing = implementation_cfi.inspect_cfi(tmp_path / "missing.elf", 0, 8)
     assert missing.status is ValidationStatus.UNAVAILABLE
 
     class Entry:
@@ -77,8 +55,8 @@ def test_cfi_inspection_reports_empty_unavailable_and_observed_paths(
 
     source = tmp_path / "cfi.elf"
     source.write_bytes(b"fixture")
-    monkeypatch.setattr(implementation_effects, "ELFFile", lambda _stream: FakeElf())
-    observed = implementation_effects.inspect_cfi(source, 0x110, 4)
+    monkeypatch.setattr(implementation_cfi, "ELFFile", lambda _stream: FakeElf())
+    observed = implementation_cfi.inspect_cfi(source, 0x110, 4)
     assert observed.status is ValidationStatus.OBSERVED
 
     class GapDwarf:
@@ -89,10 +67,10 @@ def test_cfi_inspection_reports_empty_unavailable_and_observed_paths(
             return ()
 
     monkeypatch.setattr(
-        implementation_effects,
+        implementation_cfi,
         "ELFFile",
         lambda _stream: SimpleNamespace(get_dwarf_info=lambda: GapDwarf()),
     )
-    partial = implementation_effects.inspect_cfi(source, 0x100, 8)
+    partial = implementation_cfi.inspect_cfi(source, 0x100, 8)
     assert partial.status is ValidationStatus.PARTIAL
     assert partial.details["uncovered_ranges"] == ((0x104, 0x108),)

@@ -1,6 +1,7 @@
 # Feature Specification: Source-bound external tool evidence
 
-**Status**: Implemented; external SDK and proprietary loader checks remain explicit
+**Status**: Implemented; SDK 12 CPU/ABI evidence integrated, external SDK and proprietary loader
+checks remain explicit
 
 ## Goal
 
@@ -30,6 +31,20 @@ unsupported PS4 ABI claims.
   or decryption.
 - **TEE-008**: Copilot, Codex/AGENTS, Python, Claude, README, architecture, generation, testing,
   knowledge-base, and goal-workflow guidance MUST describe the workflow and boundaries.
+- **TEE-009**: The implementation-validation report MUST carry a versioned Orbis toolchain
+  contract, reusable external-tool observations, parsed `orbis-bin` evidence, compiler-generated
+  assembly descriptors, object metadata, and a typed static-equivalence disposition, with schema
+  `4.4`; the implementation-discovery
+  report remains schema `4.2`.
+- **TEE-010**: SDK 12 MUST be the default host-tool profile, SDK 8 MUST require an explicit path,
+  and recognized mixed SDK tool families MUST fail closed.
+- **TEE-011**: Compiler ABI probes MUST retain source, command, compiler identity, `-S` assembly,
+  `-c` object, hashes, and status. Compiler acceptance MUST NOT promote method-specific ABI or
+  semantic equivalence.
+- **TEE-012**: Sysmodule loader constants MUST use a typed catalog separate from SCE dynamic NID
+  identities and MUST NOT participate in general NID resolution.
+- **TEE-013**: `llvm-mca` MUST remain an opt-in performance-only workflow requiring marked
+  post-compile assembly and retaining input/tool/output provenance.
 
 ## Non-goals
 
@@ -48,6 +63,8 @@ unsupported PS4 ABI claims.
 - Knowledge export tests prove additive provenance nodes and unchanged deterministic DWARF records.
 - The actual PS4 ELF accepts Orbis and generic LLVM profiles, with the authority distinction
   recorded in the research and knowledge-base documents.
+- The local SDK 12 real-asset slice records `orbis-bin` stack/dynamic/layout outputs, compiler
+  probes, canonical byte replay, and a marked `llvm-mca` sample outside source control.
 - `uv run just test-unit`, `uv run just check`, and `uv run just test` pass; coverage/audit and
   package, Docker, and nested specification checks are recorded separately when their
   prerequisites are available.

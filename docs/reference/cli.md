@@ -20,8 +20,8 @@ uv run ddon-dwarf-reconstructor generate --help
 uv run ddon-dwarf-reconstructor export-knowledge --help
 ```
 
-Common inputs are an ELF path, one or more `--symbol` values or a `--symbols-file`, an optional
-`--full-hierarchy`, and an output directory. Use the help surface from the locked environment for
+Common inputs are an ELF path, one or more `--symbol` values or a `--symbols-file`, and an output
+directory. Use the help surface from the locked environment for
 the complete option list; this page intentionally documents stable commands rather than copying
 Typer's formatting.
 
@@ -35,14 +35,41 @@ For a complete local store, the repository convention is
 `output/analytical-dwarf/main/store-<source-sha16>/manifest.json`. Checkpoints and bounded probes
 belong under `%TEMP%\ddon-analytical-dwarf` and require explicit incomplete-evidence flags.
 
+Every `generate` request uses the symbol-set workflow. One `--symbol` resolves that root and its
+complete dependency closure; multi-value `--symbol` and `--symbols-file` requests traverse one
+deduplicated union with method-signature dependencies. `--single-file` is invalid because the
+published layout is always flat. With no explicit `--output`, publication defaults to
+`generated/ps4-<client-version>/`, where the version is one unambiguous eight-digit token from the
+ELF filename or nearest parent path, or `unknown` with a manifest diagnostic:
+
+```text
+generated/ps4-<client-version>/
+  symbols.manifest.json      # when context generation is enabled
+  shared/<dependency>.h
+  <resource-class>/<resource>.h
+  <resource-class>/<owner>-<method>-<stable-hash>.asm
+```
+
+`shared/` is the only intentional sibling directory under the version root. Resource output is
+flat; symbol publication does not create `symbols/`, `implementations/`, or `methods/<id>/`
+directories. `symbols.manifest.json` records source identity, input-list hash, producer/schema/
+configuration identity, ownership and CU/DIE provenance, file hashes, per-root status, counts,
+and unresolved/conflict diagnostics.
+
+Context JSON is enabled by default for development. Pass `--no-generate-context` for a clean
+publication containing only generated C++ headers and assembly files; `--generate-context` makes
+the development default explicit. This switch controls generation artifacts, not the explicit
+`artifacts` validation/probing commands.
+
 `generate --extract-assembly` starts a separate chain only after the header bundle is committed.
 Add `--emit-implementation-sources` to publish exact-byte `.s` files and, when `orbis-as` is
-available, `.o` objects for unique DWARF-to-Orbis matches; the option requires
-`--extract-assembly`. Pass `--orbis-as <path>` explicitly when the assembler is not beside
+available and context generation is enabled, `.o` objects for unique DWARF-to-Orbis matches; the
+option requires `--extract-assembly`. Pass `--orbis-as <path>` explicitly when the assembler is not beside
 `--orbis-objdump`; the sibling SDK assembler is discovered otherwise. The JSON report retains
 all candidates, consumed profile invocations, raw
-method disassembly, instruction references, and source/file offsets. The canonical source-emission
-layout is:
+method disassembly, instruction references, and source/file offsets. The historical internal
+source-bundle publisher (used only for retained compatibility evidence, not normal `generate`)
+has this layout:
 
 ```text
 <output>/<platform>/implementations/<index>-<symbol>.json
@@ -55,14 +82,24 @@ layout is:
 ```
 
 The report is the evidence authority. The bundle manifest is only an atomic-publication and
-integrity envelope. The report is schema `4.2`; the bundle manifest is schema `3.1`. Each eligible
+integrity envelope. The implementation-validation report is schema `4.4`; the implementation-
+discovery report remains schema `4.2`, and the bundle manifest is schema `3.1`. Each eligible
 method may have a bounded `.raw.asm` evidence file, canonical `.s` compiler input, accepted `.o`,
 and `.context.json` AI transformation/provenance packet. `.raw.asm` is never passed to
 `orbis-as`; `.context.json` references it instead of duplicating the raw text. The source bundle
 is not part of the header manifest or MSVC header-closure validation. The core pipeline does not
 emit empty or executable `.cpp` placeholders; C++ translation is a later agentic workflow.
 
-The implementation report schema is `4.2`. Normal Orbis generation retains only the symbol,
+For the symbol-set route, the implementation report is `implementation-report.json` at the version
+root when context generation is enabled.
+Readable `.asm` files are flat beside their owning headers and begin with semicolon comments for
+the signature, definition signature, pseudo-symbol, address/range, file offset, source location,
+ABI/type context, and evidence status. Available calls are rendered as `; pseudo_call: ...`, and
+source references are always `; source: ...` comments. Exact-byte `.s` and accepted `.o` files are
+separate opt-in artifacts; the structured/raw disassembly remains in the report and source-bound
+cache. This IDA-style view does not promote assembly availability to header completeness.
+
+The implementation-discovery report schema is `4.2`. Normal Orbis generation retains only the symbol,
 bounded disassembly, and standard-relocation profiles. The known-invalid `-t -T` combination and
 `-R` dynamic-relocation option are capability-filtered and are not invoked. The full
 `--dwarf=info` pass is not needed because Doris is the authoritative DWARF serving model; its
@@ -91,8 +128,14 @@ uv run ddon-dwarf-reconstructor artifacts validate-implementation <elf> `
   --dwarf-store <complete-analytical-store>/manifest.json `
   --output-dir $env:TEMP/ddon-implementation-validation `
   --original-addresses `
-  --sdk-root 'D:/SCE/ORBIS SDKs/8.000'
+  --sdk-root 'D:/SCE/ORBIS SDKs/12.000'
 ```
+
+This command is an optional downstream validation feature. Header generation and default
+implementation-artifact publication do not import its strict evidence models; validation joins
+artifact context only through the neutral enrichment provider. The feature can therefore be
+removed after the evidence program is complete without changing the generation CLI or canonical
+assembly wire format.
 
 The validator requires either `--original-addresses` or an explicit aligned `--load-base`. It
 publishes independent relocation, opaque/source-bound/community-candidate NID, ABI/CFI, instruction-safety, Orbis
@@ -113,6 +156,35 @@ source publication through Doris and queries the normalized `die`, `attribute`, 
 Configure the existing Doris endpoint with `DDON_DORIS_SQL_HOST`, `DDON_DORIS_SQL_PORT`,
 `DDON_DORIS_DATABASE`, and `DDON_DORIS_TABLE`; a missing or count-mismatched registry row makes
 the analytical model unavailable and prevents ABI/CFI promotion.
+SDK 12 is the promoted host-tool profile. SDK 8 is available only through an explicit SDK root,
+and mixed recognized SDK tool families fail closed. The current validation-report schema is `4.4`;
+the implementation-discovery report remains schema `4.2`. Schema-4.3 reports remain readable, but
+their static-equivalence disposition is normalized to `not_promoted`.
+
+The validator accepts repeatable `--tool-evidence <manifest.json>` options for complete
+source-bound exports and `--abi-probe-manifest <manifest.json>` for a reusable, matching compiler
+probe matrix. `--assembly-profile byte-replay` is the default canonical byte profile;
+`--assembly-profile sectioned` is an opt-in check for `.text.<symbol>` sections and
+`EF_FFUNC_DATA_SECS_ENABLED`. The report retains the versioned `OrbisToolchainContract`, external
+tool observations, parsed `orbis-bin` stack/dynamic-symbol evidence, compiler-generated `.s`/`.o`
+descriptors, `e_flags`, section layout, CFI, `.sce_stack_sizes`, and debug-range metadata.
+
+Create those external artifacts with:
+
+```powershell
+uv run ddon-dwarf-reconstructor artifacts list-tool-profiles
+uv run ddon-dwarf-reconstructor artifacts export-tool-evidence <elf> `
+  --tool 'D:/SCE/ORBIS SDKs/12.000/host_tools/bin/orbis-bin.exe' `
+  --profile orbis-bin-stack-sizes --output-dir $env:TEMP/ddon-orbis-sdk12-exports
+uv run ddon-dwarf-reconstructor artifacts probe-compiler-abi `
+  'D:/SCE/ORBIS SDKs/12.000/host_tools/bin/orbis-clang++.exe' `
+  --orbis-readelf 'D:/SCE/ORBIS SDKs/12.000/host_tools/bin/orbis-readelf.exe' `
+  --output-dir $env:TEMP/ddon-orbis-sdk12-probes
+```
+
+`SysmoduleId` values from the local `ps4-module-ids.html` table are loader constants for
+`sceSysmoduleLoadModule` and are intentionally separate from `NidBinding` SCE dynamic identities.
+They do not participate in general NID resolution.
 Use `--tool-timeout-seconds <positive-seconds>` only when the caller wants an explicit limit for
 each SDK compiler, assembler, metadata, or linker invocation. Without it, implementation
 validation imposes no arbitrary tool timeout. It retains tool identity, command, output hashes,
@@ -124,8 +196,24 @@ evidence rather than official NID authority. Supply `--nid-database-provenance` 
 bind the local mapping to its source URL, full commit, file SHA-256, and known 16-byte NID suffix.
 Only a community mapping with complete pinned provenance plus matching NID hash and encoded
 library/module context becomes community_verified; candidates, mismatches, and unavailable
-context cannot satisfy target-object-equivalent. The current validation report schema is 4.1;
-the dated 4.0 reports remain historical evidence.
+context cannot satisfy target-object-equivalent. The current validation report schema is 4.4; the
+dated 4.0, 4.1, and 4.3 reports remain historical evidence and are not silently upgraded. Static
+equivalence is promoted only when normalized bytes, CFG/branches, calls/external edges, numeric
+NIDs, ABI/CFI, effects, and accepted SDK 12 object metadata all agree. The bounded SDK 12
+`rLayout` run retained objects for 26 code-bearing methods; 17 are `target_object_equivalent` and
+9 are `not_promoted`.
+
+For a separate performance-model run, use the canonical `performance analyze-assembly` command
+with a marked post-compile assembly file:
+
+```powershell
+uv run ddon-dwarf-reconstructor performance analyze-assembly <marked-assembly.s> `
+  --tool 'D:/SCE/ORBIS SDKs/12.000/host_tools/bin/orbis-llvm-mca.exe' `
+  --output-dir $env:TEMP/ddon-orbis-sdk12-mca --json
+```
+
+`llvm-mca` output is retained with input/tool hashes and marker regions, but it is never merged
+into correctness, ABI, or semantic-parity status.
 
 The analytical model is deliberately columnar-engine oriented. The one-time materializer writes
 typed family columns and the loader publishes them into Doris; method validation then uses
@@ -274,3 +362,18 @@ statement parameter exchange, the benchmark-only
 `--allow-unparameterized-flight-fallback` flag can be combined with
 `--reused-connections-only` to render checked literals for a diagnostic run; its report remains
 `partial` and is not a runtime fallback.
+
+## External disassembly regression workflow
+
+For a full-root before/after comparison, keep both output trees under `%TEMP%` and pass the same
+source-bound store, root partitions, `--full-hierarchy`, `--extract-assembly`,
+`--emit-implementation-sources`, SDK 12 `--orbis-objdump`, and SDK 12 `--orbis-as` options to
+`generate`. The repository does not publish these generated files. The strict
+`disassembly-regression/1` manifest/comparator validates source and tool identities, safe paths,
+root ordering, headers, assembly, objects, contexts, bundles, method identities, descriptors, and
+normalized evidence facts. Runtime paths and timing are the only allowlisted normalization fields.
+
+The completed 2026-08-18 external run is under
+`C:\Users\morph\AppData\Local\Temp\ddon-disassembly-refactor-20260818` and matched 289 roots,
+2,745 headers, 83,754 method entries, 4,504 descriptors, and 8,116 files. This workflow confirms
+refactor parity only; it does not promote ABI, semantic, or live-behavior equivalence.

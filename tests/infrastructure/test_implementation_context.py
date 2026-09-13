@@ -14,6 +14,7 @@ from ddon_dwarf_reconstructor.application.generators.dwarf_implementation_contex
 )
 from ddon_dwarf_reconstructor.domain.models.analytical_dwarf import QueryResult, QueryStatus
 from ddon_dwarf_reconstructor.domain.models.disassembly import OrbisInstruction
+from ddon_dwarf_reconstructor.domain.models.implementation_context import MethodContextPacket
 from ddon_dwarf_reconstructor.domain.models.implementation_evidence import (
     ArtifactDescriptor,
     CodeRange,
@@ -27,7 +28,6 @@ from ddon_dwarf_reconstructor.domain.models.implementation_validation import (
     AbiEvidence,
     CompilerEvidence,
     InstructionEffects,
-    MethodContextPacket,
     MethodValidationEvidence,
     SemanticParity,
     ValidationStatus,
@@ -38,7 +38,12 @@ from ddon_dwarf_reconstructor.infrastructure.implementation_artifacts import (
 )
 from ddon_dwarf_reconstructor.infrastructure.implementation_context import (
     build_context_packet,
+    normalize_assembly_export,
     normalize_raw_assembly,
+)
+from ddon_dwarf_reconstructor.infrastructure.validation.context_enrichment import (
+    project_context_evidence,
+    project_method_context,
 )
 
 
@@ -88,6 +93,14 @@ def _report() -> ImplementationDiscoveryReport:
 @pytest.mark.functional
 def test_raw_assembly_normalizes_only_line_endings() -> None:
     assert normalize_raw_assembly("a\r\nb\rc\n") == "a\nb\nc\n"
+
+
+@pytest.mark.unit
+@pytest.mark.regression
+def test_assembly_export_comments_source_location_rows() -> None:
+    assert normalize_assembly_export("file.cpp:12\nmov rax, rbx\n") == (
+        "; source: file.cpp:12\nmov rax, rbx\n"
+    )
 
 
 @pytest.mark.unit
@@ -152,7 +165,16 @@ def test_context_packet_projects_validation_dimensions() -> None:
         parity=SemanticParity(ValidationStatus.PARTIAL),
     )
 
-    payload = build_context_packet(method, "id", _report(), (), validation=validation)
+    enrichment = project_method_context(validation)
+    assert project_context_evidence({"id": validation}) == {"id": enrichment}
+
+    payload = build_context_packet(
+        method,
+        "id",
+        _report(),
+        (),
+        enrichment=enrichment,
+    )
     abi = cast(dict[str, object], payload["abi"])
     cues = cast(dict[str, object], payload["transformation_cues"])
     effects = cast(dict[str, object], payload["instruction_effects"])
@@ -259,7 +281,7 @@ def test_context_is_retained_when_canonical_assembly_is_unavailable(
 ) -> None:
     monkeypatch.setattr(
         "ddon_dwarf_reconstructor.infrastructure.implementation_artifacts.canonical_assembly_source",
-        lambda _method_id, _instructions: (None, ("canonical bytes unavailable",)),
+        lambda _method_id, _instructions, **_kwargs: (None, ("canonical bytes unavailable",)),
     )
     method = _method()
     artifact, rendered = render_canonical_method_artifact(method, (), "id", Path("orbis-as"))

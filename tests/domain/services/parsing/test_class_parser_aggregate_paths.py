@@ -9,12 +9,14 @@ import pytest
 
 from ddon_dwarf_reconstructor.domain.models.dwarf import MemberInfo, StructInfo
 from ddon_dwarf_reconstructor.domain.services.parsing import ClassParser
+from ddon_dwarf_reconstructor.domain.services.parsing.type_chain_traverser import TypeChainTraverser
 
 
 def _parser() -> ClassParser:
     parser = object.__new__(ClassParser)
     parser.type_resolver = Mock()
     parser.dwarf_info = Mock()
+    parser.type_chain_traverser = TypeChainTraverser()
     return parser
 
 

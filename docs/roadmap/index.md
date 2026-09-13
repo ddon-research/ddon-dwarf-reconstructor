@@ -26,6 +26,7 @@ tasks remain visible.
 | [018 Performance and algorithm audit](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/018-performance-algorithm-audit) | Complete; implementation, evidence, and repository gates pass | source-bound warm/cold traces, candidate decisions, and deterministic optimization evidence |
 | [019 Analytical DWARF store](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/019-analytical-dwarf-store) | Doris serving promoted; file-backed replacement, Flight SQL, and semantic validation partial/unresolved | one-pass lossless materialization, native serving evidence, query parity, and explicit replacement gates |
 | [020 Documentation API reference](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/020-documentation-api-reference) | Implemented; 305 modules and local repository gates verified | exhaustive source-derived Python module reference with deterministic generation and fail-closed docs validation |
+| [021 C++ reconstruction architecture](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/021-cpp-reconstruction-architecture) | In progress; characterized slices and deterministic gates verified, real-asset acceptance blocked | repository-wide source review, fresh all-output baselines, characterized reconstruction/toolchain boundaries, and exact parity with a 110% runtime limit |
 
 ## Next best step
 
@@ -33,10 +34,12 @@ The current tranche is evidence-led convergence. Feature 001 is the real-asset i
 record: header publication and host MSVC closure are observed, while ABI, instruction effects,
 NIDs, static parity, and live behavior remain independent gates. Feature 019 is the serving and
 validator record: Doris is the normal analytical runtime, while file-backed replacement, Flight
-SQL, and semantic validation remain partial or unresolved. The next implementation slice is the
-bounded Feature 001 T086--T088 sequence, followed by a full source-bound rerun only after its
-representative gate passes. `KG-001` remains deferred and is owned only by Feature 015; Features
-013 and 014 retain pointers to that record.
+SQL, and semantic validation remain partial or unresolved. Feature 021 now owns the characterized
+C++ reconstruction boundaries, CU-qualified method context, output comparator, and deterministic
+workflow provenance check. Its next implementation work is review-coverage closure and the
+source-bound T010/T011/T022/T060 preflight once the recorded Doris BE blocker is resolved.
+`KG-001` remains deferred and is owned only by Feature 015; Features 013 and 014 retain pointers
+to that record.
 
 ## Status discipline
 

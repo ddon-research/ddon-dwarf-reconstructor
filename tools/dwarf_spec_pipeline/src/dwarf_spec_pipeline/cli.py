@@ -7,6 +7,7 @@ from pathlib import Path
 
 import typer
 
+from .converters import ConversionError
 from .pipeline import PipelineError, build
 from .semantic import build_semantic_index, load_documents, write_index
 from .source_manifest import SourceError, load_manifest, verify_source
@@ -27,7 +28,14 @@ def _default_schema() -> Path:
 def _run(operation: Callable[[], None]) -> None:
     try:
         operation()
-    except (ArtifactValidationError, PipelineError, SourceError, OSError, ValueError) as error:
+    except (
+        ArtifactValidationError,
+        ConversionError,
+        PipelineError,
+        SourceError,
+        OSError,
+        ValueError,
+    ) as error:
         typer.echo(f"error: {error}", err=True)
         raise typer.Exit(code=2) from error
 

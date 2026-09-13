@@ -15,6 +15,7 @@ The `performance` group is the canonical opt-in resource and profiler interface:
 | `performance benchmark-doris-flight` | Compare PyMySQL rows with ADBC Flight SQL consumption modes |
 | `performance profile-dwarf-store <elf>` | Run the analytical-store benchmark through Scalene, cProfile, or another supported profiler |
 | `performance profile-materializer <elf>` | Profile an isolated bounded direct-Parquet materializer probe |
+| `performance analyze-assembly <assembly>` | Run bounded `orbis-llvm-mca` performance-model evidence on marked post-compile assembly |
 | `performance benchmark` | Run the deterministic fixture through pyperf and psutil |
 | `performance history compare` | Compare compatible historical runs |
 | `performance history export` | Write deterministic JSON, CSV, and Markdown |
@@ -24,6 +25,12 @@ The `performance` group is the canonical opt-in resource and profiler interface:
 profilers except tracemalloc. `scalene-libraries` is an explicit broad diagnostic and is not part
 of `all`; request tracemalloc explicitly when Python allocation snapshots are needed. Missing tools are
 recorded as `unavailable`; timeout or child failures are `partial`.
+
+`performance analyze-assembly` requires at least one closed, unique `# LLVM-MCA-BEGIN` /
+`# LLVM-MCA-END` region. It retains the input and tool hashes, marker names, command, tool
+version, output hash, and atomic manifest in the external output directory. The result is a
+performance observation only; it is not merged into ABI, correctness, target-object parity, or
+semantic-equivalence status.
 
 ## Linux container contract
 
@@ -138,6 +145,20 @@ generation round trips rather than scan CPU. The source/unit-bound 512-key batch
 faster than sequential attribute queries with exact row parity. The serving runtime now consumes
 bounded batches for DIE metadata, attributes, child frontiers, reference targets, and child-tag
 counts, and caches line programs per compilation unit.
+
+#### 2026-09-05 dependency-plan and Arrow hydration boundary
+
+The current implementation reuses one immutable header dependency plan and name index across
+symbol-union rendering, multi-file headers, cycle diagnostics, and method-signature diagnostics.
+The Doris serving adapter also exposes typed `pyarrow.RecordBatch` reads with one explicit schema
+per record family. Hydration consumes those batches lazily, groups DIE, attribute, child, reference,
+and unit requests by source and compilation unit, and keeps `(unit_offset, die_offset)` as the
+cache identity; the bounded MySQL fallback builds batches with `RecordBatch.from_arrays` after
+`fetchmany`, rather than converting `fetchall()` tuples through `from_pylist()`.
+
+This is implementation and focused-test evidence, not a new performance result. No fresh full
+Season 2 or v44 reprofile has been completed for this slice, and Flight SQL remains an opt-in
+benchmark transport rather than the default serving path.
 
 The current optimized path produced exact output from the complete source-bound publication.
 `rLayout` completed in `13.195 s`. Exhaustive `rAIFSM` completed in `19.811 s`, `20.166 s`, and

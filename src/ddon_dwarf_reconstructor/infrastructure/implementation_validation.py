@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, cast
@@ -22,14 +21,25 @@ from .implementation_load_image import read_load_image
 from .implementation_method_validation import dimension_status, validate_method
 from .implementation_nids import NidIndex
 from .implementation_relocations import (
-    RELOCATION_EVALUATOR_VERSION,
     RelocationIndex,
     evaluate_relocations,
     nid_bindings,
 )
 from .implementation_report_publisher import write_validation_report
+from .implementation_validation_context import ValidationRun
+from .implementation_validation_report_builder import build_validation_report
+from .implementation_validation_tools import (
+    attach_stack_size_evidence,
+    load_external_exports,
+    load_or_run_abi_probes,
+    resolve_sdk_tool,
+)
+from .orbis_bin_evidence import parse_orbis_bin_exports
 from .orbis_sce_metadata import OrbisSceMetadataReader
 from .orbis_sdk_definitions import sdk_definition_model
+from .orbis_toolchain_contracts import (
+    SDK12_PROFILE_ID,
+)
 
 _FULL_ADDRESS_RANGE = ((0, 1 << 64),)
 
@@ -49,7 +59,12 @@ def validate_implementation(
     orbis_readelf: Path | None = None,
     orbis_objdump: Path | None = None,
     orbis_ld: Path | None = None,
+    tool_evidence: tuple[Path, ...] = (),
+    abi_probe_manifest: Path | None = None,
+    toolchain_profile: str = SDK12_PROFILE_ID,
+    toolchain_diagnostics: tuple[str, ...] = (),
     tool_timeout_seconds: float | None = None,
+    assembly_profile: str = "byte-replay",
 ) -> ImplementationValidationReport:
     """Validate static implementation evidence and publish an atomic report."""
     source = source.resolve()
@@ -63,56 +78,111 @@ def validate_implementation(
     )
     try:
         return _run_validation(
-            source,
-            implementation_report,
-            output_dir,
-            raw,
-            source_sha256,
-            sha256_file(implementation_report),
-            diagnostics,
-            load_base,
-            original_addresses,
-            nid_database,
-            nid_database_provenance,
-            orbis_as,
-            orbis_clang,
-            orbis_readelf,
-            orbis_objdump,
-            orbis_ld,
-            tool_timeout_seconds,
-            store,
-            manifest_sha,
-            store_schema,
-            analytical_model,
+            ValidationRun(
+                source,
+                implementation_report,
+                output_dir,
+                raw,
+                source_sha256,
+                sha256_file(implementation_report),
+                diagnostics,
+                load_base,
+                original_addresses,
+                nid_database,
+                nid_database_provenance,
+                orbis_as,
+                orbis_clang,
+                orbis_readelf,
+                orbis_objdump,
+                orbis_ld,
+                tool_evidence,
+                abi_probe_manifest,
+                toolchain_profile,
+                toolchain_diagnostics,
+                tool_timeout_seconds,
+                assembly_profile,
+                store,
+                manifest_sha,
+                store_schema,
+                analytical_model,
+            )
         )
     finally:
         if store is not None:
             store.close()
 
 
-def _run_validation(
+def _run_validation(run: ValidationRun) -> ImplementationValidationReport:
+    run.diagnostics.extend(run.toolchain_diagnostics)
+    load_image, segments, metadata, relocations, nids = _load_target_evidence(
+        run.source,
+        run.source_sha256,
+        run.raw,
+        run.output_dir,
+        run.load_base,
+        run.original_addresses,
+        run.nid_database,
+        run.nid_database_provenance,
+        run.diagnostics,
+    )
+    relocation_index = RelocationIndex.build(relocations)
+    nid_index = NidIndex.build(nids)
+    probes, exports, orbis_bin, methods, compilers = _collect_validation_evidence(
+        raw=run.raw,
+        source=run.source,
+        output_dir=run.output_dir,
+        metadata_status=metadata.status,
+        relocation_index=relocation_index,
+        nid_index=nid_index,
+        diagnostics=run.diagnostics,
+        store=run.store,
+        orbis_as=run.orbis_as,
+        orbis_clang=run.orbis_clang,
+        orbis_readelf=run.orbis_readelf,
+        orbis_objdump=run.orbis_objdump,
+        orbis_ld=run.orbis_ld,
+        tool_evidence=run.tool_evidence,
+        abi_probe_manifest=run.abi_probe_manifest,
+        toolchain_profile=run.toolchain_profile,
+        tool_timeout_seconds=run.tool_timeout_seconds,
+        assembly_profile=run.assembly_profile,
+    )
+    _append_validation_diagnostics(run.diagnostics, load_image, metadata, methods)
+    report = build_validation_report(
+        run.source,
+        run.implementation_report,
+        run.source_sha256,
+        run.report_sha256,
+        _validation_status(load_image.status, methods, run.diagnostics),
+        load_image,
+        segments,
+        relocations,
+        nids,
+        methods,
+        _aggregate_compiler(compilers, run.orbis_as),
+        probes,
+        run.analytical_model,
+        run.manifest_sha,
+        run.store_schema,
+        run.toolchain_profile,
+        exports,
+        orbis_bin,
+        tuple(dict.fromkeys(run.diagnostics)),
+    )
+    return write_validation_report(report, run.output_dir)
+
+
+def _load_target_evidence(
     source: Path,
-    implementation_report: Path,
-    output_dir: Path,
-    raw: dict[str, Any],
     source_sha256: str,
-    report_sha256: str,
-    diagnostics: list[str],
+    raw: dict[str, Any],
+    output_dir: Path,
     load_base: int | None,
     original_addresses: bool,
     nid_database: Path | None,
     nid_database_provenance: Path | None,
-    orbis_as: Path | None,
-    orbis_clang: Path | None,
-    orbis_readelf: Path | None,
-    orbis_objdump: Path | None,
-    orbis_ld: Path | None,
-    tool_timeout_seconds: float | None,
-    store: Any | None,
-    manifest_sha: str | None,
-    store_schema: str | None,
-    analytical_model: Any | None,
-) -> ImplementationValidationReport:
+    diagnostics: list[str],
+) -> tuple[Any, tuple[Any, ...], Any, tuple[Any, ...], tuple[Any, ...]]:
     load_image, segments = read_load_image(
         source, requested_base=load_base, original_addresses=original_addresses
     )
@@ -120,20 +190,53 @@ def _run_validation(
     relocations, nids = _relocation_evidence(
         source, load_image, segments, metadata, nid_database, nid_database_provenance, diagnostics
     )
-    relocation_index = RelocationIndex.build(relocations)
-    nid_index = NidIndex.build(nids)
+    return load_image, segments, metadata, relocations, nids
+
+
+def _collect_validation_evidence(
+    *,
+    raw: dict[str, Any],
+    source: Path,
+    output_dir: Path,
+    metadata_status: str,
+    relocation_index: RelocationIndex,
+    nid_index: NidIndex,
+    diagnostics: list[str],
+    store: Any | None,
+    orbis_as: Path | None,
+    orbis_clang: Path | None,
+    orbis_readelf: Path | None,
+    orbis_objdump: Path | None,
+    orbis_ld: Path | None,
+    tool_evidence: tuple[Path, ...],
+    abi_probe_manifest: Path | None,
+    toolchain_profile: str,
+    tool_timeout_seconds: float | None,
+    assembly_profile: str,
+) -> tuple[
+    tuple[CompilerEvidence, ...],
+    tuple[tuple[Any, Path | None], ...],
+    Any,
+    tuple[MethodValidationEvidence, ...],
+    list[CompilerEvidence],
+]:
     output_dir.mkdir(parents=True, exist_ok=True)
-    probes = run_abi_probe_matrix(
+    probes = _load_or_run_abi_probes(
+        abi_probe_manifest,
         orbis_clang,
-        output_dir / "abi-probes",
-        readelf=orbis_readelf,
-        timeout_seconds=tool_timeout_seconds,
+        output_dir,
+        orbis_readelf,
+        toolchain_profile,
+        tool_timeout_seconds,
+        diagnostics,
     )
+    exports = load_external_exports(tool_evidence, source, toolchain_profile, diagnostics)
+    orbis_bin = parse_orbis_bin_exports((item[0] for item in exports), tool_evidence)
     methods, compilers = _validate_raw_methods(
         raw,
         source,
         output_dir,
-        metadata.status,
+        metadata_status,
         relocation_index,
         nid_index,
         probes,
@@ -144,27 +247,15 @@ def _run_validation(
         orbis_objdump,
         orbis_ld,
         tool_timeout_seconds,
+        assembly_profile,
     )
-    _append_validation_diagnostics(diagnostics, load_image, metadata, methods)
-    report = _build_validation_report(
-        source,
-        implementation_report,
-        source_sha256,
-        report_sha256,
-        diagnostics,
-        load_image,
-        segments,
-        relocations,
-        nids,
-        methods,
-        compilers,
+    return (
         probes,
-        analytical_model,
-        manifest_sha,
-        store_schema,
-        orbis_as,
+        exports,
+        orbis_bin,
+        attach_stack_size_evidence(methods, orbis_bin.stack_sizes),
+        compilers,
     )
-    return write_validation_report(report, output_dir)
 
 
 def _validate_raw_methods(
@@ -182,6 +273,7 @@ def _validate_raw_methods(
     objdump: Path | None,
     linker: Path | None,
     timeout_seconds: float | None,
+    assembly_profile: str,
 ) -> tuple[tuple[MethodValidationEvidence, ...], list[CompilerEvidence]]:
     raw_methods = _method_values(raw)
     _prefetch_method_context(store, raw_methods, diagnostics)
@@ -199,50 +291,28 @@ def _validate_raw_methods(
         objdump,
         linker,
         timeout_seconds,
+        assembly_profile,
     )
 
 
-def _build_validation_report(
-    source: Path,
-    implementation_report: Path,
-    source_sha256: str,
-    report_sha256: str,
+def _load_or_run_abi_probes(
+    manifest_path: Path | None,
+    compiler: Path | None,
+    output_dir: Path,
+    readelf: Path | None,
+    toolchain_profile: str,
+    timeout_seconds: float | None,
     diagnostics: list[str],
-    load_image: Any,
-    segments: tuple[Any, ...],
-    relocations: tuple[Any, ...],
-    nids: tuple[Any, ...],
-    methods: tuple[MethodValidationEvidence, ...],
-    compilers: list[CompilerEvidence],
-    probes: tuple[CompilerEvidence, ...],
-    analytical_model: Any | None,
-    manifest_sha: str | None,
-    store_schema: str | None,
-    assembler: Path | None,
-) -> ImplementationValidationReport:
-    return ImplementationValidationReport(
-        source_path=str(source),
-        source_sha256=source_sha256,
-        implementation_report_path=str(implementation_report),
-        implementation_report_sha256=report_sha256,
-        status=_validation_status(load_image.status, methods, diagnostics),
-        load_image=load_image,
-        segments=segments,
-        relocations=relocations,
-        nids=nids,
-        methods=methods,
-        compiler=_aggregate_compiler(compilers, assembler),
-        abi_probes=probes,
-        analytical_model=analytical_model,
-        analytical_store_manifest_sha256=manifest_sha,
-        analytical_store_schema_version=store_schema,
-        sdk_definition_identity=sdk_definition_model(),
-        relocation_evaluator_version=RELOCATION_EVALUATOR_VERSION,
-        nid_database_identity=_nid_database_identity(nids),
-        diagnostics=tuple(dict.fromkeys(diagnostics)),
-        validation_profile=(
-            "source-bound-static-doris" if analytical_model is not None else "source-bound-static"
-        ),
+) -> tuple[CompilerEvidence, ...]:
+    return load_or_run_abi_probes(
+        manifest_path,
+        compiler,
+        output_dir,
+        readelf,
+        toolchain_profile,
+        timeout_seconds,
+        diagnostics,
+        probe_runner=run_abi_probe_matrix,
     )
 
 
@@ -317,6 +387,7 @@ def _validate_methods(
     objdump: Path | None = None,
     linker: Path | None = None,
     timeout_seconds: float | None = None,
+    assembly_profile: str = "byte-replay",
 ) -> tuple[tuple[MethodValidationEvidence, ...], list[CompilerEvidence]]:
     methods: list[MethodValidationEvidence] = []
     compilers: list[CompilerEvidence] = []
@@ -336,6 +407,7 @@ def _validate_methods(
             objdump,
             linker,
             timeout_seconds,
+            assembly_profile,
         )
         methods.append(method)
         compilers.append(compiler)
@@ -372,6 +444,11 @@ def _aggregate_compiler(values: list[CompilerEvidence], assembler: Path | None) 
         tool=first.tool,
         tool_sha256=first.tool_sha256,
         version=first.version,
+        assembly_path=first.assembly_path,
+        assembly_sha256=first.assembly_sha256,
+        source_path=first.source_path,
+        source_sha256=first.source_sha256,
+        toolchain_profile=first.toolchain_profile,
         object_metadata=first.object_metadata,
         diagnostics=tuple(diagnostic for item in values for diagnostic in item.diagnostics),
     )
@@ -413,28 +490,22 @@ def _validation_status(
     diagnostics: list[str],
 ) -> ValidationStatus:
     status = _report_status(load_status, methods)
-    if any("hash does not match source" in item for item in diagnostics):
+    if any(
+        any(
+            marker in item
+            for marker in (
+                "does not carry an ELF source hash",
+                "hash does not match source",
+                "external tool evidence was rejected",
+                "ABI probe manifest could not be loaded",
+                "ABI probe manifest toolchain profile does not match",
+                "Mixed Orbis SDK",
+            )
+        )
+        for item in diagnostics
+    ):
         return ValidationStatus.FAILED
     return status
-
-
-def resolve_sdk_tool(sdk_root: Path | None, name: str) -> Path | None:
-    """Resolve an explicitly selected SDK tool without copying SDK content."""
-    roots: list[Path] = []
-    if sdk_root is not None:
-        roots.append(sdk_root)
-    environment_root = os.environ.get("ORBIS_SDK_ROOT")
-    if environment_root:
-        roots.append(Path(environment_root))
-    roots.append(Path(r"D:\SCE\ORBIS SDKs\8.000"))
-    for root in roots:
-        for candidate in (
-            root / "host_tools" / "bin" / name,
-            root / "host_tools" / "bin" / f"{name}.exe",
-        ):
-            if candidate.exists():
-                return candidate.resolve()
-    return None
 
 
 def _nid_database_identity(nids: tuple[Any, ...]) -> str | None:

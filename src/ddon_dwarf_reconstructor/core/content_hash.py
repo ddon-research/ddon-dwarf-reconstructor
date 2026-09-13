@@ -18,6 +18,16 @@ def header_bundle_sha256(headers: Mapping[str, str]) -> str:
     return digest.hexdigest()
 
 
+def sha256_bytes(value: bytes) -> str:
+    """Return the SHA-256 of bounded bytes."""
+    return hashlib.sha256(value).hexdigest()
+
+
+def sha256_text(value: str) -> str:
+    """Return the SHA-256 of UTF-8 text."""
+    return sha256_bytes(value.encode("utf-8"))
+
+
 def sha256_file(path: Path) -> str:
     """Return the SHA-256 of one bounded metadata or source artifact."""
     digest = hashlib.sha256()
@@ -25,3 +35,6 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+__all__ = ["header_bundle_sha256", "sha256_bytes", "sha256_file", "sha256_text"]

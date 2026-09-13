@@ -1,8 +1,9 @@
 # Implementation Plan: Clean Architecture Audit and Modernization
 
-This plan records the delivered refactor and completed Tier 1/2, Dependabot, and security convergence. It
-intentionally describes current contracts, not a request to preserve removed
-runtime shapes; Tier 3 real-asset/compiler validation remains deferred.
+This plan records the delivered refactor and historical Tier 1/2, Dependabot, and security
+convergence. The 2026-09-05 follow-up below is in progress. It preserves source and output
+evidence while repairing observed correctness defects before broader cleanup; Tier 3
+real-asset/compiler validation remains deferred.
 
 ## Phase 0: Preserve the evidence contract — completed
 
@@ -115,6 +116,34 @@ the correctness, quality, dependency-graph, and nested-pipeline workflows. Depen
 is fixed, PRs #1-6 and #8-11 are merged, PR #7 is closed as superseded, and no PRs remain open.
 
 ## Dependency order
+
+### 2026-09-05 follow-up
+
+1. Repair header preparation/rollback and repeated relocation reuse independently, with fault
+  injection and mutation regressions. These two slices are implemented and pass focused tests
+  plus `just test-unit`, `just test`, and `just check`.
+2. Repair analytical close/abort ownership and backfill publication; retain bounded writers and
+  fail-closed manifest validation. The typed sink/finalization slice is implemented and verified;
+  backfill transaction recovery remains pending. Do not mutate retained analytical stores during
+  fixtures.
+3. Consolidate definition selection, type classification, and hierarchy preparation before
+  implementing a combined knowledge-export use case.
+4. Publish one source-bound graph for all requested roots through a typed infrastructure
+  publisher. Use one new schema for single and multiple roots; retain successful roots and
+  explicit failed-root records, with nonzero exit status for incomplete requests. Identity or
+  publication failures preserve the previous bundle. Update export contracts before this slice.
+5. Bind Doris registry rows to the exact validated manifest digest. Legacy rows remain untrusted;
+  live migration or serving reload requires separately retained evidence and explicit scope.
+6. Move CLI concerns out of infrastructure, consolidate repeated composition setup, remove
+  verified unused compatibility surfaces, and strengthen architecture/coverage controls.
+7. Run final coverage and audit gates, synchronize affected documentation, and record remaining
+  external prerequisites. No historical pass substitutes for this follow-up's evidence.
+
+The new work is tracked after the completed tasks in [tasks.md](tasks.md). Recovery must preserve
+user edits and durable artifacts: no blanket resets, automatic purges, or counts-only registry
+rebinding. Defect fixes remain independently reviewable from refactors.
+
+### Historical dependencies
 
 Phase 1 and Phase 2 enabled deletion of duplicate caches and application
 indirection. Phase 3 depended on the typed result and source-identity ports.

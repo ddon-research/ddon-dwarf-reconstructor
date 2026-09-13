@@ -13,7 +13,6 @@ from ...models.dwarf import (
 )
 from .class_parser_context import ClassParserContext
 from .method_evidence import merge_parameter_names
-from .type_chain_traverser import TypeChainTraverser
 
 logger = get_logger(__name__)
 
@@ -26,8 +25,8 @@ class ClassParserMethodsMixin:
             return None
         method_name = decode_dwarf_string(name_attr.value)
         return_type = self.type_resolver.resolve_type_name(method_die)
-        return_type_offset = TypeChainTraverser.get_terminal_type_offset(method_die)
-        declared_return_type_offset = TypeChainTraverser.get_declared_type_offset(method_die)
+        return_type_offset = self.type_chain_traverser.get_terminal_type_offset(method_die)
+        declared_return_type_offset = self.type_chain_traverser.get_declared_type_offset(method_die)
         is_virtual, vtable_index = self._virtual_method_info(method_die)
         parent_name = self._parent_name(method_die)
         parent_die = method_die.get_parent()
@@ -183,8 +182,8 @@ class ClassParserMethodsMixin:
         param_type = self.type_resolver.resolve_type_name(param_die)
 
         # Capture terminal type offset for dependency resolution
-        type_offset = TypeChainTraverser.get_terminal_type_offset(param_die)
-        declared_type_offset = TypeChainTraverser.get_declared_type_offset(param_die)
+        type_offset = self.type_chain_traverser.get_terminal_type_offset(param_die)
+        declared_type_offset = self.type_chain_traverser.get_declared_type_offset(param_die)
         if type_offset is not None:
             logger.debug(
                 f"Captured type offset 0x{type_offset:x} for parameter '{param_name}': "

@@ -77,6 +77,21 @@ class TestClassParser:
         assert result.members[0].bit_offset == 4
 
     @pytest.mark.unit
+    @pytest.mark.regression
+    def test_parse_namespace_info_preserves_namespace_kind(self, class_parser):
+        """Namespace roots must not be rendered as empty C++ classes."""
+        namespace_die = Mock()
+        namespace_die.tag = "DW_TAG_namespace"
+        namespace_die.attributes = {"DW_AT_name": Mock(value=b"rAcquirement")}
+        namespace_die.offset = 0x2000
+        namespace_die.iter_children.return_value = []
+
+        result = class_parser.parse_class_info(Mock(cu_offset=0x3000), namespace_die)
+
+        assert result.kind == "namespace"
+        assert result.name == "rAcquirement"
+
+    @pytest.mark.unit
     def test_parse_class_info_preserves_nested_class_scope(self, class_parser):
         """Nested class definitions retain their containing qualified name."""
         parent_die = Mock()

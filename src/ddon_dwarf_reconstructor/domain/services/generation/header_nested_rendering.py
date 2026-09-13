@@ -7,6 +7,20 @@ from .rendering.operations import HeaderRenderingHost
 
 
 class HeaderNestedRenderingService:
+    def _all_nested_members(self: HeaderRenderingHost, class_info: ClassInfo) -> list[MemberInfo]:
+        members = list(class_info.members)
+        members.extend(member for struct in class_info.nested_structs for member in struct.members)
+        members.extend(member for union in class_info.unions for member in union.members)
+        members.extend(
+            member
+            for union in class_info.unions
+            for struct in union.nested_structs
+            for member in struct.members
+        )
+        for nested_class in class_info.nested_classes:
+            members.extend(self._all_nested_members(nested_class))
+        return members
+
     def _nested_type_lines(
         self: HeaderRenderingHost, class_info: ClassInfo, include_metadata: bool
     ) -> list[str]:

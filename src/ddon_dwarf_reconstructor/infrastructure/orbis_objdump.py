@@ -11,10 +11,8 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import os
 import re
 import subprocess as _subprocess
-import tempfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from time import perf_counter
@@ -31,10 +29,21 @@ from ..domain.models.disassembly import (
     OrbisToolInvocation,
 )
 from ..domain.models.disassembly_scope import DisassemblyRequest, DisassemblyTarget
+from .artifact_io import atomic_write_text
 from .artifacts import SourceIdentityCatalog, get_artifact_cache_dir
-from .orbis_objdump_parsing import OrbisObjdumpParsingMixin
+from .orbis_objdump_parsing import (
+    group_ranges,
+    parse_instructions,
+    parse_llvm_metadata,
+    parse_llvm_unknown_dynamic_tags,
+    parse_relocations,
+    parse_symbols,
+    select_root_symbols,
+    select_target_symbols,
+    slice_function_text,
+)
 from .orbis_objdump_profile_runtime import (
-    OrbisProfileExecutionMixin,
+    OrbisProfileExecutor,
     ProfileResult,
 )
 from .orbis_objdump_profile_runtime import (
@@ -57,6 +66,7 @@ from .orbis_objdump_profiles import (
     STANDARD_RELOCATION_FLAGS,
     SYMBOL_FLAGS,
 )
+from .orbis_report_factory import empty_disassembly_report
 from .orbis_sdk_definitions import (
     SDK_DEFINITIONS_VERSION,
     sdk_definition_identity,
@@ -103,7 +113,7 @@ class _ProductionContext:
     targets: tuple[DisassemblyTarget, ...] = ()
 
 
-class OrbisObjdumpProducer(OrbisProfileExecutionMixin, OrbisObjdumpParsingMixin):
+class OrbisObjdumpProducer:
     """Run and cache bounded disassembly from the PS4 SDK toolchain."""
 
     def __init__(
@@ -127,6 +137,20 @@ class OrbisObjdumpProducer(OrbisProfileExecutionMixin, OrbisObjdumpParsingMixin)
         self.last_cache_hit = False
         self._last_capture: tuple[str, str, int] | None = None
         self._dwarf_modes: tuple[str, ...] | None = None
+        command_runner = None if type(self)._run is OrbisObjdumpProducer._run else self._run
+        external_runner = (
+            None
+            if type(self)._run_with_executable is OrbisObjdumpProducer._run_with_executable
+            else self._run_with_executable
+        )
+        self._profile_executor = OrbisProfileExecutor(
+            self.executable,
+            self.cache_root,
+            self.timeout_seconds,
+            command_runner=command_runner,
+            external_runner=external_runner,
+            capture_reader=lambda: self._last_capture,
+        )
 
     def produce(self, elf_path: Path, request: DisassemblyRequest | str) -> OrbisDisassemblyReport:
         """Return bounded functions selected by a DWARF-derived request.
@@ -214,6 +238,54 @@ class OrbisObjdumpProducer(OrbisProfileExecutionMixin, OrbisObjdumpParsingMixin)
         from .orbis_objdump_workflow import produce_uncached
 
         return produce_uncached(self, context, started_at)
+
+    # The three small adapters keep direct test seams and subclass fixtures
+    # stable while production workflows use ``_profile_executor`` directly.
+    def _executor(self) -> OrbisProfileExecutor:
+        executor = getattr(self, "_profile_executor", None)
+        if executor is None:
+            executor = OrbisProfileExecutor(
+                self.executable,
+                getattr(self, "cache_root", Path(".orbis-objdump-cache")),
+                getattr(self, "timeout_seconds", DEFAULT_TIMEOUT_SECONDS),
+                capture_reader=lambda: getattr(self, "_last_capture", None),
+            )
+            self._profile_executor = executor
+        return executor
+
+    def _run(self, arguments: list[str]) -> str:
+        executor = self._executor()
+        try:
+            return executor.run_command(arguments)
+        finally:
+            self._last_capture = executor._last_capture
+
+    def _run_with_executable(self, executable: Path, arguments: list[str]) -> str:
+        executor = self._executor()
+        try:
+            return executor.run_with_executable(executable, arguments)
+        finally:
+            self._last_capture = executor._last_capture
+
+    def _execute_profile(self, executable: Path, arguments: list[str]) -> ProfileResult:
+        return self._executor().execute_profile(executable, arguments)
+
+    def _shared_profile_dir(self, context: _ProductionContext) -> Path:
+        return self._executor().shared_profile_dir(context)
+
+    def _run_profile(self, *args: Any, **kwargs: Any) -> ProfileResult:
+        return self._executor().run_profile(*args, **kwargs)
+
+    # Direct function bindings retain the historical class-level parser API
+    # without coupling the producer to a parser mixin.
+    parse_symbols = staticmethod(parse_symbols)
+    select_root_symbols = staticmethod(select_root_symbols)
+    select_target_symbols = staticmethod(select_target_symbols)
+    parse_instructions = staticmethod(parse_instructions)
+    parse_relocations = staticmethod(parse_relocations)
+    parse_llvm_metadata = staticmethod(parse_llvm_metadata)
+    parse_llvm_unknown_dynamic_tags = staticmethod(parse_llvm_unknown_dynamic_tags)
+    _group_ranges = staticmethod(group_ranges)
 
     @staticmethod
     def _load_profile_cache(
@@ -304,9 +376,7 @@ class OrbisObjdumpProducer(OrbisProfileExecutionMixin, OrbisObjdumpParsingMixin)
     def _raw_function_text(outputs: list[tuple[int, int, str]], symbol: OrbisFunctionSymbol) -> str:
         for start, stop, output in outputs:
             if start <= symbol.address < stop:
-                return OrbisObjdumpParsingMixin.slice_function_text(
-                    output, symbol.address, symbol.end_address
-                )
+                return slice_function_text(output, symbol.address, symbol.end_address)
         return ""
 
     @staticmethod
@@ -315,27 +385,7 @@ class OrbisObjdumpProducer(OrbisProfileExecutionMixin, OrbisObjdumpParsingMixin)
         invocations: list[OrbisToolInvocation],
         diagnostics: tuple[str, ...],
     ) -> OrbisDisassemblyReport:
-        return OrbisDisassemblyReport(
-            artifact_key=context.artifact_key,
-            build_root=context.root_symbol,
-            elf_sha256=context.elf_sha256,
-            tool=context.tool,
-            flags=DISASSEMBLY_FLAGS,
-            parser_version=PARSER_VERSION,
-            functions=(),
-            schema_version=REPORT_SCHEMA_VERSION,
-            invocations=tuple(invocations),
-            diagnostics=diagnostics,
-            status=(
-                "unavailable"
-                if any(item.status == "unavailable" for item in invocations)
-                else "not_observed"
-            ),
-            sdk_definition_identity=context.sdk_definition_identity,
-            scope_hash=context.scope_hash,
-            scope_policy=context.scope_policy,
-            target_count=context.target_count,
-        )
+        return empty_disassembly_report(context, invocations, diagnostics)
 
     @staticmethod
     def _artifact_key(
@@ -409,20 +459,12 @@ class OrbisObjdumpProducer(OrbisProfileExecutionMixin, OrbisObjdumpParsingMixin)
 
     @staticmethod
     def _write_cached(path: Path, report: OrbisDisassemblyReport) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
-        temporary_path = Path(temporary_name)
-        try:
-            with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as output:
-                json.dump(
-                    {"schema_version": REPORT_SCHEMA_VERSION, "report": report.to_dict()},
-                    output,
-                    indent=2,
-                    sort_keys=True,
-                )
-                output.write("\n")
-                output.flush()
-                os.fsync(output.fileno())
-            temporary_path.replace(path)
-        finally:
-            temporary_path.unlink(missing_ok=True)
+        atomic_write_text(
+            path,
+            json.dumps(
+                {"schema_version": REPORT_SCHEMA_VERSION, "report": report.to_dict()},
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+        )

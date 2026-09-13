@@ -57,6 +57,27 @@ Real tests remain opt-in and must not delete or rebuild a validated index withou
 explicit operation. Compare generated headers, manifests, and diagnostics byte-for-
 byte across fresh processes.
 
+## Single-pass symbol extraction
+
+The current multi-root contract is one source-bound union operation. The full list does not run
+as independent root jobs or batches:
+
+```powershell
+$storeManifest = 'output\analytical-dwarf\main\store-<source-sha16>\manifest.json'
+uv run ddon-dwarf-reconstructor generate `
+  $env:DDON_REAL_ELF `
+  --dwarf-store $storeManifest `
+  --symbols-file resources/season2-resources.txt
+```
+
+By default this publishes `generated/ps4-02020005/` for the path above, or
+`generated/ps4-unknown/` when no unambiguous eight-digit client token is present. Inspect
+`symbols.manifest.json` for the input-list/source identity, ownership map, `MtDataReader` method
+signature closure, hashes, per-root statuses, and unresolved/conflict diagnostics. Resource and
+`shared/` directories are flat; the symbol route does not create `symbols/`, `implementations/`,
+or `methods/<id>/` directories. Complete dependency traversal is implicit and `--single-file` is
+invalid. Context generation is on by default; use `--no-generate-context` for headers/assembly only.
+
 ## MSVC Sample Verification
 
 The current validation corpus is:

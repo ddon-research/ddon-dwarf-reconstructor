@@ -13,6 +13,7 @@ nav = [
   ] },
   { "How-to" = [
     { "Generate headers" = "how-to/generate-headers.md" },
+    { "Validate local Orbis CPU/ABI evidence" = "how-to/validate-orbis-toolchain.md" },
     { "Export the knowledge graph" = "how-to/export-knowledge-graph.md" },
     { "Inspect durable artifacts" = "how-to/inspect-artifacts.md" },
     { "Validate changes" = "how-to/validate-changes.md" },

@@ -22,6 +22,69 @@ class ToolExportProfile:
 
 _PROFILES = (
     ToolExportProfile(
+        name="orbis-bin-stack-sizes",
+        tool_name="orbis-bin",
+        arguments=("-dss",),
+        output_format="text",
+        authority="ps4_abi_authority",
+        description=(
+            "Matching Orbis function stack-size metadata from .sce_stack_sizes; it is a "
+            "cross-check and does not prove source-level ABI equivalence."
+        ),
+        max_output_bytes=128 * 1024 * 1024,
+    ),
+    ToolExportProfile(
+        name="orbis-bin-dynamic-symbols",
+        tool_name="orbis-bin",
+        arguments=("--dump-dynsym", "-v"),
+        output_format="text",
+        authority="ps4_symbol_authority",
+        description=(
+            "Verbose dynamic symbols with encoded NID/library/module context from matching "
+            "Orbis binutils."
+        ),
+        max_output_bytes=256 * 1024 * 1024,
+    ),
+    ToolExportProfile(
+        name="orbis-bin-inline-relocations",
+        tool_name="orbis-bin",
+        arguments=("-r",),
+        output_format="text",
+        authority="ps4_orbis_bin_utility",
+        description=(
+            "Instruction-oriented relocation display; SCE relocation tables remain owned by "
+            "the source-bound Orbis SCE metadata reader."
+        ),
+        max_output_bytes=128 * 1024 * 1024,
+    ),
+    ToolExportProfile(
+        name="orbis-bin-section-headers",
+        tool_name="orbis-bin",
+        arguments=("-dsh",),
+        output_format="text",
+        authority="ps4_orbis_bin_utility",
+        description="Section-header layout from matching Orbis binutils.",
+        max_output_bytes=64 * 1024 * 1024,
+    ),
+    ToolExportProfile(
+        name="orbis-bin-memory-layout",
+        tool_name="orbis-bin",
+        arguments=("-dml",),
+        output_format="text",
+        authority="ps4_orbis_bin_utility",
+        description="Loaded memory layout from matching Orbis binutils.",
+        max_output_bytes=64 * 1024 * 1024,
+    ),
+    ToolExportProfile(
+        name="orbis-bin-file-layout",
+        tool_name="orbis-bin",
+        arguments=("-dfl",),
+        output_format="text",
+        authority="ps4_orbis_bin_utility",
+        description="On-disk file layout from matching Orbis binutils.",
+        max_output_bytes=64 * 1024 * 1024,
+    ),
+    ToolExportProfile(
         name="elfutils-elflint",
         tool_name="eu-elflint",
         arguments=("--gnu-ld",),

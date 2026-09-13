@@ -7,11 +7,11 @@ from dataclasses import replace
 from typing import Any
 
 from ...domain.models.analytical_dwarf import QueryResult, QueryStatus
+from ...domain.models.implementation_context import MethodContextPacket
 from ...domain.models.implementation_evidence import (
     MethodAssemblyEvidence,
     MethodImplementationCandidate,
 )
-from ...domain.models.implementation_validation import MethodContextPacket
 from ...domain.ports.analytical_store import DwarfQueryPort
 from ..generation.runtime import GenerationRuntime
 

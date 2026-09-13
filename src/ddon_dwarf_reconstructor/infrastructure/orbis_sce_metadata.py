@@ -20,6 +20,7 @@ from typing import Any, BinaryIO, cast
 from elftools.common.exceptions import ELFError
 from elftools.elf.elffile import ELFFile
 
+from ..core.content_hash import sha256_file
 from ..domain.models.disassembly import (
     OrbisDynamicTag,
     OrbisRelocationEntry,
@@ -29,6 +30,7 @@ from ..domain.models.disassembly import (
     OrbisToolIdentity,
 )
 from ..utils.elf_patches import patch_pyelftools_for_ps4
+from .artifact_io import atomic_write_text
 from .orbis_objdump_profiles import SCE_METADATA_PARSER_VERSION
 from .orbis_sce_metadata_support import (
     Segment as _Segment,
@@ -71,9 +73,6 @@ from .orbis_sce_metadata_support import (
 )
 from .orbis_sce_metadata_support import (
     segment_from_dict as _segment_from_dict,
-)
-from .orbis_sce_metadata_support import (
-    sha256_file as _sha256_file,
 )
 from .orbis_sce_metadata_support import (
     string_at as _string_at,
@@ -227,31 +226,11 @@ class OrbisSceMetadataReader:
             if temporary is not None:
                 temporary.unlink(missing_ok=True)
             raise
-        return parsed, tuple(selected), entry_count, _sha256_file(jsonl_path)
+        return parsed, tuple(selected), entry_count, sha256_file(jsonl_path)
 
     @staticmethod
     def _write_metadata(path: Path, value: dict[str, object]) -> None:
-        temporary: Path | None = None
-        try:
-            with tempfile.NamedTemporaryFile(
-                mode="w",
-                encoding="utf-8",
-                newline="\n",
-                prefix=f".{path.name}.",
-                suffix=".tmp",
-                dir=path.parent,
-                delete=False,
-            ) as output:
-                temporary = Path(output.name)
-                json.dump(value, output, indent=2, sort_keys=True)
-                output.write("\n")
-                output.flush()
-                os.fsync(output.fileno())
-            temporary.replace(path)
-        except Exception:
-            if temporary is not None:
-                temporary.unlink(missing_ok=True)
-            raise
+        atomic_write_text(path, json.dumps(value, indent=2, sort_keys=True) + "\n")
 
     @staticmethod
     def _load_cached(
@@ -305,7 +284,7 @@ def _cache_metadata_matches(
             value.get("source_sha256") == source_sha256,
             value.get("tool_identity") == asdict(tool),
             _json_equivalent(stored_sdk_identity, expected_sdk_identity),
-            value.get("entries_sha256") == _sha256_file(jsonl_path),
+            value.get("entries_sha256") == sha256_file(jsonl_path),
         )
     )
 

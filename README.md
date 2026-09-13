@@ -17,6 +17,9 @@ Dragon's Dogma Online research and modding.
 - Knowledge-graph exports with explicit producer and Orbis evidence provenance.
 - Bounded one-time exports from Orbis, LLVM, GNU Binutils, elfutils, and libdwarf profiles, with
   source/tool/output hashes and authority metadata.
+- Versioned local Orbis SDK 12 CPU/ABI contracts with explicit SDK 8 history, source-bound
+  `orbis-bin` utility exports, retained compiler `.s`/`.o` probes, and separate `llvm-mca`
+  performance evidence.
 - An exhaustive, source-derived Python module reference grouped by package layer; indexed modules
   include implementation internals and are not all stable public API.
 - Source-bound implementation validation with explicit load-image, relocation, NID, ABI/CFI,
@@ -130,11 +133,32 @@ uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf \
   --llvm-target-triple x86_64-scei-ps4
 ```
 
-When `--symbols-file` is combined with `--full-hierarchy` and multiple roots, generation writes
-separate source-derived bundles under `output/season2/<platform>/symbols/<index>-<safe-root>/`.
-Each bundle has its own manifest and status; aggregate publication fails closed on conflicting
-same-named headers. Validate a selected root bundle standalone before treating aggregate, Sonar,
-or IDA diagnostics as additive evidence.
+Every `generate` request uses the same symbol-set workflow. One `--symbol` resolves that class
+and its complete dependency closure. Repeated `--symbol` values or `--symbols-file` resolve one
+global union, deduplicate it across all requested roots, and publish it atomically under
+`generated/ps4-<client-version>/` by default (`--output` overrides the root):
+
+```text
+generated/ps4-02020005/
+  symbols.manifest.json      # emitted when context generation is enabled
+  shared/<dependency>.h
+  rAchievement/<resource>.h
+  rAchievement/<owner>-<method>-<stable-hash>.asm
+```
+
+Headers and human-readable assembly files are flat within each owner directory. Dependencies
+reached by multiple roots go under `shared/`; same-name, different-content definitions receive a
+deterministic identity suffix and are never overwritten. The manifest binds the ELF identity,
+input-list hash, producer configuration, class/header ownership, file hashes, per-root status,
+and unresolved/conflict diagnostics. Complete dependency traversal is implicit and `--single-file`
+is rejected because symbol-set output is always flat. The expected regression spelling is
+`rAchievement`.
+
+Context generation is enabled by default for development and retained evidence. Use
+`--no-generate-context` when the handoff must contain only generated C++ headers and assembly
+files; this suppresses the manifest, implementation report, validation objects, and other
+generation-context JSON.
+The explicit `--generate-context` spelling is also accepted to make that intent visible in scripts.
 
 Use `uv run ddon-dwarf-reconstructor --help` or a command’s `--help` for the complete typed
 interface. Normal `generate` and `export-knowledge` runs require `--dwarf-store` and a matching
@@ -143,16 +167,20 @@ count-mismatched publication fails closed. They never perform an implicit CU tra
 Parquet/JSONL at runtime. `--dwarf-dump` and `--dwarf-index` remain explicit validation-only
 inputs for the legacy cross-check workflow.
 
-The assembly command publishes `output/ps4/header-bundle.manifest.json` and `rLayout.h` before
-writing `output/ps4/implementations/0001-rLayout.json`. That JSON is the canonical source-bound
-implementation index: it retains raw method disassembly, decoded instructions, references,
-source/file offsets, candidates, tool invocations, and explicit limitations. With source emission
-enabled, uniquely matched methods receive a bounded `.raw.asm` evidence file, exact-byte `.s`
-compiler input, an `implementation-context/1.0` `.context.json` packet, and, when `orbis-as` is
-available, an accepted `.o` file plus a minimal atomic bundle manifest. `.raw.asm` is never passed
-to the assembler; `.s` is the clean recompilable handoff for the later agentic C++ workflow. The
-core pipeline emits no `.cpp`, empty, reference, or diagnostic placeholder files. Ambiguous and
-unavailable methods remain evidence only.
+The symbol-set assembly report retains raw method disassembly, decoded instructions, references,
+source/file offsets, candidates, tool invocations, and explicit limitations when context generation
+is enabled. With source emission enabled, uniquely matched methods receive exact-byte `.s`
+compiler input and, when `orbis-as` is available, an accepted `.o` file. The core pipeline emits
+no empty, reference, or diagnostic placeholder C++ files. Ambiguous and unavailable methods remain
+evidence only.
+
+Symbol-set assembly uses the same additive evidence boundary but writes one flat `.asm` namespace per
+resource (and `shared/` for shared methods) beside the headers. Each `.asm` begins with semicolon
+comments for the method/definition signature, pseudo-symbol, address/range, file offset, source
+location, ABI/type facts, and evidence status; available calls are recorded as `; pseudo_call:`
+comments. Exact-byte `.s` and accepted `.o` files are separate opt-in artifacts and are never
+confused with the readable IDA-style export. Source references in readable exports are always
+semicolon comments; the structured/raw disassembly remains in the report/cache.
 
 The latest full Season 2 rerun covered all 289 roots, checked 2,760 header files, and emitted
 1,150 complete assembly handoff bundles with exact raw/report and object/text parity. It remains
@@ -174,10 +202,44 @@ rows are queried from Doris, never read directly from Parquet/JSONL. Set the exi
 `DDON_DORIS_SQL_HOST`, `DDON_DORIS_SQL_PORT`, `DDON_DORIS_DATABASE`, and `DDON_DORIS_TABLE`
 settings before running the command.
 
+SDK 12 is the promoted host-tool profile; SDK 8 is historical and requires an explicit SDK root.
+Use repeatable `--tool-evidence` options for complete `orbis-bin` manifests and
+`--abi-probe-manifest` for the retained compiler matrix. The default `--assembly-profile
+byte-replay` preserves canonical `.text` byte replay; opt-in `--assembly-profile sectioned`
+checks `.text.<symbol>` and `EF_FFUNC_DATA_SECS_ENABLED`. The current implementation-validation
+report schema is `4.4`, while the implementation-discovery report remains `4.2`. Schema-4.3
+reports remain readable but default static-equivalence disposition to `not_promoted`.
+
+See [Validate local Orbis CPU/ABI evidence](docs/how-to/validate-orbis-toolchain.md) for the
+offline SDK 12 profiles, local documentation provenance, Sysmodule/NID distinction, and the
+separate marked-assembly `performance analyze-assembly` workflow. Keep all SDK outputs, probe
+manifests, and `llvm-mca` artifacts under `%TEMP%` or another external evidence directory.
+
 Validation hydrates method context through deterministic Doris batches of 512 requests and builds
-relocation/NID indexes once per run. The retained `rLayout` pilot and full Season 2 validator now
-publish atomically; the full report remains failed because ABI, compiler, effect, and parity gates
-are incomplete. No arbitrary timeout is used as completion evidence.
+relocation/NID indexes once per run. The bounded SDK 12 `rLayout` acceptance retained target
+objects for all 26 code-bearing methods; 17 are `target_object_equivalent` and 9 remain
+`not_promoted` because source-bound return-type/ABI facts are incomplete. The full Season 2
+validator remains deferred, and live behavior remains `not_observed`. No arbitrary timeout is used
+as completion evidence.
+
+### SDK 12 disassembly refactor parity baseline
+
+On 2026-08-18 the complete 289-root Season 2 set was regenerated before and after the disassembly
+refactor with SDK `12.000`, full hierarchy, assembly extraction, and implementation-source emission.
+The source-bound baseline and post-refactor outputs are external evidence under
+`C:\Users\morph\AppData\Local\Temp\ddon-disassembly-refactor-20260818\baseline` and
+`C:\Users\morph\AppData\Local\Temp\ddon-disassembly-refactor-20260818\post`;
+the configuration and strict comparison are recorded in `baseline-config.json` and
+`comparison.json`. The versioned manifests are `disassembly-regression/1`, both have SHA-256
+`db59e07ebaf34ccd582065223b79897b3a75bc64352343497c2f56519cda3533`, and the comparison reports
+zero differences.
+
+The matched aggregate is 289 roots, 2,745 headers, 83,754 method entries, 60,117 unique method
+identities, 4,504 artifact descriptors, 289 implementation reports/source bundles, and 8,116
+files totaling 354,480,609 bytes. The comparison requires exact header, assembly, object, context,
+identity, descriptor, and normalized evidence equality; only explicitly allowlisted runtime paths
+and timing fields are normalized. This current SDK 12 baseline is separate from the historical
+2,760-header/MSVC record and does not promote ABI, semantic, or live-behavior equivalence.
 
 ```powershell
 uv run ddon-dwarf-reconstructor artifacts validate-implementation resources/DDOORBIS.elf `
@@ -185,7 +247,7 @@ uv run ddon-dwarf-reconstructor artifacts validate-implementation resources/DDOO
   --dwarf-store output/analytical-dwarf/main/store-<source-sha16>/manifest.json `
   --output-dir $env:TEMP/ddon-implementation-validation `
   --original-addresses `
-  --sdk-root 'D:/SCE/ORBIS SDKs/8.000'
+  --sdk-root 'D:/SCE/ORBIS SDKs/12.000'
 ```
 
 Use `--tool-timeout-seconds <positive-seconds>` only for an explicitly bounded SDK validation
@@ -479,6 +541,7 @@ contract, security integrations, and Pages build.
 - [Architecture overview](docs/explanation/architecture/index.md)
 - [Component boundaries](docs/explanation/architecture/components.md)
 - [Generation runtime](docs/explanation/architecture/runtime.md)
+- [Architecture review evidence](specs/021-cpp-reconstruction-architecture/measured-evidence.md)
 - [Observability and diagnostics](docs/how-to/observability.md)
 - [Testing and acceptance tiers](docs/reference/testing.md)
 - [Performance commands and metrics](docs/reference/performance.md)

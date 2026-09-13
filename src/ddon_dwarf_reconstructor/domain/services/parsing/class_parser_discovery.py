@@ -35,6 +35,20 @@ class ClassParserDiscoveryMixin(ClassParserDumpDiscoveryMixin, ClassParserLazyDi
         exhaustive_override: bool | None = None,
     ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         """Find a class-like definition or namespace by name."""
+        cache = getattr(self, "_found_class_cache", None)
+        cache_key = (class_name, exhaustive_override)
+        if cache is not None and cache_key in cache:
+            return cache[cache_key]
+        result = self._find_class_uncached(class_name, exhaustive_override)
+        if cache is not None:
+            cache[cache_key] = result
+        return result
+
+    def _find_class_uncached(
+        self: ClassParserContext,
+        class_name: str,
+        exhaustive_override: bool | None = None,
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         exhaustive = self.exhaustive_search if exhaustive_override is None else exhaustive_override
         if class_name in TYPE_BLACKLIST:
             logger.warning("Type '%s' is blacklisted; skipping search", class_name)

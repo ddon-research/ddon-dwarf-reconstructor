@@ -8,18 +8,20 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from ..domain.models.disassembly import OrbisInstruction
+from ..domain.models.disassembly import OrbisInstruction, OrbisReference
+from ..domain.models.implementation_context import MethodContextPacket
 from ..domain.models.implementation_validation import (
     AbiEvidence,
     CompilerEvidence,
-    MethodContextPacket,
     MethodValidationEvidence,
     SemanticParity,
     ValidationStatus,
 )
+from ..domain.services.cpp_reconstruction.control_flow import normalize_parity as _normalize_parity
+from ..domain.services.cpp_reconstruction.instruction_effects import analyze_instruction_effects
 from .implementation_abi_probes import aggregate_probe_status
+from .implementation_cfi import inspect_cfi
 from .implementation_dwarf_context import dwarf_method_evidence, store_cfi_status
-from .implementation_effects import analyze_instruction_effects, inspect_cfi
 from .implementation_nids import NidIndex
 from .implementation_relocations import RelocationIndex
 from .implementation_toolchain import emit_and_assemble_method
@@ -41,6 +43,7 @@ def validate_method(
     objdump: Path | None = None,
     linker: Path | None = None,
     timeout_seconds: float | None = None,
+    assembly_profile: str = "byte-replay",
 ) -> tuple[MethodValidationEvidence, CompilerEvidence]:
     """Build one method evidence record from independent source-bound dimensions."""
     instructions, address, size, end = _method_inputs(raw)
@@ -66,11 +69,12 @@ def validate_method(
         effects.status,
         relocation_status,
         nid_status,
-        abi.status,
         linker,
         timeout_seconds,
+        assembly_profile,
+        (address, size),
     )
-    parity = _method_parity(parity, compiler.status, relocation_status, nid_status, abi.status)
+    parity = _method_parity(parity, compiler, relocation_status, nid_status, abi.status)
     context = _context_packet(
         raw,
         instructions,
@@ -206,16 +210,16 @@ def _emit_method(
     effect_status: ValidationStatus,
     relocation_status: ValidationStatus,
     nid_status: ValidationStatus,
-    abi_status: ValidationStatus,
     linker: Path | None = None,
     timeout_seconds: float | None = None,
+    assembly_profile: str = "byte-replay",
+    expected_range: tuple[int | None, int | None] = (None, None),
 ) -> tuple[CompilerEvidence, SemanticParity, tuple[str, ...]]:
     assembly_ready = all(
         (
             bool(instructions),
             relocation_status is ValidationStatus.OBSERVED,
             nid_status is ValidationStatus.OBSERVED,
-            abi_status is ValidationStatus.OBSERVED,
             effect_status is ValidationStatus.OBSERVED,
         )
     )
@@ -230,92 +234,29 @@ def _emit_method(
         linker=linker,
         assembly_ready=assembly_ready,
         timeout_seconds=timeout_seconds,
-    )
-
-
-def _normalize_parity(
-    parity: SemanticParity,
-    compiler_status: ValidationStatus | None = None,
-    *,
-    required_dimensions: tuple[tuple[str, ValidationStatus], ...] = (),
-) -> SemanticParity:
-    status = _normalized_parity_status(parity, compiler_status, required_dimensions)
-    diagnostics = _normalized_parity_diagnostics(parity, compiler_status, required_dimensions)
-    return replace(
-        parity,
-        status=status,
-        diagnostics=tuple(dict.fromkeys(diagnostics)),
+        assembly_profile=assembly_profile,
+        expected_start=expected_range[0],
+        expected_size=expected_range[1],
     )
 
 
 def _method_parity(
     parity: SemanticParity,
-    compiler: ValidationStatus,
+    compiler: CompilerEvidence,
     relocation: ValidationStatus,
     nid: ValidationStatus,
     abi: ValidationStatus,
 ) -> SemanticParity:
     return _normalize_parity(
         parity,
-        compiler,
+        compiler.status,
+        compiler_evidence=compiler,
         required_dimensions=(
             ("relocation", relocation),
             ("NID/import/export", nid),
             ("ABI/CFI", abi),
         ),
     )
-
-
-def _normalized_parity_status(
-    parity: SemanticParity,
-    compiler_status: ValidationStatus | None,
-    required_dimensions: tuple[tuple[str, ValidationStatus], ...] = (),
-) -> ValidationStatus:
-    statuses = (
-        parity.byte_status,
-        parity.cfg_status,
-        parity.external_edge_status,
-        parity.effect_status,
-        *(value for _label, value in required_dimensions),
-    )
-    if parity.status is ValidationStatus.FAILED or ValidationStatus.FAILED in statuses:
-        return ValidationStatus.FAILED
-    if all(item is ValidationStatus.OBSERVED for item in statuses) and compiler_status in (
-        None,
-        ValidationStatus.OBSERVED,
-    ):
-        return ValidationStatus.OBSERVED
-    if parity.status is ValidationStatus.NOT_OBSERVED and all(
-        item is ValidationStatus.NOT_OBSERVED for item in statuses
-    ):
-        return ValidationStatus.NOT_OBSERVED
-    return ValidationStatus.PARTIAL
-
-
-def _normalized_parity_diagnostics(
-    parity: SemanticParity,
-    compiler_status: ValidationStatus | None,
-    required_dimensions: tuple[tuple[str, ValidationStatus], ...] = (),
-) -> tuple[str, ...]:
-    missing = tuple(
-        label
-        for label, value in (
-            ("CFG", parity.cfg_status),
-            ("external edges", parity.external_edge_status),
-        )
-        if value is not ValidationStatus.OBSERVED
-    )
-    missing += tuple(
-        label for label, value in required_dimensions if value is not ValidationStatus.OBSERVED
-    )
-    diagnostics = tuple(parity.diagnostics)
-    if missing:
-        diagnostics += (
-            "static parity dimensions not independently observed: " + ", ".join(missing),
-        )
-    if compiler_status not in (None, ValidationStatus.OBSERVED):
-        diagnostics += ("accepted Orbis target-object generation was not observed",)
-    return diagnostics
 
 
 def _method_diagnostics(
@@ -434,7 +375,7 @@ def _abi_evidence(
     facts = dwarf_facts or {}
     cfi_status = cfi.status if cfi is not None else ValidationStatus.NOT_OBSERVED
     return AbiEvidence(
-        status=_abi_status(cfi_status, probes),
+        status=_abi_status(cfi_status, probes, facts),
         target_triple=DEFAULT_PS4_LLVM_TRIPLE,
         calling_convention=_fact_string(facts, raw, "calling_convention"),
         object_pointer=_fact_string(facts, raw, "object_pointer"),
@@ -445,31 +386,76 @@ def _abi_evidence(
         return_location=_fact_string(facts, raw, "return_location"),
         hidden_return=_hidden_return(facts, raw),
         cfi_status=cfi_status,
-        diagnostics=_abi_diagnostics(cfi, facts),
+        diagnostics=_abi_diagnostics(cfi, facts, cfi_status),
     )
 
 
 def _abi_status(
-    cfi_status: ValidationStatus, probes: tuple[CompilerEvidence, ...]
+    cfi_status: ValidationStatus,
+    probes: tuple[CompilerEvidence, ...],
+    facts: dict[str, Any],
 ) -> ValidationStatus:
     probe_status = aggregate_probe_status(probes)
-    if (
-        cfi_status is ValidationStatus.NOT_OBSERVED
-        and probe_status is ValidationStatus.NOT_OBSERVED
-    ):
-        return ValidationStatus.NOT_OBSERVED
+    if probe_status is ValidationStatus.FAILED or cfi_status is ValidationStatus.FAILED:
+        return ValidationStatus.FAILED
     if cfi_status in {ValidationStatus.UNAVAILABLE, ValidationStatus.BLOCKED}:
         return cfi_status
-    if probe_status is ValidationStatus.FAILED:
-        return ValidationStatus.FAILED
-    return ValidationStatus.PARTIAL
+    missing = _abi_missing_facts(cfi_status, facts)
+    if not facts and probe_status is ValidationStatus.NOT_OBSERVED:
+        return ValidationStatus.NOT_OBSERVED
+    return ValidationStatus.OBSERVED if not missing else ValidationStatus.PARTIAL
 
 
-def _abi_diagnostics(cfi: Any, facts: dict[str, Any]) -> tuple[str, ...]:
+def _abi_diagnostics(
+    cfi: Any, facts: dict[str, Any], cfi_status: ValidationStatus
+) -> tuple[str, ...]:
     diagnostics = list(cfi.diagnostics if cfi is not None else ("CFI was not inspected",))
     diagnostics.extend(str(item) for item in facts.get("diagnostics", ()))
     diagnostics.append("compiler probes do not replace method-specific DWARF parameter locations")
+    missing = _abi_missing_facts(cfi_status, facts)
+    if missing:
+        diagnostics.append("ABI completeness missing: " + ", ".join(missing))
     return tuple(dict.fromkeys(diagnostics))
+
+
+def _abi_missing_facts(cfi_status: ValidationStatus, facts: dict[str, Any]) -> tuple[str, ...]:
+    missing: list[str] = []
+    if not facts.get("calling_convention"):
+        missing.append("calling convention")
+    missing.extend(_missing_object_pointer(facts))
+    missing.extend(_missing_parameter_locations(facts))
+    missing.extend(_missing_return_facts(cfi_status, facts))
+    return tuple(dict.fromkeys(missing))
+
+
+def _missing_object_pointer(facts: dict[str, Any]) -> tuple[str, ...]:
+    required = bool(facts.get("object_pointer_required", facts.get("object_pointer")))
+    return ("object pointer location",) if required and not facts.get("object_pointer") else ()
+
+
+def _missing_parameter_locations(facts: dict[str, Any]) -> tuple[str, ...]:
+    formal_count = facts.get("formal_parameter_count")
+    located_count = facts.get("located_parameter_count")
+    if isinstance(formal_count, int) and isinstance(located_count, int):
+        if formal_count != located_count:
+            return ("complete parameter locations",)
+    elif not facts.get("parameter_locations") and formal_count != 0:
+        return ("parameter locations",)
+    return ()
+
+
+def _missing_return_facts(cfi_status: ValidationStatus, facts: dict[str, Any]) -> tuple[str, ...]:
+    missing: list[str] = []
+    if not facts.get("frame_base_locations"):
+        missing.append("frame base location")
+    return_type_status = facts.get("return_type_status")
+    if return_type_status is not None and return_type_status is not ValidationStatus.OBSERVED:
+        missing.append("source return type")
+    if not facts.get("return_location"):
+        missing.append("return location")
+    if cfi_status is not ValidationStatus.OBSERVED:
+        missing.append("complete CFI coverage")
+    return tuple(dict.fromkeys(missing))
 
 
 def _fact_string(facts: dict[str, Any], raw: dict[str, Any], key: str) -> str | None:
@@ -521,6 +507,23 @@ def _instruction(item: dict[str, Any]) -> OrbisInstruction:
         source_line=_optional_int(item.get("source_line")),
         call_target_address=_optional_int(item.get("call_target_address")),
         call_target_name=_optional_string(item.get("call_target_name")),
+        references=tuple(
+            _reference(value)
+            for value in _list_value(item.get("references"))
+            if isinstance(value, dict)
+        ),
+    )
+
+
+def _reference(item: dict[str, Any]) -> OrbisReference:
+    return OrbisReference(
+        kind=str(item.get("kind", "unknown")),
+        address=_optional_int(item.get("address")),
+        resolved_name=_optional_string(item.get("resolved_name")),
+        raw_operand=str(item.get("raw_operand", "")),
+        resolution_status=str(item.get("resolution_status", "unresolved")),
+        relocation=_optional_string(item.get("relocation")),
+        relocation_id=_optional_string(item.get("relocation_id")),
     )
 
 

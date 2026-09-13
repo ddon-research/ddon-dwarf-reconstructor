@@ -66,6 +66,14 @@ This page indexes every source module in the **application modules** group. It i
 
 ::: ddon_dwarf_reconstructor.application.generators.dwarf_multi_file
 
+::: ddon_dwarf_reconstructor.application.generators.dwarf_symbol_generation
+
 ::: ddon_dwarf_reconstructor.application.generators.generation_contracts
 
 ::: ddon_dwarf_reconstructor.application.generators.session
+
+::: ddon_dwarf_reconstructor.application.generators.symbol_definition_graph
+
+::: ddon_dwarf_reconstructor.application.generators.symbol_header_layout
+
+::: ddon_dwarf_reconstructor.application.generators.symbol_header_validation

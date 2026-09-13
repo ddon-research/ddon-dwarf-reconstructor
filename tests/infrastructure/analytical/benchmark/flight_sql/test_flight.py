@@ -128,6 +128,8 @@ def _table() -> pa.Table:
 def test_config_reads_flight_settings_without_changing_mysql_defaults(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.delenv("DDON_DORIS_SQL_HOST", raising=False)
+    monkeypatch.delenv("DDON_DORIS_SQL_PORT", raising=False)
     monkeypatch.setenv("DDON_DORIS_FLIGHT_SQL_HOST", "be.example")
     monkeypatch.setenv("DDON_DORIS_FLIGHT_SQL_PORT", "8050")
     monkeypatch.setenv("DDON_DORIS_FLIGHT_SQL_PUBLIC_HOST", "be.example")

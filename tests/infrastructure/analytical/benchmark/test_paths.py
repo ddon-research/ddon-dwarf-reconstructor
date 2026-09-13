@@ -188,6 +188,7 @@ def test_loader_native_file_dispatch_is_source_family_aware(tmp_path: Path) -> N
         tmp_path / "manifest.json",
     )
     loader = DorisLoader()
+    manifest = SimpleNamespace(source_identity=SimpleNamespace(sha256="a" * 64))
     with (
         patch(
             "ddon_dwarf_reconstructor.infrastructure.analytical.doris._family_for_file",
@@ -203,10 +204,51 @@ def test_loader_native_file_dispatch_is_source_family_aware(tmp_path: Path) -> N
             return_value=StreamLoadOutcome(parquet_file, StreamLoadState.LOADED, label="label"),
         ) as stream_load,
     ):
-        result = loader._load_native_files(plan, DorisConfig())
+        result = loader._load_native_files(plan, DorisConfig(), manifest)
 
     assert result[0]["status"] == "loaded"
     stream_load.assert_called_once_with(parquet_file, "dwarf_index", "label")
+
+
+def test_loader_reads_manifest_once_for_load_scoped_labels(tmp_path: Path) -> None:
+    parquet_files = tuple(
+        tmp_path / "parquet" / "index" / f"part-{index:03}.parquet" for index in range(3)
+    )
+    plan = DorisLoadPlan(
+        "test_db",
+        "dwarf",
+        (),
+        parquet_files,
+        tmp_path / "manifest.json",
+    )
+    manifest = SimpleNamespace(source_identity=SimpleNamespace(sha256="a" * 64))
+    sources: list[str] = []
+    with (
+        patch(
+            "ddon_dwarf_reconstructor.infrastructure.analytical.doris._load_manifest",
+            return_value=manifest,
+        ) as load_manifest,
+        patch(
+            "ddon_dwarf_reconstructor.infrastructure.analytical.doris._family_for_file",
+            return_value="index",
+        ),
+        patch(
+            "ddon_dwarf_reconstructor.infrastructure.analytical.doris._load_label",
+            side_effect=lambda _plan, _family, path, source: sources.append(source) or path.name,
+        ),
+        patch.object(
+            DorisStreamLoadClient,
+            "load",
+            side_effect=lambda path, _table, label: StreamLoadOutcome(
+                path, StreamLoadState.LOADED, label=label
+            ),
+        ),
+    ):
+        result = DorisLoader()._load_native_files(plan, DorisConfig(stream_load_workers=2))
+
+    assert len(result) == len(parquet_files)
+    assert load_manifest.call_count == 1
+    assert sources == [manifest.source_identity.sha256] * len(parquet_files)
 
 
 def test_loader_can_overlap_independent_native_stream_loads(tmp_path: Path) -> None:
@@ -221,6 +263,7 @@ def test_loader_can_overlap_independent_native_stream_loads(tmp_path: Path) -> N
         tmp_path / "manifest.json",
     )
     loader = DorisLoader()
+    manifest = SimpleNamespace(source_identity=SimpleNamespace(sha256="a" * 64))
     with (
         patch(
             "ddon_dwarf_reconstructor.infrastructure.analytical.doris._family_for_file",
@@ -228,7 +271,7 @@ def test_loader_can_overlap_independent_native_stream_loads(tmp_path: Path) -> N
         ),
         patch(
             "ddon_dwarf_reconstructor.infrastructure.analytical.doris._load_label",
-            side_effect=lambda _plan, _family, path: path.name,
+            side_effect=lambda _plan, _family, path, _source: path.name,
         ),
         patch.object(
             DorisStreamLoadClient,
@@ -238,7 +281,7 @@ def test_loader_can_overlap_independent_native_stream_loads(tmp_path: Path) -> N
             ),
         ) as stream_load,
     ):
-        result = loader._load_native_files(plan, DorisConfig(stream_load_workers=2))
+        result = loader._load_native_files(plan, DorisConfig(stream_load_workers=2), manifest)
 
     assert [entry["label"] for entry in result] == [path.name for path in parquet_files]
     assert stream_load.call_count == len(parquet_files)
@@ -273,12 +316,16 @@ def test_loader_reports_partial_concurrent_stream_load_failures(tmp_path: Path) 
         ),
         patch(
             "ddon_dwarf_reconstructor.infrastructure.analytical.doris._load_label",
-            side_effect=lambda _plan, _family, path: path.name,
+            side_effect=lambda _plan, _family, path, _source: path.name,
         ),
         patch.object(DorisStreamLoadClient, "load", side_effect=lambda *_args: next(outcomes)),
         pytest.raises(RuntimeError, match="batch failed"),
     ):
-        DorisLoader()._load_native_files(plan, DorisConfig(stream_load_workers=2))
+        DorisLoader()._load_native_files(
+            plan,
+            DorisConfig(stream_load_workers=2),
+            SimpleNamespace(source_identity=SimpleNamespace(sha256="a" * 64)),
+        )
 
 
 def test_promoted_lookup_reuses_verified_rows_without_append(tmp_path: Path) -> None:

@@ -57,6 +57,26 @@ def test_named_type_resolution_is_cached(resolver: LazyTypeResolver) -> None:
 
 
 @pytest.mark.unit
+@pytest.mark.regression
+def test_named_type_resolution_uses_cached_reference_offset_before_hydration(
+    resolver: LazyTypeResolver,
+) -> None:
+    """A repeated type reference must not rehydrate its target DIE."""
+    source = Mock(tag="DW_TAG_member")
+    source.attributes = {"DW_AT_type": Mock()}
+    source.get_DIE_offset_from_attribute.return_value = 0x100
+    target = Mock(tag="DW_TAG_class_type", offset=0x100)
+    target.attributes = {"DW_AT_name": Mock(value=b"MtDataReader")}
+    source.get_DIE_from_attribute.return_value = target
+
+    assert resolver.resolve_type_name(source) == "MtDataReader"
+    assert resolver.resolve_type_name(source) == "MtDataReader"
+
+    source.get_DIE_offset_from_attribute.assert_called_with("DW_AT_type")
+    source.get_DIE_from_attribute.assert_called_once_with("DW_AT_type")
+
+
+@pytest.mark.unit
 @pytest.mark.functional
 def test_named_type_die_can_be_resolved_without_type_attribute(resolver: LazyTypeResolver) -> None:
     type_die = Mock(tag="DW_TAG_class_type", offset=0x100)

@@ -199,6 +199,37 @@ class _BatchStore:
         return query_method_context_batch(self, requests)
 
 
+class _CollisionBatchStore(_BatchStore):
+    def __init__(self) -> None:
+        super().__init__()
+        self._dies = self._dies + (
+            {
+                "unit_offset": 2,
+                "die_offset": 10,
+                "ordinal": 1,
+                "tag": "DW_TAG_subprogram_other_cu",
+                "abbrev_code": 1,
+                "has_children": False,
+                "depth": 1,
+                "parent_offset": 3,
+                "is_null": False,
+            },
+        )
+
+    @staticmethod
+    def _attribute_rows() -> tuple[dict[str, object], ...]:
+        return _BatchStore._attribute_rows() + (
+            {
+                "unit_offset": 2,
+                "die_offset": 10,
+                "ordinal": 0,
+                "name": "DW_AT_calling_convention",
+                "form": "DW_FORM_data1",
+                "decoded_value": "DW_CC_other",
+            },
+        )
+
+
 def test_context_projection_batches_families_and_keeps_doris_as_authority() -> None:
     store = _BatchStore()
     result = query_method_context_batch(
@@ -287,3 +318,67 @@ def test_model_prefetch_routes_all_follow_up_context_queries_to_the_batch_view()
     assert result.status is QueryStatus.COMPLETE
     assert any("batches: 1; requests: 1" in item for item in result.diagnostics)
     assert len(store.calls) == calls_after_prefetch
+
+
+def test_context_batch_rejects_ambiguous_unqualified_die_offsets() -> None:
+    store = _CollisionBatchStore()
+
+    result = query_method_context_batch(
+        store,
+        (MethodContextRequest(0, (10,)),),
+    )
+
+    assert result.status is QueryStatus.UNAVAILABLE
+    assert result.items == ()
+    assert any("lacks CU provenance" in item for item in result.diagnostics)
+
+
+def test_context_batch_preserves_rows_when_die_offset_is_cu_qualified() -> None:
+    store = _CollisionBatchStore()
+
+    result = query_method_context_batch(
+        store,
+        (
+            MethodContextRequest(0, (10,), unit_offsets=(1,)),
+            MethodContextRequest(1, (10,), unit_offsets=(2,)),
+        ),
+    )
+
+    assert result.status is QueryStatus.COMPLETE
+    query = DorisBatchContextQuery(result.items[0], store.manifest_path)
+    qualified = query.get_die(10, unit_offset=2)
+    assert qualified.status is QueryStatus.COMPLETE
+    assert qualified.items[0].tag == "DW_TAG_subprogram_other_cu"
+    assert query.get_die(10).status is QueryStatus.UNAVAILABLE
+
+
+def test_model_prefetch_threads_selected_candidate_cu_into_context_lookups() -> None:
+    store = _CollisionBatchStore()
+    model = DorisImplementationEvidenceModel(
+        store,
+        AnalyticalModelEvidence(
+            backend="doris",
+            source_id="a" * 64,
+            manifest_sha256="b" * 64,
+            manifest_schema_version="1.1",
+            database="dwarf",
+            table="records",
+            serving_variant_id="canonical",
+            registry_status="complete",
+        ),
+    )
+    raw = {
+        "selected_implementation_die_offset": 10,
+        "candidates": [
+            {
+                "implementation_die_offset": 10,
+                "implementation_cu_offset": 2,
+            }
+        ],
+    }
+
+    assert model.prefetch_method_context([raw]).status is QueryStatus.COMPLETE
+    _locations, facts, _frames, diagnostics = dwarf_method_evidence(model, raw, None, None)
+
+    assert facts["calling_convention"] == "DW_CC_other"
+    assert not any("not found" in item for item in diagnostics)

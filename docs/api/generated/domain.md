@@ -10,6 +10,12 @@ This page indexes every source module in the **domain modules** group. It is an 
 
 ::: ddon_dwarf_reconstructor.domain.models.analytical_dwarf
 
+::: ddon_dwarf_reconstructor.domain.models.cpp_reconstruction
+
+::: ddon_dwarf_reconstructor.domain.models.cpp_reconstruction.abi
+
+::: ddon_dwarf_reconstructor.domain.models.cpp_reconstruction.control_flow
+
 ::: ddon_dwarf_reconstructor.domain.models.disassembly
 
 ::: ddon_dwarf_reconstructor.domain.models.disassembly_scope
@@ -38,11 +44,19 @@ This page indexes every source module in the **domain modules** group. It is an 
 
 ::: ddon_dwarf_reconstructor.domain.models.dwarf.union_info
 
+::: ddon_dwarf_reconstructor.domain.models.implementation_context
+
 ::: ddon_dwarf_reconstructor.domain.models.implementation_evidence
 
 ::: ddon_dwarf_reconstructor.domain.models.implementation_validation
 
+::: ddon_dwarf_reconstructor.domain.models.orbis_evidence
+
+::: ddon_dwarf_reconstructor.domain.models.orbis_toolchain
+
 ::: ddon_dwarf_reconstructor.domain.models.performance
+
+::: ddon_dwarf_reconstructor.domain.models.sysmodule
 
 ::: ddon_dwarf_reconstructor.domain.models.tool_evidence
 
@@ -57,6 +71,8 @@ This page indexes every source module in the **domain modules** group. It is an 
 ::: ddon_dwarf_reconstructor.domain.ports.disassembly
 
 ::: ddon_dwarf_reconstructor.domain.ports.dwarf_lookup
+
+::: ddon_dwarf_reconstructor.domain.ports.implementation_artifacts
 
 ::: ddon_dwarf_reconstructor.domain.ports.source_identity
 
@@ -84,15 +100,31 @@ This page indexes every source module in the **domain modules** group. It is an 
 
 ::: ddon_dwarf_reconstructor.domain.services
 
+::: ddon_dwarf_reconstructor.domain.services.cpp_reconstruction
+
+::: ddon_dwarf_reconstructor.domain.services.cpp_reconstruction.abi
+
+::: ddon_dwarf_reconstructor.domain.services.cpp_reconstruction.control_flow
+
+::: ddon_dwarf_reconstructor.domain.services.cpp_reconstruction.instruction_effects
+
+::: ddon_dwarf_reconstructor.domain.services.cpp_reconstruction.instruction_operands
+
 ::: ddon_dwarf_reconstructor.domain.services.definition_selection
 
 ::: ddon_dwarf_reconstructor.domain.services.generation
+
+::: ddon_dwarf_reconstructor.domain.services.generation.definition_identity
 
 ::: ddon_dwarf_reconstructor.domain.services.generation.dependency_extractor
 
 ::: ddon_dwarf_reconstructor.domain.services.generation.file_registry
 
 ::: ddon_dwarf_reconstructor.domain.services.generation.header_aggregate_rendering
+
+::: ddon_dwarf_reconstructor.domain.services.generation.header_cycles
+
+::: ddon_dwarf_reconstructor.domain.services.generation.header_dependency_plan
 
 ::: ddon_dwarf_reconstructor.domain.services.generation.header_forward_declarations
 

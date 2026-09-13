@@ -5,17 +5,18 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import os
 import re
 import subprocess
-import tempfile
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from time import perf_counter
 from typing import Any, Protocol, cast
 
+from ..core.content_hash import sha256_text
 from ..core.observability import get_logger, log_event
 from ..domain.models.disassembly import OrbisToolIdentity, OrbisToolInvocation
+from .artifact_io import atomic_write_text
 from .orbis_objdump_profiles import PARSER_VERSION, SDK_DEFINITIONS_VERSION
 from .orbis_sdk_definitions import sdk_definition_identity
 
@@ -62,15 +63,28 @@ class ProfileCacheContext(Protocol):
     def llvm_target_triple(self) -> str: ...
 
 
-class OrbisProfileExecutionMixin:
-    """Run one exact tool profile and retain a validated text cache."""
+class OrbisProfileExecutor:
+    """Own command execution, source-bound cache validation, and retention."""
 
-    executable: Path
-    cache_root: Path
-    timeout_seconds: float | None
-    _last_capture: tuple[str, str, int] | None
+    def __init__(
+        self,
+        executable: Path,
+        cache_root: Path,
+        timeout_seconds: float | None,
+        *,
+        command_runner: Callable[[list[str]], str] | None = None,
+        external_runner: Callable[[Path, list[str]], str] | None = None,
+        capture_reader: Callable[[], tuple[str, str, int] | None] | None = None,
+    ) -> None:
+        self.executable = executable
+        self.cache_root = cache_root
+        self.timeout_seconds = timeout_seconds
+        self._command_runner = command_runner
+        self._external_runner = external_runner
+        self._capture_reader = capture_reader
+        self._last_capture: tuple[str, str, int] | None = None
 
-    def _run_profile(
+    def run_profile(
         self,
         context: ProfileCacheContext,
         profile: str,
@@ -89,7 +103,7 @@ class OrbisProfileExecutionMixin:
         profile_executable = executable or self.executable
         profile_tool = tool_identity if tool_identity is not None else context.tool
         token = _profile_token(profile, arguments, profile_executable, profile_tool)
-        profile_dir = self._shared_profile_dir(context)
+        profile_dir = self.shared_profile_dir(context)
         paths = _profile_paths(profile_dir, profile, token)
         cached = _load_profile_cache(
             *paths,
@@ -108,7 +122,7 @@ class OrbisProfileExecutionMixin:
             invocations.append(cached[0])
             return cached[1]
 
-        result = self._execute_profile(profile_executable, arguments)
+        result = self.execute_profile(profile_executable, arguments)
         _write_text(paths[1], result.stdout)
         _write_text(paths[2], result.stderr)
         invocation = _invocation(
@@ -129,17 +143,13 @@ class OrbisProfileExecutionMixin:
         invocations.append(invocation)
         return result
 
-    def _execute_profile(self, executable: Path, arguments: list[str]) -> ProfileResult:
+    def execute_profile(self, executable: Path, arguments: list[str]) -> ProfileResult:
         started_at = perf_counter()
         self._last_capture = None
         diagnostics: tuple[str, ...] = ()
         try:
-            stdout = (
-                self._run(arguments)
-                if executable == self.executable
-                else self._run_with_executable(executable, arguments)
-            )
-            capture = self._last_capture
+            stdout = self._invoke(executable, arguments)
+            capture = self._capture()
             stderr = capture[1] if capture is not None else ""
             return_status = capture[2] if capture is not None else 0
             status = "observed" if stdout else "empty"
@@ -167,7 +177,7 @@ class OrbisProfileExecutionMixin:
             diagnostics,
         )
 
-    def _shared_profile_dir(self, context: ProfileCacheContext) -> Path:
+    def shared_profile_dir(self, context: ProfileCacheContext) -> Path:
         """Return a source/tool-bound directory shared by root-symbol reports."""
         identity = {
             "elf_sha256": context.elf_sha256,
@@ -189,10 +199,20 @@ class OrbisProfileExecutionMixin:
         ).hexdigest()[:20]
         return self.cache_root / "profiles" / token
 
-    def _run(self, arguments: list[str]) -> str:
-        return self._run_with_executable(self.executable, arguments)
+    def _invoke(self, executable: Path, arguments: list[str]) -> str:
+        if executable == self.executable and self._command_runner is not None:
+            return self._command_runner(arguments)
+        if executable != self.executable and self._external_runner is not None:
+            return self._external_runner(executable, arguments)
+        return self.run_with_executable(executable, arguments)
 
-    def _run_with_executable(self, executable: Path, arguments: list[str]) -> str:
+    def _capture(self) -> tuple[str, str, int] | None:
+        return self._capture_reader() if self._capture_reader is not None else self._last_capture
+
+    def run_command(self, arguments: list[str]) -> str:
+        return self.run_with_executable(self.executable, arguments)
+
+    def run_with_executable(self, executable: Path, arguments: list[str]) -> str:
         command = [str(executable), *arguments]
         log_event(
             logger,
@@ -407,9 +427,9 @@ def _profile_metadata_matches(
 
 
 def _capture_hashes_match(value: dict[str, Any], stdout: str, stderr: str) -> bool:
-    return value.get("stdout_sha256") == _sha256_text(stdout) and value.get(
+    return value.get("stdout_sha256") == sha256_text(stdout) and value.get(
         "stderr_sha256"
-    ) == _sha256_text(stderr)
+    ) == sha256_text(stderr)
 
 
 def _invocation(
@@ -435,8 +455,8 @@ def _invocation(
         status=result.status,
         stdout_path=str(paths[1]),
         stderr_path=str(paths[2]),
-        stdout_sha256=_sha256_text(result.stdout),
-        stderr_sha256=_sha256_text(result.stderr),
+        stdout_sha256=sha256_text(result.stdout),
+        stderr_sha256=sha256_text(result.stderr),
         tool_identity=tool,
         duration_ms=result.duration_ms,
         diagnostics=result.diagnostics,
@@ -450,25 +470,11 @@ def _invocation(
 
 
 def _write_text(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
-    temporary_path = Path(temporary_name)
-    try:
-        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as output:
-            output.write(content)
-            output.flush()
-            os.fsync(output.fileno())
-        temporary_path.replace(path)
-    finally:
-        temporary_path.unlink(missing_ok=True)
+    atomic_write_text(path, content)
 
 
 def _safe_profile_name(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("._-") or "profile"
-
-
-def _sha256_text(value: str) -> str:
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
 def _optional_return_status(value: object) -> int | None:
@@ -487,4 +493,4 @@ def _optional_int(value: object, fallback: int | None) -> int | None:
     return int(value)
 
 
-__all__ = ["OrbisProfileExecutionMixin", "ProfileResult"]
+__all__ = ["OrbisProfileExecutor", "ProfileResult"]

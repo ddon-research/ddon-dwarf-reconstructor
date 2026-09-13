@@ -42,6 +42,11 @@ class PrimitiveLookupMixin:
         canonical = self._canonical_primitive_alias(search_name)
         if canonical is not None:
             return canonical
+        return self._query_primitive_typedef(search_name, typedef_name)
+
+    def _query_primitive_typedef(
+        self: TypeResolverContext, search_name: str, typedef_name: str
+    ) -> str | None:
         if not self.index:
             logger.debug("No index available for type resolution: %s", typedef_name)
             return None

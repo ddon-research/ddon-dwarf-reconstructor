@@ -13,7 +13,6 @@ from .class_parser_children import ClassParserChildrenMixin
 from .class_parser_context import ClassParserContext
 from .dwarf_location_parser import parse_location_offset
 from .parser_policy import DWARF_ACCESS_NAMES
-from .type_chain_traverser import TypeChainTraverser
 
 logger = get_logger(__name__)
 
@@ -78,6 +77,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
             "DW_TAG_class_type": "class",
             "DW_TAG_structure_type": "struct",
             "DW_TAG_union_type": "union",
+            "DW_TAG_namespace": "namespace",
         }.get(class_die.tag if isinstance(class_die.tag, str) else "", "class")
         qualified_name = self._get_qualified_name(class_die, class_name)
         logger.debug("Parsing class: %s", class_name)
@@ -203,7 +203,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
         if "DW_AT_type" not in member_die.attributes:
             type_name = "unknown_type"
 
-        type_offset = TypeChainTraverser.get_terminal_type_offset(member_die)
+        type_offset = self.type_chain_traverser.get_terminal_type_offset(member_die)
         if type_offset is not None:
             logger.debug(f"Captured type offset 0x{type_offset:x} for member type '{type_name}'")
 
@@ -232,7 +232,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
             is_volatile=type_name.startswith("volatile "),
             bit_size=layout[3],
             bit_offset=layout[4],
-            declared_type_offset=TypeChainTraverser.get_declared_type_offset(member_die),
+            declared_type_offset=self.type_chain_traverser.get_declared_type_offset(member_die),
             inline_struct=inline_struct,
             opaque_storage_size=opaque_storage_size,
             template_arguments=template_arguments,

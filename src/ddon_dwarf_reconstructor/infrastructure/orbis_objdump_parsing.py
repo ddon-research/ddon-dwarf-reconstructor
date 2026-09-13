@@ -63,150 +63,144 @@ _BRANCH_MNEMONICS = (
 )
 
 
-class OrbisObjdumpParsingMixin:
-    """Parse symbols, instructions, and bounded address ranges."""
+def parse_symbols(output: str) -> tuple[OrbisFunctionSymbol, ...]:
+    """Parse demangled function symbols from ``orbis-objdump -t`` output."""
+    symbols: list[OrbisFunctionSymbol] = []
+    for line in output.splitlines():
+        parts = line.split(maxsplit=5)
+        if len(parts) != 6 or parts[2] != "F":
+            continue
+        try:
+            address = int(parts[0], 16)
+            size = int(parts[4], 16)
+        except ValueError:
+            continue
+        if size <= 0:
+            continue
+        symbols.append(OrbisFunctionSymbol(address, size, parts[3], parts[5].strip()))
+    return tuple(sorted(set(symbols), key=lambda symbol: (symbol.address, symbol.name)))
 
-    @staticmethod
-    def parse_symbols(output: str) -> tuple[OrbisFunctionSymbol, ...]:
-        """Parse demangled function symbols from ``orbis-objdump -t`` output."""
-        symbols: list[OrbisFunctionSymbol] = []
-        for line in output.splitlines():
-            parts = line.split(maxsplit=5)
-            if len(parts) != 6 or parts[2] != "F":
-                continue
-            try:
-                address = int(parts[0], 16)
-                size = int(parts[4], 16)
-            except ValueError:
-                continue
-            if size <= 0:
-                continue
-            symbols.append(OrbisFunctionSymbol(address, size, parts[3], parts[5].strip()))
-        return tuple(sorted(set(symbols), key=lambda symbol: (symbol.address, symbol.name)))
 
-    @staticmethod
-    def select_root_symbols(
-        symbols: tuple[OrbisFunctionSymbol, ...], root_symbol: str
-    ) -> tuple[OrbisFunctionSymbol, ...]:
-        """Select class and nested-class methods without fuzzy name matching."""
-        prefix = f"{root_symbol}::"
-        thunk_prefixes = ("non-virtual thunk to ", "virtual thunk to ")
+def select_root_symbols(
+    symbols: tuple[OrbisFunctionSymbol, ...], root_symbol: str
+) -> tuple[OrbisFunctionSymbol, ...]:
+    """Select class and nested-class methods without fuzzy name matching."""
+    prefix = f"{root_symbol}::"
+    thunk_prefixes = ("non-virtual thunk to ", "virtual thunk to ")
 
-        def belongs(symbol: OrbisFunctionSymbol) -> bool:
-            candidate = symbol.name
-            for thunk_prefix in thunk_prefixes:
-                if candidate.startswith(thunk_prefix):
-                    candidate = candidate[len(thunk_prefix) :]
-                    break
-            return candidate.startswith(prefix)
+    def belongs(symbol: OrbisFunctionSymbol) -> bool:
+        candidate = symbol.name
+        for thunk_prefix in thunk_prefixes:
+            if candidate.startswith(thunk_prefix):
+                candidate = candidate[len(thunk_prefix) :]
+                break
+        return candidate.startswith(prefix)
 
-        return tuple(symbol for symbol in symbols if belongs(symbol))
+    return tuple(symbol for symbol in symbols if belongs(symbol))
 
-    @staticmethod
-    def select_target_symbols(
-        symbols: tuple[OrbisFunctionSymbol, ...],
-        targets: tuple[DisassemblyTarget, ...],
-    ) -> tuple[OrbisFunctionSymbol, ...]:
-        """Select ELF functions from explicit DWARF ranges and names.
 
-        Selection is deliberately address-first. Names are only a bounded
-        fallback for a target that has no exact/contained ELF function symbol;
-        this prevents a broad class prefix from silently widening the request.
-        """
-        selected: dict[tuple[int, int, str, str], OrbisFunctionSymbol] = {}
-        for target in targets:
-            range_matches = _target_range_matches(symbols, target.ranges)
-            range_matches = range_matches or _target_name_matches_all(symbols, target)
-            for symbol in range_matches:
-                selected[(symbol.address, symbol.size, symbol.name, symbol.section)] = symbol
-        return tuple(sorted(selected.values(), key=lambda symbol: (symbol.address, symbol.name)))
+def select_target_symbols(
+    symbols: tuple[OrbisFunctionSymbol, ...],
+    targets: tuple[DisassemblyTarget, ...],
+) -> tuple[OrbisFunctionSymbol, ...]:
+    """Select ELF functions from explicit DWARF ranges and names."""
+    selected: dict[tuple[int, int, str, str], OrbisFunctionSymbol] = {}
+    for target in targets:
+        range_matches = _target_range_matches(symbols, target.ranges)
+        range_matches = range_matches or _target_name_matches_all(symbols, target)
+        for symbol in range_matches:
+            selected[(symbol.address, symbol.size, symbol.name, symbol.section)] = symbol
+    return tuple(sorted(selected.values(), key=lambda symbol: (symbol.address, symbol.name)))
 
-    @staticmethod
-    def parse_instructions(output: str) -> tuple[OrbisInstruction, ...]:
-        """Parse raw instructions and attach the active objdump source location."""
-        source_location: tuple[str, int, int | None, str] | None = None
-        instructions: list[OrbisInstruction] = []
-        for line in output.splitlines():
-            parsed_source = _parse_source_location(line)
-            if parsed_source is not None:
-                source_location = parsed_source
-                continue
-            instruction = _parse_instruction(line, source_location)
-            if instruction is not None:
-                instructions.append(instruction)
-        return tuple(instructions)
 
-    @staticmethod
-    def parse_relocations(output: str) -> tuple[OrbisReference, ...]:
-        """Preserve relocation rows as additive, source-independent references."""
-        references: list[OrbisReference] = []
-        for line in output.splitlines():
-            match = re.match(r"^\s*(?P<address>[0-9a-fA-F]+)\s+(?P<body>.+)$", line)
-            if match is None or "RELOCATION" in line.upper():
-                continue
-            body = match.group("body").strip()
-            target = _TARGET_RE.search(body)
-            name = target.group("name") if target is not None else _relocation_name(body)
-            references.append(
-                OrbisReference(
-                    kind="relocation",
-                    address=int(match.group("address"), 16),
-                    resolved_name=name,
-                    raw_operand=line.strip(),
-                    resolution_status="resolved" if name else "unresolved",
-                    relocation=body,
-                )
+def parse_instructions(output: str) -> tuple[OrbisInstruction, ...]:
+    """Parse raw instructions and attach the active objdump source location."""
+    source_location: tuple[str, int, int | None, str] | None = None
+    instructions: list[OrbisInstruction] = []
+    for line in output.splitlines():
+        parsed_source = _parse_source_location(line)
+        if parsed_source is not None:
+            source_location = parsed_source
+            continue
+        instruction = _parse_instruction(line, source_location)
+        if instruction is not None:
+            instructions.append(instruction)
+    return tuple(instructions)
+
+
+def parse_relocations(output: str) -> tuple[OrbisReference, ...]:
+    """Preserve relocation rows as additive, source-independent references."""
+    references: list[OrbisReference] = []
+    for line in output.splitlines():
+        match = re.match(r"^\s*(?P<address>[0-9a-fA-F]+)\s+(?P<body>.+)$", line)
+        if match is None or "RELOCATION" in line.upper():
+            continue
+        body = match.group("body").strip()
+        target = _TARGET_RE.search(body)
+        name = target.group("name") if target is not None else _relocation_name(body)
+        references.append(
+            OrbisReference(
+                kind="relocation",
+                address=int(match.group("address"), 16),
+                resolved_name=name,
+                raw_operand=line.strip(),
+                resolution_status="resolved" if name else "unresolved",
+                relocation=body,
             )
-        return tuple(references)
-
-    @staticmethod
-    def parse_llvm_unknown_dynamic_tags(output: str) -> tuple[int, ...]:
-        """Return numeric vendor tags LLVM did not name in its JSON output."""
-        tags, _ = OrbisObjdumpParsingMixin.parse_llvm_metadata(output)
-        return tags
-
-    @staticmethod
-    def parse_llvm_metadata(output: str) -> tuple[tuple[int, ...], tuple[str, ...]]:
-        """Parse LLVM JSON and retain diagnostics for a valid JSON prefix."""
-        value, trailing = _decode_llvm_json(output)
-        tags: set[int] = set()
-        _collect_llvm_dynamic_tags(value, False, tags)
-        diagnostics = (
-            (f"LLVM metadata has trailing non-JSON output: {trailing[:200]}",) if trailing else ()
         )
-        return tuple(sorted(tags)), diagnostics
+    return tuple(references)
 
-    @staticmethod
-    def slice_function_text(output: str, start_address: int, end_address: int) -> str:
-        """Retain the original range text without manufacturing source lines."""
-        selected: list[str] = []
-        active = False
-        for line in output.splitlines():
-            parsed, _ = _parse_instruction_line(line)
-            if parsed is not None:
-                address = int(parsed.group("address"), 16)
-                active = start_address <= address < end_address
-                if active:
-                    selected.append(line.rstrip("\r\n"))
-                continue
-            if active and (line.strip() == "" or _SOURCE_RE.fullmatch(line.strip()) is not None):
+
+def parse_llvm_unknown_dynamic_tags(output: str) -> tuple[int, ...]:
+    """Return numeric vendor tags LLVM did not name in its JSON output."""
+    tags, _ = parse_llvm_metadata(output)
+    return tags
+
+
+def parse_llvm_metadata(output: str) -> tuple[tuple[int, ...], tuple[str, ...]]:
+    """Parse LLVM JSON and retain diagnostics for a valid JSON prefix."""
+    value, trailing = _decode_llvm_json(output)
+    tags: set[int] = set()
+    _collect_llvm_dynamic_tags(value, False, tags)
+    diagnostics = (
+        (f"LLVM metadata has trailing non-JSON output: {trailing[:200]}",) if trailing else ()
+    )
+    return tuple(sorted(tags)), diagnostics
+
+
+def slice_function_text(output: str, start_address: int, end_address: int) -> str:
+    """Retain the original range text without manufacturing source lines."""
+    selected: list[str] = []
+    active = False
+    for line in output.splitlines():
+        parsed, _ = _parse_instruction_line(line)
+        if parsed is not None:
+            address = int(parsed.group("address"), 16)
+            active = start_address <= address < end_address
+            if active:
                 selected.append(line.rstrip("\r\n"))
-        return "\n".join(selected) + ("\n" if selected else "")
+            continue
+        if active and (line.strip() == "" or _SOURCE_RE.fullmatch(line.strip()) is not None):
+            selected.append(line.rstrip("\r\n"))
+    return "\n".join(selected) + ("\n" if selected else "")
 
-    @staticmethod
-    def _group_ranges(symbols: tuple[OrbisFunctionSymbol, ...]) -> tuple[tuple[int, int], ...]:
-        groups: list[tuple[int, int]] = []
-        start = symbols[0].address
-        stop = symbols[0].end_address
-        for symbol in symbols[1:]:
-            if symbol.address > stop + MAX_GROUP_GAP:
-                groups.append((start, stop))
-                start = symbol.address
-                stop = symbol.end_address
-            else:
-                stop = max(stop, symbol.end_address)
-        groups.append((start, stop))
-        return tuple(groups)
+
+def group_ranges(symbols: tuple[OrbisFunctionSymbol, ...]) -> tuple[tuple[int, int], ...]:
+    """Group nearby function ranges into deterministic bounded tool slices."""
+    if not symbols:
+        return ()
+    groups: list[tuple[int, int]] = []
+    start = symbols[0].address
+    stop = symbols[0].end_address
+    for symbol in symbols[1:]:
+        if symbol.address > stop + MAX_GROUP_GAP:
+            groups.append((start, stop))
+            start = symbol.address
+            stop = symbol.end_address
+        else:
+            stop = max(stop, symbol.end_address)
+    groups.append((start, stop))
+    return tuple(groups)
 
 
 def _parse_instruction_line(line: str) -> tuple[re.Match[str] | None, int | None]:

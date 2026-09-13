@@ -34,6 +34,13 @@ groups, capped `Table.from_pylist` inputs, and typed Dataset partitioning/filter
 JSONL-to-Parquet backfill must use the same bounded sink and manifest layout/writer settings as
 direct materialization, validate closed payloads, and publish atomically.
 
+The serving boundary additionally exposes typed `pyarrow.RecordBatch` reads for each normalized
+family. Native cursor batches are preferred; the DB-API fallback reads bounded `fetchmany` windows
+and constructs arrays with the family schema. Hydration groups DIE, attribute, child, reference,
+and unit requests by source and compilation unit, preserves `(unit_offset, die_offset)` identity in
+bounded caches, and restores logical rows only while consuming a batch. This path is covered by
+focused compatibility tests; no new full-corpus latency or memory result is inferred from them.
+
 A complete manifest is source-bound and publication-bound: it records the producer, schema, and
 configuration identities, CU and family counts, and the closed Parquet file descriptors including
 relative path, size, modification timestamp, SHA-256, compression, footer, and row-group metadata.

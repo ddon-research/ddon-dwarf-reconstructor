@@ -148,3 +148,50 @@ patched at 9.0.3). PR #11 upgraded the lock to pytest 9.1.1 while preserving the
 After the dependency graph refresh, GitHub's SBOM reported pytest 9.1.1 and the alert changed to
 `fixed` at 2026-08-03T17:04:07Z. The final main workflows passed at commit `36eafb3`; PRs #1-6
 and #8-11 are merged, #7 is superseded and closed, and the open PR list is empty.
+
+## 2026-09-05 correctness-first follow-up
+
+This entry records local implementation evidence for maintainers; earlier audit and remote CI
+results above remain historical. The worktree already contained unrelated source, test, and
+documentation changes. They were retained. uv 0.12.3 and the locked CPython 3.14.7 environment
+were available, and the pre-change `just check` gate passed.
+
+**Verified:** Four new header-publication regressions failed before the repair because invalid
+new names, an invalid previous manifest, and header/manifest backup failures deleted the previous
+manifest. `AtomicHeaderPublisher` now separates preparation from mutation and retains backups
+with chained exceptions if rollback fails. The focused header and main-path selection passes
+28 tests, including `KeyboardInterrupt` recovery and context-disabled publication. Normal
+generation uses `SymbolPublisher`; this repair concerns the separately exported header adapter.
+
+**Verified:** Adding a second fresh-catalog lookup to the relocation regression reproduced an
+unnecessary full hash. The catalog now records accepted `observed_ctime_ns` without changing
+the original `SourceIdentity`. Artifact and relocation tests pass 24 cases, including later
+same-path mutation, explicit verification, malformed metadata, legacy records, repeated moves,
+and `record()` plus pruning. `just test-unit`, `just test`, and `just check` passed after both
+repairs.
+
+**Verified:** Three analytical regressions demonstrated that failed native close and audit sync
+made `RecordWriter.abort()` a no-op, and that suppressed Parquet close errors were replaced by
+later footer-validation errors. The bounded sink now has an explicit protocol; normal close
+errors propagate, unsuccessful finalization remains abortable, and the materializer includes
+finalization in its cleanup boundary. Closed row totals are reconciled against written family
+counts before publication. Fourteen lifecycle regressions cover delegation, closed state, lost
+rows, finalization, and chained abort failures. Direct materialization, checkpoint, and backfill
+fixtures also pass; no batch sizes or writer limits changed.
+
+The pre-final-test `just coverage-ci` run passed 992 tests with 84.2% line coverage. The configured
+group line/branch percentages were parsing 85.7/72.0, generation 88.3/75.2, orchestration 88.7/75.0,
+and artifact 92.2/78.3. `just audit` reported zero diagnostics. These percentages describe the
+current group selectors, not the planned expanded analytical coverage group. No real input,
+retained store, or live database was modified.
+
+Evidence: [header tests](../../tests/infrastructure/test_header_output.py),
+[identity tests](../../tests/infrastructure/test_source_identity_relocation.py), and the
+[current artifact contract](../../docs/reference/artifacts.md).
+
+**Planned:** The remaining review work includes backfill
+recovery, qualified definition resolution, shared hierarchy/type policy, combined knowledge
+export, exact Doris manifest binding, CLI ownership, and coverage guardrails. Knowledge export
+will use one schema for single and multiple roots, publish successful roots with explicit failed
+root records, and report partial publication separately from command success. No combined export,
+registry migration, real-asset run, or live database validation is claimed by this entry.

@@ -70,6 +70,7 @@ def acquire_source(source: SourceSpec, cache_dir: Path, *, offline: bool = False
         raise SourceError(f"Offline mode requires cached source {destination}")
 
     request = Request(source.url, headers={"User-Agent": "ddon-dwarf-spec-pipeline/0.1"})
+    temporary_path: Path | None = None
     try:
         with (
             urlopen(request, timeout=120) as response,
@@ -81,8 +82,12 @@ def acquire_source(source: SourceSpec, cache_dir: Path, *, offline: bool = False
             while chunk := response.read(1024 * 1024):
                 temporary.write(chunk)
     except OSError as exc:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
         raise SourceError(f"Unable to download {source.url}: {exc}") from exc
 
+    if temporary_path is None:  # pragma: no cover - NamedTemporaryFile always sets it
+        raise SourceError(f"Unable to download {source.url}: no temporary file was created")
     try:
         verify_source(temporary_path, source)
         os.replace(temporary_path, destination)

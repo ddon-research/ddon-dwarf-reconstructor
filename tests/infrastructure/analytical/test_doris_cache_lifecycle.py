@@ -18,12 +18,21 @@ def test_begin_root_clears_hydration_caches_but_resets_metrics() -> None:
     store = object.__new__(DorisDwarfStore)
     store._units = {1: object()}
     store._dies = {2: object()}
+    store._dies_by_key = BoundedQueryCache()
+    store._dies_by_key[(1, 2)] = object()
     store._die_unit_offsets = {2: 1}
     store._children = {2: ()}
+    store._children_by_key = BoundedQueryCache()
+    store._children_by_key[(1, 2)] = ()
     store._line_programs = {1: None}
     store._child_tag_counts = {2: object()}
+    store._child_tag_counts_by_key = BoundedQueryCache()
+    store._child_tag_counts_by_key[(1, 2)] = object()
     store._reference_targets = {(1, 2, "type"): 3}
     store._reference_loaded = {(1, 2)}
+    store._reference_dies = {2: object()}
+    store._reference_dies_by_key = BoundedQueryCache()
+    store._reference_dies_by_key[(1, 2)] = None
     store._definition_query_cache = BoundedQueryCache()
     store._definition_query_cache[("Thing", None, None)] = object()
     store._active_root = "previous"
@@ -38,12 +47,17 @@ def test_begin_root_clears_hydration_caches_but_resets_metrics() -> None:
     assert store._request_cache_sizes() == {
         "units": 0,
         "dies": 0,
+        "dies_by_key": 0,
         "die_unit_offsets": 0,
         "children": 0,
+        "children_by_key": 0,
         "line_programs": 0,
         "child_tag_counts": 0,
+        "child_tag_counts_by_key": 0,
         "reference_targets": 0,
         "reference_loaded": 0,
+        "reference_candidates": 0,
+        "reference_candidates_by_key": 0,
         "definition_queries": 0,
         "definition_query_evictions": 0,
     }
@@ -56,12 +70,17 @@ def test_end_root_is_idempotent_without_an_active_root() -> None:
     store._cache_misses = 0
     store._units = {}
     store._dies = {}
+    store._dies_by_key = BoundedQueryCache()
     store._die_unit_offsets = {}
     store._children = {}
+    store._children_by_key = BoundedQueryCache()
     store._line_programs = {}
     store._child_tag_counts = {}
+    store._child_tag_counts_by_key = BoundedQueryCache()
     store._reference_targets = {}
     store._reference_loaded = set()
+    store._reference_dies = {}
+    store._reference_dies_by_key = BoundedQueryCache()
     store._definition_query_cache = BoundedQueryCache()
 
     store.end_root()

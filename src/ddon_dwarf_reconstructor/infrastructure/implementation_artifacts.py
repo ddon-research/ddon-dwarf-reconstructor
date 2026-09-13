@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
 
+from ..domain.models.implementation_context import ImplementationContextEnrichment
 from ..domain.models.implementation_evidence import (
     ArtifactDescriptor,
     ImplementationDiscoveryReport,
@@ -14,9 +14,12 @@ from ..domain.models.implementation_evidence import (
     MethodAssemblyEvidence,
     SourceArtifactMetadata,
 )
-from ..domain.models.implementation_validation import MethodValidationEvidence
-from .implementation_context import normalize_raw_assembly, render_context_packet
-from .implementation_toolchain import assemble_canonical_source, canonical_assembly_source
+from .implementation_assembler import assemble_canonical_source
+from .implementation_assembly_source import canonical_assembly_source
+from .implementation_context import (
+    normalize_assembly_export,
+    render_context_packet,
+)
 
 RenderedContent = str | bytes
 
@@ -55,7 +58,12 @@ def _render_eligible_artifact(
     method_id: str,
     assembler: Path | None,
 ) -> tuple[SourceArtifactMetadata, dict[Path, RenderedContent]]:
-    assembly, assembly_diagnostics = canonical_assembly_source(method_id, method.instructions)
+    assembly, assembly_diagnostics = canonical_assembly_source(
+        method_id,
+        method.instructions,
+        expected_start=method.selected_function_address,
+        expected_size=method.selected_function_size,
+    )
     if assembly is None:
         return (
             SourceArtifactMetadata(
@@ -93,7 +101,7 @@ def _render_files(
     method_dir = Path("methods") / method_id
     rendered: dict[Path, RenderedContent] = {}
     descriptors: list[ArtifactDescriptor] = []
-    raw_assembly = normalize_raw_assembly(method.raw_disassembly)
+    raw_assembly = normalize_assembly_export(method.raw_disassembly)
     if raw_assembly:
         _add_rendered(
             rendered,
@@ -160,13 +168,12 @@ def add_context_artifact(
     report: ImplementationDiscoveryReport,
     artifact: SourceArtifactMetadata,
     rendered: dict[Path, RenderedContent] | None,
-    validation_evidence: Mapping[str, MethodValidationEvidence] | None = None,
+    enrichment: ImplementationContextEnrichment | None = None,
     assembler: Path | None = None,
 ) -> tuple[SourceArtifactMetadata, dict[Path, RenderedContent] | None]:
     """Append one context packet after the other method files are known."""
     if rendered is None:
         return artifact, None
-    validation = validation_evidence.get(method_id) if validation_evidence else None
     object_content = next(
         (
             content
@@ -181,7 +188,7 @@ def add_context_artifact(
         method_id,
         report,
         artifact.artifacts,
-        validation=validation,
+        enrichment=enrichment,
         assembler=assembler,
         object_content=object_content,
     )

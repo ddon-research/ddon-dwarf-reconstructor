@@ -57,7 +57,7 @@ class HeaderGenerationService(HeaderGenerationSupportMixin):
             context,
             class_name,
             max_depth=10,
-            include_method_signatures=False,
+            include_method_signatures=True,
         )
         if not HeaderGenerationService._validate_hierarchy(context, class_infos, class_name):
             return SpecialHeaderRenderer.render_not_found(class_name)
@@ -122,7 +122,7 @@ class HeaderGenerationService(HeaderGenerationSupportMixin):
             context,
             class_name,
             max_depth=10,
-            include_method_signatures=False,
+            include_method_signatures=True,
         )
 
         # Step 3: Validate hierarchy

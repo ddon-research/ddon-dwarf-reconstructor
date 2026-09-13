@@ -38,7 +38,7 @@ from .dwarf_implementation_association import source_sha256 as _source_sha256
 from .dwarf_implementation_context import attach_analytical_context
 from .dwarf_implementation_ranges import code_ranges_for_die as _code_ranges
 from .dwarf_implementation_reporting import implementation_report as _implementation_report
-from .generation_contracts import HeaderBundle
+from .generation_contracts import HeaderBundle, SymbolExtractionResult
 
 logger = get_logger(__name__)
 
@@ -94,6 +94,54 @@ class ImplementationDiscoveryService:
             disassembly_scope_policy=request.selection_policy,
             disassembly_target_manifest=request.targets,
         )
+
+    @staticmethod
+    def discover_symbols(
+        context: GenerationRuntime,
+        roots: tuple[str, ...],
+        symbols: SymbolExtractionResult,
+        *,
+        orbis_objdump_path: Path | None = None,
+    ) -> ImplementationDiscoveryReport:
+        """Discover one deduplicated method union for a symbol request."""
+        del roots
+        header_bundle = symbols.header_bundle
+        root_symbol = "symbols"
+        try:
+            seeds = _discover_methods(context, symbols.class_infos)
+            request = _build_disassembly_request(context, root_symbol, seeds)
+            disassembly, disassembly_error = ImplementationDiscoveryService._load_disassembly(
+                context,
+                request,
+                orbis_objdump_path,
+            )
+            methods = tuple(
+                _attach_relocation_ids(
+                    _attach_disassembly(seed, disassembly, disassembly_error),
+                    disassembly,
+                )
+                for seed in seeds
+            )
+            methods = attach_analytical_context(context, methods)
+            report = _implementation_report(
+                root_symbol,
+                header_bundle,
+                _report_status(methods),
+                methods,
+                disassembly,
+                disassembly_error,
+                disassembly.elf_sha256 if disassembly else _source_sha256(context),
+            )
+            report = _bind_analytical_identity(report, context)
+            return replace(
+                report,
+                disassembly_scope_hash=request.scope_hash,
+                disassembly_scope_policy=request.selection_policy,
+                disassembly_target_manifest=request.targets,
+            )
+        except (AttributeError, KeyError, OSError, RuntimeError, TypeError, ValueError) as error:
+            logger.warning("Symbol implementation discovery failed", exc_info=error)
+            return _unavailable_report(root_symbol, header_bundle, error)
 
     @staticmethod
     def _discover_classes(context: GenerationRuntime, root_symbol: str) -> Mapping[str, ClassInfo]:
@@ -163,10 +211,13 @@ class ImplementationDiscoveryService:
         method: MethodInfo,
     ) -> MethodAssemblyEvidence:
         owner = class_info.qualified_name or class_info.name
+        owner_class_key = _class_identity_key(class_info)
         signature = _method_signature(method)
         declaration_offset = method.die_offset
         if declaration_offset is None:
-            return _evidence_without_declaration(owner, method, signature)
+            return _evidence_without_declaration(
+                owner, method, signature, owner_class_key=owner_class_key
+            )
 
         query = _method_candidates(context, class_info, method)
         if query.status is QueryStatus.UNAVAILABLE:
@@ -177,6 +228,7 @@ class ImplementationDiscoveryService:
                 ImplementationStatus.UNAVAILABLE,
                 ImplementationStatus.UNAVAILABLE,
                 diagnostics=query.diagnostics,
+                owner_class_key=owner_class_key,
             )
         candidates = _candidate_evidence(context, method, query)
         implementation_status = _implementation_status(query, candidates)
@@ -357,6 +409,7 @@ def _method_evidence(
         is_deleted=method.is_deleted,
         is_defaulted=method.is_defaulted,
         is_pure_virtual=method.is_pure_virtual,
+        owner_class_key=_class_identity_key(class_info),
     )
 
 
@@ -372,6 +425,17 @@ def _direct_method_pair(
         (cu, die)
         if die is not None and die.offset == method.die_offset and cu is not None
         else None
+    )
+
+
+def _class_identity_key(class_info: ClassInfo) -> str:
+    """Match implementation evidence to the canonical symbol graph key."""
+    return "|".join(
+        (
+            class_info.qualified_name or class_info.name,
+            "none" if class_info.cu_offset is None else str(class_info.cu_offset),
+            "none" if class_info.die_offset is None else str(class_info.die_offset),
+        )
     )
 
 
@@ -456,7 +520,11 @@ def _method_signature(method: MethodInfo) -> str:
 
 
 def _evidence_without_declaration(
-    owner: str, method: MethodInfo, signature: str
+    owner: str,
+    method: MethodInfo,
+    signature: str,
+    *,
+    owner_class_key: str | None = None,
 ) -> MethodAssemblyEvidence:
     return MethodAssemblyEvidence(
         owner,
@@ -467,6 +535,7 @@ def _evidence_without_declaration(
         ImplementationStatus.UNSUPPORTED,
         ImplementationStatus.UNSUPPORTED,
         diagnostics=("method has no source DIE identity",),
+        owner_class_key=owner_class_key,
     )
 
 
@@ -478,6 +547,7 @@ def _evidence_with_status(
     assembly_status: ImplementationStatus,
     *,
     diagnostics: Iterable[str] = (),
+    owner_class_key: str | None = None,
 ) -> MethodAssemblyEvidence:
     return MethodAssemblyEvidence(
         owner,
@@ -488,6 +558,7 @@ def _evidence_with_status(
         implementation_status,
         assembly_status,
         diagnostics=tuple(diagnostics),
+        owner_class_key=owner_class_key,
     )
 
 

@@ -4,6 +4,7 @@
 
 from .dependency_extractor import DependencyExtractor
 from .file_registry import FileRegistry
+from .header_dependency_plan import HeaderDependencyPlan
 from .hierarchy_builder import HierarchyBuilder
 from .method_definition_rendering import MethodDefinitionRenderingService
 from .packing_analyzer import calculate_packing_info
@@ -13,11 +14,12 @@ from .special_header_renderer import SpecialHeaderRenderer
 __all__ = [
     "DependencyExtractor",
     "FileRegistry",
+    "HeaderDependencyPlan",
     "HeaderRenderContext",
     "HeaderRenderer",
     "HierarchyBuilder",
-    "TypeExpressionPolicy",
-    "calculate_packing_info",
     "MethodDefinitionRenderingService",
     "SpecialHeaderRenderer",
+    "TypeExpressionPolicy",
+    "calculate_packing_info",
 ]

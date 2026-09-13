@@ -51,10 +51,14 @@ docker compose -f compose.yaml run --rm dwarf-spec-pipeline
 
 - `config/sources.json` locks source URLs, filenames, formats, and SHA-256 values.
 - `schema/dwarf-specification.schema.json` defines the published JSON shape.
-- `generated/dwarf{2,3,4}.json` and `.md` are deterministic published artifacts.
+- `generated/dwarf{2,3,4}.json` and `.md` are deterministic published artifacts. A selected-version
+  build publishes and validates only the requested version pairs; the official acceptance check
+  still requires all three versions.
 - `generated/semantic-index.json` and `.md` are derived, searchable vocabulary and relationship
   artifacts. They recover paragraph-form DWARF2 tables as well as normal tables from DWARF3/4.
 - `generated/manifest.json` records output hashes and source identity, including the semantic index.
+  Validation rejects duplicate, missing, extra, path-escaping, symlinked, or checksum-invalid
+  artifacts before consuming any document.
 
 `audit` validates the canonical JSON documents, records version availability for `DW_TAG`,
 `DW_AT`, `DW_FORM`, `DW_OP`, and `DW_LANG` names, extracts attribute encodings and tag
@@ -65,5 +69,9 @@ The project uses Ruff, Pyrefly, deptry, and just through its locked uv environme
 quality checks do not download sources unless an explicit build requests it; `--offline` requires
 an already verified local cache. The test suite uses the shared project vocabulary: `unit`,
 `integration`, and `acceptance` scopes plus `functional`, `regression`, and `non_functional`
-purposes. `just test` includes deterministic local integration tests; `just test-official` is an
-explicit check for generated official artifacts.
+purposes. Source downloads and converter output are staged in temporary paths; network, checksum,
+write, converter, and publication failures preserve the last verified source/intermediate. The
+converter runner uses a finite timeout and bounded diagnostics, and the audit command publishes
+its JSON/Markdown pair with rollback on a partial replacement. `just test` includes deterministic
+local integration tests; `just test-official` is an explicit check for generated official
+artifacts.

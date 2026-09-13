@@ -65,6 +65,37 @@ def test_current_route_preserves_ordered_header_hashes(tmp_path: Path) -> None:
     assert result["total_bytes"] == first.stat().st_size + second.stat().st_size
 
 
+def test_current_route_reads_versioned_symbol_manifest(tmp_path: Path) -> None:
+    target = tmp_path / "output"
+    platform_root = target / "ps4-02020005"
+    owner_root = platform_root / "RootA"
+    owner_root.mkdir(parents=True)
+    header = owner_root / "RootA.h"
+    header.write_text("header\n", encoding="utf-8")
+    bundle = {
+        "headers": {
+            "RootA/RootA.h": {
+                "bytes": header.stat().st_size,
+                "sha256": _sha256(header),
+            }
+        },
+        "header_bundle_sha256": "bundle-sha",
+        "requested_symbols": ["RootA"],
+        "roots": {"RootA": {"header_count": 1, "status": "success"}},
+    }
+    manifest = platform_root / "symbols.manifest.json"
+    manifest.write_text(json.dumps(bundle), encoding="utf-8")
+
+    result = _generation_output(target)
+
+    assert result["status"] == "observed"
+    assert result["published"] is True
+    assert result["platform_root"] == str(platform_root)
+    assert result["header_bundle_sha256"] == "bundle-sha"
+    assert result["ordered_headers"] == ["RootA/RootA.h"]
+    assert result["files"][0]["status"] == "observed"
+
+
 def test_current_route_keeps_short_and_long_workload_settings_independent(
     tmp_path: Path,
 ) -> None:

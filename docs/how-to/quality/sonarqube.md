@@ -85,9 +85,10 @@ uv run just sonar-validate
 ```
 
 After generated headers exist in the configured validation bundle, capture the compilation
-database. For season two, point the adapter at one generated root bundle under
-`output/season2/<platform>/symbols/<index>-<safe-root>/` or copy one selected bundle into the
-configured validation directory; do not merge all roots before standalone validation.
+database. For season two, point the adapter at one resource directory under
+`generated/ps4-<client-version>/<resource-class>/` (or copy one selected resource directory into
+the configured validation directory). Symbol publication is already deduplicated; do not merge
+independent root bundles or treat a selected resource compile as full symbol-set evidence.
 
 ```powershell
 uv run just sonar-capture

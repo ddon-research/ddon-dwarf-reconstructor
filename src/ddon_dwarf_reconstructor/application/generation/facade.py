@@ -12,7 +12,13 @@ from ..generators.dwarf_header_generation import HeaderGenerationService
 from ..generators.dwarf_implementation import ImplementationDiscoveryService
 from ..generators.dwarf_knowledge import KnowledgeExportService
 from ..generators.dwarf_multi_file import MultiFileGenerationService
-from ..generators.generation_contracts import GenerationRequest, HeaderBundle
+from ..generators.dwarf_symbol_generation import SymbolExtractionService
+from ..generators.generation_contracts import (
+    GenerationRequest,
+    HeaderBundle,
+    SymbolExtractionRequest,
+    SymbolExtractionResult,
+)
 from .runtime import GenerationRuntime
 
 
@@ -50,6 +56,10 @@ class GenerationFacade:
             )
         return HeaderBundle.single(request.symbol, content)
 
+    def extract_symbols(self, request: SymbolExtractionRequest) -> SymbolExtractionResult:
+        """Execute one single- or multi-symbol extraction."""
+        return SymbolExtractionService.generate(self._runtime, request)
+
     def export_knowledge_graph(
         self,
         root_symbol: str,
@@ -80,5 +90,20 @@ class GenerationFacade:
             self._runtime,
             root_symbol,
             header_bundle,
+            orbis_objdump_path=orbis_objdump_path,
+        )
+
+    def discover_implementations_for_symbols(
+        self,
+        roots: tuple[str, ...],
+        symbols: SymbolExtractionResult,
+        *,
+        orbis_objdump_path: Path | None = None,
+    ) -> ImplementationDiscoveryReport:
+        """Discover one union of implementations for generated symbols."""
+        return ImplementationDiscoveryService.discover_symbols(
+            self._runtime,
+            roots,
+            symbols,
             orbis_objdump_path=orbis_objdump_path,
         )

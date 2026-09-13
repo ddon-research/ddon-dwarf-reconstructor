@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
-from decimal import Decimal
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -15,6 +14,51 @@ from ...domain.models.analytical_dwarf import (
     QueryStatus,
 )
 from .doris import DorisConfig
+from .doris_method_context_keys import (
+    ambiguous_context_result as _ambiguous_context_result,
+)
+from .doris_method_context_keys import (
+    as_int as _as_int,
+)
+from .doris_method_context_keys import (
+    filter_parent_rows as _filter_parent_rows,
+)
+from .doris_method_context_keys import (
+    filter_rows_by_keys as _filter_die_rows,
+)
+from .doris_method_context_keys import (
+    filter_rows_by_keys as _filter_rows_by_keys,
+)
+from .doris_method_context_keys import (
+    has_unknown_units as _has_unknown_units,
+)
+from .doris_method_context_keys import (
+    known_units as _known_units,
+)
+from .doris_method_context_keys import (
+    lookup_is_ambiguous as _lookup_is_ambiguous,
+)
+from .doris_method_context_keys import (
+    read_context_artifacts as _read_context_artifacts,
+)
+from .doris_method_context_keys import (
+    reference_target_keys as _reference_target_keys,
+)
+from .doris_method_context_keys import (
+    resolve_lookup_key as _resolve_lookup_key,
+)
+from .doris_method_context_keys import (
+    resolve_requested_keys as _resolve_requested_keys,
+)
+from .doris_method_context_keys import (
+    row_key as _row_key,
+)
+from .doris_method_context_keys import (
+    row_keys as _row_keys,
+)
+from .doris_method_context_keys import (
+    unit_filter as _unit_filter,
+)
 from .doris_rows import restore_row
 from .doris_store_helpers import bounded_query_diagnostic
 
@@ -104,56 +148,10 @@ def query_method_context_batch(
     if not ordered:
         return QueryResult(QueryStatus.COMPLETE, (MethodContextBatch(),), _provenance(store))
     try:
-        method_offsets = _unique_offsets(item.die_offsets for item in ordered)
-        method_rows = _die_rows(store, {"die_offset": method_offsets}, "validation_method_dies")
-        parameter_rows = _die_rows(
-            store,
-            {
-                "parent_offset": method_offsets,
-                "tag": ("DW_TAG_formal_parameter",),
-            },
-            "validation_parameter_dies",
-        )
-        parameter_offsets = _row_offsets(parameter_rows)
-        context_offsets = _unique_offsets((method_offsets, parameter_offsets))
-        references = store._rows(
-            "reference",
-            {"die_offset": context_offsets, "relation": "attribute_reference"},
-            order_by=("unit_offset", "die_offset", "attribute_name"),
-            operation="validation_references",
-        )
-        target_offsets = _unique_offsets((_reference_targets(references),))
-        target_rows = _die_rows(store, {"die_offset": target_offsets}, "validation_target_dies")
-        all_die_rows = _unique_rows(
-            (*method_rows, *parameter_rows, *target_rows),
-            ("unit_offset", "die_offset"),
-        )
-        attribute_offsets = _unique_offsets((_row_offsets(all_die_rows),))
-        attributes = store._rows(
-            "attribute",
-            {"die_offset": attribute_offsets},
-            columns=_ATTRIBUTE_COLUMNS,
-            order_by=("unit_offset", "die_offset", "ordinal"),
-            operation="validation_attributes",
-        )
-        locations = store._rows(
-            "location",
-            {"die_offset": context_offsets},
-            order_by=("unit_offset", "die_offset", "ordinal", "record_offset"),
-            operation="validation_locations",
-        )
-        frames = _frame_rows(store, ordered)
-        batch = MethodContextBatch(
-            die_rows=all_die_rows,
-            attribute_rows=tuple(attributes),
-            reference_rows=tuple(references),
-            location_rows=tuple(locations),
-            frame_rows=frames,
-            status=(
-                QueryStatus.COMPLETE if store.manifest.status == "complete" else QueryStatus.PARTIAL
-            ),
-        )
+        batch = _read_context_batch(store, ordered)
         return QueryResult(batch.status, (batch,), _provenance(store))
+    except _AmbiguousContextError as error:
+        return _ambiguous_context_result(_provenance(store), error.keys)
     except (OSError, RuntimeError, TypeError, ValueError) as error:
         return QueryResult(
             QueryStatus.UNAVAILABLE,
@@ -162,6 +160,116 @@ def query_method_context_batch(
                 bounded_query_diagnostic(error, prefix="Doris implementation context unavailable"),
             ),
         )
+
+
+def _read_context_batch(
+    store: DorisContextStore,
+    requests: Sequence[MethodContextRequest],
+) -> MethodContextBatch:
+    requested_keys = tuple(key for item in requests for key in item.die_keys)
+    method_offsets = _unique_offsets(item.die_offsets for item in requests)
+    method_rows, resolved_keys = _read_method_dies(store, method_offsets, requested_keys)
+    parameter_rows = _read_parameter_dies(store, method_offsets, resolved_keys)
+    parameter_offsets = _row_offsets(parameter_rows)
+    parameter_keys = _row_keys(parameter_rows)
+    context_keys = tuple(dict.fromkeys((*resolved_keys, *parameter_keys)))
+    context_offsets = _unique_offsets((method_offsets, parameter_offsets))
+    references, target_rows = _read_context_references(
+        store,
+        context_keys,
+        context_offsets,
+    )
+    all_die_rows = _unique_rows(
+        (*method_rows, *parameter_rows, *target_rows),
+        ("unit_offset", "die_offset"),
+    )
+    attributes, locations = _read_context_artifacts(
+        store,
+        all_die_rows,
+        context_keys,
+        context_offsets,
+        _ATTRIBUTE_COLUMNS,
+    )
+    return MethodContextBatch(
+        die_rows=all_die_rows,
+        attribute_rows=attributes,
+        reference_rows=references,
+        location_rows=locations,
+        frame_rows=_frame_rows(store, requests),
+        status=(
+            QueryStatus.COMPLETE if store.manifest.status == "complete" else QueryStatus.PARTIAL
+        ),
+    )
+
+
+def _read_method_dies(
+    store: DorisContextStore,
+    offsets: tuple[int, ...],
+    requested_keys: Sequence[tuple[int | None, int]],
+) -> tuple[tuple[dict[str, Any], ...], tuple[tuple[int, int], ...]]:
+    filters: dict[str, object] = {"die_offset": offsets}
+    known_units = _known_units(requested_keys)
+    if known_units and not _has_unknown_units(requested_keys):
+        filters["unit_offset"] = known_units
+    rows = _filter_die_rows(_die_rows(store, filters, "validation_method_dies"), requested_keys)
+    resolved = _resolve_requested_keys(requested_keys, rows)
+    if resolved is None:
+        raise _AmbiguousContextError(requested_keys)
+    return rows, resolved
+
+
+def _read_parameter_dies(
+    store: DorisContextStore,
+    method_offsets: tuple[int, ...],
+    resolved_keys: Sequence[tuple[int, int]],
+) -> tuple[dict[str, Any], ...]:
+    rows = _die_rows(
+        store,
+        {
+            "parent_offset": method_offsets,
+            "tag": ("DW_TAG_formal_parameter",),
+            **_unit_filter(resolved_keys),
+        },
+        "validation_parameter_dies",
+    )
+    return _filter_parent_rows(rows, resolved_keys)
+
+
+def _read_context_references(
+    store: DorisContextStore,
+    context_keys: Sequence[tuple[int, int]],
+    context_offsets: tuple[int, ...],
+) -> tuple[tuple[dict[str, Any], ...], tuple[dict[str, Any], ...]]:
+    references = store._rows(
+        "reference",
+        {
+            "die_offset": context_offsets,
+            "relation": "attribute_reference",
+            **_unit_filter(context_keys),
+        },
+        order_by=("unit_offset", "die_offset", "attribute_name"),
+        operation="validation_references",
+    )
+    references = _filter_rows_by_keys(references, context_keys)
+    target_keys = _reference_target_keys(references)
+    target_filters: dict[str, object] = {
+        "die_offset": _unique_offsets((_reference_targets(references),))
+    }
+    if target_keys:
+        target_filters.update(_unit_filter(target_keys))
+    target_rows = _filter_die_rows(
+        _die_rows(store, target_filters, "validation_target_dies"),
+        target_keys,
+    )
+    return tuple(references), target_rows
+
+
+class _AmbiguousContextError(ValueError):
+    """Internal control flow for an unqualified same-offset request."""
+
+    def __init__(self, keys: Sequence[tuple[int | None, int]]) -> None:
+        self.keys = tuple(keys)
+        super().__init__(self.keys)
 
 
 def merge_context_batches(
@@ -197,15 +305,27 @@ class DorisBatchContextQuery:
         self._diagnostics = batch.diagnostics
         self._provenance = (str(manifest_path),)
         self._dies = _build_dies(batch)
-        self._locations = _group_rows(batch.location_rows, "die_offset")
+        self._locations = _group_rows(batch.location_rows)
         self._frames = batch.frame_rows
 
-    def get_die(self, die_offset: int) -> QueryResult:
-        die = self._dies.get(die_offset)
+    def get_die(self, die_offset: int, *, unit_offset: int | None = None) -> QueryResult:
+        if unit_offset is None and _lookup_is_ambiguous(self._dies, die_offset):
+            return self._ambiguous_lookup(die_offset)
+        key = _resolve_lookup_key(self._dies, die_offset, unit_offset)
+        die = self._dies.get(key) if key is not None else None
         return self._result((die,) if die is not None else ())
 
-    def find_locations(self, die_offset: int, *, attribute_name: str | None = None) -> QueryResult:
-        rows = self._locations.get(die_offset, ())
+    def find_locations(
+        self,
+        die_offset: int,
+        *,
+        unit_offset: int | None = None,
+        attribute_name: str | None = None,
+    ) -> QueryResult:
+        if unit_offset is None and _lookup_is_ambiguous(self._locations, die_offset):
+            return self._ambiguous_lookup(die_offset)
+        key = _resolve_lookup_key(self._locations, die_offset, unit_offset)
+        rows = self._locations.get(key, ()) if key is not None else ()
         if attribute_name is not None:
             rows = tuple(row for row in rows if row.get("attribute_name") == attribute_name)
         return self._result(rows)
@@ -226,6 +346,14 @@ class DorisBatchContextQuery:
             self._diagnostics,
         )
 
+    def _ambiguous_lookup(self, die_offset: int) -> QueryResult:
+        return QueryResult(
+            QueryStatus.UNAVAILABLE,
+            provenance=self._provenance,
+            diagnostics=self._diagnostics
+            + (f"DIE 0x{die_offset:x} requires a CU-qualified context lookup",),
+        )
+
 
 class _BatchAttribute:
     def __init__(self, row: Mapping[str, Any]) -> None:
@@ -235,12 +363,14 @@ class _BatchAttribute:
 
 class _BatchDie:
     def __init__(self, row: Mapping[str, Any], attributes: Mapping[str, _BatchAttribute]) -> None:
+        self.unit_offset = _as_int(row.get("unit_offset")) or 0
         self.offset = _as_int(row.get("die_offset")) or 0
         self.tag = row.get("tag")
         self.attributes = dict(attributes)
-        self._references: dict[str, int] = {}
+        self._references: dict[str, tuple[int, int]] = {}
         self._children: tuple[_BatchDie, ...] = ()
-        self._all_dies: dict[int, _BatchDie] = {}
+        self._all_dies: dict[tuple[int, int], _BatchDie] = {}
+        self.cu = _BatchCompilationUnit(self.unit_offset)
 
     def get_DIE_from_attribute(self, attribute_name: str) -> _BatchDie | None:  # noqa: N802
         target = self._references.get(attribute_name)
@@ -250,8 +380,13 @@ class _BatchDie:
         return self._children
 
 
-def _build_dies(batch: MethodContextBatch) -> dict[int, _BatchDie]:
-    dies = _dies_by_offset(batch.die_rows, _attributes_by_die(batch.attribute_rows))
+class _BatchCompilationUnit:
+    def __init__(self, cu_offset: int) -> None:
+        self.cu_offset = cu_offset
+
+
+def _build_dies(batch: MethodContextBatch) -> dict[tuple[int, int], _BatchDie]:
+    dies = _dies_by_key(batch.die_rows, _attributes_by_die(batch.attribute_rows))
     _attach_all_dies(dies)
     _attach_formal_parameters(dies, batch.die_rows)
     _attach_references(dies, batch.reference_rows)
@@ -260,58 +395,81 @@ def _build_dies(batch: MethodContextBatch) -> dict[int, _BatchDie]:
 
 def _attributes_by_die(
     rows: Sequence[Mapping[str, Any]],
-) -> dict[int, dict[str, _BatchAttribute]]:
-    attributes: dict[int, dict[str, _BatchAttribute]] = defaultdict(dict)
+) -> dict[tuple[int, int], dict[str, _BatchAttribute]]:
+    attributes: dict[tuple[int, int], dict[str, _BatchAttribute]] = defaultdict(dict)
     for row in rows:
+        unit_offset = _as_int(row.get("unit_offset"))
         die_offset = _as_int(row.get("die_offset"))
         name = row.get("name")
-        if die_offset is not None and isinstance(name, str):
-            attributes[die_offset][name] = _BatchAttribute(row)
+        if unit_offset is not None and die_offset is not None and isinstance(name, str):
+            attributes[(unit_offset, die_offset)][name] = _BatchAttribute(row)
 
     return attributes
 
 
-def _dies_by_offset(
+def _dies_by_key(
     rows: Sequence[Mapping[str, Any]],
-    attributes: Mapping[int, Mapping[str, _BatchAttribute]],
-) -> dict[int, _BatchDie]:
+    attributes: Mapping[tuple[int, int], Mapping[str, _BatchAttribute]],
+) -> dict[tuple[int, int], _BatchDie]:
     dies = {
-        offset: _BatchDie(row, attributes.get(offset, {}))
+        key: _BatchDie(row, attributes.get(key, {}))
         for row in rows
-        if (offset := _as_int(row.get("die_offset"))) is not None
+        if (key := _row_key(row)) is not None
     }
 
     return dies
 
 
-def _attach_all_dies(dies: dict[int, _BatchDie]) -> None:
+def _attach_all_dies(dies: dict[tuple[int, int], _BatchDie]) -> None:
     for die in dies.values():
         die._all_dies = dies
 
 
 def _attach_formal_parameters(
-    dies: Mapping[int, _BatchDie], rows: Sequence[Mapping[str, Any]]
+    dies: Mapping[tuple[int, int], _BatchDie], rows: Sequence[Mapping[str, Any]]
 ) -> None:
-    children: dict[int, list[_BatchDie]] = defaultdict(list)
+    children: dict[tuple[int, int], list[_BatchDie]] = defaultdict(list)
     for row in rows:
+        unit_offset = _as_int(row.get("unit_offset"))
         parent = _as_int(row.get("parent_offset"))
         child_offset = _as_int(row.get("die_offset"))
-        child = dies.get(child_offset) if child_offset is not None else None
-        if parent is not None and child is not None and row.get("tag") == "DW_TAG_formal_parameter":
-            children[parent].append(child)
+        child = (
+            dies.get((unit_offset, child_offset))
+            if unit_offset is not None and child_offset is not None
+            else None
+        )
+        if (
+            unit_offset is not None
+            and parent is not None
+            and child is not None
+            and row.get("tag") == "DW_TAG_formal_parameter"
+        ):
+            children[(unit_offset, parent)].append(child)
     for parent, values in children.items():
         if parent in dies:
             dies[parent]._children = tuple(sorted(values, key=lambda item: item.offset))
 
 
-def _attach_references(dies: Mapping[int, _BatchDie], rows: Sequence[Mapping[str, Any]]) -> None:
+def _attach_references(
+    dies: Mapping[tuple[int, int], _BatchDie], rows: Sequence[Mapping[str, Any]]
+) -> None:
     for row in rows:
+        unit_offset = _as_int(row.get("unit_offset"))
         source_offset = _as_int(row.get("die_offset"))
-        source = dies.get(source_offset) if source_offset is not None else None
+        source = (
+            dies.get((unit_offset, source_offset))
+            if unit_offset is not None and source_offset is not None
+            else None
+        )
         name = row.get("attribute_name")
         target = _as_int(row.get("target_offset"))
-        if source is not None and isinstance(name, str) and target is not None:
-            source._references[name] = target
+        if (
+            source is not None
+            and unit_offset is not None
+            and isinstance(name, str)
+            and target is not None
+        ):
+            source._references[name] = (unit_offset, target)
 
 
 def _merged_rows(
@@ -396,13 +554,15 @@ def _unique_rows(
     return tuple(values[key] for key in sorted(values, key=str))
 
 
-def _group_rows(rows: Sequence[dict[str, Any]], key: str) -> dict[int, tuple[dict[str, Any], ...]]:
-    grouped: dict[int, list[dict[str, Any]]] = defaultdict(list)
+def _group_rows(
+    rows: Sequence[dict[str, Any]],
+) -> dict[tuple[int, int], tuple[dict[str, Any], ...]]:
+    grouped: dict[tuple[int, int], list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
-        value = _as_int(row.get(key))
-        if value is not None:
-            grouped[value].append(row)
-    return {offset: tuple(values) for offset, values in grouped.items()}
+        key = _row_key(row)
+        if key is not None:
+            grouped[key].append(row)
+    return {key: tuple(values) for key, values in grouped.items()}
 
 
 def _batch_status(batches: Sequence[MethodContextBatch]) -> QueryStatus:
@@ -419,19 +579,6 @@ def _frame_overlaps(row: Mapping[str, Any], start: int | None, end: int | None) 
     initial = _as_int(row.get("initial_address"))
     span = _as_int(row.get("address_range"))
     return initial is not None and span is not None and initial < end and initial + span > start
-
-
-def _as_int(value: object) -> int | None:
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, (int, Decimal)):
-        return int(value)
-    if isinstance(value, str):
-        try:
-            return int(value, 0)
-        except ValueError:
-            return None
-    return None
 
 
 def _provenance(store: DorisContextStore) -> tuple[str, ...]:

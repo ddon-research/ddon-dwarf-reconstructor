@@ -9,11 +9,11 @@ from importlib import import_module
 from typing import Any
 
 __all__ = [
-    "run_store_benchmark",
     "run_current_doris_benchmark",
-    "run_doris_optimization_benchmark",
     "run_doris_flight_benchmark",
     "run_doris_flight_preflight",
+    "run_doris_optimization_benchmark",
+    "run_store_benchmark",
     "write_doris_flight_preflight",
 ]
 

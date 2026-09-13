@@ -39,6 +39,15 @@ The real PS4 generator and warm budget remain explicit `real_asset` acceptance/p
 This keeps the quality loop meaningful on machines and CI workers without the 800 MB ELF or the
 30+ GB expanded dump.
 
+The local Orbis CPU/ABI workflow follows the same separation. Unit tests validate the versioned
+SDK 12/SDK 8 contract, source-bound `orbis-bin` manifests, retained compiler `.s`/`.o` probes,
+section flags, Sysmodule/NID identity boundaries, and marker-gated `llvm-mca` handling. A named
+SDK/ELF acceptance run is environmental evidence: compiler acceptance and performance-model
+results remain separate from method ABI, semantic parity, and live behavior. The schema-4.4
+bounded `rLayout` run retained objects for all 26 code-bearing methods, with 17
+`target_object_equivalent` and 9 `not_promoted`; the nine incomplete ABI rows prevent all-26
+promotion and full Season 2 expansion.
+
 The required correctness tier also carries cross-platform filesystem evidence. The source identity
 catalog must reuse an unchanged object after relocation on POSIX and Windows, while still rehashing
 ctime-only mutation at an existing path. A local Windows pass is therefore insufficient by itself;
@@ -74,16 +83,35 @@ The executable contract lives in:
 - `pyproject.toml` and the root `justfile`;
 - `specs/008-testing-pyramid-validation/contracts/testing-policy.md`.
 
+## Current architecture-review evidence (2026-09-09)
+
+The current Feature 021 continuation is `Verified` at the deterministic repository boundary:
+`uv run just test-unit` passed 1,164 tests with 7 deselected, `uv run just check` passed, and
+`uv run just test` passed 1,159 tests with 12 deselected. `uv run just coverage-ci` reported
+80.68% pytest line coverage and 84.2% repository-checker lines / 68.1% branches; the required
+high-risk groups met their 80% line / 70% branch thresholds. `uv run just audit` reported zero
+Prospector messages. The evidence is bound to the current 590-record receipt in the active feature's
+`measured-evidence.md`.
+
+The quality slice also verifies that checked-in external GitHub Action references use full commit
+SHAs with release comments and that a deliberate unpinned fixture fails. This is local policy
+evidence. Remote branch protection, Dependabot behavior, full-corpus generated-output parity,
+compiler acceptance, and performance thresholds remain `Blocked` or `Deferred`; the next
+validation step is the named real-asset/toolchain preflight in Feature 021 T010/T011/T022/T060.
+
 ## Boundary-refactor evidence rule
 
 The 2026-08-11 boundary refactor added focused tests for truncated and unavailable analytical
 lookups, source mismatch, cache lifecycle, registry/publication failure, and placeholder rejection.
 Those tests establish error semantics; they do not establish full Season 2, Doris, MSVC, or warm
-performance evidence. Full-corpus reports must use the machine-derived fields
-`root_count`, `bundle_count`, `manifest_count`, `header_file_count`, `published_file_count`, and
-`msvc_unit_count`, and must keep incomplete or blocked external surfaces separate from repository
-test results. A root that emits only `UncategorizedDefinitions.h` is an error for source-bound
-full-hierarchy generation, not a successful low-count bundle.
+performance evidence. Full-corpus reports must use the machine-derived corpus manifest fields
+`requested_symbols`, `input_list_sha256`, `header_count`, `class_count`, `roots`, `headers`, and
+`implementation.files`, and must keep incomplete or blocked external surfaces separate from
+repository test results. Historical pre-corpus reports may additionally contain `root_count`,
+`bundle_count`, `manifest_count`, `header_file_count`, `published_file_count`, and
+`msvc_unit_count`; those fields do not describe the new flat publication. A root that emits only
+`UncategorizedDefinitions.h` is an error for source-bound full-hierarchy generation, not a
+successful low-count bundle.
 
 The completed 2026-08-14 acceptance run demonstrates the required separation: 289 roots and
 2,745 headers were compared byte-for-byte against the external baseline, then 2,745 headers were
@@ -92,6 +120,17 @@ replacements for the deterministic repository gates. Cache experiments must also
 boundary: a transient Doris query-cache miss may affect a query timing sample, but a validated
 source-bound selection cache affects definition choice and therefore must be included in any
 byte-parity performance workload.
+
+## Full-root disassembly refactor acceptance
+
+The 2026-08-18 SDK 12 acceptance is a separate historical external integration/acceptance tier.
+It regenerated all 289 Season 2 roots in four bounded batches before the single-pass symbol route was
+introduced, then used `disassembly-regression/1` to reject missing, extra, duplicate, truncated,
+path-escaping, stale, or hash-mismatched outputs. The matched result contained 2,745 headers,
+83,754 method entries, 4,504 artifact descriptors, and 8,116 files. It is not evidence for the
+new single-pass flat corpus layout and is not a substitute for `test-unit`, `check`, `test`,
+coverage, audit, or documentation checks. Generated files and manifests remain under the external
+Temp root.
 
 ## References
 

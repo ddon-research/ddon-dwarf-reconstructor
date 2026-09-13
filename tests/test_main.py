@@ -6,6 +6,7 @@ from unittest.mock import ANY, Mock
 
 import pytest
 
+from ddon_dwarf_reconstructor.infrastructure.composition import create_disassembly_producer
 from ddon_dwarf_reconstructor.main import GenerationOptions
 
 cli_main = importlib.import_module("ddon_dwarf_reconstructor.main")
@@ -66,7 +67,7 @@ def test_run_generation_uses_export_knowledge_path(mocker) -> None:
         dwarf_index_path=None,
         resolve_param_names=False,
         dump_lookup_factory=cli_main.create_dump_lookup,
-        disassembly_factory=cli_main.create_disassembly_producer,
+        disassembly_factory=create_disassembly_producer,
         cache_file=cache_file,
         die_cache_size=10000,
         type_cache_size=5000,
@@ -116,7 +117,7 @@ def test_run_generation_uses_store_as_fast_lookup_without_exhaustive_mode(mocker
         dwarf_index_path=None,
         resolve_param_names=False,
         dump_lookup_factory=cli_main.create_dump_lookup,
-        disassembly_factory=cli_main.create_disassembly_producer,
+        disassembly_factory=create_disassembly_producer,
         cache_file=cache_file,
         die_cache_size=10000,
         type_cache_size=5000,

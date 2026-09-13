@@ -5,14 +5,13 @@ import json
 import os
 import re
 import shutil
-import tempfile
 from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
 from typing import Protocol
 from uuid import uuid4
 
-from ..core.content_hash import header_bundle_sha256
+from ..core.content_hash import header_bundle_sha256, sha256_file, sha256_text
 from ..core.path_policy import create_header_filename
 from ..core.platform import ELFPlatform
 from ..domain.models.implementation_evidence import (
@@ -22,7 +21,8 @@ from ..domain.models.implementation_evidence import (
     MethodAssemblyEvidence,
     SourceArtifactMetadata,
 )
-from ..domain.models.implementation_validation import MethodValidationEvidence
+from ..domain.ports.implementation_artifacts import ImplementationContextEnrichmentProvider
+from .artifact_io import content_sha256, safe_relative_path, temporary_text
 from .implementation_artifacts import (
     add_context_artifact,
     render_canonical_method_artifact,
@@ -77,10 +77,10 @@ class AtomicImplementationReportPublisher:
         renderer: ImplementationArtifactRenderer | None = None,
         *,
         assembler: Path | None = None,
-        validation_evidence: Mapping[str, MethodValidationEvidence] | None = None,
+        context_evidence: ImplementationContextEnrichmentProvider | None = None,
     ) -> None:
         self._renderer = renderer or CanonicalAssemblyArtifactRenderer(assembler)
-        self._validation_evidence = validation_evidence or {}
+        self._context_evidence = context_evidence or {}
 
     def publish(
         self,
@@ -167,7 +167,7 @@ class AtomicImplementationReportPublisher:
                     report,
                     artifact,
                     rendered,
-                    self._validation_evidence,
+                    self._context_evidence.get(method_id),
                     getattr(self._renderer, "assembler", None),
                 )
                 _validate_rendered_artifact(artifact, method_id, includes, rendered)
@@ -201,7 +201,7 @@ def stable_method_id(method: MethodAssemblyEvidence) -> str:
         )
     )
     slug = _safe_symbol(f"{method.owner}-{method.method_name}")[:48]
-    return f"{slug}-{hashlib.sha256(identity.encode('utf-8')).hexdigest()[:16]}"
+    return f"{slug}-{sha256_text(identity)[:16]}"
 
 
 def _validate_header_mapping(
@@ -244,7 +244,7 @@ def _validate_rendered_artifact(
 def _normalized_rendered_files(rendered: dict[Path, RenderedContent]) -> dict[str, RenderedContent]:
     files: dict[str, RenderedContent] = {}
     for relative_path, content in rendered.items():
-        normalized = _relative_path(_safe_relative_path(relative_path))
+        normalized = _relative_path(safe_relative_path(relative_path))
         if normalized in files:
             raise ValueError(f"duplicate rendered artifact path: {normalized}")
         files[normalized] = content
@@ -256,7 +256,7 @@ def _normalized_descriptors(
 ) -> dict[str, ArtifactDescriptor]:
     result: dict[str, ArtifactDescriptor] = {}
     for descriptor in descriptors:
-        normalized = _relative_path(_safe_relative_path(Path(descriptor.path)))
+        normalized = _relative_path(safe_relative_path(Path(descriptor.path)))
         if normalized in result:
             raise ValueError(f"duplicate artifact descriptor path: {normalized}")
         if not descriptor.kind or not re.fullmatch(r"[0-9a-f]{64}", descriptor.sha256):
@@ -270,18 +270,12 @@ def _validate_artifact_hashes(
 ) -> None:
     for relative_path, content in rendered.items():
         descriptor = descriptors[relative_path]
-        if descriptor.sha256 != _sha256_content(content):
+        if descriptor.sha256 != content_sha256(content):
             raise ValueError(f"artifact hash mismatch for {relative_path}")
         if descriptor.byte_length is not None:
             actual_length = len(content if isinstance(content, bytes) else content.encode("utf-8"))
             if descriptor.byte_length != actual_length:
                 raise ValueError(f"artifact byte length mismatch for {relative_path}")
-
-
-def _safe_relative_path(path: Path) -> Path:
-    if path.is_absolute() or path.root or path.drive or not path.parts or ".." in path.parts:
-        raise ValueError(f"artifact path must be relative and contained: {path}")
-    return path
 
 
 def _header_includes(
@@ -310,7 +304,7 @@ def _bind_header_manifest(
     )
     if not manifest_path.exists():
         return report
-    return replace(report, header_manifest_sha256=_sha256_file(manifest_path))
+    return replace(report, header_manifest_sha256=sha256_file(manifest_path))
 
 
 def _without_sources(report: ImplementationDiscoveryReport) -> ImplementationDiscoveryReport:
@@ -328,7 +322,7 @@ def _commit_bundle_and_report(
     report: ImplementationDiscoveryReport,
 ) -> None:
     report_payload = json.dumps(report.to_dict(), indent=2, sort_keys=True) + "\n"
-    report_temporary: Path | None = _temporary_text(report_target, report_payload)
+    report_temporary: Path | None = temporary_text(report_target, report_payload)
     bundle_backup: Path | None = None
     report_backup: Path | None = None
     bundle_published = False
@@ -375,7 +369,7 @@ def _write_bundle_manifest(
         "artifact_profile": report.artifact_profile.value,
         "root_symbol": report.root_symbol,
         "report_path": (Path("..") / report_filename).as_posix(),
-        "report_sha256": _sha256_text(report_payload),
+        "report_sha256": sha256_text(report_payload),
         "header_bundle_sha256": report.header_bundle_sha256,
         "header_manifest_sha256": report.header_manifest_sha256,
         "elf_sha256": report.elf_sha256,
@@ -426,7 +420,7 @@ def _bundle_files(root: Path) -> tuple[tuple[str, str], ...]:
         relative = _relative_path(path.relative_to(root))
         if relative == AtomicImplementationReportPublisher.BUNDLE_MANIFEST_NAME:
             continue
-        files.append((relative, _sha256_file(path)))
+        files.append((relative, sha256_file(path)))
     return tuple(files)
 
 
@@ -478,24 +472,6 @@ def _discard_backup(backup: Path | None) -> None:
         backup.unlink(missing_ok=True)
 
 
-def _temporary_text(path: Path, content: str) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(
-        mode="w",
-        encoding="utf-8",
-        newline="\n",
-        prefix=f".{path.name}.",
-        suffix=".tmp",
-        dir=path.parent,
-        delete=False,
-    ) as stream:
-        temporary = Path(stream.name)
-        stream.write(content)
-        stream.flush()
-        os.fsync(stream.fileno())
-    return temporary
-
-
 def _write_text(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8", newline="\n")
@@ -515,16 +491,3 @@ def _relative_path(path: Path) -> str:
 
 def _safe_symbol(symbol: str) -> str:
     return re.sub(r"[^A-Za-z0-9_.-]+", "_", symbol).strip("._-") or "symbol"
-
-
-def _sha256_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def _sha256_text(value: str) -> str:
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()
-
-
-def _sha256_content(value: RenderedContent) -> str:
-    raw = value if isinstance(value, bytes) else value.encode("utf-8")
-    return hashlib.sha256(raw).hexdigest()

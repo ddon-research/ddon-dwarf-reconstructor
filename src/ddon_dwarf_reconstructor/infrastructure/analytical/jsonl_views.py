@@ -1,7 +1,6 @@
 """Generator-compatible views over a materialized analytical store."""
 
 # The names intentionally mirror the pyelftools protocol at this adapter boundary.
-# ruff: noqa: N802
 
 from __future__ import annotations
 
@@ -27,10 +26,10 @@ class StoreCompilationUnit:
             self.header = {}
         self.dwarfinfo = store.dwarf_info
 
-    def iter_DIEs(self) -> Iterable[StoreDie]:
+    def iter_DIEs(self) -> Iterable[StoreDie]:  # noqa: N802
         return self._store.dies_for_unit(self.cu_offset)
 
-    def get_top_DIE(self) -> StoreDie:
+    def get_top_DIE(self) -> StoreDie:  # noqa: N802
         for die in self.iter_DIEs():
             if not die.is_null() and die.depth == 0:
                 return die
@@ -57,7 +56,7 @@ class StoreDie:
     def __getitem__(self, attribute_name: str) -> StoreAttribute:
         return self.attributes[attribute_name]
 
-    def get_DIE_from_attribute(self, attribute_name: str) -> StoreDie | None:
+    def get_DIE_from_attribute(self, attribute_name: str) -> StoreDie | None:  # noqa: N802
         target_offset = self._store.attribute_target(self.offset, attribute_name)
         if target_offset is None:
             return None
@@ -100,14 +99,14 @@ class StoreDwarfInfo:
     def __init__(self, store: MaterializedStorePort) -> None:
         self._store = store
 
-    def iter_CUs(self) -> Iterable[StoreCompilationUnit]:
+    def iter_CUs(self) -> Iterable[StoreCompilationUnit]:  # noqa: N802
         return self._store.iter_dwarf_units()
 
-    def get_DIE_from_refaddr(self, refaddr: int, cu: Any = None) -> StoreDie | None:
+    def get_DIE_from_refaddr(self, refaddr: int, cu: Any = None) -> StoreDie | None:  # noqa: N802
         del cu
         return self._store.die_by_offset(refaddr)
 
-    def line_program_for_CU(self, CU: Any) -> StoreLineProgram | _EmptyLineProgram:  # noqa: N803
+    def line_program_for_CU(self, CU: Any) -> StoreLineProgram | _EmptyLineProgram:  # noqa: N802, N803
         program = self._store.line_program_for_unit(int(CU.cu_offset))
         return program if program is not None else _EmptyLineProgram()
 

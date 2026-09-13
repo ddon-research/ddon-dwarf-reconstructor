@@ -13,12 +13,14 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from .msvc_validation.commands import run_command as run_bounded_command
 from .msvc_validation.publication import write_json_atomic
 
 REQUIRED_MSVC_FLAGS = ("/std:c++latest", "/EHsc", "/W4", "/Zc:__cplusplus")
 TRANSLATION_UNIT_SUFFIXES = (".c", ".cc", ".cpp", ".cxx")
 AGGREGATE_TRANSLATION_UNIT = "compile_all.cpp"
 DEFAULT_VALIDATION_DIRECTORY = Path("output/msvc-header-validation-20260801")
+DEFAULT_COMMAND_TIMEOUT_SECONDS = 3600
 
 
 class SonarAnalysisError(RuntimeError):
@@ -94,9 +96,31 @@ def get_build_wrapper_file(requested_path: Path | None) -> Path:
 
 def _run_command(arguments: list[str]) -> subprocess.CompletedProcess[str]:
     try:
-        return subprocess.run(arguments, capture_output=True, text=True, check=False)
+        result = run_bounded_command(
+            arguments,
+            timeout_seconds=DEFAULT_COMMAND_TIMEOUT_SECONDS,
+        )
     except OSError as error:
         raise SonarAnalysisError(f"Could not run {arguments[0]!r}: {error}") from error
+    if result.timed_out:
+        raise SonarAnalysisError(
+            f"Command {arguments[0]!r} timed out after "
+            f"{DEFAULT_COMMAND_TIMEOUT_SECONDS} seconds. Output: {result.output.strip()}"
+        )
+    if result.stdout_truncated or result.stderr_truncated:
+        raise SonarAnalysisError(
+            f"Command {arguments[0]!r} produced truncated output; command evidence is incomplete."
+        )
+    if result.returncode is None:
+        raise SonarAnalysisError(
+            f"Command {arguments[0]!r} returned no exit status; command evidence is incomplete."
+        )
+    return subprocess.CompletedProcess(
+        arguments,
+        result.returncode,
+        stdout=result.stdout,
+        stderr=result.stderr,
+    )
 
 
 def get_visual_studio_developer_command_file() -> Path:

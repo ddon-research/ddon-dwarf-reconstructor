@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import json
 import re
-from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -19,29 +17,12 @@ from .infrastructure.analytical.doris import (
     DorisLoader,
     build_doris_plan,
 )
+from .infrastructure.artifact_cli_support import run_operation as _run_operation
+from .infrastructure.artifact_cli_support import write_result as _write_result
 from .infrastructure.artifacts import SourceIdentityCatalog
 from .infrastructure.config import get_cache_file_path
 from .infrastructure.elf_evidence import inspect_elf
 from .infrastructure.implementation_coverage_cli import audit_implementation_coverage_command
-from .infrastructure.implementation_validation_cli import execute_implementation_validation
-from .infrastructure.implementation_validation_options import (
-    DwarfStoreOption,
-    ElfArgument,
-    LoadBaseOption,
-    NidDatabaseOption,
-    NidDatabaseProvenanceOption,
-    OrbisAsOption,
-    OrbisClangOption,
-    OrbisLdOption,
-    OrbisObjdumpOption,
-    OrbisReadelfOption,
-    OriginalAddressesOption,
-    OutputOption,
-    ReportOption,
-    SdkRootOption,
-    ToolTimeoutSecondsOption,
-)
-from .infrastructure.logging import LoggerSetup, get_logger, log_exception
 from .infrastructure.toolchain_exports import (
     ToolchainExporter,
     list_tool_export_profiles,
@@ -49,10 +30,10 @@ from .infrastructure.toolchain_exports import (
 from .infrastructure.toolchain_exports import (
     probe_tool as probe_external_tool,
 )
+from .infrastructure.validation.abi_probe_cli import probe_compiler_abi
+from .infrastructure.validation.command import validate_implementation_command
 from .infrastructure.zstd_dump_evidence import inspect_dump
 from .infrastructure.zstd_dump_parser import ZstdDumpParser
-
-logger = get_logger(__name__)
 
 app = typer.Typer(
     name="artifacts",
@@ -60,6 +41,8 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 app.command("audit-implementation-coverage")(audit_implementation_coverage_command)
+app.command("probe-compiler-abi")(probe_compiler_abi)
+app.command("validate-implementation")(validate_implementation_command)
 
 
 def _inspect(
@@ -89,20 +72,6 @@ def _inspect(
     if dump_path is not None:
         result["dump_index"] = ZstdDumpParser(dump_path, dump_index).inspect_index()
     return result
-
-
-def _write_result(result: dict[str, Any]) -> None:
-    typer.echo(json.dumps(result, indent=2, sort_keys=True))
-
-
-def _run_operation(operation: Callable[[], None]) -> None:
-    try:
-        LoggerSetup.initialize(Path("logs"))
-        operation()
-    except Exception as error:
-        log_exception(logger, "artifact_operation_failed", error, operation=operation.__name__)
-        typer.echo(f"Artifact operation failed: {error}", err=True)
-        raise typer.Exit(code=1) from error
 
 
 @app.command("inspect")
@@ -163,48 +132,6 @@ def inspect_elf_command(
 ) -> None:
     """Inspect ELF headers and all DWARF CU producer/version headers as JSON."""
     _run_operation(lambda: _write_result(inspect_elf(elf)))
-
-
-@app.command("validate-implementation")
-def validate_implementation_command(
-    elf: ElfArgument,
-    implementation_report: ReportOption,
-    output_dir: OutputOption,
-    load_base: LoadBaseOption = None,
-    original_addresses: OriginalAddressesOption = False,
-    dwarf_store: DwarfStoreOption = None,
-    nid_database: NidDatabaseOption = None,
-    nid_database_provenance: NidDatabaseProvenanceOption = None,
-    sdk_root: SdkRootOption = None,
-    orbis_as: OrbisAsOption = None,
-    orbis_clang: OrbisClangOption = None,
-    orbis_readelf: OrbisReadelfOption = None,
-    orbis_objdump: OrbisObjdumpOption = None,
-    orbis_ld: OrbisLdOption = None,
-    tool_timeout_seconds: ToolTimeoutSecondsOption = None,
-) -> None:
-    """Validate relocation, NID, ABI, safety, compiler, and parity evidence."""
-
-    _run_operation(
-        lambda: execute_implementation_validation(
-            elf,
-            implementation_report,
-            output_dir,
-            load_base=load_base,
-            original_addresses=original_addresses,
-            dwarf_store=dwarf_store,
-            nid_database=nid_database,
-            nid_database_provenance=nid_database_provenance,
-            sdk_root=sdk_root,
-            orbis_as=orbis_as,
-            orbis_clang=orbis_clang,
-            orbis_readelf=orbis_readelf,
-            orbis_objdump=orbis_objdump,
-            orbis_ld=orbis_ld,
-            tool_timeout_seconds=tool_timeout_seconds,
-            write_result=_write_result,
-        )
-    )
 
 
 @app.command("inspect-dwarf-dump")

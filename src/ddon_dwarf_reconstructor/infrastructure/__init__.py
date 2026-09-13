@@ -10,13 +10,13 @@ from .orbis_objdump import OrbisObjdumpProducer
 from .toolchain_exports import ToolchainExporter, load_tool_exports, probe_tool
 
 __all__ = [
-    "config",
-    "ElfDwarfSession",
     "AtomicHeaderPublisher",
-    "logging",
+    "ElfDwarfSession",
     "OrbisDisassemblyReport",
     "OrbisObjdumpProducer",
     "ToolchainExporter",
+    "config",
     "load_tool_exports",
+    "logging",
     "probe_tool",
 ]

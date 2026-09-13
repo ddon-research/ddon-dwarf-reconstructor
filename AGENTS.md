@@ -98,13 +98,28 @@ ordering and source offsets.
   and `__internal_schema.column_statistics` for database evidence. The loader submits
   `ANALYZE TABLE` by default and waits for terminal states only when
   `DDON_DORIS_ANALYZE_WAIT_SECONDS` is positive.
-- The season-two corpus request is the 289 nonblank roots in
-  `resources/season2-resources.txt`. Generate separate source-derived bundles with collision-safe
-  publication and aggregate collision failure; preserve per-root status, provenance, hashes, and incomplete
-  evidence. Standalone MSVC header compilation is distinct from optional aggregate diagnostics.
-  IDA and Sonar observations are additive evidence and must not be reported as completed
-  validation without a retained result. Use the system-derived local timezone in timestamps and
-  examples; do not assume Berlin/CEST or install a tzdata dependency for local runs.
+- The season-two symbol-set request is the 289 nonblank roots in
+  `resources/season2-resources.txt`. Every normal `generate` request uses one source-bound
+  traversal: a single root resolves its complete dependency closure, while multiple roots are
+  deduplicated globally by qualified identity plus CU/DIE provenance. It publishes one versioned
+  tree under `generated/ps4-<client-version>/` (or an explicit output root) and must not create
+  `symbols/<index>-...`, `implementations/`, or `methods/<id>/` subtrees. `shared/` is the only
+  intentional sibling below the version root; resource folders contain flat headers and flat
+  human-readable `.asm` files. `symbols.manifest.json` is the source/list/producer/configuration-
+  bound integrity record and retains per-root statuses, ownership, file hashes, and unresolved/
+  conflict diagnostics when context generation is enabled. `--single-file` is rejected. Context
+  generation is enabled by default for development; `--no-generate-context` publishes only C++ and
+  assembly files and omits validation objects.
+- Symbol version names infer one standalone eight-digit client token from the ELF filename or
+  nearest parent path, falling back to `ps4-unknown` with a manifest diagnostic when absent or
+  ambiguous. Assembly evidence is additive: `.asm` starts with semicolon-prefixed IDA-style
+  signature/type/address/source/file-offset/status comments and pseudo-call comments; exact-byte
+  `.s` and accepted `.o` outputs remain a separate opt-in profile. Every human-readable source
+  reference is a `; source: ...` comment. Standalone MSVC header compilation is distinct from
+  optional aggregate diagnostics. IDA and Sonar observations are additive evidence and must not
+  be reported as completed validation without a retained result. Use the system-derived local
+  timezone in timestamps and examples; do not assume Berlin/CEST or install a tzdata dependency
+  for local runs.
 - Opt-in profiling uses the canonical `performance` command group and `just` recipes. Use
   `performance doctor` before selecting tools, the deterministic fixture tier before real assets,
   and `performance history compare/export` for the tracked SQLite/static-history contract. The

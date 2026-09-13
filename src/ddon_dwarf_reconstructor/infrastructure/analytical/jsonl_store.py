@@ -1,7 +1,6 @@
 """Validated JSONL query adapter and generator-compatible materialized facade."""
 
 # The names intentionally mirror the pyelftools protocol at this adapter boundary.
-# ruff: noqa: N802
 
 from __future__ import annotations
 

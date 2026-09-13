@@ -30,6 +30,7 @@ class AtomicHeaderPublisher:
         headers: Mapping[str, str],
         *,
         metadata: Mapping[str, object] | None = None,
+        generate_context: bool = True,
     ) -> tuple[Path, int]:
         platform_dir = output_root / platform.value
         platform_dir.mkdir(parents=True, exist_ok=True)
@@ -39,6 +40,8 @@ class AtomicHeaderPublisher:
         targets: list[str] = []
         backups: dict[str, Path | None] = {}
         manifest_backup: Path | None = None
+        publication_started = False
+        cleanup_backups = True
         started_at = perf_counter()
         log_event(
             logger,
@@ -53,13 +56,11 @@ class AtomicHeaderPublisher:
             targets = sorted({*new_filenames, *self._previous_filenames(manifest_path)})
             backups = self._backup_targets(backup_dir, platform_dir, targets)
             manifest_backup = self._backup_manifest(backup_dir, manifest_path)
-            for filename in new_filenames:
-                os.replace(staged_dir / filename, platform_dir / filename)
-            for filename in targets:
-                if filename not in headers:
-                    (platform_dir / filename).unlink(missing_ok=True)
-            self._publish_manifest(staged_dir, manifest_path, headers, metadata)
-        except Exception as error:
+            publication_started = True
+            self._commit_headers(
+                staged_dir, platform_dir, targets, headers, metadata, generate_context
+            )
+        except BaseException as error:
             log_event(
                 logger,
                 logging.ERROR,
@@ -70,14 +71,19 @@ class AtomicHeaderPublisher:
                 duration_ms=round((perf_counter() - started_at) * 1000, 3),
                 exc_info=error,
             )
-            self._rollback(platform_dir, backups, manifest_path, manifest_backup)
-            raise
-        except BaseException:
-            self._rollback(platform_dir, backups, manifest_path, manifest_backup)
+            if publication_started:
+                cleanup_backups = False
+                try:
+                    self._rollback(platform_dir, backups, manifest_path, manifest_backup)
+                except BaseException as rollback_error:
+                    rollback_error.add_note(f"Header recovery files retained at {backup_dir}")
+                    raise rollback_error from error
+                cleanup_backups = True
             raise
         finally:
             shutil.rmtree(staged_dir, ignore_errors=True)
-            shutil.rmtree(backup_dir, ignore_errors=True)
+            if cleanup_backups:
+                shutil.rmtree(backup_dir, ignore_errors=True)
         total_bytes = sum(len(content.encode("utf-8")) for content in headers.values())
         log_event(
             logger,
@@ -90,6 +96,26 @@ class AtomicHeaderPublisher:
             duration_ms=round((perf_counter() - started_at) * 1000, 3),
         )
         return platform_dir, total_bytes
+
+    def _commit_headers(
+        self,
+        staged_dir: Path,
+        platform_dir: Path,
+        targets: list[str],
+        headers: Mapping[str, str],
+        metadata: Mapping[str, object] | None,
+        generate_context: bool,
+    ) -> None:
+        for filename in sorted(headers):
+            os.replace(staged_dir / filename, platform_dir / filename)
+        for filename in targets:
+            if filename not in headers:
+                (platform_dir / filename).unlink(missing_ok=True)
+        manifest_path = platform_dir / self.MANIFEST_NAME
+        if generate_context:
+            self._publish_manifest(staged_dir, manifest_path, headers, metadata)
+        else:
+            manifest_path.unlink(missing_ok=True)
 
     @classmethod
     def _previous_filenames(cls, manifest_path: Path) -> list[str]:

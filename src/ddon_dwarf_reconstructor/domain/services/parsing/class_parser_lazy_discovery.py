@@ -129,6 +129,17 @@ class ClassParserLazyDiscoveryMixin:
         self: ClassParserContext, offset: int
     ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         """Find both the DIE and its containing CU without a full DIE materialization."""
+        cache = getattr(self, "_die_and_cu_offset_cache", None)
+        if cache is not None and offset in cache:
+            return cache[offset]
+        result = self._lookup_die_and_cu_by_offset(offset)
+        if cache is not None:
+            cache[offset] = result
+        return result
+
+    def _lookup_die_and_cu_by_offset(
+        self: ClassParserContext, offset: int
+    ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None:
         try:
             direct_die = self._direct_die(offset)
             if direct_die is not None:

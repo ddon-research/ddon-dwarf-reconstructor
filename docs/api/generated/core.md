@@ -15,3 +15,5 @@ This page indexes every source module in the **core modules** group. It is an im
 ::: ddon_dwarf_reconstructor.core.path_policy
 
 ::: ddon_dwarf_reconstructor.core.platform
+
+::: ddon_dwarf_reconstructor.core.serialization

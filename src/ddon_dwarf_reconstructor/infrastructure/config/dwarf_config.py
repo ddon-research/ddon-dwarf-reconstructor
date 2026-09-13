@@ -7,6 +7,7 @@ from __future__ import annotations
 import hashlib
 import os
 from dataclasses import dataclass
+from math import isfinite
 from pathlib import Path
 
 from ..artifacts import get_artifact_cache_dir
@@ -19,6 +20,10 @@ class DwarfRuntimeConfig:
     die_cache_size: int = 10_000
     type_cache_size: int = 5_000
     search_timeout_seconds: float = 1.0
+
+    def __post_init__(self) -> None:
+        if not isfinite(self.search_timeout_seconds):
+            raise ValueError("search_timeout_seconds must be finite")
 
     @classmethod
     def from_environment(cls) -> DwarfRuntimeConfig:

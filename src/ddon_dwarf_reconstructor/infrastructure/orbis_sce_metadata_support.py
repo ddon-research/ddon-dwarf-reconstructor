@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import struct
 from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass
-from pathlib import Path
 from typing import BinaryIO
 
 from elftools.elf.elffile import ELFFile
 
+from ..core.content_hash import sha256_file, sha256_text
 from ..domain.models.disassembly import (
     OrbisDynamicTag,
     OrbisRelocationEntry,
@@ -393,17 +392,7 @@ def cache_key(
             asdict(sdk_definition_identity) if sdk_definition_identity is not None else None
         ),
     }
-    return hashlib.sha256(
-        json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
-    ).hexdigest()
-
-
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+    return sha256_text(json.dumps(value, sort_keys=True, separators=(",", ":")))
 
 
 def dynamic_tag_from_dict(value: dict[str, object]) -> OrbisDynamicTag:

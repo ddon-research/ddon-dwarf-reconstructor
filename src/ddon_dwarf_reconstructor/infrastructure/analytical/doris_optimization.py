@@ -329,7 +329,9 @@ class DorisQueryTracer:
         self._stream = self.path.open("a", encoding="utf-8", newline="\n")
         self._sequence = 0
         self._profile_count = 0
+        self._profile_attempt_count = 0
         self._profiled_shapes: set[str] = set()
+        self._failed_profile_shapes: set[str] = set()
         self._shape_counts: dict[str, int] = {}
         self._observed = 0
         self._partial = 0
@@ -346,6 +348,7 @@ class DorisQueryTracer:
         execute_seconds: float,
         fetch_seconds: float,
         rows: Sequence[Sequence[object]],
+        result_rows: int | None = None,
         error: BaseException | None = None,
     ) -> None:
         """Record one completed or failed DB-API query without parameter values."""
@@ -377,7 +380,7 @@ class DorisQueryTracer:
             query_id=query_id,
             execute_seconds=execute_seconds,
             fetch_seconds=fetch_seconds,
-            result_rows=len(rows),
+            result_rows=len(rows) if result_rows is None else result_rows,
             status=status,
             profile_status=profile_status,
             profile_summary=profile_summary,
@@ -432,6 +435,7 @@ class DorisQueryTracer:
                 "observed_count": self._observed,
                 "partial_count": self._partial,
                 "profile_count": self._profile_count,
+                "profile_attempt_count": self._profile_attempt_count,
                 "shape_count": len(self._shape_counts),
             },
             "shapes": dict(sorted(self._shape_counts.items())),
@@ -439,7 +443,9 @@ class DorisQueryTracer:
         _write_json_atomic(self._summary_path, summary)
 
     def _should_profile(self, shape_hash: str, elapsed_ms: float) -> bool:
-        if self._profile_count >= self.trace_config.max_profile_instances:
+        if self._profile_attempt_count >= self.trace_config.max_profile_instances:
+            return False
+        if shape_hash in self._failed_profile_shapes:
             return False
         if shape_hash not in self._profiled_shapes:
             return True
@@ -450,13 +456,16 @@ class DorisQueryTracer:
     ) -> tuple[
         str, Mapping[str, object], Mapping[str, object], Mapping[str, object] | None, str | None
     ]:
+        self._profile_attempt_count += 1
         if self._profile_fetcher is None:
+            self._failed_profile_shapes.add(shape_hash)
             return "partial", {}, {}, None, "Doris profile provider is not configured"
         try:
             status, summary, metrics, payload, error = self._profile_fetcher(
                 query_id, self.trace_config.profile_timeout_seconds
             )
             if status != "observed" or payload is None:
+                self._failed_profile_shapes.add(shape_hash)
                 return (
                     status,
                     {},
@@ -480,6 +489,7 @@ class DorisQueryTracer:
                 None,
             )
         except (OSError, RuntimeError, ValueError) as error:
+            self._failed_profile_shapes.add(shape_hash)
             return "partial", {}, {}, None, str(error)
 
 

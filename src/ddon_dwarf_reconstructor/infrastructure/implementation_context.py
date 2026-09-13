@@ -2,37 +2,46 @@
 
 from __future__ import annotations
 
-import hashlib
 import io
 import json
-from dataclasses import asdict, is_dataclass
-from enum import Enum
-from functools import lru_cache
+import re
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
 from elftools.common.exceptions import ELFError
 from elftools.elf.elffile import ELFFile
 
+from ..core.content_hash import sha256_file, sha256_text
+from ..core.serialization import to_jsonable as _jsonable
 from ..domain.models.disassembly import OrbisInstruction
+from ..domain.models.implementation_context import (
+    ImplementationContextEnrichment,
+    MethodContextPacket,
+)
 from ..domain.models.implementation_evidence import (
     ArtifactDescriptor,
     ImplementationDiscoveryReport,
     MethodAssemblyEvidence,
 )
-from ..domain.models.implementation_validation import (
-    MethodContextPacket,
-    MethodValidationEvidence,
-    ValidationStatus,
-)
 
 CONTEXT_SCHEMA_VERSION = "implementation-context/1.0"
-_NOT_OBSERVED = ValidationStatus.NOT_OBSERVED.value
+_NOT_OBSERVED = "not_observed"
+_SOURCE_LINE = re.compile(r"^.+:\d+(?:\s+\(discriminator\s+\d+\))?$")
 
 
 def normalize_raw_assembly(value: str) -> str:
     """Normalize tool text for a stable evidence file without adding metadata."""
     return value.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def normalize_assembly_export(value: str) -> str:
+    """Make extracted source-location rows valid semicolon comments."""
+    lines = normalize_raw_assembly(value).splitlines()
+    return "\n".join(
+        f"; source: {line.strip()}" if _SOURCE_LINE.fullmatch(line.strip()) else line
+        for line in lines
+    ) + ("\n" if lines else "")
 
 
 def render_context_packet(
@@ -41,7 +50,7 @@ def render_context_packet(
     report: ImplementationDiscoveryReport,
     descriptors: tuple[ArtifactDescriptor, ...],
     *,
-    validation: MethodValidationEvidence | None = None,
+    enrichment: ImplementationContextEnrichment | None = None,
     assembler: Path | None = None,
     object_content: bytes | None = None,
 ) -> str:
@@ -51,7 +60,7 @@ def render_context_packet(
         method_id,
         report,
         descriptors,
-        validation=validation,
+        enrichment=enrichment,
         assembler=assembler,
         object_content=object_content,
     )
@@ -64,17 +73,16 @@ def build_context_packet(
     report: ImplementationDiscoveryReport,
     descriptors: tuple[ArtifactDescriptor, ...],
     *,
-    validation: MethodValidationEvidence | None = None,
+    enrichment: ImplementationContextEnrichment | None = None,
     assembler: Path | None = None,
     object_content: bytes | None = None,
 ) -> dict[str, object]:
     """Build the agent-facing join without duplicating raw disassembly text."""
     context = (
-        validation.context
-        if validation is not None
+        enrichment.packet
+        if enrichment is not None and enrichment.packet is not None
         else method.dwarf_context or _default_context(method)
     )
-    validation_payload = _validation_payload(validation)
     return {
         "schema_version": CONTEXT_SCHEMA_VERSION,
         "method_id": method_id,
@@ -97,24 +105,24 @@ def build_context_packet(
         "references": _reference_payload(method),
         "control_flow": _control_flow_payload(method),
         "dwarf_context": context.to_dict(),
-        "relocations": _relocation_payload(method, report, validation),
-        "nids": _nid_payload(validation),
-        "abi": _abi_payload(method, validation),
-        "instruction_effects": _dimension_payload(validation, "effects"),
+        "relocations": _relocation_payload(method, report, enrichment),
+        "nids": _nid_payload(enrichment),
+        "abi": _abi_payload(method, enrichment),
+        "instruction_effects": _dimension_payload(enrichment, "instruction_effects"),
         "compiler": _compiler_payload(
-            validation,
+            enrichment,
             report,
             descriptors,
             assembler=assembler,
             object_content=object_content,
         ),
-        "semantic_parity": _dimension_payload(validation, "parity"),
-        "transformation_cues": _transformation_cues(method, validation),
-        "evidence_status": _evidence_status(method, descriptors, validation),
+        "semantic_parity": _dimension_payload(enrichment, "semantic_parity"),
+        "transformation_cues": _transformation_cues(method, enrichment),
+        "evidence_status": _evidence_status(method, descriptors, enrichment),
         "artifacts": [item.to_dict() for item in descriptors],
         "tool_evidence": _tool_evidence(report),
         "diagnostics": list(dict.fromkeys(method.diagnostics + context.diagnostics)),
-        "validation": validation_payload,
+        "validation": _enrichment_payload(enrichment, "validation", _not_observed_payload()),
     }
 
 
@@ -273,55 +281,52 @@ def _is_external_target(address: int | None, start: int | None, end: int | None)
 def _relocation_payload(
     method: MethodAssemblyEvidence,
     report: ImplementationDiscoveryReport,
-    validation: MethodValidationEvidence | None,
+    enrichment: ImplementationContextEnrichment | None,
 ) -> list[object]:
-    if validation is not None:
-        return [_jsonable(item) for item in validation.context.relocation_ids]
+    if enrichment is not None:
+        return [_jsonable(item) for item in enrichment.relocation_ids]
     selected = set(method.relocation_ids)
     if not selected:
         return []
     return [_jsonable(item) for item in report.relocation_entries if item.relocation_id in selected]
 
 
-def _nid_payload(validation: MethodValidationEvidence | None) -> list[object]:
-    if validation is None:
+def _nid_payload(enrichment: ImplementationContextEnrichment | None) -> list[object]:
+    if enrichment is None:
         return []
-    return [_jsonable(item) for item in validation.context.nid_ids]
+    return [_jsonable(item) for item in enrichment.nid_ids]
 
 
-def _validation_payload(validation: MethodValidationEvidence | None) -> dict[str, object]:
-    if validation is None:
-        return {
-            "status": _NOT_OBSERVED,
-            "source": "validation-report-not-supplied",
-        }
-    return {
-        "method_id": validation.method_id,
-        "relocation_status": validation.relocation_status.value,
-        "nid_status": validation.nid_status.value,
-        "abi_status": validation.abi.status.value,
-        "effects_status": validation.effects.status.value,
-        "compiler_status": validation.compiler.status.value,
-        "parity_status": validation.parity.status.value,
-        "diagnostics": list(validation.diagnostics),
-    }
+def _not_observed_payload() -> dict[str, object]:
+    return {"status": _NOT_OBSERVED, "source": "validation-report-not-supplied"}
+
+
+def _enrichment_payload(
+    enrichment: ImplementationContextEnrichment | None,
+    key: str,
+    default: object,
+) -> object:
+    if enrichment is None or key not in enrichment.payloads:
+        return default
+    return _jsonable(enrichment.payloads[key])
 
 
 def _dimension_payload(
-    validation: MethodValidationEvidence | None, attribute: str
+    enrichment: ImplementationContextEnrichment | None, key: str
 ) -> dict[str, object]:
-    if validation is None:
-        return {"status": _NOT_OBSERVED, "source": "validation-report-not-supplied"}
-    value = getattr(validation, attribute)
-    return _jsonable(value)
+    value = _enrichment_payload(enrichment, key, _not_observed_payload())
+    return dict(value) if isinstance(value, dict) else _not_observed_payload()
 
 
 def _abi_payload(
     method: MethodAssemblyEvidence,
-    validation: MethodValidationEvidence | None,
+    enrichment: ImplementationContextEnrichment | None,
 ) -> dict[str, object]:
-    if validation is not None:
-        return _jsonable(validation.abi)
+    value = _enrichment_payload(enrichment, "abi", None)
+    if value is not None:
+        payload = _jsonable(value)
+        if isinstance(payload, dict):
+            return payload
     facts = method.dwarf_context.abi_facts if method.dwarf_context is not None else {}
     if not facts:
         return {"status": _NOT_OBSERVED, "source": "doris-context-not-observed"}
@@ -329,7 +334,7 @@ def _abi_payload(
 
 
 def _compiler_payload(
-    validation: MethodValidationEvidence | None,
+    enrichment: ImplementationContextEnrichment | None,
     report: ImplementationDiscoveryReport,
     descriptors: tuple[ArtifactDescriptor, ...],
     *,
@@ -337,8 +342,9 @@ def _compiler_payload(
     object_content: bytes | None,
 ) -> dict[str, object]:
     payload: dict[str, object]
-    if validation is not None:
-        candidate = _jsonable(validation.compiler)
+    candidate = _enrichment_payload(enrichment, "compiler", None)
+    if candidate is not None:
+        candidate = _jsonable(candidate)
         payload = dict(candidate) if isinstance(candidate, dict) else {"status": _NOT_OBSERVED}
     else:
         payload = {
@@ -373,7 +379,7 @@ def _tool_payload(assembler: Path | None) -> dict[str, object]:
         return {"tool": None, "tool_sha256": None, "version": None, "command_flags": ()}
     return {
         "tool": str(assembler),
-        "tool_sha256": _sha256_file(assembler),
+        "tool_sha256": sha256_file(assembler),
         "version": None,
         "command_flags": ("-o",),
     }
@@ -415,7 +421,7 @@ def _descriptor_for(
 def _evidence_status(
     method: MethodAssemblyEvidence,
     descriptors: tuple[ArtifactDescriptor, ...],
-    validation: MethodValidationEvidence | None,
+    enrichment: ImplementationContextEnrichment | None,
 ) -> dict[str, str]:
     kinds = {item.kind for item in descriptors}
     status = {
@@ -430,48 +436,42 @@ def _evidence_status(
         "semantic_parity": _NOT_OBSERVED,
         "live_behavior": _NOT_OBSERVED,
     }
-    if validation is not None:
-        status.update(
-            {
-                "abi": validation.abi.status.value,
-                "instruction_safety": validation.effects.status.value,
-                "compiler": validation.compiler.status.value,
-                "semantic_parity": validation.parity.status.value,
-            }
-        )
+    overlay = _enrichment_payload(enrichment, "evidence_status", {})
+    if isinstance(overlay, dict):
+        status.update({str(key): str(value) for key, value in overlay.items()})
     return status
 
 
 def _transformation_cues(
     method: MethodAssemblyEvidence,
-    validation: MethodValidationEvidence | None,
+    enrichment: ImplementationContextEnrichment | None,
 ) -> dict[str, object]:
     mnemonics = {item.mnemonic.lower().removesuffix("q") for item in method.instructions}
-    effects = validation.effects if validation is not None else None
-    object_pointer, hidden_return = _abi_cues(method, validation)
+    object_pointer, hidden_return = _abi_cues(method)
     calls = _call_targets(method)
-    return {
+    cues: dict[str, object] = {
         "object_pointer": object_pointer,
         "hidden_return": hidden_return,
         "has_calls": bool(calls),
         "call_targets": list(calls),
-        "has_indirect_call": _indirect_call_cue(method, effects),
+        "has_indirect_call": _indirect_call_cue(method),
         "has_conditional_branch": any(
             item.mnemonic.lower().startswith("j") for item in method.instructions
         ),
         "has_return": "ret" in mnemonics,
-        "stack": _stack_cue(effects),
-        "callee_saved_preserved": effects.callee_saved_preserved if effects is not None else None,
+        "stack": _stack_cue(),
+        "callee_saved_preserved": None,
         "status": "observed" if method.instructions else _NOT_OBSERVED,
     }
+    overlay = _enrichment_payload(enrichment, "transformation_cues", {})
+    if isinstance(overlay, dict):
+        cues.update({str(key): _jsonable(value) for key, value in overlay.items()})
+    return cues
 
 
 def _abi_cues(
     method: MethodAssemblyEvidence,
-    validation: MethodValidationEvidence | None,
 ) -> tuple[object, object]:
-    if validation is not None:
-        return validation.abi.object_pointer, validation.abi.hidden_return
     facts = {} if method.dwarf_context is None else method.dwarf_context.abi_facts
     return facts.get("object_pointer"), facts.get("hidden_return")
 
@@ -486,10 +486,7 @@ def _call_targets(method: MethodAssemblyEvidence) -> tuple[object, ...]:
 
 def _indirect_call_cue(
     method: MethodAssemblyEvidence,
-    effects: Any,
 ) -> bool | None:
-    if effects is not None:
-        return effects.indirect_call
     return any(
         "*" in item.operands
         for item in method.instructions
@@ -497,15 +494,8 @@ def _indirect_call_cue(
     )
 
 
-def _stack_cue(effects: Any) -> dict[str, object]:
-    if effects is None:
-        return {"status": _NOT_OBSERVED}
-    return {
-        "status": effects.status.value,
-        "delta_min": effects.stack_delta_min,
-        "delta_max": effects.stack_delta_max,
-        "balanced": effects.stack_balanced,
-    }
+def _stack_cue() -> dict[str, object]:
+    return {"status": _NOT_OBSERVED}
 
 
 def _tool_evidence(report: ImplementationDiscoveryReport) -> dict[str, object]:
@@ -563,35 +553,13 @@ def _target_manifest_hash(report: ImplementationDiscoveryReport) -> str | None:
     payload = [item.to_dict() for item in report.disassembly_target_manifest]
     if not payload:
         return None
-    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
-
-
-@lru_cache(maxsize=8)
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _jsonable(value: Any) -> Any:
-    if isinstance(value, Enum):
-        return value.value
-    if hasattr(value, "to_dict") and callable(value.to_dict):
-        return _jsonable(value.to_dict())
-    if is_dataclass(value):
-        return _jsonable(asdict(value))
-    if isinstance(value, dict):
-        return {str(key): _jsonable(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_jsonable(item) for item in value]
-    return value
+    return sha256_text(json.dumps(payload, sort_keys=True))
 
 
 __all__ = [
     "CONTEXT_SCHEMA_VERSION",
     "build_context_packet",
+    "normalize_assembly_export",
     "normalize_raw_assembly",
     "render_context_packet",
 ]

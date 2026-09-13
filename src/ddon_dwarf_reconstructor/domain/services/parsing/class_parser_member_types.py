@@ -9,7 +9,6 @@ from ....core.observability import get_logger
 from ...models.dwarf import StructInfo, TypeDeclarator, TypeReference
 from ...ports.type_resolution import TypeNameResolver
 from .class_parser_context import ClassParserContext
-from .type_chain_traverser import TypeChainTraverser
 
 logger = get_logger(__name__)
 
@@ -32,8 +31,8 @@ class ClassParserMemberTypesMixin:
             return None
         return self.parse_nested_structure(type_die)
 
-    @staticmethod
     def _opaque_storage_size(
+        self: ClassParserContext,
         member_die: DwarfEntry,
         type_die: DwarfEntry | None,
         type_name: str | None = None,
@@ -47,7 +46,9 @@ class ClassParserMemberTypesMixin:
             return size
 
         terminal_type = (
-            TypeChainTraverser.follow_to_terminal_type(type_die) if type_die is not None else None
+            self.type_chain_traverser.follow_to_terminal_type(type_die)
+            if type_die is not None
+            else None
         )
         if ClassParserMemberTypesMixin._needs_terminal_storage(member_die, terminal_type):
             return ClassParserMemberTypesMixin._byte_size(type_die)
@@ -127,18 +128,18 @@ class ClassParserMemberTypesMixin:
     def _template_argument_references(
         self: ClassParserContext, type_die: DwarfEntry | None
     ) -> tuple[TypeReference, ...]:
-        return ClassParserMemberTypesMixin._template_argument_references_from_die(
-            self.type_resolver, type_die, set()
-        )
+        return self._template_argument_references_from_die(self.type_resolver, type_die, set())
 
-    @staticmethod
     def _template_argument_references_from_die(
+        self: ClassParserContext,
         type_resolver: TypeNameResolver,
         type_die: DwarfEntry | None,
         visited_offsets: set[int],
     ) -> tuple[TypeReference, ...]:
         terminal_die = (
-            TypeChainTraverser.follow_to_terminal_type(type_die) if type_die is not None else None
+            self.type_chain_traverser.follow_to_terminal_type(type_die)
+            if type_die is not None
+            else None
         )
         if terminal_die is None:
             return ()
@@ -154,7 +155,7 @@ class ClassParserMemberTypesMixin:
                 argument_name = type_resolver.resolve_type_name(child)
                 if not argument_name:
                     continue
-                argument_offset = TypeChainTraverser.get_terminal_type_offset(child)
+                argument_offset = self.type_chain_traverser.get_terminal_type_offset(child)
                 argument_type_die = child.get_DIE_from_attribute("DW_AT_type")
                 references.append(
                     TypeReference(
@@ -163,7 +164,7 @@ class ClassParserMemberTypesMixin:
                             unresolved=argument_name in {"void", "unknown_type"},
                         ),
                         die_offset=argument_offset,
-                        template_arguments=ClassParserMemberTypesMixin._template_argument_references_from_die(
+                        template_arguments=self._template_argument_references_from_die(
                             type_resolver, argument_type_die, visited_offsets
                         ),
                     )

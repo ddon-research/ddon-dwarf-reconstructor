@@ -290,6 +290,46 @@ class TestHeaderGenerator:
         )
 
     @pytest.mark.unit
+    def test_typedef_forward_is_removed_when_complete_dependency_is_included(
+        self, header_generator
+    ):
+        owner = ClassInfo(
+            name="Owner",
+            byte_size=8,
+            members=[],
+            methods=[],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x2100,
+        )
+        object_info = ClassInfo(
+            name="MtObject",
+            byte_size=8,
+            members=[],
+            methods=[],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x2110,
+        )
+
+        header = header_generator.generate_single_file_hierarchy_header(
+            {"Owner": owner},
+            ["Owner"],
+            "Owner",
+            typedefs={"MT_MFUNC": "MtObject"},
+            include_metadata=False,
+            dependency_headers={"MtObject": "MtObject.h"},
+            base_type_infos={"MtObject": object_info},
+        )
+
+        assert '#include "MtObject.h"' in header
+        assert "class MtObject;" not in header
+
+    @pytest.mark.unit
     def test_generate_single_file_hierarchy_header_emits_valid_dependency_declarations(
         self, header_generator
     ):

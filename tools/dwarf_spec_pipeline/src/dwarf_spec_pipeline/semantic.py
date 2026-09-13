@@ -9,7 +9,10 @@ pretending that a normative "applicable" attribute list is a mandatory schema.
 from __future__ import annotations
 
 import hashlib
+import json
+import os
 import re
+import tempfile
 from collections import defaultdict
 from pathlib import Path
 
@@ -84,8 +87,6 @@ def load_documents(
     output_dir: Path, versions: set[int] | None = None
 ) -> list[SpecificationDocument]:
     """Load the three checked-in canonical JSON documents."""
-    import json
-
     documents: list[SpecificationDocument] = []
     selected_versions = versions or {2, 3, 4}
     for version in sorted(selected_versions):
@@ -387,14 +388,70 @@ def render_markdown(index: SemanticIndex) -> str:
 
 
 def write_index(index: SemanticIndex, json_path: Path, markdown_path: Path) -> None:
-    """Publish both report formats after rendering them completely."""
-    import json
-
-    json_path.parent.mkdir(parents=True, exist_ok=True)
-    json_path.write_text(
+    """Publish both report formats while preserving the previous pair on failure."""
+    targets = (json_path, markdown_path)
+    if len(set(targets)) != len(targets):
+        raise ValueError("Semantic JSON and Markdown outputs must be different files")
+    for target in targets:
+        target.parent.mkdir(parents=True, exist_ok=True)
+    contents = (
         json.dumps(index.model_dump(mode="json"), ensure_ascii=False, indent=2, sort_keys=True)
         + "\n",
-        encoding="utf-8",
-        newline="\n",
+        render_markdown(index),
     )
-    markdown_path.write_text(render_markdown(index), encoding="utf-8", newline="\n")
+    temporary_paths: list[Path] = []
+    try:
+        for target, content in zip(targets, contents, strict=True):
+            temporary_paths.append(_write_temporary_text(target, content))
+    except BaseException:
+        for temporary in temporary_paths:
+            temporary.unlink(missing_ok=True)
+        raise
+    backups: dict[Path, Path] = {}
+    published: set[Path] = set()
+    try:
+        for target in targets:
+            if target.exists():
+                if not target.is_file():
+                    raise OSError(f"Semantic output is not a file: {target}")
+                backup = _temporary_name(target, "backup")
+                os.replace(target, backup)
+                backups[target] = backup
+        for temporary, target in zip(temporary_paths, targets, strict=True):
+            os.replace(temporary, target)
+            published.add(target)
+    except OSError:
+        for target in published:
+            target.unlink(missing_ok=True)
+        for target, backup in backups.items():
+            if backup.exists():
+                os.replace(backup, target)
+        raise
+    else:
+        for backup in backups.values():
+            backup.unlink(missing_ok=True)
+    finally:
+        for temporary in temporary_paths:
+            temporary.unlink(missing_ok=True)
+
+
+def _temporary_name(target: Path, purpose: str) -> Path:
+    descriptor, name = tempfile.mkstemp(prefix=f".{target.name}.{purpose}-", dir=target.parent)
+    os.close(descriptor)
+    path = Path(name)
+    path.unlink()
+    return path
+
+
+def _write_temporary_text(target: Path, content: str) -> Path:
+    descriptor, name = tempfile.mkstemp(prefix=f".{target.name}.stage-", dir=target.parent)
+    path = Path(name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+    except BaseException:
+        path.unlink(missing_ok=True)
+        raise
+    return path

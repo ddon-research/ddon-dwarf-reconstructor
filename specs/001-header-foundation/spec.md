@@ -205,6 +205,30 @@ profile invocation is retained, and only the unique method receives `.s`/`.o` ar
   compilable when its aggregate translation unit has a nonzero exit code.
 - **FR-006**: Single-file and multi-file output MUST produce collision-safe names,
   deduplicated shared declarations, and a valid cross-file dependency/include closure.
+- **FR-006a**: Every normal `generate` request MUST execute one source-bound symbol traversal and
+  publication. A single `--symbol` MUST resolve its complete dependency closure; `--symbols-file`
+  and repeated `--symbol` values MUST resolve one globally deduplicated union. The route MUST
+  reject `--single-file` and MUST NOT create per-root batches or `symbols/<index>-<safe-root>/`,
+  `implementations/`, or `methods/<id>/` directories.
+- **FR-006b**: Symbol dependency traversal MUST include method return and parameter types,
+  follow declaration/specification references to complete definitions where available, and retain
+  unresolved definitions as explicit diagnostics. The `rAchievement`/`MtDataReader` regression
+  MUST resolve one complete `MtDataReader` definition when the source evidence provides it.
+- **FR-006c**: Symbol publication MUST use `generated/ps4-<client-version>/` by default, infer one
+  unambiguous eight-digit client token from the ELF filename or nearest parent path, and record
+  the source/diagnostic or `unknown` fallback in `symbols.manifest.json`. The manifest MUST bind
+  the input-list hash, producer/schema/configuration identity, ownership/provenance, file hashes,
+  counts, per-root statuses, and unresolved/conflict diagnostics. The version directory MUST be
+  atomically staged and committed with flat resource and `shared/` outputs.
+- **FR-006d**: Symbol readable `.asm` exports MUST begin with semicolon-commented method/type,
+  pseudo-symbol, address/range, file-offset, source-location, ABI/context, and evidence-status
+  metadata. Calls MUST use `; pseudo_call: ...` and source references MUST use `; source: ...`.
+  Exact-byte `.s`/`.o` artifacts remain a separate opt-in profile, and assembly availability MUST
+  NOT promote header completeness.
+- **FR-006e**: Generation context files, including manifests and validation/probing reports emitted
+  by the generation workflow, MUST be controlled by `--generate-context`. Development defaults
+  MUST enable the flag; `--no-generate-context` MUST publish only C++ headers and assembly files.
+  Explicit `artifacts` validation and probing commands retain their own output contracts.
 - **FR-007**: Reusable symbol, dump, and header artifacts MUST be bound to source
   identity plus producer/schema/configuration identity.
 - **FR-008**: Artifact publication MUST be atomic and MUST preserve the last valid

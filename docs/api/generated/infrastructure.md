@@ -6,6 +6,8 @@ This page indexes every source module in the **infrastructure modules** group. I
 
 ::: ddon_dwarf_reconstructor.infrastructure
 
+::: ddon_dwarf_reconstructor.infrastructure.abi_probe_cli
+
 ::: ddon_dwarf_reconstructor.infrastructure.analytical
 
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.artifact_store
@@ -64,7 +66,13 @@ This page indexes every source module in the **infrastructure modules** group. I
 
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.doris
 
+::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_batch_rows
+
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_cache
+
+::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_child_hydration
+
+::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_child_tag_queries
 
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_config
 
@@ -82,11 +90,15 @@ This page indexes every source module in the **infrastructure modules** group. I
 
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_hydration
 
+::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_hydration_cache
+
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_index
 
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_layout
 
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_method_context
+
+::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_method_context_keys
 
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_method_queries
 
@@ -100,6 +112,10 @@ This page indexes every source module in the **infrastructure modules** group. I
 
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_queries
 
+::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_query_batches
+
+::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_reference_hydration
+
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_registry
 
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_rows
@@ -112,15 +128,23 @@ This page indexes every source module in the **infrastructure modules** group. I
 
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_store
 
+::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_store_access
+
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_store_helpers
 
+::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_store_hydration
+
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_store_queries
+
+::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_store_runtime
 
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_stream_load
 
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_validation
 
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.dwarf_recovery
+
+::: ddon_dwarf_reconstructor.infrastructure.analytical.dwarf_reference
 
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.json_codec
 
@@ -174,7 +198,13 @@ This page indexes every source module in the **infrastructure modules** group. I
 
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.unit_emitter
 
+::: ddon_dwarf_reconstructor.infrastructure.artifact_cli_support
+
+::: ddon_dwarf_reconstructor.infrastructure.artifact_io
+
 ::: ddon_dwarf_reconstructor.infrastructure.artifacts
+
+::: ddon_dwarf_reconstructor.infrastructure.assembly_method_output
 
 ::: ddon_dwarf_reconstructor.infrastructure.composition
 
@@ -184,6 +214,10 @@ This page indexes every source module in the **infrastructure modules** group. I
 
 ::: ddon_dwarf_reconstructor.infrastructure.config.dwarf_config
 
+::: ddon_dwarf_reconstructor.infrastructure.disassembly_output_equivalence
+
+::: ddon_dwarf_reconstructor.infrastructure.disassembly_regression
+
 ::: ddon_dwarf_reconstructor.infrastructure.elf_evidence
 
 ::: ddon_dwarf_reconstructor.infrastructure.elf_platform
@@ -192,9 +226,19 @@ This page indexes every source module in the **infrastructure modules** group. I
 
 ::: ddon_dwarf_reconstructor.infrastructure.header_output
 
+::: ddon_dwarf_reconstructor.infrastructure.implementation_abi_facts
+
+::: ddon_dwarf_reconstructor.infrastructure.implementation_abi_probe_manifest
+
 ::: ddon_dwarf_reconstructor.infrastructure.implementation_abi_probes
 
 ::: ddon_dwarf_reconstructor.infrastructure.implementation_artifacts
+
+::: ddon_dwarf_reconstructor.infrastructure.implementation_assembler
+
+::: ddon_dwarf_reconstructor.infrastructure.implementation_assembly_source
+
+::: ddon_dwarf_reconstructor.infrastructure.implementation_cfi
 
 ::: ddon_dwarf_reconstructor.infrastructure.implementation_context
 
@@ -204,7 +248,7 @@ This page indexes every source module in the **infrastructure modules** group. I
 
 ::: ddon_dwarf_reconstructor.infrastructure.implementation_dwarf_context
 
-::: ddon_dwarf_reconstructor.infrastructure.implementation_effects
+::: ddon_dwarf_reconstructor.infrastructure.implementation_dwarf_context_evidence
 
 ::: ddon_dwarf_reconstructor.infrastructure.implementation_linker
 
@@ -218,8 +262,6 @@ This page indexes every source module in the **infrastructure modules** group. I
 
 ::: ddon_dwarf_reconstructor.infrastructure.implementation_output
 
-::: ddon_dwarf_reconstructor.infrastructure.implementation_parity
-
 ::: ddon_dwarf_reconstructor.infrastructure.implementation_relocations
 
 ::: ddon_dwarf_reconstructor.infrastructure.implementation_report_publisher
@@ -230,13 +272,21 @@ This page indexes every source module in the **infrastructure modules** group. I
 
 ::: ddon_dwarf_reconstructor.infrastructure.implementation_validation_cli
 
+::: ddon_dwarf_reconstructor.infrastructure.implementation_validation_context
+
 ::: ddon_dwarf_reconstructor.infrastructure.implementation_validation_options
 
+::: ddon_dwarf_reconstructor.infrastructure.implementation_validation_report_builder
+
 ::: ddon_dwarf_reconstructor.infrastructure.implementation_validation_summary
+
+::: ddon_dwarf_reconstructor.infrastructure.implementation_validation_tools
 
 ::: ddon_dwarf_reconstructor.infrastructure.logging
 
 ::: ddon_dwarf_reconstructor.infrastructure.logging.logger_setup
+
+::: ddon_dwarf_reconstructor.infrastructure.orbis_bin_evidence
 
 ::: ddon_dwarf_reconstructor.infrastructure.orbis_objdump
 
@@ -250,11 +300,15 @@ This page indexes every source module in the **infrastructure modules** group. I
 
 ::: ddon_dwarf_reconstructor.infrastructure.orbis_objdump_workflow
 
+::: ddon_dwarf_reconstructor.infrastructure.orbis_report_factory
+
 ::: ddon_dwarf_reconstructor.infrastructure.orbis_sce_metadata
 
 ::: ddon_dwarf_reconstructor.infrastructure.orbis_sce_metadata_support
 
 ::: ddon_dwarf_reconstructor.infrastructure.orbis_sdk_definitions
+
+::: ddon_dwarf_reconstructor.infrastructure.orbis_toolchain_contracts
 
 ::: ddon_dwarf_reconstructor.infrastructure.performance
 
@@ -264,7 +318,11 @@ This page indexes every source module in the **infrastructure modules** group. I
 
 ::: ddon_dwarf_reconstructor.infrastructure.performance.history
 
+::: ddon_dwarf_reconstructor.infrastructure.performance.llvm_mca
+
 ::: ddon_dwarf_reconstructor.infrastructure.performance.paths
+
+::: ddon_dwarf_reconstructor.infrastructure.performance.process_accounting
 
 ::: ddon_dwarf_reconstructor.infrastructure.performance.profilers
 
@@ -282,11 +340,29 @@ This page indexes every source module in the **infrastructure modules** group. I
 
 ::: ddon_dwarf_reconstructor.infrastructure.performance.workloads
 
+::: ddon_dwarf_reconstructor.infrastructure.symbol_output
+
+::: ddon_dwarf_reconstructor.infrastructure.symbol_output_methods
+
+::: ddon_dwarf_reconstructor.infrastructure.sysmodule_catalog
+
 ::: ddon_dwarf_reconstructor.infrastructure.toolchain_exports
 
 ::: ddon_dwarf_reconstructor.infrastructure.toolchain_process
 
 ::: ddon_dwarf_reconstructor.infrastructure.toolchain_profiles
+
+::: ddon_dwarf_reconstructor.infrastructure.validation
+
+::: ddon_dwarf_reconstructor.infrastructure.validation.abi_probe_cli
+
+::: ddon_dwarf_reconstructor.infrastructure.validation.cli
+
+::: ddon_dwarf_reconstructor.infrastructure.validation.command
+
+::: ddon_dwarf_reconstructor.infrastructure.validation.context_enrichment
+
+::: ddon_dwarf_reconstructor.infrastructure.validation.options
 
 ::: ddon_dwarf_reconstructor.infrastructure.zstd_dump_context
 

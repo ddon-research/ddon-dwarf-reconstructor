@@ -7,8 +7,13 @@ They are validated before reuse and published atomically.
 
 `SourceIdentityCatalog` uses size, mtime, device, and inode for a relocation-stable fast key. It
 retains ctime as a mutation signal. A moved catalog entry may reuse ctime evidence only when the
-old path disappeared and stable object metadata matches. `verify-source` always computes a full
-SHA-256 hash.
+old path disappeared and stable object metadata matches. The catalog records the accepted
+`observed_ctime_ns` separately from the original source identity, so repeated relocated lookups
+remain warm. A later ctime change at a recorded path still requires a full hash. Legacy entries
+without this field use their recorded identity ctime; malformed observations cannot authorize
+reuse. `verify-source` always computes a full SHA-256 hash. The
+[relocation regressions](../../tests/infrastructure/test_source_identity_relocation.py) cover
+fresh-instance reuse, mutation, explicit verification, and catalog maintenance.
 
 ## Dump indexes
 
@@ -32,7 +37,12 @@ written directly during materialization, Zstandard-compressed, and partitioned b
 identity, and a bounded unit-offset bucket. Complete Parquet manifests include closed-file size,
 modification timestamp, SHA-256, compression,
 footer, and row-group metadata. Publication also reads every closed row group so a valid footer and
-hash cannot mask a corrupt compressed page. Normal readers reject missing, stale, open, or partial
+hash cannot mask a corrupt compressed page. Closed-file row totals must match the sink's recorded
+family counts before a checkpoint, rotation, or complete projection succeeds. Native writer-close
+failures propagate and remain abortable; the materializer aborts on production or finalization
+failure before publishing the outer manifest. Audit-stream flushing does not force smaller Parquet
+row groups. The [sink lifecycle regressions](../../tests/infrastructure/analytical/test_record_sink.py)
+cover these failure and cleanup boundaries. Normal readers reject missing, stale, open, or partial
 stores; `inspect-dwarf-store` performs full artifact-hash and payload verification. These artifacts
 must remain outside source control.
 
@@ -63,8 +73,51 @@ compatibility views and remain empty; use `SHOW TABLE STATS`, `SHOW COLUMN STATS
 ## Header bundles
 
 `AtomicHeaderPublisher` stages UTF-8 headers, writes a manifest containing byte counts and
-SHA-256 values, backs up existing targets, and commits the bundle. Any failure rolls back the
-staged publication so a previously valid result remains available.
+SHA-256 values, backs up existing targets, and commits the bundle. Preparation failures leave
+existing files untouched; rollback starts only after all backups are complete and publication
+begins. If recovery itself fails, the exception retains the publication cause and names the
+preserved `.headers-backup-*` directory. Do not delete that directory before recovering its
+files. The [publisher regressions](../../tests/infrastructure/test_header_output.py) cover
+preparation, replacement, interruption, and recovery failures. These guarantees do not claim
+power-loss durability or a snapshot for concurrent readers. Normal `generate` requests use the
+separate symbol publisher described below.
+
+## Flat PS4 symbol publications
+
+Every normal `generate` request uses one symbol publication. A single `--symbol` resolves that
+root plus its complete dependency closure; `--symbols-file` and repeated `--symbol` values resolve
+one deduplicated union. Unless `--output` is explicit, the version root is
+`generated/ps4-<client-version>/`; the version comes from one unambiguous eight-digit token in
+the ELF filename or nearest parent path, with `unknown` plus a diagnostic when inference is not
+possible.
+
+```text
+generated/ps4-<client-version>/
+  symbols.manifest.json      # when context generation is enabled
+  shared/<dependency>.h
+  <resource-class>/<resource>.h
+  <resource-class>/<owner>-<method>-<stable-hash>.asm
+```
+
+The version directory is staged and atomically replaced as one unit. `shared/` is the only
+intentional sibling below it; owner directories contain flat headers and assembly files. The
+manifest binds source identity, input-list hash, producer/schema/configuration identity, stable
+CU/DIE and qualified-identity ownership, per-root status, file hashes, counts, and unresolved or
+conflicting evidence. Same-name definitions with different content receive deterministic identity
+suffixes and are never overwritten. A single-symbol request retains the legacy header and
+implementation behavior through this same layout.
+
+Context generation is enabled by default for development. `--no-generate-context` suppresses the
+manifest and implementation report so the publication contains only generated C++ headers and
+assembly files. The explicit `artifacts` validation and probing commands retain their own
+contracts and are not controlled by this generation switch.
+
+The readable `.asm` file is an evidence view, not an assembler input. Its header uses semicolon
+comments for signature, definition signature, pseudo-symbol, address/range, file offset, source
+location, ABI/type context, and evidence status; call targets use `; pseudo_call: ...`, and source
+locations use `; source: ...`. Exact-byte `.s` and accepted `.o` artifacts are separate opt-in
+outputs. Structured/raw disassembly remains in `implementation-report.json` and the source-bound
+cache, so assembly availability cannot promote header completeness.
 
 ## External-tool evidence
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from types import MethodType
 from typing import cast
@@ -11,6 +11,7 @@ from ....models.dwarf import ClassInfo
 from ....ports.class_parser import ClassParserPort
 from ....ports.dwarf_lookup import DwarfLookupPort
 from ..header_aggregate_rendering import HeaderAggregateRenderingService
+from ..header_dependency_plan import HeaderDependencyPlan, HeaderDependencyPlanService
 from ..header_forward_declarations import HeaderForwardDeclarationService
 from ..header_hierarchy import HierarchyHeaderGenerationService
 from ..header_member_rendering import HeaderMemberRenderingService
@@ -40,6 +41,7 @@ class HeaderRenderingComponents:
     nested: HeaderNestedRenderingService
     aggregates: HeaderAggregateRenderingService
     methods: HeaderMethodRenderingService
+    dependency_plan: HeaderDependencyPlanService
 
     @classmethod
     def create(cls) -> HeaderRenderingComponents:
@@ -54,6 +56,7 @@ class HeaderRenderingComponents:
             nested=HeaderNestedRenderingService(),
             aggregates=HeaderAggregateRenderingService(),
             methods=HeaderMethodRenderingService(),
+            dependency_plan=HeaderDependencyPlanService(),
         )
 
 
@@ -86,6 +89,7 @@ class _HeaderRenderingHost:
             components.nested,
             components.aggregates,
             components.methods,
+            components.dependency_plan,
         ):
             for name, descriptor in vars(type(component)).items():
                 if not callable(descriptor) and not isinstance(
@@ -159,6 +163,9 @@ class HeaderRenderingEngine:
         guard_suffix: str = "_HIERARCHY_H",
         dependency_headers: dict[str, str] | None = None,
         base_type_infos: dict[str, ClassInfo] | None = None,
+        allow_cyclic_dependencies: bool = False,
+        *,
+        dependency_plan: HeaderDependencyPlan | None = None,
     ) -> str:
         return cast(
             str,
@@ -173,6 +180,8 @@ class HeaderRenderingEngine:
                 guard_suffix,
                 dependency_headers,
                 base_type_infos,
+                allow_cyclic_dependencies,
+                dependency_plan=dependency_plan,
             ),
         )
 
@@ -194,12 +203,80 @@ class HeaderRenderingEngine:
             ),
         )
 
+    def external_dependency_headers_for_groups(
+        self,
+        class_infos: dict[str, ClassInfo],
+        groups: dict[str, set[str]],
+        header_names: dict[str, str],
+        typedefs: dict[str, str] | None = None,
+    ) -> dict[str, dict[str, str]]:
+        return cast(
+            dict[str, dict[str, str]],
+            self._host.invoke(
+                "external_dependency_headers_for_groups",
+                class_infos,
+                groups,
+                header_names,
+                typedefs,
+            ),
+        )
+
+    def build_dependency_plan(
+        self,
+        class_infos: Mapping[str, ClassInfo],
+        hierarchy_order: Sequence[str],
+        typedefs: Mapping[str, str] | None = None,
+    ) -> HeaderDependencyPlan:
+        return cast(
+            HeaderDependencyPlan,
+            self._host.invoke("build_dependency_plan", class_infos, hierarchy_order, typedefs),
+        )
+
+    def external_dependency_headers_for_group_specs(
+        self,
+        class_infos: Mapping[str, ClassInfo],
+        groups: Mapping[str, set[str]],
+        header_names_by_group: Mapping[str, Mapping[str, str]],
+        typedefs_by_group: Mapping[str, Mapping[str, str]] | None = None,
+        *,
+        dependency_plan: HeaderDependencyPlan | None = None,
+    ) -> dict[str, dict[str, str]]:
+        return cast(
+            dict[str, dict[str, str]],
+            self._host.invoke(
+                "external_dependency_headers_for_group_specs",
+                class_infos,
+                groups,
+                header_names_by_group,
+                typedefs_by_group,
+                dependency_plan=dependency_plan,
+            ),
+        )
+
     def stable_topological_order(
         self, dependencies: dict[str, set[str]], hierarchy_order: list[str]
     ) -> list[str]:
         """Expose the deterministic ordering primitive for focused tests."""
         return cast(
             list[str], self._host.invoke("_stable_topological_order", dependencies, hierarchy_order)
+        )
+
+    def cyclic_dependency_components(
+        self,
+        class_infos: dict[str, ClassInfo],
+        hierarchy_order: list[str],
+        typedefs: dict[str, str] | None = None,
+        dependency_plan: HeaderDependencyPlan | None = None,
+    ) -> tuple[tuple[str, ...], ...]:
+        return cast(
+            tuple[tuple[str, ...], ...],
+            self._host.invoke(
+                "cyclic_dependency_components",
+                class_infos,
+                hierarchy_order,
+                typedefs,
+                dependency_plan,
+            ),
         )
 
     @staticmethod

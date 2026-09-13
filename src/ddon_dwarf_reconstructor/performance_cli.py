@@ -42,6 +42,7 @@ from .performance_analytical_cli import (
 )
 from .performance_current_doris_cli import benchmark_doris_current
 from .performance_doris_optimization_cli import benchmark_doris_optimization
+from .performance_llvm_mca_cli import analyze_assembly_command
 from .performance_materializer_cli import profile_materializer
 
 app = typer.Typer(
@@ -59,6 +60,7 @@ app.command("profile-dwarf-store")(profile_dwarf_store)
 app.command("profile-materializer")(profile_materializer)
 app.command("benchmark-doris-current")(benchmark_doris_current)
 app.command("benchmark-doris-optimization")(benchmark_doris_optimization)
+app.command("analyze-assembly")(analyze_assembly_command)
 
 
 @app.command()

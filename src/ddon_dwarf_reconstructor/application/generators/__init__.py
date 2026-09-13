@@ -7,16 +7,20 @@ from .generation_contracts import (
     GenerationReport,
     GenerationRequest,
     HeaderBundle,
+    SymbolExtractionRequest,
+    SymbolExtractionResult,
 )
 from .session import DwarfSession, DwarfSessionFactory
 
 __all__ = [
     "DwarfGenerator",
-    "ImplementationDiscoveryService",
     "DwarfSession",
     "DwarfSessionFactory",
     "GenerationOutcome",
     "GenerationReport",
     "GenerationRequest",
     "HeaderBundle",
+    "ImplementationDiscoveryService",
+    "SymbolExtractionRequest",
+    "SymbolExtractionResult",
 ]

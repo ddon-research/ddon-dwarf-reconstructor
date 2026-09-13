@@ -167,6 +167,9 @@ max-complexity = 10
 "src/ddon_dwarf_reconstructor/performance_current_doris_cli.py" = ["B008"]
 "src/ddon_dwarf_reconstructor/performance_doris_optimization_cli.py" = ["B008"]
 
+# Typer callback defaults declare CLI options, matching the other command modules.
+"src/ddon_dwarf_reconstructor/infrastructure/implementation_coverage_cli.py" = ["B008"]
+
 [dependency-groups]
 test = [
     "pytest>=7.0",

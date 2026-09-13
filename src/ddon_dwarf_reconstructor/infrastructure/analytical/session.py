@@ -56,18 +56,22 @@ class AnalyticalDwarfSession:
             selection_cache_path=self.selection_cache_path,
             selection_source_fingerprint=self.selection_source_fingerprint,
         )
-        if self.expected_source_path is not None:
-            if source_identity is None:
-                source_identity = SourceIdentityCatalog().identify(self.expected_source_path)
-            if source_identity.sha256 != self.store.manifest.source_identity.sha256:
-                raise ValueError(
-                    "Analytical store source identity does not match the requested ELF: "
-                    f"{self.expected_source_path}"
-                )
-        self.query_port = self.store
-        self.query_index = DorisDwarfIndex(self.store)
-        self.dwarf_info = self.store.as_dwarf_info()
-        self.platform = _platform(self.store.manifest.platform)
+        try:
+            if self.expected_source_path is not None:
+                if source_identity is None:
+                    source_identity = SourceIdentityCatalog().identify(self.expected_source_path)
+                if source_identity.sha256 != self.store.manifest.source_identity.sha256:
+                    raise ValueError(
+                        "Analytical store source identity does not match the requested ELF: "
+                        f"{self.expected_source_path}"
+                    )
+            self.query_port = self.store
+            self.query_index = DorisDwarfIndex(self.store)
+            self.dwarf_info = self.store.as_dwarf_info()
+            self.platform = _platform(self.store.manifest.platform)
+        except BaseException:
+            self.close()
+            raise
         return self
 
     def __exit__(
@@ -80,12 +84,13 @@ class AnalyticalDwarfSession:
         self.close()
 
     def close(self) -> None:
-        if self.store is not None:
-            self.store.close()
+        store = self.store
         self.dwarf_info = None
         self.query_port = None
         self.query_index = None
         self.store = None
+        if store is not None:
+            store.close()
 
     def begin_root(self, root_symbol: str) -> None:
         if self.store is not None:

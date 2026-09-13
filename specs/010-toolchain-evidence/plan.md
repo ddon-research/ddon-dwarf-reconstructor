@@ -7,7 +7,8 @@ Orbis `objdump` identifies the target as `elf64-x86-64-freebsd` and preserves SC
 generic LLVM/GNU readers accept the file but render generic or unknown SCE values. The existing
 pyelftools session and Orbis disassembly adapter therefore remain authoritative boundaries.
 
-Local help/version inventory covered Orbis 8.0 host tools, MSYS2 LLVM/GNU tools, libdwarf
+Local help/version inventory covered promoted Orbis 12.000 host tools, explicit historical Orbis
+8.000 host tools, MSYS2 LLVM/GNU tools, libdwarf
 `dwarfdump`, and the OpenOrbis/reference source locations. LIEF is not installed in the managed
 Python environment, and `elfldr` is intentionally treated as loader research rather than an
 inspection dependency.
@@ -25,6 +26,9 @@ inspection dependency.
    Python/pyelftools, and zstd. Keep Orbis binaries host-specific and read-only.
 5. Document the goal loop, authority matrix, uncertainty record, commands, tests, and exact
    validation tiers across repository instruction surfaces and the active Spec Kit feature.
+6. Add the versioned `OrbisToolchainContract`, SDK selection/fail-closed mixed-family policy,
+   `orbis-bin` utility profiles, compiler ABI probe manifests, Sysmodule catalog, sectioned
+   assembly opt-in, and independent `llvm-mca` performance workflow.
 
 ## Exact paths and validation tiers
 
@@ -46,6 +50,8 @@ inspection dependency.
 - Keep raw outputs outside source control and do not make expensive tool scans part of every lookup.
 - Preserve deterministic ordering and existing DWARF/Orbis facts; only add graph records for
   validated tool artifacts.
+- Treat the implementation-discovery schema (`4.2`) and implementation-validation schema (`4.4`)
+  as separate contracts; do not silently reinterpret historical reports.
 
 ## Handoff status
 
@@ -53,3 +59,12 @@ The implementation and validation slices are complete. The remaining boundary is
 Sony SDK binaries and proprietary ELF/SELF inputs stay on the host, while generic Docker tooling
 is a reproducible fallback. `elfldr`, SELF decryption/signing, LIEF promotion, and any claim that
 generic output establishes PS4 ABI semantics remain separate follow-up work.
+
+## Baseline-first disassembly refactor evidence (2026-08-18)
+
+The shared parser/executor/evidence-projection/hash/publication refactor was validated against a
+fresh external SDK 12 baseline and identical post-refactor run. Both used the complete analytical
+store and all 289 Season 2 roots in 73/73/73/70 batches. The external `disassembly-regression/1`
+manifests matched with zero differences across headers, assembly, objects, contexts, method
+identities, descriptors, and normalized evidence. No generated outputs were added to source
+control; SDK 8 remains historical comparison evidence.

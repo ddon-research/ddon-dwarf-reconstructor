@@ -34,16 +34,35 @@ uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf `
 ```
 
 `--symbol` is repeatable for targeted work. Do not combine it with `--symbols-file`; the CLI
-rejects the ambiguous request. Use `--full-hierarchy` only when inherited definitions and their
-dependencies are part of the requested evidence surface.
+rejects the ambiguous request. One symbol always resolves its complete dependency closure;
+multiple symbols are deduplicated in the same request. `--full-hierarchy` is retained as a
+compatibility spelling, while `--single-file` is rejected because published output is flat.
 
-When `--symbols-file` requests more than one full-hierarchy root without `--single-file`, the
-workflow publishes separate bundles under `output/season2/<platform>/symbols/<index>-<safe-root>/`.
-Each bundle has its own `header-bundle.manifest.json`; the root index and symbol name remain in
-the manifest metadata. This avoids overwriting same-named headers from unrelated roots. Aggregate
-single-directory publication still fails closed when two roots produce conflicting file contents.
-Keep failed or incomplete root status in the run report rather than treating the surviving bundles
-as a complete corpus.
+The default output root is `generated`; an explicit `--output` overrides it. The client version is
+inferred from one unambiguous
+eight-digit token in the ELF filename or nearest parent path, otherwise it is `unknown` and the
+diagnostic is retained in the manifest when context generation is enabled.
+
+```text
+generated/ps4-<client-version>/
+  symbols.manifest.json      # when context generation is enabled
+  shared/<dependency>.h
+  rAchievement/<resource>.h
+  rAchievement/<owner>-<method>-<stable-hash>.asm
+```
+
+Each owner directory is flat. A dependency reached by multiple roots is assigned to `shared/`;
+a dependency reached by one root remains with that resource. Includes are rewritten from this
+ownership map, collision-safe filenames are deterministic, and no `symbols/`, `implementations/`,
+or `methods/<id>/` directories are created by symbol-set publication. The manifest records the source
+identity, input-list hash, producer/schema/configuration identity, ownership/provenance mappings,
+file hashes, counts, per-root statuses, and unresolved/conflict diagnostics. `rAchievement` is
+the spelling used by the current resource list; `rArchievement` is not a class name in that list.
+
+Context JSON is enabled by default for development. Use `--no-generate-context` for a clean
+handoff containing only headers and assembly files; `--generate-context` makes the default
+explicit in scripts. The flag suppresses generation manifests and reports, while explicit
+`artifacts` validation/probing commands retain their own output contracts.
 
 ## Follow up with implementation assembly
 
@@ -79,13 +98,21 @@ report stores only slice/status/count/hash summaries. `llvm-readobj` remains gen
 does not accept `--triple`, and `llvm-tli-checker` is reserved for a future SDK-library/sysroot
 diagnostic.
 
-The header publisher completes before the follow-up starts. Reports are then published under
-`output/<platform>/implementations/` and retain every source-bound declaration/implementation
-candidate, validated code range, header-bundle SHA-256, header-manifest identity, Orbis invocation,
-source-line/file-offset provenance, relocation, and resolved or unresolved reference. A missing or
-failing Orbis profile does not invalidate the already-published header; its unavailable/empty
-status is retained in the report. The report schema is `4.2` and is the canonical implementation
-evidence index; complete raw Orbis profile stdout/stderr remains in the source-bound Orbis cache.
+The header publication completes before the follow-up starts. The implementation report retains
+every source-bound declaration/implementation candidate, validated code range, header-bundle
+SHA-256, Orbis invocation, source-line/file-offset provenance, relocation, and resolved or
+unresolved reference when context generation is enabled. A missing or failing Orbis profile does
+not invalidate the already-published headers; its unavailable/empty status remains additive
+evidence. Complete raw Orbis profile stdout/stderr remains in the source-bound Orbis cache.
+
+For every symbol request, `--extract-assembly` performs one implementation-discovery union and one
+disassembly request. It writes `implementation-report.json` at the version root and flat readable
+`.asm` files beside their owning headers. Each readable export starts with semicolon comments for
+the method signature, definition signature, pseudo-symbol, address/range, file offset, source
+location, ABI/type context, and evidence status; calls use `; pseudo_call: ...`. Source locations
+are never emitted as bare rows. Optional exact-byte `.s` and accepted `.o` artifacts remain
+separate from this IDA-style evidence view. They require `--emit-implementation-sources`; `.o`
+validation output is additionally gated by `--generate-context`.
 
 Use `--emit-implementation-sources` only with `--extract-assembly` to stage per-method
 reconstruction artifacts:
@@ -98,32 +125,26 @@ uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf `
   --orbis-as 'D:\SCE\ORBIS SDKs\8.000\host_tools\bin\orbis-as.exe'
 ```
 
-For the single-header `rLayout` workflow the output is:
+For the `rLayout` symbol request the flat output is:
 
 ```text
-output/ps4/header-bundle.manifest.json
-output/ps4/rLayout.h
-output/ps4/implementations/0001-rLayout.json
-output/ps4/implementations/0001-rLayout/
-  source-bundle.manifest.json
-  methods/<stable-method-id>/<stable-method-id>.raw.asm
-  methods/<stable-method-id>/<stable-method-id>.s
-  methods/<stable-method-id>/<stable-method-id>.o                 # when accepted
-  methods/<stable-method-id>/<stable-method-id>.context.json
+generated/ps4-<client-version>/
+  symbols.manifest.json                # with --generate-context
+  implementation-report.json           # with --generate-context and --extract-assembly
+  rLayout/rLayout.h
+  rLayout/<owner>-<method>-<stable-hash>.asm
+  rLayout/<owner>-<method>-<stable-hash>.s
+  rLayout/<owner>-<method>-<stable-hash>.o   # only with context and accepted by orbis-as
 ```
 
 Only a unique DWARF implementation candidate with a valid range and a unique Orbis function
-association receives bounded original `.raw.asm` evidence, exact-byte `.s` evidence and, when
-`orbis-as` is available, its accepted `.o` object. The `.context.json` packet joins source-bound
-Doris context, ABI/CFI, instruction effects, relocations/NIDs, compiler metadata, and explicit
-transformation cues. Ambiguous, partial, unsupported, unresolved, deleted, defaulted, pure-virtual,
-and unavailable methods remain in the JSON index without invented instructions. The `.s` file is
-the handoff artifact for a later agentic C++ translation workflow; the core pipeline does not emit
-empty or executable `.cpp` scaffolds. `.raw.asm` is evidence only and is never passed to the
-assembler; the context references it instead of duplicating its text.
-The report and context packet record structured evidence statuses for ABI and register clobbers,
-stack safety, external declarations, and semantic equivalence; absent evidence remains
-`not_observed`. MSVC inline assembly is not a validation
+association receives exact-byte `.s` evidence and, when `orbis-as` is available, its accepted
+`.o` object. Ambiguous, partial, unsupported, unresolved, deleted, defaulted, pure-virtual, and
+unavailable methods remain evidence with explicit status and no invented instructions. With
+`--no-generate-context`, the version directory contains only the generated headers and requested
+assembly source views; validation objects and all JSON context are omitted. The core pipeline does
+not emit empty or executable `.cpp` scaffolds. MSVC
+inline assembly is not a validation
 target for these PS4 x86-64 artifacts; see [Microsoft's inline assembler guidance](https://learn.microsoft.com/en-us/cpp/assembler/inline/inline-assembler?view=msvc-180)
 and [cppreference's compiler-defined asm notes](https://en.cppreference.com/w/c/language/asm).
 
@@ -133,7 +154,7 @@ and CFI:
 
 ```powershell
 uv run ddon-dwarf-reconstructor artifacts validate-implementation <PS4-ELF> `
-  --implementation-report <output>/ps4/implementations/0001-rLayout.json `
+  --implementation-report <output>/ps4-<client-version>/implementation-report.json `
   --dwarf-store <complete-store-manifest.json> `
   --output-dir $env:TEMP/ddon-implementation-validation `
   --original-addresses `

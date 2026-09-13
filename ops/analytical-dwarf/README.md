@@ -4,10 +4,24 @@ This Compose project is an explicit local benchmark dependency. It keeps Doris
 metadata, BE storage, and source-bound Parquet inputs outside source control.
 
 The Doris 4.1.3 images are pinned by immutable amd64 digest in `compose.yaml` and
-[`images.lock.json`](images.lock.json). Registry metadata, image pulls, a healthy daemon, and
-native fixture load were observed on 2026-08-05. The complete source-bound Season 2 generation
-and per-header MSVC closure audit were observed on 2026-08-10; IDA/Sonar evidence and comparison
-with the unavailable historical approved header remain separate boundaries.
+[`images.lock.json`](images.lock.json). A fresh final-tag pull and registry comparison on
+2026-09-09 resolved the same FE/BE index digests, so no image-byte change was available to
+apply. The container build banner still reports `4.1.3-rc02`; its embedded commit matches the
+4.1.3 release and is retained as upstream build metadata rather than treated as a second image.
+The complete source-bound Season 2 generation and per-header MSVC closure audit were observed on
+2026-08-10; IDA/Sonar evidence and comparison with the unavailable historical approved header
+remain separate boundaries.
+
+The 2026-09-09 BE outage was caused by its storage health check receiving `errno=5` while
+testing `.testfile` on the D: Windows bind mount at approximately 97.9% utilization. The
+source files remain readable and are preserved for copy-first recovery. Recovery must use a new
+directory on a fixed local disk, retain the original D: paths and forensic evidence, and leave
+`ignore_broken_disk` disabled. The original container objects were recreated during canonical
+promotion; their pre-promotion inspect, mount, network, and log evidence is retained. Matching
+forensic container definitions using the original D: mounts are retained in Docker with a
+`never_start` label and were never started. If the copied store cannot start, reload the validated complete
+Parquet manifest with `artifacts load-doris`; do not purge or rematerialize the source store as
+an outage workaround.
 
 The default bind mounts are repository-local ignored paths under
 `output/analytical-dwarf/warehouse` for Doris metadata, storage, and logs. The source-bound
@@ -16,6 +30,25 @@ uploads bounded batches through Doris Stream Load, so it does not need to be mou
 container. Override the individual `DDON_DORIS_*` variables only when the replacement path is on
 a local fixed disk; do not use the portable E: drive. `%TEMP%\ddon-analytical-dwarf` is reserved
 for disposable diagnostic runs and is not the default durable warehouse.
+
+The current workstation recovery uses the ignored `ops/analytical-dwarf/.env` file to bind the
+canonical Compose services to the verified C: copy and host ports `28030`/`29030`/`28040`.
+Run Compose from this directory, or pass the file explicitly from the repository root:
+
+```powershell
+docker compose --env-file ops/analytical-dwarf/.env --file ops/analytical-dwarf/compose.yaml config --quiet
+docker compose --env-file ops/analytical-dwarf/.env --file ops/analytical-dwarf/compose.yaml up -d
+.\ops\analytical-dwarf\preflight.ps1 `
+  -ComposeFile .\ops\analytical-dwarf\compose.yaml `
+  -EnvFile .\ops\analytical-dwarf\.env `
+  -OutputPath .\output\refactoring-evidence\021\<working-state>\doris-preflight.json
+```
+
+The original D: warehouse remains retained for forensics at the paths recorded in the Feature
+021 recovery receipt. Do not remove it until the recovered service has completed the required
+regression and performance evidence. The preflight also samples readable files, performs a
+temporary write/read round-trip with cleanup, rejects E:, and requires the configured free-space
+headroom before a Compose start.
 
 For a long producer run, use `--checkpoint-every-cus N` only when diagnostic snapshots are
 needed. Checkpoints rotate Parquet parts and preserve `checkpoint.json` after an interruption;

@@ -6,7 +6,7 @@ import json
 import os
 import shutil
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from time import perf_counter
 from urllib.error import HTTPError, URLError
@@ -43,6 +43,7 @@ class DorisDiagnosticTransport:
         self.timeout_seconds = timeout_seconds
         self.cli_path = self._discover_cli(cli_path)
         self.cli_version = self._capture_cli_version()
+        self._http_profile_unavailable: str | None = None
 
     def descriptor(self) -> dict[str, object]:
         """Return non-secret transport identity and fallback details."""
@@ -148,38 +149,75 @@ class DorisDiagnosticTransport:
         )
 
     def _fetch_http_profile(self, query_id: str) -> DiagnosticTransportResult:
+        if self._http_profile_unavailable is not None:
+            return DiagnosticTransportResult(
+                "unavailable",
+                "fe_http",
+                error=self._http_profile_unavailable,
+                attempts=({"source": "fe_http", "status": "cached_unavailable"},),
+            )
+        result = self._fetch_http_profile_endpoints(query_id)
+        if result.status == "unavailable" and _all_connection_failures(result.attempts):
+            self._http_profile_unavailable = result.error
+        return result
+
+    def _fetch_http_profile_endpoints(self, query_id: str) -> DiagnosticTransportResult:
         attempts: list[dict[str, object]] = []
         last_error = "FE profile endpoint did not return a profile"
         for endpoint in self._profile_endpoints(query_id):
-            started = perf_counter()
-            request = Request(endpoint, headers={"Authorization": self._basic_auth()})
-            try:
-                with urlopen(request, timeout=self.timeout_seconds) as response:
-                    raw_text = response.read().decode("utf-8", errors="replace")
-                    status = int(getattr(response, "status", 200))
-                attempts.append({"source": "fe_http", "url": endpoint, "status_code": status})
-                if status < 300 and raw_text.strip():
-                    return DiagnosticTransportResult(
-                        "observed",
-                        "fe_http",
-                        raw_text,
-                        _json_or_text(raw_text),
-                        duration_seconds=perf_counter() - started,
-                        attempts=tuple(attempts),
-                    )
-                last_error = f"FE profile endpoint returned HTTP {status}"
-            except HTTPError as error:
-                attempts.append({"source": "fe_http", "url": endpoint, "status_code": error.code})
-                last_error = f"FE profile endpoint returned HTTP {error.code}"
-            except (OSError, URLError) as error:
-                attempts.append({"source": "fe_http", "url": endpoint, "error": str(error)})
-                last_error = str(error)
+            result = self._fetch_profile_endpoint(endpoint)
+            attempts.extend(result.attempts)
+            if result.status == "observed":
+                return replace(result, attempts=tuple(attempts))
+            last_error = result.error or last_error
         return DiagnosticTransportResult(
             "unavailable",
             "fe_http",
             error=last_error,
             attempts=tuple(attempts),
         )
+
+    def _fetch_profile_endpoint(self, endpoint: str) -> DiagnosticTransportResult:
+        started = perf_counter()
+        request = Request(endpoint, headers={"Authorization": self._basic_auth()})
+        try:
+            with urlopen(request, timeout=self.timeout_seconds) as response:
+                raw_text = response.read().decode("utf-8", errors="replace")
+                status = int(getattr(response, "status", 200))
+            attempt: dict[str, object] = {
+                "source": "fe_http",
+                "url": endpoint,
+                "status_code": status,
+            }
+            if status < 300 and raw_text.strip():
+                return DiagnosticTransportResult(
+                    "observed",
+                    "fe_http",
+                    raw_text,
+                    _json_or_text(raw_text),
+                    duration_seconds=perf_counter() - started,
+                    attempts=(attempt,),
+                )
+            return DiagnosticTransportResult(
+                "partial",
+                "fe_http",
+                error=f"FE profile endpoint returned HTTP {status}",
+                attempts=(attempt,),
+            )
+        except HTTPError as error:
+            return DiagnosticTransportResult(
+                "partial",
+                "fe_http",
+                error=f"FE profile endpoint returned HTTP {error.code}",
+                attempts=({"source": "fe_http", "url": endpoint, "status_code": error.code},),
+            )
+        except (OSError, URLError) as error:
+            return DiagnosticTransportResult(
+                "unavailable",
+                "fe_http",
+                error=str(error),
+                attempts=({"source": "fe_http", "url": endpoint, "error": str(error)},),
+            )
 
     def _capture_cli_version(self) -> str | None:
         if self.cli_path is None:
@@ -279,6 +317,10 @@ def _cli_error(stderr: str, returncode: int) -> str:
 
 def _safe_command(command: list[str]) -> list[str]:
     return list(command)
+
+
+def _all_connection_failures(attempts: tuple[dict[str, object], ...]) -> bool:
+    return bool(attempts) and all("error" in attempt for attempt in attempts)
 
 
 __all__ = ["DiagnosticTransportResult", "DorisDiagnosticTransport"]

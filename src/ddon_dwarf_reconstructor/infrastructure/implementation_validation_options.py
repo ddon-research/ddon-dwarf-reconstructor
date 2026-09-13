@@ -90,8 +90,31 @@ ToolTimeoutSecondsOption = Annotated[
         help="Optional limit for each SDK tool invocation; unset means no limit.",
     ),
 ]
+ToolEvidenceOption = Annotated[
+    list[Path] | None,
+    typer.Option(
+        "--tool-evidence",
+        help="Complete source-bound external-tool manifest; repeat for multiple profiles.",
+    ),
+]
+AssemblyProfileOption = Annotated[
+    str,
+    typer.Option(
+        "--assembly-profile",
+        help="Assembly emission profile: byte-replay (default) or sectioned.",
+    ),
+]
+AbiProbeManifestOption = Annotated[
+    Path | None,
+    typer.Option(
+        "--abi-probe-manifest",
+        help="Reusable toolchain-bound compiler ABI probe manifest.",
+    ),
+]
 
 __all__ = [
+    "AbiProbeManifestOption",
+    "AssemblyProfileOption",
     "DwarfStoreOption",
     "ElfArgument",
     "LoadBaseOption",
@@ -106,5 +129,6 @@ __all__ = [
     "OutputOption",
     "ReportOption",
     "SdkRootOption",
+    "ToolEvidenceOption",
     "ToolTimeoutSecondsOption",
 ]

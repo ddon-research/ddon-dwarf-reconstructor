@@ -17,6 +17,7 @@ class GenerationOptions:
     symbols_file: Path | None = None
     output: Path | None = None
     verbose: bool = False
+    generate_context: bool = True
     full_hierarchy: bool = False
     single_file: bool = False
     exhaustive: bool = False
@@ -38,6 +39,11 @@ class GenerationOptions:
 
 def validate_implementation_options(options: GenerationOptions) -> None:
     """Reject profile combinations whose evidence chain would ignore them."""
+    if options.export_knowledge is None and options.single_file:
+        raise ValueError(
+            "--single-file is not supported for symbol generation; the complete dependency "
+            "closure is always published as flat files"
+        )
     if options.emit_implementation_sources and not options.extract_assembly:
         raise ValueError("--emit-implementation-sources requires --extract-assembly")
     _validate_profile_option(options, options.orbis_objdump, "--orbis-objdump")

@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from dwarf_spec_pipeline import semantic
 from dwarf_spec_pipeline.models import (
     ParagraphBlock,
     Section,
@@ -12,7 +13,7 @@ from dwarf_spec_pipeline.models import (
     SpecificationIdentity,
     Table,
 )
-from dwarf_spec_pipeline.semantic import build_semantic_index, load_documents
+from dwarf_spec_pipeline.semantic import build_semantic_index, load_documents, write_index
 
 
 def _document(version: int, sections: list[Section], tables: list[Table]) -> SpecificationDocument:
@@ -152,3 +153,27 @@ def test_checked_in_specifications_expose_the_relationships_used_by_the_audit() 
     assert "DW_AT_containing_type" in dwarf2.tag_applicability["DW_TAG_ptr_to_member_type"]
     assert "DW_AT_containing_type" not in dwarf2.tag_applicability["DW_TAG_class_type"]
     assert dwarf4.attribute_encodings["DW_AT_high_pc"].classes == ["address", "constant"]
+
+
+@pytest.mark.unit
+@pytest.mark.regression
+def test_write_index_failure_preserves_previous_report_pair(tmp_path: Path, monkeypatch) -> None:
+    sections = [Section(id="section-1", number="1", title="Intro", level=1, blocks=[])]
+    index = build_semantic_index([_document(2, sections, [])])
+    json_path = tmp_path / "semantic-index.json"
+    markdown_path = tmp_path / "semantic-index.md"
+    json_path.write_text("old json", encoding="utf-8")
+    markdown_path.write_text("old markdown", encoding="utf-8")
+    real_replace = semantic.os.replace
+
+    def fail_markdown(source: str | Path, destination: str | Path) -> None:
+        if Path(destination) == markdown_path and ".stage-" in Path(source).name:
+            raise OSError("simulated report publication failure")
+        real_replace(source, destination)
+
+    monkeypatch.setattr(semantic.os, "replace", fail_markdown)
+    with pytest.raises(OSError, match="simulated report publication failure"):
+        write_index(index, json_path, markdown_path)
+    assert json_path.read_text(encoding="utf-8") == "old json"
+    assert markdown_path.read_text(encoding="utf-8") == "old markdown"
+    assert not list(tmp_path.glob(".semantic-index.*"))

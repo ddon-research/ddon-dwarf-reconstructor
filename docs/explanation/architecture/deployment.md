@@ -98,6 +98,13 @@ module, then runs Markdownlint, Mermaid validation, and the strict build. The wo
 external action to a full commit SHA and uses both `uv.lock` and
 `tools/documentation/package-lock.json` as dependency contracts.
 
+The local architecture quality suite enforces the same action provenance convention: external
+`uses:` references in `.github/workflows/` must use a full 40-character commit SHA and a
+human-readable release comment; repository-local `./` actions are allowed. `actionlint` remains
+the syntax and expression check, while `tests/quality/test_architecture.py` owns this narrower
+provenance rule and includes a deliberate unpinned fixture. This is `Verified` local policy
+evidence; it does not establish GitHub branch protection, Dependabot, or other remote settings.
+
 The docs dependency group locks the currently validated Zensical and `mkdocstrings-python`
 combination. Zensical marks this handler integration as preliminary, so publication depends on
 the strict build resolving every `:::` directive; no unsupported backlinks or fallback API site

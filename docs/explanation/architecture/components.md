@@ -15,6 +15,22 @@ documentation rules apply across the layers below.
 | `infrastructure` | `ElfDwarfSession`, source catalog, Doris serving adapters, composed JSONL/Parquet validation views, SQLite/zstd indexes, atomic header and implementation publishers, Orbis/process adapters, logging setup | domain policy duplication |
 | composition roots | construction of concrete adapters and CLI wiring | — |
 
+The application `SymbolExtractionService` is the symbol-generation boundary. It receives one typed
+`SymbolExtractionRequest` for one or many roots, asks the hierarchy builder for one union closure
+with method-signature dependencies enabled, assigns each class to a resource or `shared/` using
+qualified identity and CU/DIE provenance, rewrites includes from that ownership map, and returns
+one `SymbolExtractionResult`. The composition root does not loop over roots as separate generation
+jobs. `SymbolPublisher` is the infrastructure boundary that infers the client-version
+directory, stages the complete version tree, records the source/list/producer/configuration
+identity in `symbols.manifest.json` when context generation is enabled, and atomically commits or
+rolls back the publication.
+
+There is one normal symbol path: a single root receives the same dependency closure and flat
+publication rules as a multi-root request. Readable `.asm` exports are an IDA-style
+semicolon-comment evidence view, while exact-byte `.s`/`.o` generation remains a separate opt-in
+assembler profile. `--no-generate-context` suppresses generation manifests and reports without
+changing the C++/assembly publication.
+
 ## Evidence authority
 
 The owning DWARF DIE is authoritative for producer facts. `DefinitionCandidate` selection resolves
@@ -36,6 +52,55 @@ while the canonical report stores only comparison summaries. `llvm-readobj` rema
 it has no triple option, and `llvm-tli-checker` is outside ELF extraction. SDK-derived definitions
 are typed and source-hash-bound; the official SDK source contains `PT_GNU_RELRO`, not
 `PT_SCE_RELRO`.
+
+The local CPU/ABI integration adds a versioned `OrbisToolchainContract` at the infrastructure
+boundary. SDK 12 is the promoted host-tool profile; SDK 8 is historical and explicit. The
+source-bound `orbis-bin` exports, compiler `.s`/`.o` probe manifests, object `e_flags`/section/CFI/
+`.sce_stack_sizes` metadata, and `llvm-mca` performance manifests are additive observations. A
+`SysmoduleId` loader constant is deliberately not a `NidBinding` dynamic identity, so the Sysmodule
+catalog cannot affect general NID resolution.
+
+## Optional validation feature boundary
+
+Strict implementation validation is an optional infrastructure feature exposed through
+`infrastructure/validation`. Its CLI, option wiring, compiler-probe entry point, and conversion of
+strict validation reports into artifact context enrichment are owned by that feature facade; the
+facade delegates to the dedicated strict evidence adapters that remain outside the generation
+path. The normal generation path depends only on the neutral `MethodContextPacket`,
+`ImplementationContextEnrichment`, and `ImplementationContextEnrichmentProvider` contracts; it
+does not import validation models or invoke validation policy. The publisher accepts enrichment
+only through the provider seam and behaves as before when no provider is supplied.
+
+This makes later removal a bounded change: remove the validation feature facade, its delegated
+strict evidence adapters and tests, and the one validation command registration; retain generic
+method context, artifact rendering, canonical Orbis evidence, and header generation. The
+serialized context keys remain stable while the feature is present, so this boundary is an
+ownership seam, not a wire-format migration.
+
+## C++ reconstruction analysis boundary
+
+The C++ reconstruction slice is an `Implemented` domain boundary. Pure control-flow policy,
+instruction effects, and operand interpretation live under
+`src/ddon_dwarf_reconstructor/domain/services/cpp_reconstruction/`; the published control-flow
+values live under `domain/models/cpp_reconstruction/`. The services preserve bounded paths,
+unsupported-instruction status, uncertainty, and diagnostic ordering. They do not parse tool
+output or construct processes. CFI acquisition and external instruction parsing remain
+infrastructure responsibilities in `implementation_dwarf_context.py` and the toolchain adapters.
+
+ABI handling follows the same split. `infrastructure/implementation_abi_facts.py` acquires typed
+DWARF evidence, while `domain/services/cpp_reconstruction/abi.py` classifies that evidence with
+the existing pointer, aggregate, qualifier, cycle, and incomplete-reference policies. This keeps
+the source-bound lookup contracts and failure statuses at the adapter boundary instead of
+duplicating them in pure analysis.
+
+Analytical method context is keyed by the compilation-unit and DIE offsets together. A
+`MethodContextRequest` carries the selected implementation and declaration CU provenance, and
+the Doris batch adapter uses `(unit_offset, die_offset)` for filters and hydrated maps. An
+unqualified offset that is ambiguous across CUs returns unavailable evidence. The behavior is
+`Verified` by the two-CU collision and candidate-provenance cases in
+`tests/infrastructure/analytical/test_doris_method_context.py` and by the root architecture and
+correctness gates. Full-corpus output parity and live Doris acceptance remain `Blocked` by the
+recorded serving-backend failure; this slice does not claim those results.
 
 ## Cross-cutting invariants
 
@@ -65,3 +130,15 @@ are typed and source-hash-bound; the official SDK source contains `PT_GNU_RELRO`
   unresolved operands, consumed profile failures, raw stdout/stderr, and source/file offsets.
   Known-invalid SDK profiles are capability-filtered and documented rather than retained as
   repeated runtime diagnostics.
+- The implementation-validation report schema is `4.4` and records toolchain-contract identity,
+  reusable external-tool observations, parsed `orbis-bin` evidence, compiler-generated assembly
+  descriptors, object metadata, and typed static-equivalence dispositions. The
+  implementation-discovery report remains schema `4.2`.
+- `llvm-mca` is an opt-in performance-model path for marked post-compile assembly. It cannot
+  promote compiler ABI, target-object parity, correctness, or semantic-equivalence status.
+- Orbis disassembly parsing is implemented as pure functions; profile execution is composed through
+  one executor that owns invocation, cache, timeout, and atomic retention. A shared Orbis evidence
+  projection constructs empty and populated reports without changing the flattened wire format.
+- Artifact I/O, content hashing, safe-relative-path checks, and atomic text publication are shared
+  infrastructure contracts. The external `disassembly-regression/1` builder owns strict inventory
+  and normalization, while generation and validation retain their separate evidence gates.

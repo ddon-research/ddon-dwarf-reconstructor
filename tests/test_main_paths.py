@@ -8,7 +8,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from ddon_dwarf_reconstructor.application.generators import HeaderBundle
+from ddon_dwarf_reconstructor.application.generation.logging_workflow import generation_mode
 from ddon_dwarf_reconstructor.domain.models.implementation_evidence import (
     ImplementationDiscoveryReport,
     ImplementationStatus,
@@ -26,6 +26,7 @@ def _options(**overrides: object) -> GenerationOptions:
         "symbols_file": None,
         "output": None,
         "verbose": False,
+        "generate_context": True,
         "full_hierarchy": False,
         "single_file": False,
         "exhaustive": False,
@@ -41,12 +42,11 @@ def _options(**overrides: object) -> GenerationOptions:
 
 
 @pytest.mark.unit
-def test_generation_mode_reports_single_and_multi_file_modes() -> None:
-    assert cli_main._generation_mode(_options()) == "single-header"
-    assert cli_main._generation_mode(_options(full_hierarchy=True, single_file=True)).startswith(
-        "full-hierarchy (single-file"
-    )
-    assert cli_main._generation_mode(_options(full_hierarchy=True)).endswith("multi-file)")
+def test_generation_mode_uses_one_symbol_set_mode_for_every_generate_request() -> None:
+    assert generation_mode(_options()) == "symbol-set"
+    assert generation_mode(_options(symbols=("A", "B"))) == "symbol-set"
+    assert generation_mode(_options(symbols=(), symbols_file=Path("symbols.txt"))) == ("symbol-set")
+    assert generation_mode(_options(full_hierarchy=True)) == "symbol-set"
 
 
 @pytest.mark.unit
@@ -55,6 +55,26 @@ def test_source_emission_requires_assembly_extraction() -> None:
         cli_main._validate_implementation_options(
             _options(emit_implementation_sources=True, extract_assembly=False)
         )
+
+
+@pytest.mark.unit
+def test_single_file_is_rejected_for_symbol_generation() -> None:
+    with pytest.raises(ValueError, match="not supported"):
+        cli_main._validate_implementation_options(_options(single_file=True))
+
+
+@pytest.mark.unit
+def test_symbol_generation_defaults_to_generated_output_root(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = Mock(output_dir=Path("output"))
+    monkeypatch.delenv("OUTPUT_DIR", raising=False)
+    monkeypatch.setattr(cli_main.Config, "from_args", Mock(return_value=config))
+
+    loaded = cli_main._load_config(_options())
+
+    assert loaded.output_dir == Path("generated")
+    config.validate.assert_called_once_with()
 
 
 @pytest.mark.unit
@@ -126,31 +146,14 @@ def test_read_symbols_reports_missing_files(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
-def test_build_headers_uses_typed_bundle_for_all_modes() -> None:
-    generator = Mock()
-    generator.generate_bundle.side_effect = [
-        HeaderBundle.single("A", "single"),
-        HeaderBundle.single("A", "complete"),
-        HeaderBundle({"A.h": "multi", "B.h": "more"}),
-    ]
-
-    assert cli_main._build_headers(_options(), generator, "A") == {"A.h": "single"}
-    assert cli_main._build_headers(
-        _options(full_hierarchy=True, single_file=True), generator, "A"
-    ) == {"A.h": "complete"}
-    assert cli_main._build_headers(_options(full_hierarchy=True), generator, "A") == {
-        "A.h": "multi",
-        "B.h": "more",
-    }
-
-
-@pytest.mark.unit
 def test_write_headers_uses_platform_directory_and_logs_success(tmp_path: Path) -> None:
-    config = Mock(output_dir=tmp_path)
-    generator = Mock(platform=ELFPlatform.PS4)
-    logger = Mock()
+    from ddon_dwarf_reconstructor.infrastructure.header_output import AtomicHeaderPublisher
 
-    total = cli_main._write_headers(config, generator, {"A.h": "abc", "B.h": "de"}, logger)
+    platform_dir, total = AtomicHeaderPublisher().publish(
+        tmp_path,
+        ELFPlatform.PS4,
+        {"A.h": "abc", "B.h": "de"},
+    )
 
     assert total == 5
     assert (tmp_path / "ps4" / "A.h").read_text(encoding="utf-8") == "abc"
@@ -221,22 +224,23 @@ def test_header_publisher_persists_generation_metadata(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
-def test_process_symbol_saves_cache_after_header_output(tmp_path: Path) -> None:
-    options = _options()
-    config = Mock(output_dir=tmp_path, verbose=False)
-    generator = Mock(platform=ELFPlatform.PS4)
-    generator.generate_bundle.return_value = HeaderBundle.single("A", "header")
-    generator.save_cache = Mock()
-    logger = Mock()
+def test_header_publisher_can_emit_clean_headers_without_context(tmp_path: Path) -> None:
+    from ddon_dwarf_reconstructor.infrastructure.header_output import AtomicHeaderPublisher
 
-    cli_main._process_symbol(options, config, generator, "A", ["A"], logger)
+    AtomicHeaderPublisher().publish(
+        tmp_path,
+        ELFPlatform.PS4,
+        {"A.h": "a"},
+        generate_context=False,
+    )
 
-    assert (tmp_path / "ps4" / "A.h").exists()
-    generator.save_cache.assert_called_once_with()
+    platform_dir = tmp_path / "ps4"
+    assert tuple(platform_dir.glob("*.json")) == ()
+    assert (platform_dir / "A.h").read_text(encoding="utf-8") == "a"
 
 
 @pytest.mark.unit
-def test_run_generation_publishes_one_bundle_for_all_symbols(tmp_path: Path, mocker) -> None:
+def test_run_generation_uses_one_symbol_set_request_for_all_symbols(tmp_path: Path, mocker) -> None:
     config = Mock(
         output_dir=tmp_path,
         elf_file_path=Path("input.elf"),
@@ -244,7 +248,6 @@ def test_run_generation_publishes_one_bundle_for_all_symbols(tmp_path: Path, moc
     )
     generator = mocker.MagicMock(platform=ELFPlatform.PS4)
     generator.__enter__.return_value = generator
-    generator.save_cache = Mock()
     mocker.patch.object(
         cli_main.DwarfRuntimeConfig,
         "from_environment",
@@ -253,12 +256,7 @@ def test_run_generation_publishes_one_bundle_for_all_symbols(tmp_path: Path, moc
     mocker.patch.object(cli_main, "SourceIdentityCatalog", return_value=Mock(sha256=Mock()))
     mocker.patch.object(cli_main, "get_cache_file_path", return_value=tmp_path / "cache.json")
     mocker.patch.object(cli_main, "DwarfGenerator", return_value=generator)
-    mocker.patch.object(
-        cli_main,
-        "_build_headers",
-        side_effect=[{"A.h": "a"}, {"B.h": "bb"}],
-    )
-    publisher = mocker.patch.object(cli_main, "_write_headers", return_value=3)
+    symbol_runner = mocker.patch.object(cli_main, "_run_symbol_generation", return_value=(2, []))
     logger = Mock()
 
     success, failures = cli_main._run_generation(
@@ -267,77 +265,141 @@ def test_run_generation_publishes_one_bundle_for_all_symbols(tmp_path: Path, moc
 
     assert success == 2
     assert failures == []
-    publisher.assert_called_once_with(
-        config,
-        generator,
-        {"A.h": "a", "B.h": "bb"},
-        mocker.ANY,
-        metadata=mocker.ANY,
-    )
-    report_calls = [
-        call for call in logger.log.call_args_list if call.args[1] == "generation_report"
-    ]
-    assert len(report_calls) == 1
-    fields = report_calls[0].kwargs["extra"]["ddon_fields"]
-    assert fields["published"] is True
-    assert fields["outcomes"] == [
-        {"symbol": "A", "status": "success", "headers": ["A.h"]},
-        {"symbol": "B", "status": "success", "headers": ["B.h"]},
-    ]
+    symbol_runner.assert_called_once()
 
 
 @pytest.mark.unit
-def test_assembly_follow_up_runs_after_header_build_without_changing_header_publish(
+def test_symbol_generation_discovers_assembly_once_after_one_union(tmp_path: Path, mocker) -> None:
+    config = Mock(output_dir=tmp_path, elf_file_path=Path("input.elf"), verbose=False)
+    generator = mocker.MagicMock(platform=ELFPlatform.PS4)
+    symbol_set = Mock(
+        header_classes={"A/A.h": ("A",)},
+        class_origins={"A": ("A",)},
+        root_statuses={"A": "success"},
+        header_count=1,
+        class_count=1,
+    )
+    report = ImplementationDiscoveryReport(
+        "symbols",
+        "header-sha",
+        ImplementationStatus.NOT_OBSERVED,
+        (),
+    )
+    generator.extract_symbols.return_value = symbol_set
+    generator.discover_implementations_for_symbols.return_value = report
+    identity_catalog = Mock(sha256=Mock(return_value="elf-sha"))
+    publisher = mocker.patch.object(cli_main, "SymbolPublisher")
+    publisher.return_value.publish.return_value = tmp_path / "ps4-unknown"
+
+    success, failures = cli_main._run_symbol_generation(
+        _options(symbols=("A",), extract_assembly=True),
+        config,
+        generator,
+        ["A"],
+        Mock(),
+        identity_catalog,
+    )
+
+    assert (success, failures) == (1, [])
+    generator.extract_symbols.assert_called_once()
+    generator.discover_implementations_for_symbols.assert_called_once_with(
+        ("A",), symbol_set, orbis_objdump_path=None
+    )
+    assert publisher.return_value.publish.call_count == 2
+    header_call, implementation_call = publisher.return_value.publish.call_args_list
+    assert header_call.args[5] is None
+    assert header_call.kwargs == {
+        "emit_assembly": False,
+        "emit_sources": False,
+        "generate_context": True,
+    }
+    assert implementation_call.args[5] is report
+    assert implementation_call.kwargs == {
+        "emit_assembly": True,
+        "emit_sources": False,
+        "generate_context": True,
+    }
+
+
+@pytest.mark.unit
+@pytest.mark.regression
+def test_symbol_generation_propagates_partial_root_status(tmp_path: Path, mocker) -> None:
+    config = Mock(output_dir=tmp_path, elf_file_path=Path("input.elf"), verbose=False)
+    generator = mocker.MagicMock(platform=ELFPlatform.PS4)
+    symbol_set = Mock(
+        header_classes={"shared.h": ("A", "B")},
+        class_origins={"A": ("A",), "B": ("B",)},
+        root_statuses={"A": "success", "B": "partial"},
+        header_count=1,
+        class_count=2,
+    )
+    generator.extract_symbols.return_value = symbol_set
+    identity_catalog = Mock(sha256=Mock(return_value="elf-sha"))
+    mocker.patch.object(cli_main, "SymbolPublisher").return_value.publish.return_value = (
+        tmp_path / "ps4-unknown"
+    )
+    logged = mocker.patch.object(cli_main, "log_event")
+
+    success, failures = cli_main._run_symbol_generation(
+        _options(symbols=("A", "B")),
+        config,
+        generator,
+        ["A", "B"],
+        Mock(),
+        identity_catalog,
+    )
+
+    assert success == 1
+    assert failures == [("B", "generation status is partial")]
+    report = next(
+        call.kwargs["fields"] for call in logged.call_args_list if "fields" in call.kwargs
+    )
+    assert [outcome["status"] for outcome in report["outcomes"]] == ["success", "partial"]
+
+
+@pytest.mark.unit
+@pytest.mark.regression
+def test_symbol_generation_publishes_headers_before_assembly_discovery(
     tmp_path: Path, mocker
 ) -> None:
     config = Mock(output_dir=tmp_path, elf_file_path=Path("input.elf"), verbose=False)
     generator = mocker.MagicMock(platform=ELFPlatform.PS4)
-    generator.__enter__.return_value = generator
-    report = ImplementationDiscoveryReport(
-        "A",
-        HeaderBundle.single("A", "header").sha256,
-        ImplementationStatus.NOT_OBSERVED,
-        (),
+    symbol_set = Mock(
+        header_classes={"A/A.h": ("A",)},
+        class_origins={"A": ("A",)},
+        root_statuses={"A": "success"},
+        header_count=1,
+        class_count=1,
     )
-    events: list[str] = []
-    mocker.patch.object(
-        cli_main.DwarfRuntimeConfig,
-        "from_environment",
-        return_value=Mock(die_cache_size=1, type_cache_size=1, search_timeout_seconds=1.0),
-    )
-    mocker.patch.object(cli_main, "SourceIdentityCatalog", return_value=Mock(sha256=Mock()))
-    mocker.patch.object(cli_main, "get_cache_file_path", return_value=tmp_path / "cache.json")
-    mocker.patch.object(cli_main, "DwarfGenerator", return_value=generator)
-    mocker.patch.object(
-        cli_main,
-        "_build_headers",
-        side_effect=lambda *_args: events.append("header-build") or {"A.h": "header"},
-    )
-    generator.discover_implementations.side_effect = lambda *args, **kwargs: (
-        events.append("implementation-discovery") or report
-    )
-    mocker.patch.object(
-        cli_main,
-        "_write_headers",
-        side_effect=lambda *_args, **_kwargs: events.append("header-publish") or 6,
-    )
-    mocker.patch.object(cli_main, "_publish_implementation_reports")
+    generator.extract_symbols.return_value = symbol_set
+    identity_catalog = Mock(sha256=Mock(return_value="elf-sha"))
+    publish = mocker.patch.object(cli_main, "SymbolPublisher").return_value.publish
+    publish.return_value = tmp_path / "ps4-unknown"
 
-    success, failures = cli_main._run_generation(
-        _options(symbols=("A",), extract_assembly=True), config, ["A"], Mock()
-    )
+    def fail_discovery(*_args, **_kwargs):
+        assert publish.call_count == 1
+        raise RuntimeError("disassembly failed")
 
-    assert (success, failures) == (1, [])
-    assert events == ["header-build", "header-publish", "implementation-discovery"]
-    generator.discover_implementations.assert_called_once_with(
-        "A", HeaderBundle({"A.h": "header"}), orbis_objdump_path=None
-    )
+    generator.discover_implementations_for_symbols.side_effect = fail_discovery
+
+    with pytest.raises(RuntimeError, match="disassembly failed"):
+        cli_main._run_symbol_generation(
+            _options(symbols=("A",), extract_assembly=True),
+            config,
+            generator,
+            ["A"],
+            Mock(),
+            identity_catalog,
+        )
+
+    assert publish.call_count == 1
+    assert publish.call_args.args[5] is None
+    assert publish.call_args.kwargs["emit_assembly"] is False
+    assert publish.call_args.kwargs["emit_sources"] is False
 
 
 @pytest.mark.unit
-def test_run_generation_publishes_separate_bundles_for_full_hierarchy_roots(
-    tmp_path: Path, mocker
-) -> None:
+def test_run_generation_does_not_publish_separate_root_bundles(tmp_path: Path, mocker) -> None:
     config = Mock(
         output_dir=tmp_path,
         elf_file_path=Path("input.elf"),
@@ -345,7 +407,6 @@ def test_run_generation_publishes_separate_bundles_for_full_hierarchy_roots(
     )
     generator = mocker.MagicMock(platform=ELFPlatform.PS4)
     generator.__enter__.return_value = generator
-    generator.save_cache = Mock()
     mocker.patch.object(
         cli_main.DwarfRuntimeConfig,
         "from_environment",
@@ -354,15 +415,7 @@ def test_run_generation_publishes_separate_bundles_for_full_hierarchy_roots(
     mocker.patch.object(cli_main, "SourceIdentityCatalog", return_value=Mock(sha256=Mock()))
     mocker.patch.object(cli_main, "get_cache_file_path", return_value=tmp_path / "cache.json")
     mocker.patch.object(cli_main, "DwarfGenerator", return_value=generator)
-    mocker.patch.object(
-        cli_main,
-        "_build_headers",
-        side_effect=[
-            {"MtAllocator.h": "root A context"},
-            {"MtAllocator.h": "root B context"},
-        ],
-    )
-    publisher = mocker.patch.object(cli_main, "_write_headers", return_value=3)
+    symbol_runner = mocker.patch.object(cli_main, "_run_symbol_generation", return_value=(2, []))
     logger = Mock()
 
     success, failures = cli_main._run_generation(
@@ -374,16 +427,4 @@ def test_run_generation_publishes_separate_bundles_for_full_hierarchy_roots(
 
     assert success == 2
     assert failures == []
-    assert publisher.call_count == 2
-    assert publisher.call_args_list[0].kwargs["output_dir"] == (
-        tmp_path / "symbols" / "0001-rAIFSM"
-    )
-    assert publisher.call_args_list[1].kwargs["output_dir"] == tmp_path / "symbols" / "0002-rZone"
-    assert publisher.call_args_list[0].args[2] == {"MtAllocator.h": "root A context"}
-    assert publisher.call_args_list[1].args[2] == {"MtAllocator.h": "root B context"}
-    report_calls = [
-        call for call in logger.log.call_args_list if call.args[1] == "generation_report"
-    ]
-    assert len(report_calls) == 1
-    fields = report_calls[0].kwargs["extra"]["ddon_fields"]
-    assert fields["published"] is True
+    symbol_runner.assert_called_once()

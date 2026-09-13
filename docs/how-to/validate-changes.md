@@ -16,6 +16,12 @@ uv run just test
 Markdownlint, Mermaid CLI validation, and the strict documentation build. `test` includes
 deterministic integration tests but excludes performance, packaging, and real-asset qualifiers.
 
+For a cross-module refactoring, retain the active Spec Kit feature's source-bound working-state
+receipt with the command results. The current architecture feature records a 590-file receipt at
+`output/refactoring-evidence/021/1b10b75e751c97b1/implemented-findings-working-state.json`; its
+identity changes when an inventoried production, test, or effective configuration file changes.
+The receipt is an evidence identity, not a replacement for generated-output comparison.
+
 For the explicit profiling slice, use the same source of truth:
 
 ```powershell
@@ -50,6 +56,40 @@ uv run --directory tools/dwarf_spec_pipeline just test-official
 uv run --directory tools/dwarf_spec_pipeline just check
 ```
 
+The coverage gate rejects required groups with no executable statements. When a module moves,
+update the selectors in `tests/support/quality/check_coverage.py`; an empty group is a failed
+check, not 100% coverage. Publication helpers, symbol publication, bounded tool execution, and
+analytical session ownership are included in the corresponding high-risk groups.
+The `cpp_reconstruction` group covers the moved instruction and control-flow services and
+requires the same 80% line and 70% branch coverage as the other high-risk groups.
+
+Source-bound parser caches and tool-process evidence are part of the deterministic checks. The
+`TypeChainTraverser` cache is created per `ClassParser` session, and failure-path tests verify
+that a drained subprocess cannot be reported as successful evidence. Analytical load tests also
+verify that one validated manifest identity is reused for all labels in a load invocation; they
+do not replace live Doris publication or duplicate-label acceptance.
+
+The architecture quality tests scan inner-layer call expressions for legacy unbounded process APIs
+(`os.system`, `os.popen`, and `subprocess.call`/`check_call`/`check_output`) in addition to import
+direction rules. The test includes a deliberate violation fixture so an empty selector or a
+never-matching AST rule cannot pass silently.
+
+The same architecture suite checks workflow action provenance. External GitHub Action references
+must use a full commit SHA and a human-readable release comment; repository-local action paths are
+valid. A passing local check proves the checked-in files satisfy that convention, not that remote
+repository settings are enabled. Keep remote settings and Dependabot evidence in the feature
+record rather than inferring them from YAML.
+
+Implementation-tool validation uses the shared bounded runner. Version, assembler, linker,
+objdump, readelf, and ABI-probe calls share finite timeout metadata and bounded stdout/stderr
+capture. A timeout, stream-drain failure, or truncated stream is incomplete evidence and must
+remain visible in the result diagnostics. Executable identity observations may be reused only
+inside one toolchain run/profile; do not add a process-global tool cache when changing a caller.
+
+DWARF search budgets and Doris timeout/wait configuration reject NaN and infinite values at
+construction, including values loaded from the environment. Use finite durations; the existing
+zero value for `DDON_DORIS_ANALYZE_WAIT_SECONDS` remains valid and disables waiting.
+
 Run package recipes when distribution behavior changed. Run the nested project from its own
 boundary; it has an independent lockfile and dependency contract.
 
@@ -65,6 +105,12 @@ Real PS4/PS3 assets, MSVC, Orbis, and performance runs are acceptance evidence o
 explicit local path and the cold/warm state are recorded in the relevant Spec Kit artifact.
 Their absence does not invalidate deterministic fixture or integration evidence, but it must not
 be hidden behind a green default test command.
+
+For the current architecture refactoring, full-corpus headers, assembly/object parity, compiler
+acceptance, and the 110% per-workload performance bound remain `Blocked` until Doris BE and the
+named external toolchain prerequisites are restored. The deterministic gates above remain useful
+`Verified` evidence for the changed slice and must be reported separately from those external
+acceptance surfaces.
 
 ## Documentation-only changes
 

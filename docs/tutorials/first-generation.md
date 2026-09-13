@@ -42,23 +42,37 @@ uv run ddon-dwarf-reconstructor generate `
   --output output/first-generation
 ```
 
-The application opens one `ElfDwarfSession`, resolves the requested definition through the
-domain ports, and publishes generated headers atomically with a byte/size/SHA-256 manifest.
+The application opens one `ElfDwarfSession`, resolves the requested symbol and its complete
+dependency closure through the domain ports, and publishes a flat versioned directory. Context
+generation is enabled by default, so the manifest is available for development inspection.
 
 ## 5. Check the result
 
 ```powershell
 Get-ChildItem output/first-generation -Recurse
-Get-Content output/first-generation/header-bundle.manifest.json
+Get-Content output/first-generation/ps4-unknown/symbols.manifest.json
 ```
 
 Treat the manifest as the stable handoff artifact. If evidence is incomplete, the result must
 remain visibly incomplete; do not fill missing offsets, methods, or types with guesses.
 
-For the full season-two list, use `--symbols-file resources/season2-resources.txt` with
-`--full-hierarchy`. Multiple roots publish separate, atomically replaced bundles under the
-`symbols/` subdirectory, so same-named headers cannot silently overwrite one another. Check each
-bundle manifest and the generation report before claiming corpus completion.
+For the full season-two list, use `--symbols-file resources/season2-resources.txt`. The same
+symbol workflow performs one union traversal for the list and one atomic publication under
+`generated/ps4-<client-version>/` (or the explicit `--output` root):
+
+```text
+generated/ps4-<client-version>/
+  symbols.manifest.json      # with the development default --generate-context
+  shared/<dependency>.h
+  <resource-class>/<resource>.h
+  <resource-class>/<owner>-<method>-<stable-hash>.asm
+```
+
+The manifest is the symbol-set handoff: check its input-list/source identity, ownership, hashes,
+per-root statuses, and unresolved/conflict diagnostics. A single `--symbol` uses the same flat
+layout. Use `--no-generate-context` for a clean headers/assembly-only handoff; it omits all
+generation-context JSON. No `symbols/`, `implementations/`, or `methods/<id>/` directories are
+created.
 
 ## 6. Continue from here
 

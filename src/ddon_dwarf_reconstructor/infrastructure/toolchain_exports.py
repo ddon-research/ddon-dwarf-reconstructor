@@ -250,28 +250,56 @@ def load_tool_exports(
     source_identity = catalog.identify(source_path)
     exports: list[ToolExport] = []
     seen_keys: set[str] = set()
+    seen_profiles: set[str] = set()
     for manifest_path in manifest_paths:
-        path = manifest_path.resolve()
-        try:
-            value = json.loads(path.read_text(encoding="utf-8"))
-            export = ToolExport.from_dict(value, manifest_name=path.name).require_complete()
-        except (OSError, TypeError, ValueError, json.JSONDecodeError) as error:
-            raise ValueError(f"Invalid tool export manifest: {path}") from error
-        if export.artifact_key in seen_keys:
-            raise ValueError(f"Duplicate tool export artifact key: {export.artifact_key}")
-        if export.source_sha256 != source_identity.sha256:
-            raise ValueError(f"Tool export source does not match {source_path}: {path}")
-        if export.source_size != source_identity.size:
-            raise ValueError(f"Tool export source size does not match {source_path}: {path}")
-        if export.artifact_key != _artifact_key_from_export(export):
-            raise ValueError(f"Tool export artifact key does not match its manifest: {path}")
-        if export.output is None:
-            raise ValueError(f"Tool export has no output: {path}")
-        output_path = _safe_output_path(path.parent, export.output.path)
-        _validate_output(output_path, export.output)
-        seen_keys.add(export.artifact_key)
-        exports.append(export)
+        exports.append(
+            _load_export_manifest(
+                manifest_path, source_path, source_identity, seen_keys, seen_profiles
+            )
+        )
     return tuple(sorted(exports, key=lambda item: item.artifact_key))
+
+
+def _load_export_manifest(
+    manifest_path: Path,
+    source_path: Path,
+    source_identity: SourceIdentity,
+    seen_keys: set[str],
+    seen_profiles: set[str],
+) -> ToolExport:
+    path = manifest_path.resolve()
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+        export = ToolExport.from_dict(value, manifest_name=path.name).require_complete()
+    except (OSError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise ValueError(f"Invalid tool export manifest: {path}") from error
+    _validate_export_identity(export, path, source_path, source_identity, seen_keys, seen_profiles)
+    if export.output is None:
+        raise ValueError(f"Tool export has no output: {path}")
+    _validate_output(_safe_output_path(path.parent, export.output.path), export.output)
+    seen_keys.add(export.artifact_key)
+    seen_profiles.add(export.profile)
+    return export
+
+
+def _validate_export_identity(
+    export: ToolExport,
+    path: Path,
+    source_path: Path,
+    source_identity: SourceIdentity,
+    seen_keys: set[str],
+    seen_profiles: set[str],
+) -> None:
+    if export.artifact_key in seen_keys:
+        raise ValueError(f"Duplicate tool export artifact key: {export.artifact_key}")
+    if export.profile in seen_profiles:
+        raise ValueError(f"Duplicate tool export profile: {export.profile}")
+    if export.source_sha256 != source_identity.sha256:
+        raise ValueError(f"Tool export source does not match {source_path}: {path}")
+    if export.source_size != source_identity.size:
+        raise ValueError(f"Tool export source size does not match {source_path}: {path}")
+    if export.artifact_key != _artifact_key_from_export(export):
+        raise ValueError(f"Tool export artifact key does not match its manifest: {path}")
 
 
 def _artifact_key_from_export(export: ToolExport) -> str:

@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-__all__ = ["ClassParser", "TYPE_BLACKLIST", "TypeChainTraverser"]
+__all__ = ["TYPE_BLACKLIST", "ClassParser", "TypeChainTraverser"]
 
 
 class ClassParser(
@@ -82,9 +82,16 @@ class ClassParser(
         self.dump_parser = dump_parser
         self.timed_out_symbols: set[str] = set()  # Track symbols that timed out
         self._class_info_cache: dict[tuple[int, int], ClassInfo] = {}
+        self._found_class_cache: dict[
+            tuple[str, bool | None], tuple[DwarfCompilationUnit, DwarfEntry] | None
+        ] = {}
+        self._die_and_cu_offset_cache: dict[
+            int, tuple[DwarfCompilationUnit, DwarfEntry] | None
+        ] = {}
         self._implementation_cache: dict[
             int, tuple[DwarfCompilationUnit, DwarfEntry] | None
         ] = {}  # Cache for method implementations
+        self.type_chain_traverser = TypeChainTraverser()
         self._dump_lookup_authoritative_miss = False
         self._dump_lookup_unavailable = False
 

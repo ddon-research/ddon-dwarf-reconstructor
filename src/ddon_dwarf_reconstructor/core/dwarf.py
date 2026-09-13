@@ -12,7 +12,6 @@ from typing import Any, Protocol
 
 # These names intentionally mirror the pyelftools protocol surface so that
 # adapters can satisfy the contracts without leaking the dependency inward.
-# ruff: noqa: N802
 
 
 class DwarfAttribute(Protocol):
@@ -25,11 +24,11 @@ class DwarfAttribute(Protocol):
 class DwarfInfo(Protocol):
     """Debug-information source operations used by the core."""
 
-    def iter_CUs(self) -> Any: ...
+    def iter_CUs(self) -> Any: ...  # noqa: N802
 
-    def get_DIE_from_refaddr(self, refaddr: int, cu: Any = None) -> Any: ...
+    def get_DIE_from_refaddr(self, refaddr: int, cu: Any = None) -> Any: ...  # noqa: N802
 
-    def line_program_for_CU(self, CU: Any) -> Any:  # noqa: N803
+    def line_program_for_CU(self, CU: Any) -> Any:  # noqa: N802, N803
         ...
 
 
@@ -40,9 +39,9 @@ class DwarfCompilationUnit(Protocol):
     header: Mapping[str, Any]
     dwarfinfo: DwarfInfo
 
-    def iter_DIEs(self) -> Any: ...
+    def iter_DIEs(self) -> Any: ...  # noqa: N802
 
-    def get_top_DIE(self) -> Any: ...
+    def get_top_DIE(self) -> Any: ...  # noqa: N802
 
     def __getitem__(self, key: str) -> Any: ...
 
@@ -81,7 +80,7 @@ class DwarfEntry(Protocol):
 
     def __getitem__(self, attribute_name: str) -> Any: ...
 
-    def get_DIE_from_attribute(self, attribute_name: str) -> Any: ...
+    def get_DIE_from_attribute(self, attribute_name: str) -> Any: ...  # noqa: N802
 
     def get_full_path(self) -> str: ...
 

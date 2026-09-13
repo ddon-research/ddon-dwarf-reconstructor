@@ -12,6 +12,7 @@ from ..domain.models.disassembly import (
     OrbisTargetedDisassemblyCrossCheck,
     OrbisToolInvocation,
 )
+from .orbis_objdump_parsing import parse_instructions
 from .orbis_objdump_profiles import (
     LLVM_TARGET_CAPABILITY_FLAGS,
     LLVM_TARGET_DISASSEMBLY_FLAGS,
@@ -85,7 +86,7 @@ def _run_capability_probe(
     context: _ProductionContext,
     invocations: list[OrbisToolInvocation],
 ):
-    return producer._run_profile(
+    return producer._profile_executor.run_profile(
         context,
         "llvm-objdump-capability",
         ["--help"],
@@ -158,7 +159,7 @@ def _run_targeted_slice(
     instructions: dict[int, OrbisInstruction],
     invocations: list[OrbisToolInvocation],
 ) -> _TargetedSliceEvidence:
-    result = producer._run_profile(
+    result = producer._profile_executor.run_profile(
         context,
         LLVM_TARGET_PROFILE,
         _targeted_arguments(context, symbol),
@@ -181,7 +182,7 @@ def _run_targeted_slice(
             cache_key=cache_key,
             diagnostics=result.diagnostics,
         )
-    target_instructions = producer.parse_instructions(result.stdout)
+    target_instructions = parse_instructions(result.stdout)
     expected, actual = _instruction_maps(symbol, instructions, target_instructions)
     matched = _matched_instruction_count(expected, actual)
     diagnostics = _slice_diagnostics(result.diagnostics, symbol, target_instructions)

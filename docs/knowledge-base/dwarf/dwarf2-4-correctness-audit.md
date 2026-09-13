@@ -58,10 +58,11 @@ The audit repaired these concrete issues:
 Header discovery and implementation discovery are now separate chains. A normal header run keeps
 the existing `HeaderBundle` contract and does not invoke an assembly producer. An opt-in
 `generate --extract-assembly` run first commits the header bundle and then performs a second,
-additive traversal for the same root. `--emit-implementation-sources` is a stricter opt-in that
-requires assembly extraction. The report and, when eligible, the source bundle are written below
-`<output>/<platform>/implementations/`; they are not merged into the header files or header
-manifest.
+additive traversal. All symbol requests perform one union discovery and write
+`implementation-report.json` plus flat resource/shared `.asm` files below
+`generated/ps4-<client-version>/` (or the explicit output root) when context generation is
+enabled. These assembly artifacts are not
+merged into header contents or used to promote header completeness.
 
 The follow-up retains method DIE and CU offsets, containing-class identity, linkage names, and the
 declaration-to-definition relation. It returns all source-bound `DW_AT_specification` and
@@ -75,7 +76,8 @@ explicit report states.
 This is assembly/disassembly evidence, not recovered C++ source or proof of inline-assembly
 semantics. A method with no standalone executable range, an unresolved range base, an unavailable
 Orbis executable, or competing definitions remains unobserved/unsupported rather than being
-assigned a plausible body. Only unique matches receive non-executable `.cpp` scaffolds. The
+assigned a plausible body. Only unique matches receive readable evidence and, under the explicit
+source-emission profile, exact-byte `.s`/`.o` artifacts; this pipeline does not emit `.cpp` files. The
 read-only validator separately evaluates explicit address policy, relocation/NID evidence,
 DWARF ABI/CFI context, instruction effects, Orbis target objects, and static parity. The
 canonical JSON report retains raw method text, decoded bytes, references, hashes, and explicit

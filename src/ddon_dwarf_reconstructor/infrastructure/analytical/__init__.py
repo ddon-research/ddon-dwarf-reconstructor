@@ -15,8 +15,8 @@ from .session import AnalyticalDwarfSession
 
 __all__ = [
     "AnalyticalDwarfSession",
-    "DorisDwarfIndex",
     "DorisConnectionError",
+    "DorisDwarfIndex",
     "DorisDwarfStore",
     "DwarfMaterializer",
     "JsonlDwarfStore",

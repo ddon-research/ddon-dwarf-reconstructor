@@ -26,6 +26,7 @@ def log_generation_options(
         input_path=input_path,
         output_path=output_path,
         generation_mode=generation_mode(options),
+        generate_context=options.generate_context,
         search_mode="exhaustive" if options.exhaustive else "fast (early-exit)",
         parameter_name_resolution=options.resolve_param_names,
         dwarf_dump=options.dwarf_dump,
@@ -45,6 +46,8 @@ def log_generation_options(
 
 
 def generation_mode(options: GenerationOptions) -> str:
+    if not options.export_knowledge:
+        return "symbol-set"
     if not options.full_hierarchy:
         return "single-header"
     return "full-hierarchy (single-file)" if options.single_file else "full-hierarchy (multi-file)"

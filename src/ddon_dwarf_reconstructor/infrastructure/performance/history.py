@@ -511,4 +511,4 @@ def _latest_baselines(rows: tuple[HistoryRow, ...]) -> tuple[HistoryRow, ...]:
     )
 
 
-__all__ = ["HistoryRow", "HistoryStore", "SCHEMA_VERSION"]
+__all__ = ["SCHEMA_VERSION", "HistoryRow", "HistoryStore"]

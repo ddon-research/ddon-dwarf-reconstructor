@@ -27,39 +27,16 @@ from ...domain.models.performance import (
 from ..artifacts import SourceIdentityCatalog
 from ..logging import get_logger, log_event
 from .paths import atomic_write_text, git_metadata, machine_profile, sha256_file
+from .process_accounting import (
+    ProcessSnapshot,
+    ProcessTotals,
+    _ProcessAccounting,
+    snapshot_process_tree,
+)
 from .runtime import current_runtime
 
 logger = get_logger(__name__)
 MAX_CAPTURE_BYTES = 1024 * 1024
-
-
-@dataclass(frozen=True, slots=True)
-class ProcessSnapshot:
-    """Aggregated process-tree counters at one sampling point."""
-
-    observed_at: float
-    cpu_user_seconds: float
-    cpu_system_seconds: float
-    rss_bytes: int
-    vms_bytes: int
-    read_bytes: int | None
-    write_bytes: int | None
-    read_count: int | None
-    write_count: int | None
-
-    def to_dict(self) -> dict[str, int | float | None]:
-        """Return one bounded JSONL sample."""
-        return {
-            "observed_at": self.observed_at,
-            "cpu_user_seconds": self.cpu_user_seconds,
-            "cpu_system_seconds": self.cpu_system_seconds,
-            "rss_bytes": self.rss_bytes,
-            "vms_bytes": self.vms_bytes,
-            "read_bytes": self.read_bytes,
-            "write_bytes": self.write_bytes,
-            "read_count": self.read_count,
-            "write_count": self.write_count,
-        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,6 +52,7 @@ class ProcessExecution:
     stdout_truncated: bool
     stderr_truncated: bool
     elapsed_seconds: float
+    process_totals: ProcessTotals | None = None
 
 
 class _BoundedCapture:
@@ -165,6 +143,7 @@ class PerformanceRunner:
             execution.timed_out,
             execution.stdout_truncated,
             execution.stderr_truncated,
+            execution.process_totals,
         )
         summary = self._build_summary(
             run_id,
@@ -256,7 +235,9 @@ class PerformanceRunner:
         stdout_capture = _BoundedCapture(process.stdout)
         stderr_capture = _BoundedCapture(process.stderr)
         readers = self._start_readers(stdout_capture, stderr_capture)
-        samples, timed_out, diagnostics = self._sample_until_exit(process, workload.timeout_seconds)
+        samples, timed_out, diagnostics, process_totals = self._sample_until_exit(
+            process, workload.timeout_seconds
+        )
         return_code = process.poll()
         process.wait()
         for reader in readers:
@@ -273,6 +254,7 @@ class PerformanceRunner:
             stdout_truncated=stdout_capture.truncated,
             stderr_truncated=stderr_capture.truncated,
             elapsed_seconds=max(0.0, monotonic() - started),
+            process_totals=process_totals,
         )
 
     @staticmethod
@@ -339,13 +321,14 @@ class PerformanceRunner:
 
     def _sample_until_exit(
         self, process: subprocess.Popen[str], timeout_seconds: float
-    ) -> tuple[list[ProcessSnapshot], bool, list[str]]:
+    ) -> tuple[list[ProcessSnapshot], bool, list[str], ProcessTotals]:
         samples: list[ProcessSnapshot] = []
         diagnostics: list[str] = []
+        accounting = _ProcessAccounting()
         started = monotonic()
         timed_out = False
         while process.poll() is None:
-            snapshot = _snapshot(process.pid)
+            snapshot = snapshot_process_tree(process.pid, accounting=accounting)
             if snapshot is not None:
                 samples.append(snapshot)
             if monotonic() - started >= timeout_seconds:
@@ -354,12 +337,12 @@ class PerformanceRunner:
                 _terminate_process_tree(process.pid)
                 break
             sleep(self.sample_interval_seconds)
-        final = _snapshot(process.pid)
+        final = snapshot_process_tree(process.pid, accounting=accounting)
         if final is not None:
             samples.append(final)
         if not samples:
             diagnostics.append("process metrics were unavailable")
-        return samples, timed_out, diagnostics
+        return samples, timed_out, diagnostics, accounting.totals()
 
     def _source_identity(self, source: Path | None, diagnostics: list[str]) -> str | None:
         if source is None:
@@ -381,72 +364,6 @@ class PerformanceRunner:
         atomic_write_text(
             summary.manifest_path, json.dumps(payload, indent=2, sort_keys=True) + "\n"
         )
-
-
-def _snapshot(pid: int) -> ProcessSnapshot | None:
-    processes = _process_tree(pid)
-    if processes is None:
-        return None
-    valid_values = _valid_process_values(processes)
-    if not valid_values:
-        return None
-    return _build_snapshot(valid_values)
-
-
-def _process_tree(pid: int) -> list[psutil.Process] | None:
-    try:
-        root = psutil.Process(pid)
-        return [root, *root.children(recursive=True)]
-    except psutil.Error, OSError:
-        return None
-
-
-def _valid_process_values(
-    processes: list[psutil.Process],
-) -> list[tuple[float, float, int, int, tuple[int, int, int, int] | None]]:
-    values = [_process_values(process) for process in processes]
-    return [value for value in values if value is not None]
-
-
-def _build_snapshot(
-    values: list[tuple[float, float, int, int, tuple[int, int, int, int] | None]],
-) -> ProcessSnapshot:
-    io_values = [value[4] for value in values if value[4] is not None]
-    return ProcessSnapshot(
-        monotonic(),
-        sum(value[0] for value in values),
-        sum(value[1] for value in values),
-        sum(value[2] for value in values),
-        sum(value[3] for value in values),
-        _sum_io(io_values, 0),
-        _sum_io(io_values, 1),
-        _sum_io(io_values, 2),
-        _sum_io(io_values, 3),
-    )
-
-
-def _process_values(
-    process: psutil.Process,
-) -> tuple[float, float, int, int, tuple[int, int, int, int] | None] | None:
-    try:
-        cpu = process.cpu_times()
-        memory = process.memory_info()
-    except psutil.Error, OSError:
-        return None
-    try:
-        counters = process.io_counters()
-    except psutil.Error, OSError:
-        counters = None
-    io = (
-        None
-        if counters is None
-        else (counters.read_bytes, counters.write_bytes, counters.read_count, counters.write_count)
-    )
-    return cpu.user, cpu.system, memory.rss, memory.vms, io
-
-
-def _sum_io(values: list[tuple[int, int, int, int]], index: int) -> int | None:
-    return sum(value[index] for value in values) if values else None
 
 
 def _terminate_process_tree(pid: int) -> None:
@@ -480,6 +397,7 @@ def _metrics(
     timed_out: bool,
     stdout_truncated: bool,
     stderr_truncated: bool,
+    process_totals: ProcessTotals | None = None,
 ) -> list[MetricRecord]:
     status = EvidenceStatus.UNAVAILABLE if not samples else _run_status(timed_out)
     first = samples[0] if samples else None
@@ -489,17 +407,43 @@ def _metrics(
     return [
         MetricRecord("wall_time_seconds", elapsed_seconds, "seconds", status),
         MetricRecord(
-            "cpu_user_seconds", _delta(first, last, "cpu_user_seconds"), "seconds", status
+            "cpu_user_seconds",
+            _total_or_delta(process_totals, "cpu_user_seconds", first, last),
+            "seconds",
+            status,
         ),
         MetricRecord(
-            "cpu_system_seconds", _delta(first, last, "cpu_system_seconds"), "seconds", status
+            "cpu_system_seconds",
+            _total_or_delta(process_totals, "cpu_system_seconds", first, last),
+            "seconds",
+            status,
         ),
         MetricRecord("peak_rss_bytes", peak_rss, "bytes", status),
         MetricRecord("peak_vms_bytes", peak_vms, "bytes", status),
-        MetricRecord("read_bytes", _delta(first, last, "read_bytes"), "bytes", status),
-        MetricRecord("write_bytes", _delta(first, last, "write_bytes"), "bytes", status),
-        MetricRecord("read_count", _delta(first, last, "read_count"), "count", status),
-        MetricRecord("write_count", _delta(first, last, "write_count"), "count", status),
+        MetricRecord(
+            "read_bytes",
+            _total_or_delta(process_totals, "read_bytes", first, last),
+            "bytes",
+            status,
+        ),
+        MetricRecord(
+            "write_bytes",
+            _total_or_delta(process_totals, "write_bytes", first, last),
+            "bytes",
+            status,
+        ),
+        MetricRecord(
+            "read_count",
+            _total_or_delta(process_totals, "read_count", first, last),
+            "count",
+            status,
+        ),
+        MetricRecord(
+            "write_count",
+            _total_or_delta(process_totals, "write_count", first, last),
+            "count",
+            status,
+        ),
         MetricRecord("sample_count", len(samples), "samples", status),
         _capture_metric("stdout_capture", stdout_truncated),
         _capture_metric("stderr_capture", stderr_truncated),
@@ -534,6 +478,19 @@ def _delta(
     if start is None or end is None:
         return None
     return max(0, end - start)
+
+
+def _total_or_delta(
+    totals: ProcessTotals | None,
+    field: str,
+    first: ProcessSnapshot | None,
+    last: ProcessSnapshot | None,
+) -> float | int | None:
+    if totals is not None:
+        value = getattr(totals, field)
+        if value is not None:
+            return value
+    return _delta(first, last, field)
 
 
 def _duration(metrics: list[MetricRecord]) -> float | None:

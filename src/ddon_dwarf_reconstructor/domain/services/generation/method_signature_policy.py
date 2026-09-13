@@ -16,6 +16,11 @@ def rendered_method_name(method_name: str) -> str:
     """Remove unavailable explicit template scopes from a method name."""
     if method_name.startswith("operator "):
         return "operator " + unqualify_type_expression(method_name[len("operator ") :])
+    if method_name.startswith("operator=") and "<" in method_name:
+        # DWARF may spell an explicitly instantiated assignment operator as
+        # ``operator=<32>``.  The specialization belongs to its parameter
+        # types; it is not valid C++ syntax in the member name.
+        return "operator="
     if method_name.startswith("operator"):
         return method_name
     return method_name.split("<", 1)[0].strip()

@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, Mock
 
 import pytest
 
-from ddon_dwarf_reconstructor.core.platform import ELFPlatform
 from tests.test_main_paths import _options
 
 cli_main = importlib.import_module("ddon_dwarf_reconstructor.main")
@@ -25,7 +24,7 @@ def test_config_and_symbol_file_errors_return_nonzero(mocker) -> None:
 
 
 @pytest.mark.unit
-def test_generation_records_per_symbol_failures_and_fatal_context_failures(
+def test_symbol_set_generation_failure_is_fatal_and_contextual(
     mocker,
 ) -> None:
     config = Mock(verbose=False, elf_file_path=Path("input.elf"))
@@ -33,12 +32,10 @@ def test_generation_records_per_symbol_failures_and_fatal_context_failures(
     generator = MagicMock()
     generator.__enter__.return_value = generator
     mocker.patch.object(cli_main, "DwarfGenerator", return_value=generator)
-    mocker.patch.object(cli_main, "_build_headers", side_effect=ValueError("bad symbol"))
+    mocker.patch.object(cli_main, "_run_symbol_generation", side_effect=ValueError("bad symbol"))
 
-    success, failures = cli_main._run_generation(_options(), config, ["A"], logger)
-
-    assert success == 0
-    assert failures == [("A", "bad symbol")]
+    with pytest.raises(RuntimeError, match="bad symbol"):
+        cli_main._run_generation(_options(), config, ["A"], logger)
 
     failing_generator = MagicMock()
     failing_generator.__enter__.side_effect = RuntimeError("cannot open")
@@ -48,74 +45,18 @@ def test_generation_records_per_symbol_failures_and_fatal_context_failures(
 
 
 @pytest.mark.unit
-def test_header_collision_aborts_batch_at_first_conflict(mocker) -> None:
+def test_symbol_collision_aborts_single_publication(mocker) -> None:
     config = Mock(output_dir=Path("output"), verbose=False, elf_file_path=Path("input.elf"))
     logger = Mock()
     generator = MagicMock()
     generator.__enter__.return_value = generator
     mocker.patch.object(cli_main, "DwarfGenerator", return_value=generator)
-    build_headers = mocker.patch.object(
-        cli_main,
-        "_build_headers",
-        side_effect=[{"Shared.h": "first"}, {"Shared.h": "second"}],
-    )
+    generator.extract_symbols.side_effect = ValueError("Conflicting generated header")
 
     with pytest.raises(RuntimeError, match="Conflicting generated header"):
         cli_main._run_generation(_options(symbols=("A", "B")), config, ["A", "B"], logger)
 
-    assert build_headers.call_count == 2
-
-
-@pytest.mark.unit
-def test_source_bound_full_hierarchy_rejects_placeholder_bundle(mocker) -> None:
-    options = _options(
-        full_hierarchy=True,
-        dwarf_store_manifest=Path("store/manifest.json"),
-    )
-    mocker.patch.object(
-        cli_main,
-        "_build_headers",
-        return_value={
-            "UncategorizedDefinitions.h": "// Class 'A' not found in DWARF information\n"
-        },
-    )
-
-    with pytest.raises(RuntimeError, match="unresolved placeholder"):
-        cli_main._generate_symbol_headers(
-            options,
-            Mock(),
-            Mock(),
-            ["A"],
-            Mock(),
-            (),
-            cli_main._GenerationState(True),
-            1,
-            "A",
-        )
-
-
-@pytest.mark.unit
-def test_diagnostics_cover_unknown_platform_preview_and_failed_summary(tmp_path: Path) -> None:
-    config = Mock(output_dir=tmp_path, verbose=False)
-    generator = Mock(platform=ELFPlatform.UNKNOWN)
-    logger = Mock()
-    assert cli_main._write_headers(config, generator, {"A.h": "content"}, logger) == 7
-
-    cli_main._log_header_summary(
-        _options(full_hierarchy=True, verbose=True),
-        {"A.h": "content"},
-        7,
-        ["A"],
-        logger,
-    )
-    cli_main._log_header_summary(
-        _options(verbose=True),
-        {"A.h": "\n".join(str(item) for item in range(31))},
-        0,
-        ["A"],
-        logger,
-    )
-    cli_main._log_summary(["A"], 0, [("A", "failed")], logger)
+    generator.extract_symbols.assert_called_once()
 
 
 @pytest.mark.unit

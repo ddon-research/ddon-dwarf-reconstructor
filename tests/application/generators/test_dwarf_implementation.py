@@ -8,10 +8,14 @@ from unittest.mock import Mock
 
 import pytest
 
+from ddon_dwarf_reconstructor.application.generators import dwarf_implementation
 from ddon_dwarf_reconstructor.application.generators.dwarf_implementation import (
     ImplementationDiscoveryService,
 )
-from ddon_dwarf_reconstructor.application.generators.generation_contracts import HeaderBundle
+from ddon_dwarf_reconstructor.application.generators.generation_contracts import (
+    HeaderBundle,
+    SymbolExtractionResult,
+)
 from ddon_dwarf_reconstructor.domain.models.analytical_dwarf import QueryResult, QueryStatus
 from ddon_dwarf_reconstructor.domain.models.disassembly import (
     OrbisDisassemblyReport,
@@ -28,6 +32,7 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import (
 from ddon_dwarf_reconstructor.domain.models.implementation_evidence import (
     FunctionMatchKind,
     ImplementationStatus,
+    MethodAssemblyEvidence,
 )
 
 
@@ -390,3 +395,60 @@ def test_implementation_rediscovery_failure_isolated_from_header_bundle() -> Non
     assert result.status is ImplementationStatus.UNAVAILABLE
     assert result.header_bundle_sha256 == bundle.sha256
     assert "hierarchy failed" in result.diagnostics[0]
+
+
+@pytest.mark.unit
+@pytest.mark.regression
+def test_symbol_discovery_uses_one_canonical_method_union_and_one_request(mocker) -> None:
+    context, _ = _context(())
+    class_info = context.hierarchy_builder.build_full_hierarchy_with_dependencies()[0]["rLayout"]
+    class_key = "rLayout|16|128"
+    symbols = SymbolExtractionResult(
+        requested_symbols=("rLayout", "rOther"),
+        headers={"rLayout/rLayout.h": "class rLayout {};\n"},
+        header_owners={"rLayout/rLayout.h": "rLayout"},
+        header_classes={"rLayout/rLayout.h": (class_key,)},
+        class_owners={class_key: "rLayout"},
+        class_origins={class_key: ("rLayout",)},
+        class_identities={class_key: class_key},
+        class_infos={class_key: class_info},
+    )
+    method = MethodAssemblyEvidence(
+        owner="rLayout",
+        method_name="load",
+        signature="void load()",
+        declaration_die_offset=0x100,
+        declaration_cu_offset=0x10,
+        implementation_status=ImplementationStatus.MATCHED,
+        assembly_status=ImplementationStatus.NOT_OBSERVED,
+        owner_class_key=class_key,
+    )
+    discover_methods = mocker.patch.object(
+        dwarf_implementation, "_discover_methods", return_value=(method,)
+    )
+    build_request = mocker.patch.object(
+        dwarf_implementation,
+        "_build_disassembly_request",
+        return_value=SimpleNamespace(
+            scope_hash="scope",
+            selection_policy="one-request",
+            targets=(),
+        ),
+    )
+    mocker.patch.object(
+        ImplementationDiscoveryService,
+        "_load_disassembly",
+        return_value=(None, "not observed"),
+    )
+
+    result = ImplementationDiscoveryService.discover_symbols(
+        context,
+        ("rLayout", "rOther"),
+        symbols,
+        orbis_objdump_path=Path("orbis-objdump.exe"),
+    )
+
+    discover_methods.assert_called_once_with(context, symbols.class_infos)
+    build_request.assert_called_once_with(context, "symbols", (method,))
+    assert result.root_symbol == "symbols"
+    assert result.disassembly_scope_hash == "scope"

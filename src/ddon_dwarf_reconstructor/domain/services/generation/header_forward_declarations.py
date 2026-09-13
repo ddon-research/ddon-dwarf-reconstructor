@@ -11,16 +11,33 @@ from .header_type_planning import HeaderTypePlanningService
 from .rendering.operations import HeaderRenderingHost
 from .rendering.type_policy import TypeExpressionPolicy
 
+_FORWARD_DECLARABLE_CACHE: dict[int, bool] = {}
+
 
 class HeaderForwardDeclarationService:
     def _collect_forward_declarations(
         self: HeaderRenderingHost,
         class_info: ClassInfo,
         typedefs: dict[str, str],
+        inherited_excluded_names: set[str] | None = None,
     ) -> set[str]:
         """Collect forward declarations needed by a class and its nested types."""
         enum_names, struct_names, union_names = self._aggregate_names(class_info)
-        excluded_names = enum_names | struct_names | union_names | set(typedefs)
+        nested_names = self._nested_aggregate_names(class_info)
+        own_names = {
+            self._normalize_type_name(name)
+            for name in (class_info.name, class_info.qualified_name)
+            if name
+        }
+        excluded_names = (
+            (inherited_excluded_names or set())
+            | enum_names
+            | struct_names
+            | union_names
+            | nested_names
+            | own_names
+            | set(typedefs)
+        )
         primitives = self._primitive_names()
         declarations: set[str] = set()
         for type_name, type_offset, allow_textual_pointer in self._referenced_types(class_info):
@@ -43,8 +60,22 @@ class HeaderForwardDeclarationService:
                         self._template_argument_forward_declarations(expression, set(typedefs))
                     )
         for nested_class in class_info.nested_classes:
-            declarations.update(self._collect_forward_declarations(nested_class, typedefs))
+            declarations.update(
+                self._collect_forward_declarations(nested_class, typedefs, excluded_names)
+            )
         return declarations
+
+    @classmethod
+    def _nested_aggregate_names(cls, class_info: ClassInfo) -> set[str]:
+        names: set[str] = set()
+        for nested_class in class_info.nested_classes:
+            names.add(HeaderTypePlanningService._normalize_type_name(nested_class.name))
+            if nested_class.qualified_name:
+                names.add(
+                    HeaderTypePlanningService._normalize_type_name(nested_class.qualified_name)
+                )
+            names.update(cls._nested_aggregate_names(nested_class))
+        return {name for name in names if name}
 
     @staticmethod
     def _aggregate_names(class_info: ClassInfo) -> tuple[set[str], set[str], set[str]]:
@@ -89,10 +120,10 @@ class HeaderForwardDeclarationService:
     ) -> Iterator[tuple[str | None, int | None, bool]]:
         for method in class_info.methods:
             if hasattr(method, "return_type_offset"):
-                yield method.return_type, method.return_type_offset, False
+                yield method.return_type, method.return_type_offset, True
             for parameter in method.parameters or []:
                 if hasattr(parameter, "type_offset"):
-                    yield parameter.type_name, parameter.type_offset, False
+                    yield parameter.type_name, parameter.type_offset, True
 
     @staticmethod
     def _struct_member_types(
@@ -142,6 +173,8 @@ class HeaderForwardDeclarationService:
         if type_offset is None:
             return f"class {clean_name};"
         die = self.dwarf_index.get_die_by_offset(type_offset)
+        if die and die.tag == "DW_TAG_typedef":
+            return None
         tag_declarations = {
             "DW_TAG_enumeration_type": f"enum class {clean_name} : int;",
             "DW_TAG_structure_type": f"struct {clean_name};",
@@ -167,6 +200,12 @@ class HeaderForwardDeclarationService:
             return False
         if clean_name in primitives or self._is_builtin_type(clean_name):
             return False
+        if clean_name in excluded_names:
+            return False
+        if allow_textual_pointer and self._is_textual_pointer(
+            type_name, clean_name, allow_textual_pointer
+        ):
+            return True
         if type_offset is None:
             return self._is_textual_pointer(type_name, clean_name, allow_textual_pointer)
         return self._should_forward_declare_die(clean_name, type_offset, excluded_names)
@@ -177,12 +216,23 @@ class HeaderForwardDeclarationService:
         type_offset: int,
         excluded_names: set[str],
     ) -> bool:
+        if clean_name in excluded_names:
+            return False
+        cached = _FORWARD_DECLARABLE_CACHE.get(type_offset)
+        if cached is not None:
+            return cached
         die = self.dwarf_index.get_die_by_offset(type_offset)
         if die and die.tag == "DW_TAG_enumeration_type":
-            return clean_name not in excluded_names
-        if clean_name in excluded_names or not die:
+            _FORWARD_DECLARABLE_CACHE[type_offset] = True
+            return True
+        if not die:
+            _FORWARD_DECLARABLE_CACHE[type_offset] = False
             return False
-        return DIETypeClassifier.is_forward_declarable(die)
+        declarable = DIETypeClassifier.is_forward_declarable(die)
+        if len(_FORWARD_DECLARABLE_CACHE) > 65536:
+            _FORWARD_DECLARABLE_CACHE.clear()
+        _FORWARD_DECLARABLE_CACHE[type_offset] = declarable
+        return declarable
 
     @staticmethod
     def _is_textual_pointer(type_name: str, clean_name: str, allowed: bool) -> bool:

@@ -4,10 +4,24 @@ from __future__ import annotations
 
 from collections import deque
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
+from dataclasses import replace
 
-from ..domain.models.disassembly import OrbisInstruction, OrbisReference
-from ..domain.models.implementation_validation import ValidationStatus
+from ...models.cpp_reconstruction.control_flow import ControlFlowJoin, ControlFlowStep
+from ...models.disassembly import OrbisInstruction, OrbisReference
+from ...models.implementation_validation import (
+    CompilerEvidence,
+    SemanticParity,
+    StaticEquivalenceDisposition,
+    ValidationStatus,
+)
+
+_NON_RETURNING_CALL_MARKERS = (
+    "__stack_chk_fail",
+    "__cxa_pure_virtual",
+    "abort",
+    "exit",
+    "terminate",
+)
 
 _PathState = tuple[
     int,
@@ -20,34 +34,16 @@ _PathState = tuple[
     bool,
     int,
 ]
-_PathTerminal = tuple[int, int, int, frozenset[str], frozenset[str], frozenset[str], bool]
-
-
-@dataclass(frozen=True, slots=True)
-class ControlFlowStep:
-    """Bounded effect summary for one instruction in a method CFG."""
-
-    address: int
-    branch_kind: str = "normal"
-    target: int | None = None
-    stack_delta: int = 0
-    terminal: bool = False
-    uncertain: bool = False
-    saved: frozenset[str] = frozenset()
-    restored: frozenset[str] = frozenset()
-    writes: frozenset[str] = frozenset()
-
-
-@dataclass(frozen=True, slots=True)
-class ControlFlowJoin:
-    """Result of joining bounded conditional paths without guessing missing edges."""
-
-    status: ValidationStatus
-    stack_delta: int | None = None
-    stack_min: int | None = None
-    stack_max: int | None = None
-    callee_saved_preserved: bool | None = None
-    diagnostics: tuple[str, ...] = ()
+_PathTerminal = tuple[
+    int,
+    int,
+    int,
+    frozenset[str],
+    frozenset[str],
+    frozenset[str],
+    bool,
+    bool,
+]
 
 
 def make_control_flow_steps(
@@ -69,6 +65,7 @@ def make_control_flow_steps(
         writes = (
             frozenset({destination_register}) if destination_register is not None else frozenset()
         )
+        non_returning = _is_non_returning_call(item, mnemonic)
         steps.append(
             ControlFlowStep(
                 address=item.address,
@@ -81,7 +78,8 @@ def make_control_flow_steps(
                 ),
                 target=target(item),
                 stack_delta=stack_delta(item),
-                terminal=mnemonic == "ret",
+                terminal=mnemonic == "ret" or non_returning,
+                returns=not non_returning,
                 uncertain=mnemonic not in known or mnemonic == "leave",
                 saved=saved(item, "push"),
                 restored=saved(item, "pop"),
@@ -89,6 +87,13 @@ def make_control_flow_steps(
             )
         )
     return tuple(steps)
+
+
+def _is_non_returning_call(instruction: OrbisInstruction, mnemonic: str) -> bool:
+    if mnemonic != "call":
+        return False
+    target = (instruction.call_target_name or "").casefold()
+    return any(marker in target for marker in _NON_RETURNING_CALL_MARKERS)
 
 
 def join_conditional_paths(
@@ -153,7 +158,7 @@ def _expand_path(
     if len(seen) > max_states:
         return (), (), "conditional control-flow path state limit was exceeded"
     if _path_is_terminal(step, index, len(steps)):
-        terminal = (delta, minimum, maximum, saved, restored, writes, uncertain)
+        terminal = (delta, minimum, maximum, saved, restored, writes, uncertain, step.returns)
         return (terminal,), (), None
     successors = _successors(index, step, addresses, len(steps))
     if successors is None:
@@ -180,9 +185,15 @@ def _summarize_paths(
     terminals: list[_PathTerminal],
     expected_delta: int,
 ) -> ControlFlowJoin:
-    deltas = {item[0] for item in terminals}
-    preserved = all(not (item[6] or item[5] - item[3] - item[4]) for item in terminals)
-    if len(deltas) != 1 or next(iter(deltas)) != expected_delta:
+    returning = _returning_paths(terminals)
+    if not returning:
+        return ControlFlowJoin(
+            ValidationStatus.PARTIAL,
+            diagnostics=("conditional control-flow has no returning terminal path",),
+        )
+    deltas = {item[0] for item in returning}
+    preserved = _paths_preserve_callee_saved(returning)
+    if not _has_expected_cleanup(deltas, expected_delta):
         return ControlFlowJoin(
             ValidationStatus.FAILED,
             diagnostics=("conditional control-flow paths have conflicting stack cleanup",),
@@ -197,10 +208,22 @@ def _summarize_paths(
     return ControlFlowJoin(
         ValidationStatus.OBSERVED,
         stack_delta=next(iter(deltas)),
-        stack_min=min(item[1] for item in terminals),
-        stack_max=max(item[2] for item in terminals),
+        stack_min=min(item[1] for item in returning),
+        stack_max=max(item[2] for item in returning),
         callee_saved_preserved=True,
     )
+
+
+def _returning_paths(terminals: list[_PathTerminal]) -> list[_PathTerminal]:
+    return [item for item in terminals if item[7]]
+
+
+def _paths_preserve_callee_saved(paths: list[_PathTerminal]) -> bool:
+    return all(not (item[6] or item[5] - item[3] - item[4]) for item in paths)
+
+
+def _has_expected_cleanup(deltas: set[int], expected_delta: int) -> bool:
+    return len(deltas) == 1 and next(iter(deltas), None) == expected_delta
 
 
 def _successors(
@@ -260,6 +283,139 @@ def compare_static_edges(
     return cfg_status, call_status, tuple(diagnostics)
 
 
+def normalize_parity(
+    parity: SemanticParity,
+    compiler_status: ValidationStatus | None = None,
+    *,
+    required_dimensions: tuple[tuple[str, ValidationStatus], ...] = (),
+    compiler_evidence: CompilerEvidence | None = None,
+) -> SemanticParity:
+    """Join parity dimensions without promoting incomplete target evidence."""
+    status = _normalized_parity_status(parity, compiler_status, required_dimensions)
+    diagnostics = _normalized_parity_diagnostics(parity, compiler_status, required_dimensions)
+    disposition = _static_equivalence_disposition(
+        parity,
+        compiler_status,
+        required_dimensions,
+        compiler_evidence,
+    )
+    return replace(
+        parity,
+        status=status,
+        static_equivalence=disposition,
+        diagnostics=tuple(dict.fromkeys(diagnostics)),
+    )
+
+
+def _static_equivalence_disposition(
+    parity: SemanticParity,
+    compiler_status: ValidationStatus | None,
+    required_dimensions: tuple[tuple[str, ValidationStatus], ...],
+    compiler_evidence: CompilerEvidence | None,
+) -> StaticEquivalenceDisposition:
+    dimension_statuses = (
+        parity.byte_status,
+        parity.cfg_status,
+        parity.external_edge_status,
+        parity.effect_status,
+        *(value for _label, value in required_dimensions),
+    )
+    failure = _static_disposition_failure(parity, compiler_status, required_dimensions)
+    if failure is not None:
+        return failure
+    if compiler_status is not ValidationStatus.OBSERVED:
+        return StaticEquivalenceDisposition.NOT_PROMOTED
+    if any(status is not ValidationStatus.OBSERVED for status in dimension_statuses):
+        return StaticEquivalenceDisposition.NOT_PROMOTED
+    if not _accepted_target_object(compiler_evidence):
+        return StaticEquivalenceDisposition.NOT_PROMOTED
+    return StaticEquivalenceDisposition.TARGET_OBJECT_EQUIVALENT
+
+
+def _static_disposition_failure(
+    parity: SemanticParity,
+    compiler_status: ValidationStatus | None,
+    required_dimensions: tuple[tuple[str, ValidationStatus], ...],
+) -> StaticEquivalenceDisposition | None:
+    if parity.byte_status is ValidationStatus.FAILED:
+        return StaticEquivalenceDisposition.CONFLICTING
+    edge_statuses = (parity.cfg_status, parity.external_edge_status)
+    if any(status is ValidationStatus.FAILED for status in edge_statuses):
+        return StaticEquivalenceDisposition.CONFLICTING
+    if parity.effect_status is ValidationStatus.FAILED or any(
+        value is ValidationStatus.FAILED for _label, value in required_dimensions
+    ):
+        return StaticEquivalenceDisposition.FAILED
+    if parity.status is ValidationStatus.FAILED or compiler_status is ValidationStatus.FAILED:
+        return StaticEquivalenceDisposition.FAILED
+    return None
+
+
+def _accepted_target_object(compiler: CompilerEvidence | None) -> bool:
+    if compiler is None or compiler.status is not ValidationStatus.OBSERVED:
+        return False
+    if not compiler.output_path or not compiler.output_sha256:
+        return False
+    metadata = compiler.object_metadata
+    return (
+        isinstance(metadata.get("e_flags"), int)
+        and isinstance(metadata.get("section_names"), (tuple, list))
+        and bool(metadata.get("section_names"))
+    )
+
+
+def _normalized_parity_status(
+    parity: SemanticParity,
+    compiler_status: ValidationStatus | None,
+    required_dimensions: tuple[tuple[str, ValidationStatus], ...] = (),
+) -> ValidationStatus:
+    statuses = (
+        parity.byte_status,
+        parity.cfg_status,
+        parity.external_edge_status,
+        parity.effect_status,
+        *(value for _label, value in required_dimensions),
+    )
+    if parity.status is ValidationStatus.FAILED or ValidationStatus.FAILED in statuses:
+        return ValidationStatus.FAILED
+    if all(item is ValidationStatus.OBSERVED for item in statuses) and compiler_status in (
+        None,
+        ValidationStatus.OBSERVED,
+    ):
+        return ValidationStatus.OBSERVED
+    if parity.status is ValidationStatus.NOT_OBSERVED and all(
+        item is ValidationStatus.NOT_OBSERVED for item in statuses
+    ):
+        return ValidationStatus.NOT_OBSERVED
+    return ValidationStatus.PARTIAL
+
+
+def _normalized_parity_diagnostics(
+    parity: SemanticParity,
+    compiler_status: ValidationStatus | None,
+    required_dimensions: tuple[tuple[str, ValidationStatus], ...] = (),
+) -> tuple[str, ...]:
+    missing = tuple(
+        label
+        for label, value in (
+            ("CFG", parity.cfg_status),
+            ("external edges", parity.external_edge_status),
+        )
+        if value is not ValidationStatus.OBSERVED
+    )
+    missing += tuple(
+        label for label, value in required_dimensions if value is not ValidationStatus.OBSERVED
+    )
+    diagnostics = tuple(parity.diagnostics)
+    if missing:
+        diagnostics += (
+            "static parity dimensions not independently observed: " + ", ".join(missing),
+        )
+    if compiler_status not in (None, ValidationStatus.OBSERVED):
+        diagnostics += ("accepted Orbis target-object generation was not observed",)
+    return diagnostics
+
+
 def _edge_signatures(
     instructions: tuple[OrbisInstruction, ...], base: int, family: str
 ) -> tuple[tuple[object, ...], ...]:
@@ -271,7 +427,8 @@ def _edge_signatures(
             if not _belongs_to_family(reference, family):
                 continue
             target = _normalized_target(reference, base, end)
-            signatures.append((offset, reference.kind, target))
+            kind = "resolved" if reference.address is not None else reference.kind
+            signatures.append((offset, kind, target))
     return tuple(signatures)
 
 
@@ -282,12 +439,14 @@ def _belongs_to_family(reference: OrbisReference, family: str) -> bool:
 
 
 def _normalized_target(reference: OrbisReference, base: int, end: int) -> tuple[object, ...]:
-    if "indirect" in reference.kind:
-        return ("indirect", reference.resolved_name)
     if reference.address is not None:
         relative = reference.address - base
+        if relative >= 1 << 63:
+            relative -= 1 << 64
         scope = "internal" if base <= reference.address < end else "external"
         return scope, relative
+    if "indirect" in reference.kind:
+        return ("indirect", reference.resolved_name)
     if reference.resolved_name is not None:
         return "name", reference.resolved_name
     return "unresolved", reference.resolution_status

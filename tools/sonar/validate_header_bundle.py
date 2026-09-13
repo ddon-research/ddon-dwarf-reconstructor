@@ -6,12 +6,13 @@ import argparse
 import hashlib
 import json
 import re
-import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+MAX_COMPILER_METADATA_BYTES = 64 * 1024
 
 if __package__ in {None, ""}:
     # Keep the established ``python tools/sonar/validate_header_bundle.py``
@@ -103,13 +104,19 @@ def discover_bundles(input_root: Path) -> list[Path]:
         return [root]
     if any(root.glob("*.h")):
         return [root]
-    bundles = sorted(
+    ps4_bundles = sorted(
         (path for path in root.rglob("ps4") if path.is_dir() and any(path.glob("*.h"))),
         key=lambda path: str(path).lower(),
     )
-    if not bundles:
+    if ps4_bundles:
+        return ps4_bundles
+    header_bundles = sorted(
+        {path.parent for path in root.rglob("*.h")},
+        key=lambda path: str(path).lower(),
+    )
+    if not header_bundles:
         raise HeaderValidationError(f"No generated header bundles were found below '{root}'.")
-    return bundles
+    return header_bundles
 
 
 def _write_unit(unit: HeaderUnit) -> None:
@@ -222,11 +229,22 @@ def write_validation_script(
                 'if not "!UNIT_EXIT!"=="0" set "EXIT_CODE=1"',
             ]
         )
-    include_paths = " ".join(f'/I"{unit.bundle}"' for unit in units)
+    unique_bundles = sorted({unit.bundle for unit in units}, key=lambda path: str(path).lower())
+    include_paths = " ".join(f'/I"{bundle}"' for bundle in unique_bundles)
+    if len(include_paths) > 2048:
+        aggregate_rsp = validation_directory / "translation-units" / "compile_all.rsp"
+        aggregate_rsp.parent.mkdir(parents=True, exist_ok=True)
+        aggregate_rsp.write_text(
+            "\n".join(f'/I"{bundle}"' for bundle in unique_bundles) + "\n",
+            encoding="utf-8",
+        )
+        include_cmd = f'@"%ROOT%translation-units\\{aggregate_rsp.name}"'
+    else:
+        include_cmd = include_paths
     lines.extend(
         [
             "echo DDON_AGGREGATE_START^|compile_all.cpp",
-            f"cl.exe /nologo {' '.join(MSVC_FLAGS)} {include_paths} /c "
+            f"cl.exe /nologo {' '.join(MSVC_FLAGS)} {include_cmd} /c "
             f'"%ROOT%translation-units\\{aggregate_source.name}" '
             f'/Fo"%ROOT%objects\\{aggregate_object.name}" '
             f'>"%ROOT%diagnostics\\{aggregate_stdout.name}" '
@@ -395,16 +413,21 @@ def _compiler_metadata(compiler: str) -> dict[str, object]:
     if not path.is_file():
         return metadata
     try:
-        result = subprocess.run(
-            (str(path), "/Bv"),
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=30,
+        result = run_command(
+            [str(path), "/Bv"],
+            timeout_seconds=30,
+            max_output_bytes=MAX_COMPILER_METADATA_BYTES,
         )
-    except OSError, subprocess.TimeoutExpired:
+    except OSError:
         return metadata
-    output = (result.stdout or "") + (result.stderr or "")
+    if (
+        result.timed_out
+        or result.returncode is None
+        or result.stdout_truncated
+        or result.stderr_truncated
+    ):
+        return metadata
+    output = result.output
     metadata["compiler_version_status"] = "observed" if output else "not_observed"
     metadata["compiler_version"] = output.strip()[:512] if output.strip() else None
     metadata["compiler_version_output_sha256"] = _sha256_text(output)
@@ -415,6 +438,10 @@ def _run_script(script: Path, timeout_seconds: int) -> tuple[int | None, str, bo
     execution = run_command(
         ["cmd.exe", "/d", "/c", "call", str(script)], timeout_seconds=timeout_seconds
     )
+    if execution.stdout_truncated or execution.stderr_truncated:
+        raise SonarAnalysisError(
+            "MSVC validation command output was truncated; result markers are incomplete."
+        )
     return execution.returncode, execution.output, execution.timed_out
 
 
@@ -514,7 +541,7 @@ def main(argv: list[str] | None = None) -> int:
         )
     }
     print(json.dumps(summary, indent=2, sort_keys=True))
-    return 0 if report["counts"].get("passed", 0) == report["header_count"] else 1
+    return 0 if report["status"] == "observed" else 1
 
 
 if __name__ == "__main__":

@@ -2,18 +2,13 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..domain.models.analytical_dwarf import (
-    MethodContextBatch,
-    MethodContextRequest,
-    QueryResult,
-)
+from ..core.content_hash import sha256_file
+from ..domain.models.analytical_dwarf import MethodContextBatch, MethodContextRequest, QueryResult
 from ..domain.models.implementation_validation import (
     AnalyticalModelEvidence,
     EvidenceStatus,
@@ -27,6 +22,30 @@ from .analytical.doris_method_context import (
 )
 from .analytical.doris_serving_profile import DorisServingProfile
 from .analytical.doris_store import DorisDwarfStore
+from .implementation_dwarf_context_evidence import (
+    abi_facts as _abi_facts,
+)
+from .implementation_dwarf_context_evidence import (
+    frame_overlaps as _frame_overlaps,
+)
+from .implementation_dwarf_context_evidence import (
+    optional_int as _optional_int,
+)
+from .implementation_dwarf_context_evidence import (
+    parameter_evidence as _parameter_evidence,
+)
+from .implementation_dwarf_context_evidence import (
+    query_diagnostics as _query_diagnostics,
+)
+from .implementation_dwarf_context_evidence import (
+    query_die as _query_die,
+)
+from .implementation_dwarf_context_evidence import (
+    query_frames as _query_frames,
+)
+from .implementation_dwarf_context_evidence import (
+    query_locations as _query_locations,
+)
 
 
 @dataclass(slots=True)
@@ -90,14 +109,24 @@ class DorisImplementationEvidenceModel:
     def manifest_path(self) -> Path:
         return self._store.manifest_path
 
-    def get_die(self, die_offset: int) -> Any:
+    def get_die(self, die_offset: int, *, unit_offset: int | None = None) -> Any:
         if self._batch_query is not None:
-            return self._batch_query.get_die(die_offset)
+            return self._batch_query.get_die(die_offset, unit_offset=unit_offset)
         return self._store.get_die(die_offset)
 
-    def find_locations(self, die_offset: int, *, attribute_name: str | None = None) -> Any:
+    def find_locations(
+        self,
+        die_offset: int,
+        *,
+        unit_offset: int | None = None,
+        attribute_name: str | None = None,
+    ) -> Any:
         if self._batch_query is not None:
-            return self._batch_query.find_locations(die_offset, attribute_name=attribute_name)
+            return self._batch_query.find_locations(
+                die_offset,
+                unit_offset=unit_offset,
+                attribute_name=attribute_name,
+            )
         return self._store.find_locations(die_offset, attribute_name=attribute_name)
 
     def find_frames(
@@ -196,22 +225,41 @@ def dwarf_method_evidence(
     """Join method DIE attributes, parameter locations, and store-backed CFI."""
     if store is None:
         return (), {}, (), ("analytical DWARF store was not supplied",)
-    implementation_offset, declaration_offset, die_offset = _method_offsets(raw)
+    (
+        implementation_offset,
+        declaration_offset,
+        die_offset,
+        implementation_unit,
+        declaration_unit,
+    ) = _method_offsets(raw)
     if die_offset is None:
         return (), {}, (), ("method has no DWARF implementation or declaration DIE offset",)
     try:
-        return _query_method_context(store, start, end, frame_rows, die_offset, declaration_offset)
+        return _query_method_context(
+            store,
+            start,
+            end,
+            frame_rows,
+            die_offset,
+            declaration_offset,
+            implementation_unit,
+            declaration_unit,
+        )
     except (AttributeError, KeyError, TypeError, ValueError, RuntimeError) as error:
         return (), {}, (), (f"analytical DWARF context query failed: {type(error).__name__}",)
 
 
-def _method_offsets(raw: dict[str, Any]) -> tuple[int | None, int | None, int | None]:
+def _method_offsets(
+    raw: dict[str, Any],
+) -> tuple[int | None, int | None, int | None, int | None, int | None]:
     implementation = _optional_int(raw.get("selected_implementation_die_offset"))
     declaration = _optional_int(raw.get("declaration_die_offset"))
     return (
         implementation,
         declaration,
         implementation if implementation is not None else declaration,
+        _selected_implementation_cu_offset(raw, implementation),
+        _optional_int(raw.get("declaration_cu_offset")),
     )
 
 
@@ -224,6 +272,7 @@ def _method_context_requests(
             die_offsets=_context_die_offsets(raw),
             start_address=_optional_int(raw.get("selected_function_address")),
             end_address=_context_end(raw),
+            unit_offsets=_context_unit_offsets(raw),
         )
         for index, raw in enumerate(raw_methods)
     )
@@ -235,6 +284,38 @@ def _context_die_offsets(raw: dict[str, Any]) -> tuple[int, ...]:
         _optional_int(raw.get("declaration_die_offset")),
     )
     return tuple(value for value in dict.fromkeys(values) if value is not None)
+
+
+def _context_unit_offsets(raw: dict[str, Any]) -> tuple[int | None, ...]:
+    """Align implementation/declaration CU provenance with requested DIE offsets."""
+    implementation = _optional_int(raw.get("selected_implementation_die_offset"))
+    declaration = _optional_int(raw.get("declaration_die_offset"))
+    implementation_unit = _selected_implementation_cu_offset(raw, implementation)
+    declaration_unit = _optional_int(raw.get("declaration_cu_offset"))
+    units: list[int | None] = []
+    for offset in _context_die_offsets(raw):
+        units.append(
+            implementation_unit
+            if offset == implementation
+            else declaration_unit
+            if offset == declaration
+            else None
+        )
+    return tuple(units)
+
+
+def _selected_implementation_cu_offset(
+    raw: dict[str, Any], implementation_offset: int | None
+) -> int | None:
+    direct = _optional_int(raw.get("implementation_cu_offset"))
+    if direct is not None:
+        return direct
+    for candidate in raw.get("candidates", ()):
+        if not isinstance(candidate, dict):
+            continue
+        if _optional_int(candidate.get("implementation_die_offset")) == implementation_offset:
+            return _optional_int(candidate.get("implementation_cu_offset"))
+    return None
 
 
 def _context_end(raw: dict[str, Any]) -> int | None:
@@ -253,6 +334,8 @@ def _query_method_context(
     frame_rows: tuple[dict[str, object], ...] | None,
     die_offset: int,
     declaration_offset: int | None,
+    implementation_unit: int | None,
+    declaration_unit: int | None,
 ) -> tuple[
     tuple[dict[str, object], ...],
     dict[str, Any],
@@ -260,19 +343,44 @@ def _query_method_context(
     tuple[str, ...],
 ]:
     facts: dict[str, Any] = {"diagnostics": []}
-    die = _query_die(store, die_offset, facts["diagnostics"])
+    die = _query_die(store, die_offset, implementation_unit, facts["diagnostics"])
+    declaration_die = (
+        _query_die(store, declaration_offset, declaration_unit, facts["diagnostics"])
+        if declaration_offset is not None and declaration_offset != die_offset
+        else die
+    )
     if die is None and declaration_offset is not None and declaration_offset != die_offset:
         die_offset = declaration_offset
-        die = _query_die(store, die_offset, facts["diagnostics"])
+        implementation_unit = declaration_unit
+        die = _query_die(store, die_offset, implementation_unit, facts["diagnostics"])
     if die is None:
         return (), {}, (), (f"DIE 0x{die_offset:x} was not found in analytical store",)
-    method_locations = _query_locations(store, die_offset, diagnostics=facts["diagnostics"])
-    facts.update(_abi_facts(store, die, method_locations, facts["diagnostics"]))
-    parameter_locations, parameter_facts = _parameter_evidence(store, die, facts["diagnostics"])
+    method_locations = _query_locations(
+        store,
+        die_offset,
+        unit_offset=implementation_unit,
+        diagnostics=facts["diagnostics"],
+    )
+    facts.update(
+        _abi_facts(
+            store,
+            die,
+            declaration_die,
+            method_locations,
+            implementation_unit,
+            facts["diagnostics"],
+        )
+    )
+    parameter_locations, parameter_facts = _parameter_evidence(
+        store,
+        die,
+        implementation_unit,
+        facts["diagnostics"],
+    )
     facts.update(parameter_facts)
     locations = tuple(method_locations) + tuple(parameter_locations)
     frames = _context_frames(store, start, end, frame_rows, facts["diagnostics"])
-    facts["diagnostics"].extend(_query_diagnostics(store, die_offset, frames))
+    facts["diagnostics"].extend(_query_diagnostics(store, die_offset, implementation_unit, frames))
     return (
         locations,
         facts,
@@ -313,221 +421,6 @@ def store_cfi_status(
         diagnostics,
         {"covering_entries": len(frames), "source": "analytical-store"},
     )
-
-
-def _query_die(store: Any, die_offset: int, diagnostics: list[str] | None = None) -> Any | None:
-    result = store.get_die(die_offset)
-    _record_query_status(result, f"DIE 0x{die_offset:x}", diagnostics)
-    return result.items[0] if result.items else None
-
-
-def _query_locations(
-    store: Any,
-    die_offset: int,
-    attribute_name: str | None = None,
-    *,
-    diagnostics: list[str] | None = None,
-) -> list[dict[str, object]]:
-    result = store.find_locations(die_offset, attribute_name=attribute_name)
-    _record_query_status(result, f"location DIE 0x{die_offset:x}", diagnostics)
-    return [dict(item) for item in result.items if isinstance(item, dict)]
-
-
-def _query_frames(
-    store: Any,
-    start: int | None,
-    end: int | None,
-    diagnostics: list[str] | None = None,
-) -> list[dict[str, object]]:
-    result = store.find_frames(start_address=start, end_address=end)
-    _record_query_status(result, "CFI", diagnostics)
-    return [dict(item) for item in result.items if isinstance(item, dict)]
-
-
-def _frame_overlaps(row: dict[str, object], start: int | None, end: int | None) -> bool:
-    if start is None or end is None:
-        return True
-    initial = _optional_int(row.get("initial_address"))
-    span = _optional_int(row.get("address_range"))
-    return initial is not None and span is not None and initial < end and initial + span > start
-
-
-def _query_diagnostics(
-    store: Any,
-    die_offset: int,
-    frames: list[dict[str, object]],
-) -> list[str]:
-    diagnostics: list[str] = []
-    if not frames:
-        diagnostics.append("analytical store has no CFI row covering the method range")
-    result = store.find_locations(die_offset)
-    _record_query_status(result, f"location DIE 0x{die_offset:x}", diagnostics)
-    if getattr(result, "truncated", False):
-        diagnostics.append("analytical store location query was truncated")
-    return diagnostics
-
-
-def _abi_facts(
-    store: Any,
-    die: Any,
-    method_locations: list[dict[str, object]],
-    diagnostics: list[str],
-) -> dict[str, Any]:
-    attributes = getattr(die, "attributes", {})
-    facts: dict[str, Any] = {
-        "diagnostics": list(diagnostics),
-        "calling_convention": _attribute_text(attributes, "DW_AT_calling_convention"),
-        "object_pointer": _object_pointer_name(die),
-        "frame_base_locations": _location_summaries(
-            item for item in method_locations if item.get("attribute_name") == "DW_AT_frame_base"
-        ),
-        "return_location": _location_summary_for_attribute(
-            store, int(die.offset), "DW_AT_return_location", diagnostics
-        ),
-    }
-    if facts["calling_convention"] is None:
-        facts["diagnostics"].append("DW_AT_calling_convention is absent")
-    if facts["object_pointer"] is None:
-        facts["diagnostics"].append("DW_AT_object_pointer is absent")
-    return facts
-
-
-def _parameter_evidence(
-    store: Any, die: Any, diagnostics: list[str]
-) -> tuple[list[dict[str, object]], dict[str, Any]]:
-    locations: list[dict[str, object]] = []
-    parameter_locations: list[str] = []
-    artificial: list[str] = []
-    hidden: list[str] = []
-    object_pointer = _object_pointer_name(die)
-    for child in die.iter_children():
-        if getattr(child, "tag", None) != "DW_TAG_formal_parameter":
-            continue
-        attributes = getattr(child, "attributes", {})
-        offset = getattr(child, "offset", None)
-        if not isinstance(offset, int):
-            continue
-        name = _attribute_text(attributes, "DW_AT_name") or f"die:0x{offset:x}"
-        is_artificial = _attribute_bool(attributes, "DW_AT_artificial") is True
-        if is_artificial:
-            artificial.append(name)
-            if name != object_pointer and name.lower() not in {"this", "__this"}:
-                hidden.append(name)
-        child_locations = _query_locations(store, offset, "DW_AT_location", diagnostics=diagnostics)
-        for record in child_locations:
-            enriched = dict(record)
-            enriched["parameter_name"] = name
-            enriched["parameter_die_offset"] = offset
-            enriched["artificial"] = is_artificial
-            locations.append(enriched)
-        if child_locations:
-            parameter_locations.append(f"{name}:" + ",".join(_location_summaries(child_locations)))
-    return locations, {
-        "parameter_locations": tuple(parameter_locations),
-        "artificial_parameters": tuple(artificial),
-        "hidden_parameters": tuple(hidden),
-        "hidden_return": _hidden_return_value(hidden),
-    }
-
-
-def _object_pointer_name(die: Any) -> str | None:
-    target_getter = getattr(die, "get_DIE_from_attribute", None)
-    target = target_getter("DW_AT_object_pointer") if callable(target_getter) else None
-    if target is None:
-        return None
-    attributes = getattr(target, "attributes", {})
-    offset = getattr(target, "offset", None)
-    return _attribute_text(attributes, "DW_AT_name") or (
-        f"die:0x{offset:x}" if isinstance(offset, int) else "object-pointer-die"
-    )
-
-
-def _location_summary_for_attribute(
-    store: Any, die_offset: int, name: str, diagnostics: list[str]
-) -> str | None:
-    values = _query_locations(store, die_offset, name, diagnostics=diagnostics)
-    summaries = _location_summaries(values)
-    return summaries[0] if summaries else None
-
-
-def _location_summaries(values: Any) -> tuple[str, ...]:
-    result: list[str] = []
-    for value in values:
-        expression = _location_expression(value)
-        result.append(json.dumps(expression, sort_keys=True, default=str))
-    return tuple(result)
-
-
-def _location_expression(value: dict[str, object]) -> object:
-    """Select the logical expression from either Doris or legacy row shapes."""
-    for key in ("expression", "details", "decoded_value"):
-        candidate = value.get(key)
-        if candidate is not None:
-            return candidate
-    encoded = value.get("expression_json")
-    if isinstance(encoded, str):
-        try:
-            return json.loads(encoded)
-        except json.JSONDecodeError:
-            return encoded
-    return None
-
-
-def _hidden_return_value(hidden: list[str]) -> bool | None:
-    matches = [value for value in hidden if "sret" in value.lower() or "return" in value.lower()]
-    return True if matches else None
-
-
-def _attribute_text(attributes: Any, name: str) -> str | None:
-    if not isinstance(attributes, dict):
-        return None
-    attribute = attributes.get(name)
-    value = getattr(attribute, "value", None)
-    if isinstance(value, bytes):
-        return value.decode("utf-8", errors="replace")
-    return str(value) if value is not None else None
-
-
-def _attribute_bool(attributes: Any, name: str) -> bool | None:
-    if not isinstance(attributes, dict):
-        return None
-    value = getattr(attributes.get(name), "value", None)
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, int) and value in {0, 1}:
-        return bool(value)
-    return None
-
-
-def _optional_int(value: object) -> int | None:
-    if value is None:
-        return None
-    if isinstance(value, int) and not isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        try:
-            return int(value, 0)
-        except ValueError:
-            return None
-    return None
-
-
-def _record_query_status(result: QueryResult, label: str, diagnostics: list[str] | None) -> None:
-    if diagnostics is None:
-        return
-    status = result.status.value
-    if status == "complete":
-        return
-    diagnostics.extend(result.diagnostics)
-    diagnostics.append(f"{label} query status: {status}")
-
-
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 __all__ = [

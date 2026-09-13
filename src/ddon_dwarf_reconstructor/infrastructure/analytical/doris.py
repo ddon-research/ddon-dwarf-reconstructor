@@ -45,12 +45,12 @@ from .manifest import (
 from .optional import import_optional
 
 __all__ = [
-    "DorisConfig",
-    "DorisLoadPlan",
-    "DorisLoader",
     "_FAMILY_BLOOM_COLUMNS",
     "_FAMILY_DISTRIBUTION",
     "_FAMILY_KEYS",
+    "DorisConfig",
+    "DorisLoadPlan",
+    "DorisLoader",
     "_native_columns",
     "_native_sql",
     "build_doris_plan",
@@ -150,7 +150,7 @@ class DorisLoader:
 
     def execute(self, plan: DorisLoadPlan, config: DorisConfig | None = None) -> dict[str, object]:
         config = config or DorisConfig.from_environment()
-        self._validate_plan(plan, config)
+        manifest = self._validate_plan(plan, config)
         connection = connect_sql(
             config,
             dependency_loader=import_optional,
@@ -158,8 +158,8 @@ class DorisLoader:
         try:
             self._execute_sql(connection, plan)
             migrate_registry_schema(connection, config.database, config.table)
-            loaded = self._load_native_files(plan, config)
-            return self._complete_load(connection, plan, config, loaded)
+            loaded = self._load_native_files(plan, config, manifest)
+            return self._complete_load(connection, plan, config, loaded, manifest)
         finally:
             connection.close()
 
@@ -169,8 +169,9 @@ class DorisLoader:
         plan: DorisLoadPlan,
         config: DorisConfig,
         loaded: list[dict[str, object]],
+        manifest: MaterializationManifest | None = None,
     ) -> dict[str, object]:
-        manifest = _load_manifest(plan.manifest_path)
+        manifest = manifest or _load_manifest(plan.manifest_path)
         pending_loads = tuple(
             load for load in loaded if str(load.get("status")) == "publish_pending"
         )
@@ -278,13 +279,14 @@ class DorisLoader:
         }
 
     @staticmethod
-    def _validate_plan(plan: DorisLoadPlan, config: DorisConfig) -> None:
+    def _validate_plan(plan: DorisLoadPlan, config: DorisConfig) -> MaterializationManifest:
         manifest_path = plan.manifest_path.resolve()
         manifest = load_manifest(manifest_path)
         _validate_manifest_for_load(manifest, manifest_path)
         _validate_plan_files(plan, manifest_path, manifest)
         _validate_plan_settings(plan, config)
         _validate_plan_manifest_files(manifest_path, manifest)
+        return manifest
 
     @staticmethod
     def _execute_sql(connection: Any, plan: DorisLoadPlan) -> list[dict[str, object]]:
@@ -366,16 +368,20 @@ class DorisLoader:
         }
 
     def _load_native_files(
-        self, plan: DorisLoadPlan, config: DorisConfig
+        self,
+        plan: DorisLoadPlan,
+        config: DorisConfig,
+        manifest: MaterializationManifest | None = None,
     ) -> list[dict[str, object]]:
         client = DorisStreamLoadClient(config)
+        source_sha256 = _source_sha256(plan, manifest)
 
         def load_file(parquet_file: Path) -> dict[str, object]:
             family = _family_for_file(parquet_file, plan.manifest_path)
             outcome = client.load(
                 parquet_file,
                 _family_table(plan.table, family),
-                _load_label(plan, family, parquet_file),
+                _load_label(plan, family, parquet_file, source_sha256),
             )
             return outcome.to_dict()
 
@@ -423,10 +429,22 @@ def _family_for_file(path: Path, manifest_path: Path) -> str:
     return family
 
 
-def _load_label(plan: DorisLoadPlan, family: str, path: Path) -> str:
+def _load_label(
+    plan: DorisLoadPlan,
+    family: str,
+    path: Path,
+    source_sha256: str | None = None,
+) -> str:
     """Return a repeatable label so a manifest cannot silently duplicate rows."""
-    source = _load_manifest(plan.manifest_path).source_identity.sha256[:16]
+    source = (source_sha256 or _load_manifest(plan.manifest_path).source_identity.sha256)[:16]
     root = plan.manifest_path.resolve().parent
     relative = path.resolve().relative_to(root).as_posix()
     path_key = hashlib.sha256(relative.encode("utf-8")).hexdigest()[:16]
     return f"ddon_{source}_{family}_{path_key}"
+
+
+def _source_sha256(plan: DorisLoadPlan, manifest: MaterializationManifest | None) -> str:
+    """Return the validated source identity for one load invocation."""
+    if manifest is None:
+        manifest = _load_manifest(plan.manifest_path)
+    return manifest.source_identity.sha256

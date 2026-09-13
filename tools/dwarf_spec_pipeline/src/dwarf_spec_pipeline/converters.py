@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 from .source_manifest import SourceSpec
+
+_CONVERTER_TIMEOUT_SECONDS = 120.0
+_MAX_DIAGNOSTIC_BYTES = 8 * 1024
 
 
 class ConversionError(RuntimeError):
@@ -23,25 +28,76 @@ def _tool_path(name: str) -> str:
     return path
 
 
-def _run(command: list[str], *, cwd: Path | None = None) -> None:
-    try:
-        completed = subprocess.run(
-            command,
-            cwd=cwd,
-            check=False,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-        )
-    except OSError as exc:
-        raise ConversionError(f"Unable to start converter {command[0]!r}: {exc}") from exc
-    if completed.returncode != 0:
-        detail = (completed.stderr or completed.stdout).strip()
-        raise ConversionError(
-            f"Converter {' '.join(command)!r} failed with exit code "
-            f"{completed.returncode}: {detail}"
-        )
+def _diagnostic(path: Path) -> str:
+    """Read only the bounded prefix used in an external-tool error."""
+    content = path.read_bytes()[: _MAX_DIAGNOSTIC_BYTES + 1]
+    text = content.decode("utf-8", errors="replace").strip()
+    if len(content) > _MAX_DIAGNOSTIC_BYTES:
+        return f"{text[:_MAX_DIAGNOSTIC_BYTES]}... [truncated]"
+    return text
+
+
+def _run(
+    command: list[str],
+    *,
+    cwd: Path | None = None,
+    output_path: Path | None = None,
+    timeout: float = _CONVERTER_TIMEOUT_SECONDS,
+) -> None:
+    """Run one converter with bounded diagnostics and a finite lifetime.
+
+    Converter stdout is streamed to a temporary file. When ``output_path`` is
+    supplied, it is atomically moved into place only after the process succeeds.
+    This keeps a previous intermediate available when a converter fails.
+    """
+    if timeout <= 0:
+        raise ConversionError(f"Converter timeout must be positive, got {timeout}")
+    run_dir = cwd if cwd is not None else Path.cwd()
+    run_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".converter-run-", dir=run_dir) as temporary_dir:
+        temporary_root = Path(temporary_dir)
+        stdout_path = temporary_root / "stdout"
+        stderr_path = temporary_root / "stderr"
+        try:
+            with (
+                stdout_path.open("wb") as stdout,
+                stderr_path.open("wb") as stderr,
+            ):
+                process = subprocess.Popen(
+                    command,
+                    cwd=cwd,
+                    stdin=subprocess.DEVNULL,
+                    stdout=stdout,
+                    stderr=stderr,
+                )
+                try:
+                    returncode = process.wait(timeout=timeout)
+                except subprocess.TimeoutExpired as exc:
+                    process.kill()
+                    try:
+                        process.wait(timeout=5)
+                    except subprocess.TimeoutExpired as cleanup_error:
+                        raise ConversionError(
+                            f"Converter {' '.join(command)!r} did not terminate after timeout"
+                        ) from cleanup_error
+                    raise ConversionError(
+                        f"Converter {' '.join(command)!r} timed out after {timeout:g}s"
+                    ) from exc
+        except OSError as exc:
+            raise ConversionError(f"Unable to start converter {command[0]!r}: {exc}") from exc
+        if returncode != 0:
+            detail = _diagnostic(stderr_path) or _diagnostic(stdout_path)
+            raise ConversionError(
+                f"Converter {' '.join(command)!r} failed with exit code {returncode}: {detail}"
+            )
+        if output_path is not None:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                os.replace(stdout_path, output_path)
+            except OSError as exc:
+                raise ConversionError(
+                    f"Unable to publish converter output {output_path}: {exc}"
+                ) from exc
 
 
 def convert_source(source: SourceSpec, source_path: Path, work_dir: Path) -> Path:
@@ -49,44 +105,47 @@ def convert_source(source: SourceSpec, source_path: Path, work_dir: Path) -> Pat
 
     output_dir = work_dir / source.source_id
     output_dir.mkdir(parents=True, exist_ok=True)
-    if source.format == "mm":
-        output_path = output_dir / f"{source.source_id}.html"
-        output_path.unlink(missing_ok=True)
-        command = [_tool_path("groff"), "-m", "mm", "-t", "-T", "html", "-p", str(source_path)]
-        try:
-            completed = subprocess.run(
-                command,
-                check=False,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-            )
-        except OSError as exc:
-            raise ConversionError(f"Unable to start Groff: {exc}") from exc
-        if completed.returncode != 0:
-            detail = (completed.stderr or completed.stdout).strip()
-            raise ConversionError(f"Groff failed with exit code {completed.returncode}: {detail}")
-        output_path.write_text(completed.stdout, encoding="utf-8", newline="\n")
-        return output_path
-
-    if source.format == "doc":
-        libreoffice = _tool_path("libreoffice")
-        output_path = output_dir / f"{source_path.stem}.docx"
-        output_path.unlink(missing_ok=True)
-        _run(
-            [
+    with tempfile.TemporaryDirectory(prefix=f".{source.source_id}-", dir=output_dir) as stage_name:
+        stage_dir = Path(stage_name)
+        if source.format == "mm":
+            output_path = output_dir / f"{source.source_id}.html"
+            staged_path = stage_dir / output_path.name
+            command = [
+                _tool_path("groff"),
+                "-m",
+                "mm",
+                "-t",
+                "-T",
+                "html",
+                "-p",
+                str(source_path.resolve()),
+            ]
+            _run(command, cwd=stage_dir, output_path=staged_path)
+        elif source.format == "doc":
+            libreoffice = _tool_path("libreoffice")
+            output_path = output_dir / f"{source_path.stem}.docx"
+            command = [
                 libreoffice,
                 "--headless",
                 "--convert-to",
                 "docx",
                 "--outdir",
-                str(output_dir),
-                str(source_path),
+                str(stage_dir),
+                str(source_path.resolve()),
             ]
-        )
-        if not output_path.exists():
-            raise ConversionError(f"LibreOffice did not produce expected output {output_path}")
-        return output_path
+            _run(command, cwd=stage_dir)
+            staged_path = stage_dir / output_path.name
+            if not staged_path.exists():
+                raise ConversionError(f"LibreOffice did not produce expected output {output_path}")
+        else:
+            raise ConversionError(f"Unsupported source format {source.format!r}")
 
-    raise ConversionError(f"Unsupported source format {source.format!r}")
+        if not staged_path.exists():
+            raise ConversionError(f"Converter did not produce expected output {staged_path}")
+        try:
+            os.replace(staged_path, output_path)
+        except OSError as exc:
+            raise ConversionError(
+                f"Unable to publish converted source {output_path}: {exc}"
+            ) from exc
+    return output_path

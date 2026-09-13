@@ -14,7 +14,6 @@ from ddon_dwarf_reconstructor.application.generators import DwarfGenerator
 from ddon_dwarf_reconstructor.core.platform import ELFPlatform
 from ddon_dwarf_reconstructor.domain.models.analytical_dwarf import (
     DwarfMaterializationRequest,
-    MaterializationManifest,
     QueryStatus,
 )
 from ddon_dwarf_reconstructor.infrastructure.analytical import (
@@ -288,6 +287,45 @@ def test_existing_jsonl_store_backfills_bounded_parquet_projection(tmp_path: Pat
     assert manifest.configuration["parquet_layout"] == "bucketed"
 
 
+@pytest.mark.parametrize("failure_type", [OSError, KeyboardInterrupt])
+def test_backfill_manifest_failure_preserves_store_and_allows_retry(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_type: type[BaseException]
+) -> None:
+    from ddon_dwarf_reconstructor.infrastructure.analytical import materializer as module
+
+    source = tmp_path / "sample.elf"
+    source.write_bytes(b"ELF!")
+    producer = DwarfMaterializer(SourceIdentityCatalog(tmp_path / "identities.json"))
+    output = tmp_path / "stores"
+    with patch.object(module, "ElfDwarfSession", lambda path: _Session(path, _fixture_dwarf())):
+        producer.materialize(
+            DwarfMaterializationRequest(source, output, write_jsonl=True, write_parquet=False)
+        )
+    assert producer.last_manifest_path is not None
+    manifest_path = producer.last_manifest_path
+    previous_manifest = manifest_path.read_bytes()
+    previous_records = (manifest_path.parent / "records.jsonl").read_bytes()
+    replace_file = module.os.replace
+
+    def fail_manifest(source_path: Path, target_path: Path) -> None:
+        if target_path == manifest_path:
+            raise failure_type("outer manifest publication failed")
+        replace_file(source_path, target_path)
+
+    request = DwarfMaterializationRequest(source, output, write_jsonl=True)
+    with monkeypatch.context() as injection:
+        injection.setattr(module.os, "replace", fail_manifest)
+        with pytest.raises(failure_type, match="outer manifest publication failed"):
+            producer.materialize(request)
+
+    assert manifest_path.read_bytes() == previous_manifest
+    assert (manifest_path.parent / "records.jsonl").read_bytes() == previous_records
+    assert not (manifest_path.parent / "parquet").exists()
+    updated = producer.materialize(request)
+    assert updated.files["parquet"] == "parquet"
+    assert ParquetDwarfStore.load(manifest_path).unit_count == 1
+
+
 def test_materializer_decodes_reference_offsets_without_cross_cu_navigation(
     tmp_path: Path,
 ) -> None:
@@ -498,27 +536,6 @@ def test_parquet_partition_derives_unit_bucket_before_normalization() -> None:
     )
 
     assert partition == ("die", "source", 1)
-
-
-def test_manifest_rejects_invalid_source_identity() -> None:
-    payload = {
-        "schema_version": "1.0",
-        "source_path": "sample.elf",
-        "source_identity": {
-            "sha256": "a",
-            "size": 1,
-            "mtime_ns": 1,
-            "ctime_ns": 1,
-            "device": 1,
-            "inode": 1,
-        },
-        "producer": "test",
-        "platform": "unknown",
-        "files": {},
-        "counts": {},
-    }
-    manifest = MaterializationManifest.from_dict(payload)
-    assert manifest.source_identity.sha256 == "a"
 
 
 def test_doris_plan_uses_source_aware_family_keys(tmp_path: Path) -> None:

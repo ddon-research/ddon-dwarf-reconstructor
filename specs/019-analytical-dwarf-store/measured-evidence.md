@@ -21,6 +21,20 @@ They remain historical observations; fresh post-refactor acceptance is recorded 
 section below. IDA/Sonar evidence and byte comparison with the unavailable historical approved
 header remain separate and are not implied by this store record.
 
+## SDK 12 disassembly refactor reuse evidence (2026-08-18)
+
+The full source-bound analytical store at `output/analytical-dwarf/main/store-4236f598acc8f158`
+was reused by the baseline-first disassembly refactor acceptance; no new materializer, Doris load,
+or serving claim was introduced. Baseline and post outputs are external at
+`C:\Users\morph\AppData\Local\Temp\ddon-disassembly-refactor-20260818`, with SDK `12.000`
+tools and 289 roots in 73/73/73/70 partitions.
+
+The strict `disassembly-regression/1` comparison matched zero differences. Both manifests report
+2,745 headers, 83,754 method entries, 4,504 artifact descriptors, 289 reports/source bundles, and
+8,116 files totaling 354,480,609 bytes. This is generation/disassembly regression evidence only;
+the analytical store remains the serving boundary and ABI, semantic, performance, and live-behavior
+claims retain their existing independent statuses.
+
 ### Supersession table
 
 | Evidence boundary | Scope | Status and use |
@@ -29,7 +43,7 @@ header remain separate and are not implied by this store record.
 | Blocked boundary-refactor attempts | 1,653 headers at most | Partial/blocked; not complete evidence |
 | Current Season 2 run | 2,760 headers, 2,760/2,760 MSVC units, 1,150 clean bundles | Current observed-partial real-asset record owned by Feature 001 |
 | Historical complete validator | 1,150 method requests | Dated pre-T087 serving/validator evidence; ABI, compiler transformation, parity, and live behavior remain open |
-| Current bounded T087 validator | 1,037 method requests | Corrected post-effects/parity pilot; report is failed/partial and target-object acceptance is not observed |
+| Current bounded T087 validator | 1,037 method requests | SDK 12 schema-4.4 report is `partial`; 26 code-bearing methods retain target objects, with 17 `target_object_equivalent` and 9 `not_promoted` |
 
 Benchmark rows include source identity, producer/schema/configuration identity, runtime and Python
 identity, cold/warm state, machine metadata, resource metrics, output-manifest identity, and an
@@ -150,6 +164,30 @@ adds a focused `#BM#k` regression. This is additive validator evidence and does 
 canonical analytical store, generated header bytes, or assembly eligibility. The full Season 2
 validator remains deferred while ABI, effects, compiler transformation, parity, and live behavior
 remain open.
+
+### SDK 12 schema-4.4 bounded gate (2026-08-17)
+
+The post-T086 source-bound acceptance used the complete analytical store on Doris at
+`127.0.0.1:19030`, the frozen 26 code-bearing `rLayout` methods, SDK 12 tools, six complete
+`orbis-bin` manifests, and the retained 8/8 compiler-probe manifest. The external report is
+`C:\Users\morph\AppData\Local\Temp\ddon-orbis-sdk12-t087-20260817-final2\implementation-validation-4236f598acc8f158.json`
+with SHA-256
+`752FA0CF923DCD303CDCE34EDD5EEEAAB4F7BD8BF95E516C6D0B6C5F85DD2BFE`. The report is source-bound
+to ELF SHA-256 `4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0` and the
+complete manifest SHA-256 `bbe354bf3f838c8a1da6da501b9829a1bedf533f4834f0a4710dcbb574886078`.
+
+| Surface | Result | Evidence boundary |
+| --- | --- | --- |
+| Analytical/Doris preflight | Complete registry and canonical serving variant observed | This is a local service observation; the manifest remains the source-binding authority |
+| T086 effects | 26/26 code-bearing methods `observed` | Normalized aliases/prefixes, vector effects, stack/frame transitions, return cleanup, and bounded CFG joins are covered; unknown/conflicting paths remain non-promoting |
+| ABI closure | 17 observed, 9 partial | The nine partial rows lack complete source-bound return-type facts; compiler probes remain capability evidence only |
+| SDK 12 target objects | 26/26 method `.s`, `.o`, and linked `.o` artifacts retained; six utility profiles observed; 8/8 probes observed | Canonical `orbis-objdump` remains the disassembler; `orbis-bin` is additive |
+| Static disposition | 17 `target_object_equivalent`, 9 `not_promoted` | No live behavior or semantic equivalence is inferred |
+| Stack-size evidence | `rLayout::load(MtStream&)` = `4,504` bytes from `orbis-bin -dss` | The signatureless discovery row is retained separately from the full-signature utility symbol |
+
+This closes the bounded implementation/evidence slices for T086 and T087 and computes T088
+dispositions, but it does not close the all-26 promotion gate. Full Season 2 generation, header and
+MSVC closure, IDA comparison, and runtime behavior remain separate evidence surfaces.
 
 ## Boundary-refactor validation (2026-08-11 to 2026-08-13)
 
@@ -586,3 +624,23 @@ infer CU completeness.
 | Bounded CU-rotation stress — v26 | `observed`, partial and payload-validated | `bounded-family-rotation-v26-1024-r16-20260806` completed normally with `PYTHONFAULTHANDLER=1` after 1,024 CUs using direct typed Zstandard Parquet, no JSONL, family/source layout, `--max-open-writers 16`, and `--rotate-writers-every-cus 16`. The source-bound manifest records 47,292,085 DIEs, 133,994,692 attributes, 69,926,012 references, 17,482,544 index rows, 17,271,294 names, 1,024 units, zero parser errors, 64 CU-boundary rotations, `peak_open_writers=12`, 642 Parquet files, 5,190 row groups, 294,968,826 rows, and 1,960,707,231 Parquet bytes. `inspect-dwarf-store --allow-incomplete` exited 0; an independent Arrow read of every column verified all 642 files in 12.776 seconds with no row mismatch or payload error, and all codecs were ZSTD. No new WER dump was created. | This is the cumulative reliability gate for the 16-CU rotation and direct native path, not a complete store: 1,024 of 2,305 CUs were traversed. It cannot serve generation, knowledge export, Doris, Iceberg, or completeness/header parity evidence. |
 | Bounded v26 query contract | `observed`, partial diagnostic | `performance benchmark-dwarf-store --allow-incomplete` loaded the v26 manifest and returned 96 `rLayout` definitions from the 1,024-CU prefix. The report is `C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\query-bounded-v26-20260806\benchmark-report.json`; the file definition query took 2.663 seconds cold and 0.434 seconds warm, scanning the 642-file projection. | The 96 matches demonstrate increased prefix coverage but are not complete `rLayout` parity; the benchmark explicitly reports `partial` and the store remains barred from generation, knowledge export, Doris, Iceberg, and acceptance. |
 | Windows crash-dump triage — v18/v21/v23 | `observed`, diagnostic | Windows Error Reporting retained `C:\Users\morph\AppData\Local\CrashDumps\python.exe.31944.dmp`, `python.exe.22356.dmp`, and `python.exe.20412.dmp`. CDB 10.0.22621.755 `!analyze -v` found the same invalid-pointer read at `lib.cp314_win_amd64+0x16a8f0` in v18 and v21, with callers in `arrow_python!arrow::py::ConvertPySequence`; v23 instead faulted at `python314!Py_HandlePending+0x11b9` while `pyarrow`/Arrow modules were loaded. Reusable CDB logs are under `C:\Users\morph\AppData\Local\Temp\ddon-analytical-dwarf\windows-dumps`. | These are WER user mini-dumps, so heap/object state is incomplete and the shared native signature does not prove the ultimate corrupting write. The effective system WER policy is the existing `CrashDumps` directory; HKLM per-app full-dump configuration was denied and HKCU `LocalDumps` is unsupported by Microsoft. Future bounded materializer profiler children set `PYTHONFAULTHANDLER=1`; use CDB/WinDbg evidence before another full traversal. |
+
+## September 9, 2026 Doris storage recovery
+
+A fresh pull of the final `apache/doris:fe-4.1.3` and `apache/doris:be-4.1.3` tags returned the
+same immutable digests already locked in `ops/analytical-dwarf/images.lock.json`; the container
+banner remains `doris-4.1.3-rc02-7126cf65d96`. The original D: bind mount produced `errno=5`
+while testing `.testfile` at approximately 97.9% utilization. Host volume and physical-disk
+checks were healthy, and all 498 BE storage files were readable and hashable.
+
+A byte/hash-verified copy of 31 FE metadata files and 498 BE storage files was started from a
+new C: directory. The recovered BE loaded 251 tablets with no storage error, FE reported 247/247
+tablets healthy, SQL and HTTP health probes passed, and every family/auxiliary tablet was
+`NORMAL`. The complete registry is source `4236f598acc8f158...`, status `complete`, and all
+fourteen expected family counts match `store-4236f598acc8f158/manifest.json`. `MtObject` and
+`rLayout` header-only controls succeeded with 20 and 40 headers respectively.
+
+Evidence is retained under
+`output/refactoring-evidence/021/1b10b75e751c97b1/doris-recovery-20260909-2016/`. Full-corpus
+parity, compiler, and performance acceptance remain pending; this is service-recovery evidence,
+not a regenerated 289-root acceptance run.

@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 
 from ..domain.models.disassembly import OrbisDefinitionSource, OrbisSdkDefinitionIdentity
+from .orbis_toolchain_contracts import SDK12_PROFILE_ID, get_toolchain_contract
 
 SDK_DEFINITION_VERSION = "orbis-sdk6500-n267"
 # Compatibility spelling used by the profile/cache layer.
@@ -211,15 +212,20 @@ def sdk_definition_model() -> OrbisSdkDefinitionIdentity:
     )
 
 
+def toolchain_contract_identity(profile_id: str = SDK12_PROFILE_ID) -> dict[str, object]:
+    """Return the reviewed compiler/toolchain contract for a report or cache key."""
+    return get_toolchain_contract(profile_id).to_dict()
+
+
 __all__ = [
     "DEFAULT_PS4_LLVM_TRIPLE",
-    "ELF_MACHINE_X86_64",
     "ELFOSABI_FREEBSD",
+    "ELF_MACHINE_X86_64",
+    "ORBIS_BFD_TARGET",
     "ORBIS_COMMON_PAGE_SIZE",
+    "ORBIS_CONFIGURE_TRIPLE",
     "ORBIS_MIN_PAGE_SIZE",
     "ORBIS_RELOCATION_DEFINITIONS",
-    "ORBIS_BFD_TARGET",
-    "ORBIS_CONFIGURE_TRIPLE",
     "PT_GNU_RELRO",
     "PT_SCE_COMMENT",
     "PT_SCE_DYNLIBDATA",
@@ -229,9 +235,10 @@ __all__ = [
     "RELOCATION_NAMES",
     "SCE_DYNAMIC_TAG_NAMES",
     "SCE_PROGRAM_HEADER_NAMES",
-    "SDK_DEFINITION_SOURCE",
     "SDK_DEFINITIONS_VERSION",
+    "SDK_DEFINITION_SOURCE",
     "SDK_DEFINITION_VERSION",
     "sdk_definition_identity",
     "sdk_definition_model",
+    "toolchain_contract_identity",
 ]

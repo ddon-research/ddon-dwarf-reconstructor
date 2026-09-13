@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import os
 from dataclasses import dataclass
+from math import isfinite
 from typing import TypedDict
 
 from .doris_config_environment import flight_environment_values
@@ -67,6 +68,7 @@ class DorisConfig:
 
     def __post_init__(self) -> None:
         _validate_sql_endpoint(self)
+        _validate_finite_timeouts(self)
         if self.analyze_wait_seconds < 0:
             raise ValueError("analyze_wait_seconds must not be negative")
         if self.stream_load_workers < 1:
@@ -291,6 +293,23 @@ def _optional_serving_environment_value(name: str, canonical: bool) -> str | Non
     if not normalized:
         raise ValueError(f"{name} must not be empty")
     return normalized
+
+
+def _validate_finite_timeouts(config: DorisConfig) -> None:
+    for field_name in (
+        "analyze_wait_seconds",
+        "publication_verify_timeout_seconds",
+        "flight_sql_query_timeout_seconds",
+        "flight_sql_fetch_timeout_seconds",
+        "sql_connect_timeout_seconds",
+        "sql_read_timeout_seconds",
+        "sql_write_timeout_seconds",
+        "stream_load_connect_timeout_seconds",
+        "stream_load_read_timeout_seconds",
+        "stream_load_write_timeout_seconds",
+    ):
+        if not isfinite(getattr(config, field_name)):
+            raise ValueError(f"{field_name} must be finite")
 
 
 def _validate_stream_load_timeouts(config: DorisConfig) -> None:

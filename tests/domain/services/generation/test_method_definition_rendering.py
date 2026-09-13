@@ -47,6 +47,20 @@ def test_definition_signature_handles_constructor_destructor_and_operator() -> N
 
 @pytest.mark.unit
 @pytest.mark.functional
+def test_definition_signature_removes_explicit_assignment_operator_specialization() -> None:
+    specialized = MethodInfo(
+        "operator=<32>",
+        "MtString",
+        parameters=[ParameterInfo("other", "MtStringEx<32>&")],
+    )
+
+    assert MethodDefinitionRenderingService.render("MtString", specialized) == (
+        "MtString MtString::operator=(MtStringEx<32>& other)"
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.functional
 def test_definition_signature_filters_typed_artificial_parameters() -> None:
     method = MethodInfo(
         name="load",

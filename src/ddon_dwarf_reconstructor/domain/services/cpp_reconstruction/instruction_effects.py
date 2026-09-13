@@ -1,51 +1,61 @@
-"""Conservative instruction-effect and CFI evidence for implementation validation."""
+"""Conservative instruction-effect evidence for implementation validation."""
 
 from __future__ import annotations
 
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from pathlib import Path
 
-from elftools.common.exceptions import ELFError
-from elftools.elf.elffile import ELFFile
-
-from ..domain.models.disassembly import OrbisInstruction
-from ..domain.models.implementation_validation import (
-    EvidenceStatus,
+from ...models.cpp_reconstruction.control_flow import ControlFlowJoin
+from ...models.disassembly import OrbisInstruction
+from ...models.implementation_validation import (
     InstructionEffects,
     ValidationStatus,
 )
-from .implementation_parity import ControlFlowJoin, join_conditional_paths, make_control_flow_steps
-
-_REGISTER_PATTERN = re.compile(
-    r"(?<![A-Za-z0-9_])%?(?:r(?:[89]|1[0-5])(?:[bwd])?|"
-    r"r(?:[abcd]x|[sb]p|[sd]i|ip)|"
-    r"e?[abcd]x|e?[sb]p|e?[sd]i|[abcd][lh]|sil|dil|spl|bpl|"
-    r"xmm\d+|ymm\d+|zmm\d+)(?![A-Za-z0-9_])",
-    re.IGNORECASE,
+from .control_flow import join_conditional_paths, make_control_flow_steps
+from .instruction_operands import (
+    _CALLEE_SAVED,
+    _CONDITIONAL_BRANCHES,
+    _FLAG_WRITERS,
+    _KNOWN_MNEMONICS,
+    _REGISTER_PATTERN,
+    _REGISTER_WRITERS,
 )
-_IMMEDIATE_PATTERN = re.compile(r"(?:\$|#)?(?:-?0x[0-9a-f]+|-?\d+)$", re.IGNORECASE)
-_CALLEE_SAVED = frozenset({"rbx", "rbp", "r12", "r13", "r14", "r15"})
-_CONDITIONAL_BRANCHES = frozenset(  # noqa: SIM905
-    "ja jae jb jbe jc je jg jge jl jle jna jnae jnb jnbe jnc jne jng jnge "  # noqa: SIM905
-    "jnl jnle jno jnp jns jnz jo jp jpe jpo js jz jecxz jrcxz jcxz loop "
-    "loope loopne loopnz loopz".split()  # noqa: SIM905
+from .instruction_operands import (
+    base_mnemonic as _base_mnemonic,
 )
-_FLAG_WRITERS = frozenset({"add", "and", "cmp", "dec", "inc", "or", "sbb", "sub", "test", "xor"})
-_KNOWN_MNEMONICS = (
-    frozenset(  # noqa: SIM905
-        "adc add and call clc cld cmc cmp cqo cqto dec div idiv imul inc jmp lea "  # noqa: SIM905
-        "leave mov movabs movdqa movdqu movaps movups mul neg nop not or pop "
-        "push ret sal rol ror sar sbb seta setae setb setbe sete setg setge "
-        "setl setle setne setno seto sets shl shr sub syscall test vzeroupper xor".split()  # noqa: SIM905
-    )
-    | _CONDITIONAL_BRANCHES
+from .instruction_operands import (
+    canonical_register as _canonical_register,
 )
-_REGISTER_WRITERS = frozenset(  # noqa: SIM905
-    "add and cmp dec idiv imul inc lea mov movabs neg not or pop rol ror sar "  # noqa: SIM905
-    "seta setae setb setbe sete setg setge setl setle setne setno seto sets "
-    "shl shr sub xor".split()  # noqa: SIM905
+from .instruction_operands import (
+    destination_is as _destination_is,
+)
+from .instruction_operands import (
+    destination_register as _destination_register,
+)
+from .instruction_operands import (
+    first_register as _first_register,
+)
+from .instruction_operands import (
+    frame_pointer_displacement as _frame_pointer_displacement,
+)
+from .instruction_operands import (
+    has_memory_operand as _has_memory_operand,
+)
+from .instruction_operands import (
+    is_indirect_target as _is_indirect_target,
+)
+from .instruction_operands import (
+    last_register as _last_register,
+)
+from .instruction_operands import (
+    mentions_stack_pointer as _mentions_stack_pointer,
+)
+from .instruction_operands import (
+    stack_immediate as _stack_immediate,
+)
+from .instruction_operands import (
+    writes_memory as _writes_memory,
 )
 
 
@@ -65,6 +75,7 @@ class _EffectState:
     stack_delta: int = 0
     stack_min: int = 0
     stack_max: int = 0
+    frame_pointer_delta: int | None = None
     uncertain: bool = False
     conditional_branch: bool = False
 
@@ -103,20 +114,50 @@ def _consume_instruction(state: _EffectState, instruction: OrbisInstruction) -> 
 def _consume_control(
     state: _EffectState, mnemonic: str, operands: str, instruction: OrbisInstruction
 ) -> None:
+    if mnemonic in {"call", "ret", "push", "pop"}:
+        _consume_terminal_control(state, mnemonic, operands, instruction)
+        return
+    if mnemonic in {"sub", "add", "and"} and _mentions_stack_pointer(operands):
+        _consume_stack_control(state, mnemonic, operands)
+        return
+    if mnemonic in {"mov", "lea", "leave"}:
+        _consume_frame_control(state, mnemonic, operands)
+
+
+def _consume_terminal_control(
+    state: _EffectState, mnemonic: str, operands: str, instruction: OrbisInstruction
+) -> None:
     if mnemonic == "call":
         _consume_call(state, operands, instruction)
     elif mnemonic == "ret":
         _consume_return(state, operands)
     elif mnemonic == "push":
         _consume_push(state, operands)
-    elif mnemonic == "pop":
+    else:
         _consume_pop(state, operands)
-    elif mnemonic in {"sub", "add"} and _mentions_stack_pointer(operands):
-        amount = _stack_immediate(operands)
-        _update_stack(state, -amount if mnemonic == "sub" else amount)
-    elif mnemonic == "leave":
+
+
+def _consume_stack_control(state: _EffectState, mnemonic: str, operands: str) -> None:
+    if mnemonic == "and":
+        _apply_stack_alignment_mask(state, operands)
+        return
+    amount = _stack_immediate(operands)
+    _update_stack(state, -amount if mnemonic == "sub" else amount)
+
+
+def _consume_frame_control(state: _EffectState, mnemonic: str, operands: str) -> None:
+    if mnemonic == "mov":
+        _consume_frame_pointer_move(state, operands)
+    elif mnemonic == "lea":
+        _consume_frame_pointer_lea(state, operands)
+    elif state.frame_pointer_delta is None:
         state.uncertain = True
-        state.diagnostics.append("leave changes stack state through frame-pointer state")
+        state.diagnostics.append("leave changes stack state through unknown frame-pointer state")
+    else:
+        state.restored.add("rbp")
+        _set_stack_delta(state, state.frame_pointer_delta)
+        _update_stack(state, 8)
+        state.frame_pointer_delta = None
 
 
 def _consume_call(state: _EffectState, operands: str, instruction: OrbisInstruction) -> None:
@@ -174,6 +215,38 @@ def _update_stack(state: _EffectState, delta: int) -> None:
     state.stack_delta += delta
     state.stack_min = min(state.stack_min, state.stack_delta)
     state.stack_max = max(state.stack_max, state.stack_delta)
+
+
+def _set_stack_delta(state: _EffectState, value: int) -> None:
+    state.stack_delta = value
+    state.stack_min = min(state.stack_min, value)
+    state.stack_max = max(state.stack_max, value)
+
+
+def _apply_stack_alignment_mask(state: _EffectState, operands: str) -> None:
+    mask = _stack_immediate(operands)
+    if mask >= 0 or not _destination_is(operands, "rsp"):
+        state.uncertain = True
+        state.diagnostics.append("stack alignment mask is not a proven negative rsp mask")
+        return
+    _set_stack_delta(state, state.stack_delta & mask)
+
+
+def _consume_frame_pointer_move(state: _EffectState, operands: str) -> None:
+    source = _first_register(operands)
+    destination = _destination_register(operands)
+    if source == "rsp" and destination == "rbp":
+        state.frame_pointer_delta = state.stack_delta
+    elif source == "rbp" and destination == "rsp" and state.frame_pointer_delta is not None:
+        _set_stack_delta(state, state.frame_pointer_delta)
+
+
+def _consume_frame_pointer_lea(state: _EffectState, operands: str) -> None:
+    if _destination_register(operands) != "rsp" or state.frame_pointer_delta is None:
+        return
+    displacement = _frame_pointer_displacement(operands)
+    if displacement is not None:
+        _set_stack_delta(state, state.frame_pointer_delta + displacement)
 
 
 def _finish_effects(state: _EffectState, items: tuple[OrbisInstruction, ...]) -> InstructionEffects:
@@ -261,17 +334,33 @@ def _conditional_join(
 ) -> ControlFlowJoin | None:
     if not has_conditional:
         return None
+    stack_deltas = _path_stack_deltas(items)
     steps = make_control_flow_steps(
         items,
         normalize=_base_mnemonic,
         target=_branch_target,
-        stack_delta=_instruction_stack_delta,
+        stack_delta=lambda item: stack_deltas.get(item.address, _instruction_stack_delta(item)),
         saved=_callee_saved_set,
         destination=_callee_saved_destination,
         conditional=_CONDITIONAL_BRANCHES,
         known=_KNOWN_MNEMONICS,
     )
-    return join_conditional_paths(steps, expected_delta)
+    return join_conditional_paths(
+        steps,
+        expected_delta,
+        max_states=min(16384, max(2048, len(items) * 16)),
+    )
+
+
+def _path_stack_deltas(items: tuple[OrbisInstruction, ...]) -> dict[int, int]:
+    """Calculate stack transitions with the same frame model as linear effects."""
+    state = _EffectState()
+    result: dict[int, int] = {}
+    for item in items:
+        before = state.stack_delta
+        _consume_control(state, _base_mnemonic(item.mnemonic), item.operands, item)
+        result[item.address] = state.stack_delta - before
+    return result
 
 
 def _callee_saved_destination(operands: str) -> str | None:
@@ -306,6 +395,10 @@ def _instruction_stack_delta(instruction: OrbisInstruction) -> int:
     if mnemonic in {"sub", "add"} and _mentions_stack_pointer(instruction.operands):
         amount = _stack_immediate(instruction.operands)
         return -amount if mnemonic == "sub" else amount
+    if mnemonic == "and" and _mentions_stack_pointer(instruction.operands):
+        # The exact mask transition is state-dependent; the linear analyzer
+        # proves it while the generic path join remains conservative.
+        return 0
     return 0
 
 
@@ -320,7 +413,7 @@ def _callee_saved_set(instruction: OrbisInstruction, mnemonic: str) -> frozenset
 
 def _callee_saved_preserved(state: _EffectState) -> bool:
     callee_writes = state.writes & _CALLEE_SAVED
-    return not callee_writes or callee_writes <= state.saved and callee_writes <= state.restored
+    return not callee_writes or (callee_writes <= state.saved and callee_writes <= state.restored)
 
 
 def _return_stack_deltas(items: tuple[OrbisInstruction, ...]) -> tuple[int, ...]:
@@ -344,185 +437,4 @@ def _effect_status(state: _EffectState, expected_delta: int, preserved: bool) ->
     return status
 
 
-def inspect_cfi(source: Path, start: int, size: int) -> EvidenceStatus:
-    """Locate CFI covering a method range without treating absence as success."""
-    if size <= 0:
-        return EvidenceStatus(ValidationStatus.NOT_OBSERVED, ("method range is empty",))
-    entries, error = _read_cfi_entries(source)
-    if error is not None:
-        return error
-    end = start + size
-    spans = sorted(span for entry in entries if (span := _cfi_span(entry, start, end)) is not None)
-    if not spans:
-        return EvidenceStatus(
-            ValidationStatus.NOT_OBSERVED,
-            ("no .debug_frame or .eh_frame entry covers the method range",),
-        )
-    gaps = _cfi_gaps(spans, start, end)
-    if gaps:
-        return EvidenceStatus(
-            ValidationStatus.PARTIAL,
-            ("CFI entries overlap the method but do not join across its full range",),
-            {"covering_entries": len(spans), "uncovered_ranges": gaps},
-        )
-    return EvidenceStatus(
-        ValidationStatus.OBSERVED,
-        details={"covering_entries": len(spans), "covered_range": (start, end)},
-    )
-
-
-def _read_cfi_entries(source: Path) -> tuple[tuple[object, ...], EvidenceStatus | None]:
-    entries: list[object] = []
-    try:
-        with source.open("rb") as stream:
-            dwarf = ELFFile(stream).get_dwarf_info()
-            for getter_name in ("CFI_entries", "EH_CFI_entries"):
-                getter = getattr(dwarf, getter_name, None)
-                if getter is None:
-                    continue
-                try:
-                    entries.extend(getter())
-                except Exception as error:  # parser-specific diagnostics are evidence
-                    return (), EvidenceStatus(
-                        ValidationStatus.PARTIAL,
-                        (f"{getter_name} parsing failed: {type(error).__name__}",),
-                    )
-    except (ELFError, OSError, ValueError) as error:
-        return (), EvidenceStatus(
-            ValidationStatus.UNAVAILABLE,
-            (f"CFI source could not be opened: {type(error).__name__}",),
-        )
-    return tuple(entries), None
-
-
-def _cfi_span(entry: object, start: int, end: int) -> tuple[int, int] | None:
-    header = getattr(entry, "header", {})
-    initial = _header_int(header, "initial_location")
-    span = _header_int(header, "address_range")
-    if initial is None or span is None or span <= 0:
-        return None
-    left = max(initial, start)
-    right = min(initial + span, end)
-    return (left, right) if left < right else None
-
-
-def _cfi_gaps(spans: list[tuple[int, int]], start: int, end: int) -> tuple[tuple[int, int], ...]:
-    cursor = start
-    gaps: list[tuple[int, int]] = []
-    for left, right in spans:
-        if left > cursor:
-            gaps.append((cursor, left))
-        cursor = max(cursor, right)
-    if cursor < end:
-        gaps.append((cursor, end))
-    return tuple(gaps)
-
-
-def _base_mnemonic(value: str) -> str:
-    mnemonic = value.strip().lower().split(".", 1)[0] if value else ""
-    for prefix in ("repnz", "repne", "repe", "repz", "rep", "lock"):
-        if mnemonic.startswith(prefix) and len(mnemonic) > len(prefix):
-            mnemonic = mnemonic[len(prefix) :]
-            break
-    mnemonic = {"sal": "shl", "retn": "ret", "retq": "ret"}.get(mnemonic, mnemonic)
-    if mnemonic.endswith(("q", "w", "l", "b")) and mnemonic[:-1] in _KNOWN_MNEMONICS:
-        return mnemonic[:-1]
-    return mnemonic
-
-
-def _canonical_register(value: str) -> str:
-    register = value.lower().lstrip("%")
-    if re.fullmatch(r"r(?:[89]|1[0-5])[bwd]", register):
-        register = register[:-1]
-    aliases = {
-        "eax": "rax",
-        "ax": "rax",
-        "al": "rax",
-        "ah": "rax",
-        "ebx": "rbx",
-        "bx": "rbx",
-        "bl": "rbx",
-        "bh": "rbx",
-        "ecx": "rcx",
-        "cx": "rcx",
-        "cl": "rcx",
-        "ch": "rcx",
-        "edx": "rdx",
-        "dx": "rdx",
-        "dl": "rdx",
-        "dh": "rdx",
-        "esp": "rsp",
-        "sp": "rsp",
-        "spl": "rsp",
-        "ebp": "rbp",
-        "bp": "rbp",
-        "bpl": "rbp",
-        "esi": "rsi",
-        "si": "rsi",
-        "sil": "rsi",
-        "edi": "rdi",
-        "di": "rdi",
-        "dil": "rdi",
-    }
-    return aliases.get(register, register)
-
-
-def _has_memory_operand(operands: str) -> bool:
-    return bool(re.search(r"\([^)]*\)|\[[^]]+\]", operands))
-
-
-def _writes_memory(mnemonic: str, operands: str) -> bool:
-    if not _has_memory_operand(operands):
-        return False
-    if mnemonic in {"cmp", "test", "lea"}:
-        return False
-    if mnemonic in {"push", "call"}:
-        return True
-    parts = [part.strip() for part in operands.split(",") if part.strip()]
-    return bool(parts) and _has_memory_operand(parts[-1])
-
-
-def _destination_register(operands: str) -> str | None:
-    parts = [part.strip() for part in operands.split(",") if part.strip()]
-    if not parts:
-        return None
-    match = _REGISTER_PATTERN.search(parts[-1])
-    return _canonical_register(match.group(0)) if match else None
-
-
-def _last_register(operands: str) -> str | None:
-    matches = _REGISTER_PATTERN.findall(operands)
-    return _canonical_register(matches[-1]) if matches else None
-
-
-def _mentions_stack_pointer(operands: str) -> bool:
-    return any(_canonical_register(item) == "rsp" for item in _REGISTER_PATTERN.findall(operands))
-
-
-def _stack_immediate(operands: str) -> int:
-    for part in (item.strip() for item in operands.split(",")):
-        candidate = part.removeprefix("$").removeprefix("#")
-        if _IMMEDIATE_PATTERN.fullmatch(part) or _IMMEDIATE_PATTERN.fullmatch(candidate):
-            try:
-                return int(candidate, 0)
-            except ValueError:
-                return 0
-    return 0
-
-
-def _is_indirect_target(operands: str, instruction: OrbisInstruction) -> bool:
-    if instruction.call_target_address is not None or instruction.call_target_name is not None:
-        return False
-    value = operands.strip().lstrip("*")
-    return not bool(_IMMEDIATE_PATTERN.fullmatch(value))
-
-
-def _header_int(header: object, key: str) -> int | None:
-    try:
-        value = header[key]  # type: ignore[index]
-    except KeyError, TypeError:
-        return None
-    return int(value) if value is not None else None
-
-
-__all__ = ["analyze_instruction_effects", "inspect_cfi"]
+__all__ = ["analyze_instruction_effects"]

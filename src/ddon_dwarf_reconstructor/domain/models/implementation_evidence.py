@@ -19,7 +19,7 @@ from .disassembly import (
     OrbisToolInvocation,
 )
 from .disassembly_scope import DisassemblyTarget
-from .implementation_validation import MethodContextPacket
+from .implementation_context import MethodContextPacket
 
 _OptionalEvidenceModel = (
     OrbisToolIdentity
@@ -152,6 +152,7 @@ class MethodAssemblyEvidence:
     is_deleted: bool = False
     is_defaulted: bool = False
     is_pure_virtual: bool = False
+    owner_class_key: str | None = None
 
     @property
     def references(self) -> tuple[OrbisReference, ...]:
@@ -387,14 +388,14 @@ def _instruction_to_dict(instruction: OrbisInstruction) -> dict[str, object]:
 
 
 __all__ = [
+    "DEFAULT_IMPLEMENTATION_LIMITATIONS",
     "ArtifactDescriptor",
     "CodeRange",
-    "DEFAULT_IMPLEMENTATION_LIMITATIONS",
     "EvidenceLimitation",
     "FunctionAssociationCandidate",
     "FunctionMatchKind",
-    "ImplementationDiscoveryReport",
     "ImplementationArtifactProfile",
+    "ImplementationDiscoveryReport",
     "ImplementationRelation",
     "ImplementationStatus",
     "MethodAssemblyEvidence",

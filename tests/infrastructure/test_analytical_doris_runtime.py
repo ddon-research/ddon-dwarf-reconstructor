@@ -16,12 +16,14 @@ from ddon_dwarf_reconstructor.infrastructure.analytical.doris import DorisConfig
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris_hydration import (
     attribute_projection_columns,
     hydrate_dies_by_keys,
+    hydrate_dies_by_offsets,
+    prefetch_dies,
     prime_child_tag_counts,
 )
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris_models import DorisDwarfInfo
-from ddon_dwarf_reconstructor.infrastructure.analytical.doris_queries import (
-    BoundedRows,
-    DorisQueryExecutor,
+from ddon_dwarf_reconstructor.infrastructure.analytical.doris_queries import BoundedRows
+from ddon_dwarf_reconstructor.infrastructure.analytical.doris_reference_hydration import (
+    reference_candidates,
 )
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris_store import DorisDwarfStore
 from ddon_dwarf_reconstructor.infrastructure.analytical.doris_store_queries import (
@@ -29,40 +31,6 @@ from ddon_dwarf_reconstructor.infrastructure.analytical.doris_store_queries impo
 )
 
 SOURCE_ID = "a" * 64
-
-
-class _FakeCursor:
-    def __init__(self, rows: Sequence[Sequence[object]]) -> None:
-        self.description = (
-            ("unit_offset",),
-            ("die_offset",),
-            ("tag",),
-            ("name",),
-            ("target_offset",),
-            ("resolution_status",),
-        )
-        self._rows = rows
-        self.executed: tuple[str, tuple[object, ...]] | None = None
-
-    def __enter__(self) -> _FakeCursor:
-        return self
-
-    def __exit__(self, exc_type: object, exc_value: object, traceback: object) -> None:
-        return None
-
-    def execute(self, operation: str, params: Sequence[object] = ()) -> None:
-        self.executed = (operation, tuple(params))
-
-    def fetchall(self) -> Sequence[Sequence[object]]:
-        return self._rows
-
-
-class _FakeConnection:
-    def __init__(self, cursor: _FakeCursor) -> None:
-        self._cursor = cursor
-
-    def cursor(self) -> _FakeCursor:
-        return self._cursor
 
 
 class _StoreStub(DorisDwarfStore):
@@ -119,14 +87,27 @@ class _StoreStub(DorisDwarfStore):
             )
             return BoundedRows(found, len(found) >= limit)
 
+        self._initialize_caches()
+        self._query_operations = DorisStoreQueryOperations(self)
+        self._queries.family_rows = family_rows
+        self._queries.find_definition_rows_bounded = find_definition_rows_bounded
+        self.dwarf_info = DorisDwarfInfo(self)
+        self.persistent_cache = SimpleNamespace()
+
+    def _initialize_caches(self) -> None:
         self._units = {}
         self._dies = {}
+        self._dies_by_key = BoundedQueryCache()
         self._die_unit_offsets = {}
         self._children = {}
+        self._children_by_key = BoundedQueryCache()
         self._line_programs = {}
         self._child_tag_counts = {}
+        self._child_tag_counts_by_key = BoundedQueryCache()
         self._reference_targets = {}
         self._reference_loaded = set()
+        self._reference_dies = {}
+        self._reference_dies_by_key = BoundedQueryCache()
         self._reference_prefetch = "eager"
         self._attribute_projection = "full"
         self._child_tag_filter = "all"
@@ -134,12 +115,7 @@ class _StoreStub(DorisDwarfStore):
         self._cache_hits = 0
         self._cache_misses = 0
         self._definition_query_cache = BoundedQueryCache()
-        self._definition_name_count = None
-        self._query_operations = DorisStoreQueryOperations(self)
-        self._queries.family_rows = family_rows
-        self._queries.find_definition_rows_bounded = find_definition_rows_bounded
-        self.dwarf_info = DorisDwarfInfo(self)
-        self.persistent_cache = SimpleNamespace()
+        self._definition_name_count_cache = None
 
 
 def _filter_rows(
@@ -155,43 +131,6 @@ def _filter_rows(
         )
     ]
     return result[:limit] if limit is not None else result
-
-
-@pytest.mark.unit
-@pytest.mark.functional
-def test_definition_lookup_is_source_bound_and_parameterized() -> None:
-    cursor = _FakeCursor(((12, 34, "DW_TAG_class_type", "Thing", 34, "resolved"),))
-    config = DorisConfig(
-        http_url="http://127.0.0.1:8030",
-        stream_load_url="http://127.0.0.1:8040",
-        sql_host="127.0.0.1",
-        sql_port=9030,
-        database="analytical",
-        user="root",
-        password="",
-        table="dwarf",
-    )
-    executor = DorisQueryExecutor(_FakeConnection(cursor), config, "a" * 64)
-
-    rows = executor.find_definition_rows(
-        "Thing; DROP TABLE dwarf_index", tags=("DW_TAG_class_type",)
-    )
-
-    assert rows == (
-        {
-            "unit_offset": 12,
-            "die_offset": 34,
-            "tag": "DW_TAG_class_type",
-            "name": "Thing",
-            "target_offset": 34,
-            "resolution_status": "resolved",
-        },
-    )
-    assert cursor.executed is not None
-    query, params = cursor.executed
-    assert "`name` = %s" in query
-    assert "DROP TABLE" not in query
-    assert params == ("a" * 64, "definition", "Thing; DROP TABLE dwarf_index", "DW_TAG_class_type")
 
 
 @pytest.mark.unit
@@ -268,8 +207,39 @@ def test_doris_store_prefetches_bounded_reference_frontier() -> None:
     assert store.die_by_offset(48)["DW_AT_name"].value == "Target48"
 
     reference_queries = [filters for family, filters in store.query_log if family == "reference"]
-    assert len(reference_queries) == 1
-    assert reference_queries[0]["die_offset"] == (16, 24)
+    assert reference_queries == []
+
+
+@pytest.mark.unit
+@pytest.mark.performance
+@pytest.mark.non_functional
+def test_doris_store_prefetches_a_single_reference_frontier() -> None:
+    store = _StoreStub(_prefetch_rows())
+    die = store.die_by_offset(16)
+    assert die is not None
+
+    prefetch_dies(store, (die,))
+
+    assert 40 in store._dies
+    assert "hydrate_dies_by_offset" in store.operation_log
+    first_hydration_queries = store.operation_log.count("hydrate_dies_by_offset")
+
+    prefetch_dies(store, (die,))
+
+    assert store.operation_log.count("hydrate_dies_by_offset") == first_hydration_queries
+
+
+@pytest.mark.unit
+@pytest.mark.regression
+def test_reference_candidates_use_indexed_reference_dies() -> None:
+    """Reference batching must not scan every hydrated DIE on each cache miss."""
+    store = _StoreStub(_prefetch_rows())
+    current = store.die_by_offset(40)
+    assert current is not None
+    store.die_by_offset(16)
+    store.die_by_offset(24)
+
+    assert tuple(die.offset for die in reference_candidates(store, current)) == (40, 24, 16)
 
 
 @pytest.mark.unit
@@ -314,12 +284,7 @@ def test_unit_bound_hydration_preserves_rows_and_scopes_fact_queries() -> None:
     children = tuple(store.children_for_die(0))
 
     assert tuple(die.offset for die in children) == (16, 24)
-    reference_filters = [
-        filters
-        for family, filters in store.query_log
-        if family == "reference" and isinstance(filters, dict)
-    ]
-    assert reference_filters[-1]["unit_offset"] == 0
+    assert not [family for family, _filters in store.query_log if family == "reference"]
     child_filters = [
         filters
         for family, filters in store.query_log
@@ -334,6 +299,48 @@ def test_doris_store_hydrates_known_dies_in_one_bounded_batch() -> None:
     store = _StoreStub(_prefetch_rows())
 
     dies = hydrate_dies_by_keys(store, ((0, 40), (0, 48)))
+
+    assert tuple(die.offset for die in dies) == (40, 48)
+    die_queries = [
+        filters
+        for family, filters in store.query_log
+        if family == "die" and isinstance(filters, dict)
+    ]
+    assert die_queries == [{"die_offset": (40, 48)}]
+
+
+@pytest.mark.unit
+@pytest.mark.regression
+def test_doris_store_keeps_duplicate_die_offsets_separate_by_compilation_unit() -> None:
+    rows = _prefetch_rows()
+    rows["unit"].append(_unit_row() | {"unit_offset": 100})
+    rows["die"].append(
+        next(row for row in rows["die"] if row["die_offset"] == 40) | {"unit_offset": 100}
+    )
+    rows["attribute"].append(_name_attribute(40, "Target40-CU100") | {"unit_offset": 100})
+    store = _StoreStub(rows)
+
+    dies = hydrate_dies_by_keys(store, ((0, 40), (100, 40)))
+
+    assert tuple((die.cu.cu_offset, die.offset) for die in dies) == ((0, 40), (100, 40))
+    assert tuple(die["DW_AT_name"].value for die in dies) == ("Target40", "Target40-CU100")
+    assert dies[0] is not dies[1]
+    assert [
+        filters
+        for family, filters in store.query_log
+        if family == "die" and isinstance(filters, dict)
+    ] == [
+        {"die_offset": (40,)},
+    ]
+
+
+@pytest.mark.unit
+@pytest.mark.performance
+@pytest.mark.non_functional
+def test_doris_store_hydrates_offset_frontier_in_one_bounded_batch() -> None:
+    store = _StoreStub(_prefetch_rows())
+
+    dies = hydrate_dies_by_offsets(store, (48, 40, 48))
 
     assert tuple(die.offset for die in dies) == (40, 48)
     die_queries = [
@@ -378,7 +385,7 @@ def test_doris_store_prefetches_child_frontier_in_one_bounded_batch() -> None:
         if family == "die" and isinstance(filters, dict) and "parent_offset" in filters
     ]
     assert child_queries == [
-        {"parent_offset": 0},
+        {"parent_offset": 0, "unit_offset": 0},
         {"parent_offset": (16, 24)},
     ]
 
@@ -432,9 +439,9 @@ def _prefetch_rows() -> dict[str, list[dict[str, object]]]:
         "die": die_rows,
         "attribute": [
             _name_attribute(16, "Child16"),
-            _reference_attribute(16),
+            _reference_attribute(16, 40),
             _name_attribute(24, "Child24"),
-            _reference_attribute(24),
+            _reference_attribute(24, 48),
             _name_attribute(40, "Target40"),
             _name_attribute(48, "Target48"),
         ],
@@ -537,7 +544,7 @@ def _name_attribute(die_offset: int, name: str) -> dict[str, object]:
     }
 
 
-def _reference_attribute(die_offset: int) -> dict[str, object]:
+def _reference_attribute(die_offset: int, target_offset: int) -> dict[str, object]:
     return {
         "record_type": "attribute",
         "source_id": SOURCE_ID,
@@ -547,9 +554,9 @@ def _reference_attribute(die_offset: int) -> dict[str, object]:
         "name": "DW_AT_type",
         "form": "DW_FORM_ref4",
         "raw_value_kind": "uint",
-        "raw_value_uint": 0,
+        "raw_value_uint": target_offset,
         "decoded_value_kind": "uint",
-        "decoded_value_uint": 0,
+        "decoded_value_uint": target_offset,
     }
 
 

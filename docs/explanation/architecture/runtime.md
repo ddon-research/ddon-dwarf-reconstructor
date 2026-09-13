@@ -82,6 +82,9 @@ flowchart LR
     Cache --> Report
     Report --> Validate["validate-implementation\nDoris-backed static evidence"]
     Validate --> Objects["Canonical .s + accepted .o\nraw/context siblings"]
+    Contract["OrbisToolchainContract\nSDK12 default / SDK8 explicit"] --> Validate
+    Exports["Source-bound orbis-bin\nraw manifests"] --> Validate
+    Probes["Compiler .s/.o ABI\nprobe manifest"] --> Validate
     Report --> Audit["IDA completeness audit\nread-only cross-validation"]
     Audit -. never feeds production .-> Report
 ```
@@ -112,11 +115,26 @@ probes, and emits canonical `.s`/`.o` artifacts. It does not claim PS4 ABI, clob
 CFG/external-edge parity, or live semantic correctness unless each dimension is independently
 observed. The bundle manifest is only an atomic-publication envelope.
 
+Validation is a separate downstream feature rather than a generation dependency. The
+`infrastructure/validation` package owns strict validation command wiring and adapts its report to
+the neutral context-enrichment provider only when an artifact workflow explicitly requests that
+join. Generation, header publication, and default implementation artifact publication remain
+usable with the package removed; absent enrichment is represented by the existing
+`not_observed` projection.
+
 The implementation report is schema `4.2` and includes the deterministic DWARF-derived target
 manifest, scope hash, every retained ELF function candidate, and match reasons. The optional
 `audit-implementation-coverage` command consumes that completed report only as a post-generation
 IDA completeness check; IDA observations cannot add targets, names, addresses, cache entries, or
 status promotion.
+
+The downstream implementation-validation report is schema `4.4`. It joins the selected toolchain
+contract, complete external-tool observations, parsed `orbis-bin` stack/dynamic-symbol evidence,
+compiler-generated assembly descriptors, and object metadata. The optional sectioned assembly
+profile validates `.text.<symbol>` and `EF_FFUNC_DATA_SECS_ENABLED`; byte-replay remains the
+default. Static-equivalence dispositions are explicit and legacy 4.3 reports default to
+`not_promoted`. `performance analyze-assembly` is intentionally outside this correctness flow because
+`llvm-mca` provides performance-model evidence only.
 
 Implementation validation uses a dedicated `DorisImplementationEvidenceModel`. The complete
 materialization manifest is read only for source identity, schema, and publication provenance;
@@ -125,6 +143,17 @@ source-bound Doris family tables. The normalized typed rows are loaded into Dori
 one-time materialization step, and the validator does not read Parquet or JSONL. CFI overlap is
 filtered in Doris before the bounded result is returned. If Doris cannot validate the registry
 publication, method-specific ABI and CFI evidence remains unavailable.
+
+Symbol generation has one runtime path for one or many roots. The request calls one union
+operation, which builds the dependency closure with method-signature dependencies enabled,
+assigns ownership to resource directories or `shared/`, and publishes one atomically staged
+`generated/ps4-<client-version>/` tree. The version root contains flat headers and, when requested,
+flat readable `.asm` evidence; `symbols.manifest.json` and `implementation-report.json` are written
+only when context generation is enabled. It does not contain `symbols/`, `implementations/`, or
+`methods/<id>/` nesting. `MtDataReader` method-signature resolution is part of this union, and
+unresolved definitions remain context diagnostics. The readable `.asm` header uses semicolon
+comments, while exact-byte `.s`/`.o` output remains an opt-in separate profile. A single-symbol
+invocation uses this same path.
 
 The historical 2026-08-10 Season 2 report passed all 2,760 headers. Warning-only compiler
 diagnostics remain evidence; they do not become generated code or runtime dependencies. The
@@ -184,3 +213,18 @@ connect/read/write timeouts, and any timeout or partial query remains non-comple
 completed benchmark observed warm exhaustive `rAIFSM` p95 of 15.796 seconds and peak RSS of 132.9
 MiB; an empty transient Doris query cache is therefore not sufficient to explain the earlier
 report of a materially slower `rAIFSM` run.
+
+## Disassembly refactor regression boundary
+
+The disassembly path now shares pure Orbis parsers, one composed profile executor, a typed evidence
+projection, canonical content-hash/atomic-I/O helpers, and one source-bound regression manifest
+builder. This reduces duplicate ownership without merging header rendering, analytical materialization,
+or validation policy. Orbis remains canonical for disassembly, LLVM remains additive, and compiler
+probes remain capability evidence.
+
+The 2026-08-18 SDK 12 baseline/post run is external evidence at
+`C:\Users\morph\AppData\Local\Temp\ddon-disassembly-refactor-20260818`; its strict comparison
+matched all four batches exactly: 289 roots, 2,745 headers, 83,754 method entries, 4,504 artifact
+descriptors, and 8,116 files. Report paths/timing are normalized only by an explicit allowlist;
+bytes, identities, descriptors, contexts, objects, and normalized evidence facts are not. The
+result confirms refactor parity, not ABI, semantic, or runtime equivalence.

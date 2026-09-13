@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 import os
@@ -14,6 +13,7 @@ from pathlib import Path
 from time import monotonic, sleep, time, time_ns
 from typing import Any, cast
 
+from ..core.content_hash import sha256_file
 from ..core.observability import get_logger, log_event
 from ..domain.ports.source_identity import SourceIdentity, source_metadata_lookup_key
 
@@ -64,15 +64,6 @@ def probe_source(path: Path) -> SourceMetadata:
         device=stat.st_dev,
         inode=stat.st_ino,
     )
-
-
-def sha256_file(path: Path) -> str:
-    """Return a streaming SHA-256 for a file."""
-    digest = hashlib.sha256()
-    with path.open("rb") as source:
-        for chunk in iter(lambda: source.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 class SourceIdentityCatalog:
@@ -156,6 +147,7 @@ class SourceIdentityCatalog:
             catalog["sources"][identity.lookup_key] = {
                 **asdict(identity),
                 "paths": sorted(paths),
+                "observed_ctime_ns": metadata.ctime_ns,
                 "verified_at_ns": time_ns(),
             }
             self._save(catalog)
@@ -193,6 +185,9 @@ class SourceIdentityCatalog:
         catalog_changed = (
             self._remember_path(catalog, lookup_key, record, source_path) or catalog_changed
         )
+        if record.get("observed_ctime_ns") != metadata.ctime_ns:
+            record["observed_ctime_ns"] = metadata.ctime_ns
+            catalog_changed = True
         if catalog_changed:
             self._save(catalog)
         log_event(
@@ -225,6 +220,7 @@ class SourceIdentityCatalog:
         catalog["sources"][identity.lookup_key] = {
             **asdict(identity),
             "paths": sorted(paths),
+            "observed_ctime_ns": metadata.ctime_ns,
             "verified_at_ns": time_ns(),
         }
         self._save(catalog)
@@ -264,15 +260,15 @@ class SourceIdentityCatalog:
 
     @classmethod
     def _valid_record(cls, record: Any, metadata: SourceMetadata, source_path: Path) -> bool:
+        if not isinstance(record, dict):
+            return False
+        observed_ctime = record.get("observed_ctime_ns", record.get("ctime_ns"))
         return (
-            isinstance(record, dict)
+            type(observed_ctime) is int
             and cls._stable_metadata_matches(record, metadata)
             and isinstance(record.get("sha256"), str)
             and len(record["sha256"]) == 64
-            and (
-                record.get("ctime_ns") == metadata.ctime_ns
-                or cls._is_relocated(record, source_path)
-            )
+            and (observed_ctime == metadata.ctime_ns or cls._is_relocated(record, source_path))
         )
 
     @staticmethod

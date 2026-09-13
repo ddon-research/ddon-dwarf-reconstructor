@@ -18,7 +18,6 @@ from ...models.dwarf import (
     UnionInfo,
 )
 from .class_parser_context import ClassParserContext
-from .type_chain_traverser import TypeChainTraverser
 
 logger = get_logger(__name__)
 T = TypeVar("T")
@@ -134,7 +133,7 @@ class ClassParserChildrenMixin:
         base_type = self.type_resolver.resolve_type_name(child)
         if base_type != "unknown_type":
             result.base_classes.append(base_type)
-            base_offset = TypeChainTraverser.get_terminal_type_offset(child)
+            base_offset = self.type_chain_traverser.get_terminal_type_offset(child)
             if base_offset is not None:
                 result.base_class_offsets.append(base_offset)
 

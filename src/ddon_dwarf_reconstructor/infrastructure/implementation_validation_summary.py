@@ -13,6 +13,19 @@ def implementation_validation_summary(report: Any) -> dict[str, Any]:
         "schema_version": report.schema_version,
         "validation_profile": report.validation_profile,
         "status": report.status.value,
+        "toolchain_profile": (
+            report.toolchain_contract.profile_id
+            if getattr(report, "toolchain_contract", None) is not None
+            else None
+        ),
+        "external_tool_profiles": sorted(
+            item.profile for item in getattr(report, "external_tool_evidence", ())
+        ),
+        "orbis_bin_status": (
+            report.orbis_bin_evidence.status.value
+            if getattr(report, "orbis_bin_evidence", None) is not None
+            else "not_observed"
+        ),
         "analytical_model": _analytical_model(report),
         "method_count": len(methods),
         "relocation_count": len(report.relocations),
@@ -20,6 +33,7 @@ def implementation_validation_summary(report: Any) -> dict[str, Any]:
         "compiler_status": report.compiler.status.value,
         "abi_probe_statuses": _status_counts(item.status.value for item in report.abi_probes),
         "method_statuses": _method_statuses(methods),
+        "static_equivalence": _status_counts(_static_equivalence_value(item) for item in methods),
     }
 
 
@@ -44,6 +58,13 @@ def _status_counts(values: Iterable[str]) -> dict[str, int]:
     for value in values:
         counts[value] = counts.get(value, 0) + 1
     return dict(sorted(counts.items()))
+
+
+def _static_equivalence_value(item: object) -> str:
+    parity = getattr(item, "parity", None)
+    disposition = getattr(parity, "static_equivalence", None)
+    value = getattr(disposition, "value", None)
+    return str(value or "not_promoted")
 
 
 __all__ = ["implementation_validation_summary"]

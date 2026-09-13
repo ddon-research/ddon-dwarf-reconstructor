@@ -46,6 +46,7 @@ def test_generate_maps_repeatable_symbols_to_typed_options(mocker, tmp_path: Pat
             "--symbol",
             "B",
             "--full-hierarchy",
+            "--no-generate-context",
             "--exhaustive",
         ],
     )
@@ -55,7 +56,20 @@ def test_generate_maps_repeatable_symbols_to_typed_options(mocker, tmp_path: Pat
     assert isinstance(options, GenerationOptions)
     assert options.symbols == ("A", "B")
     assert options.full_hierarchy is True
+    assert options.generate_context is False
     assert options.exhaustive is True
+
+
+@pytest.mark.unit
+def test_generate_context_is_enabled_by_default(mocker, tmp_path: Path) -> None:
+    elf_file = tmp_path / "input.elf"
+    elf_file.write_bytes(b"fixture")
+    run_generation = mocker.patch("ddon_dwarf_reconstructor.cli.run_generation", return_value=0)
+
+    result = runner.invoke(app, ["generate", str(elf_file), "--symbol", "A"])
+
+    assert result.exit_code == 0
+    assert run_generation.call_args.args[0].generate_context is True
 
 
 @pytest.mark.unit

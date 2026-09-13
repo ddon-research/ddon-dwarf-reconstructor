@@ -44,19 +44,83 @@ Failure behavior:
 - multi-file output MUST deduplicate shared declarations and include cross-file
   structural dependencies before it can claim aggregate closure.
 
+## Single-pass symbol contract
+
+Every normal `generate` request is a symbol request. One `--symbol` resolves its complete
+dependency closure; `--symbols-file` and repeated `--symbol` values create one deduplicated union.
+`--single-file` MUST be rejected. The application MUST create one traversal and one deduplicated
+result; it MUST NOT invoke the single-root generator once per symbol, partition the request into
+batches, or publish `symbols/<index>-<safe-root>/`, `implementations/`, or `methods/<id>/` trees.
+
+Unless an explicit `--output` is supplied, symbol artifacts are published below
+`generated/ps4-<client-version>/`. The version is the one unambiguous standalone eight-digit
+token found in the ELF filename or nearest parent path; absent or ambiguous inference uses
+`unknown` and records a diagnostic. The only intentional sibling directory under the version
+root is `shared/`; every resource directory is flat:
+
+```text
+generated/ps4-<client-version>/
+  symbols.manifest.json
+  shared/<dependency>.h
+  <resource-class>/<resource>.h
+  <resource-class>/<owner>-<method>-<stable-hash>.asm
+```
+
+Method-signature return and parameter types are part of the symbol dependency closure. A complete
+`MtDataReader` definition MUST be selected when available, even when the direct method reference
+is a declaration-only DIE; unresolved definitions remain explicit diagnostics. Class ownership
+MUST use qualified identity plus stable CU/DIE provenance: requested roots stay with their
+resource, dependencies reached by one root stay with it, and dependencies reached by multiple
+roots go under `shared/`. Include paths and collision-safe filenames are derived from that map;
+conflicting definitions MUST never overwrite one another.
+
+`symbols.manifest.json` MUST bind the source identity, input-list hash, producer/schema/configuration
+identity, requested roots and statuses, class/header ownership and provenance, file hashes/counts,
+and unresolved/conflict diagnostics. Publication MUST stage the complete version directory and
+atomically replace the target or preserve the previous valid target on failure.
+
+Symbol implementation discovery MUST form one union of method candidates and one disassembly
+request. Its readable `.asm` evidence MUST begin with semicolon comments for the method and
+definition signatures, pseudo-symbol, address/range, file offset, source location, ABI/type
+context, and evidence status. Calls use `; pseudo_call: ...`; source references use
+`; source: <path>:<line>`. Structured/raw disassembly remains in reports/caches, and exact-byte
+`.s` generation remains a separate assembler/parity profile. Assembly availability MUST NOT
+upgrade header completeness.
+
+Generation context is enabled by default for development. `--no-generate-context` MUST omit
+manifests, generation reports, and validation object files so the version directory contains only
+C++/assembly files;
+`--generate-context` MUST enable those context files explicitly. Separate `artifacts` validation
+and probing commands are not controlled by this generation switch.
+
 ## Post-header implementation and Orbis contract
 
 `--extract-assembly` is an additive follow-up switch. Header discovery must publish the valid
 header bundle and manifest before implementation discovery starts. A profile failure or timeout
 cannot roll back that header publication. Known-invalid Orbis options are capability-filtered
 before execution. `--emit-implementation-sources` requires `--extract-assembly` and enables the
-canonical assembly/object profile; without it the same report remains available without generated
-source files. A successful report-only publication retires a stale source bundle for the same root.
+canonical assembly source profile. Accepted object files are additionally emitted only when context
+generation is enabled; without the switch the same readable assembly evidence remains available
+without generated validation objects. A successful report-only publication retires a stale source
+bundle for the same root.
 
-For a single `rLayout` root, the durable layout is:
+The normal symbol-generation command never uses the legacy implementation tree below. Its
+durable output is the same flat versioned layout for one or many roots:
 
 ```text
-<output>/ps4/header-bundle.manifest.json
+<output>/ps4-<client-version>/
+  symbols.manifest.json
+  shared/<dependency>.h
+  <resource>/<class>.h
+  <resource>/<owner>-<method>-<stable-hash>.asm
+```
+
+The separate implementation-validation workflow may still publish its historical diagnostic
+bundle in an external directory. That bundle is not a `generate` result and must not be mixed
+into the symbol artifact tree:
+
+```text
+<external-validation-output>/ps4/header-bundle.manifest.json
 <output>/ps4/rLayout.h
 <output>/ps4/implementations/0001-rLayout.json
 <output>/ps4/implementations/0001-rLayout/

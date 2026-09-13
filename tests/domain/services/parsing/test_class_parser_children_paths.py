@@ -17,11 +17,13 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import (
     UnionInfo,
 )
 from ddon_dwarf_reconstructor.domain.services.parsing import ClassParser
+from ddon_dwarf_reconstructor.domain.services.parsing.type_chain_traverser import TypeChainTraverser
 
 
 def _parser() -> ClassParser:
     parser = object.__new__(ClassParser)
     parser.type_resolver = Mock()
+    parser.type_chain_traverser = TypeChainTraverser()
     parser.parse_member = Mock(return_value=MemberInfo("field", "u32"))
     parser.parse_method = Mock(return_value=MethodInfo("run", "void"))
     parser.parse_enum = Mock(return_value=EnumInfo("Mode", 4, []))

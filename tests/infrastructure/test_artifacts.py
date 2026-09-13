@@ -58,6 +58,7 @@ def test_catalog_reuses_identity_after_source_relocation(tmp_path: Path, mocker)
     relocated_identity = SourceIdentityCatalog(catalog_path).identify(relocated)
 
     assert relocated_identity == identity
+    assert SourceIdentityCatalog(catalog_path).identify(relocated) == identity
     hash_spy.assert_not_called()
     catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
     record = catalog["sources"][identity.lookup_key]

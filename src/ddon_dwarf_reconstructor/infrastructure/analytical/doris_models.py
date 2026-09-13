@@ -1,7 +1,6 @@
 """Generator-compatible views over rows served by Doris."""
 
 # The names intentionally mirror the pyelftools protocol at this adapter boundary.
-# ruff: noqa: N802
 
 from __future__ import annotations
 
@@ -22,11 +21,17 @@ class DorisStoreView(Protocol):
 
     def compilation_unit_by_offset(self, unit_offset: int) -> DorisCompilationUnit: ...
 
-    def die_by_offset(self, die_offset: int | None) -> DorisDie | None: ...
+    def die_by_offset(
+        self, die_offset: int | None, unit_offset: int | None = None
+    ) -> DorisDie | None: ...
 
-    def attribute_target(self, die_offset: int, attribute_name: str) -> int | None: ...
+    def attribute_target(
+        self, die_offset: int, attribute_name: str, unit_offset: int | None = None
+    ) -> int | None: ...
 
-    def children_for_die(self, die_offset: int) -> Iterable[DorisDie]: ...
+    def children_for_die(
+        self, die_offset: int, unit_offset: int | None = None
+    ) -> Iterable[DorisDie]: ...
 
     def line_program_for_unit(self, unit_offset: int) -> StoreLineProgram | None: ...
 
@@ -43,10 +48,10 @@ class DorisCompilationUnit:
         self.header = header if isinstance(header, dict) else {}
         self.dwarfinfo = store.dwarf_info
 
-    def iter_DIEs(self) -> Iterable[DorisDie]:
+    def iter_DIEs(self) -> Iterable[DorisDie]:  # noqa: N802
         return self._store.dies_for_unit(self.cu_offset)
 
-    def get_top_DIE(self) -> DorisDie:
+    def get_top_DIE(self) -> DorisDie:  # noqa: N802
         for die in self.iter_DIEs():
             if not die.is_null() and die.depth == 0:
                 return die
@@ -80,13 +85,29 @@ class DorisDie:
         self.cu = store.compilation_unit_by_offset(data.unit_offset)
         self.dwarfinfo = store.dwarf_info
         self.depth = data.depth
+        self._parent: DorisDie | None = None
+        self._parent_resolved: bool = False
+        self._attribute_dies: dict[str, DorisDie | None] = {}
+        self._attribute_targets: dict[str, int | None] = {}
 
     def __getitem__(self, attribute_name: str) -> DorisAttribute:
         return self.attributes[attribute_name]
 
-    def get_DIE_from_attribute(self, attribute_name: str) -> DorisDie | None:
-        target_offset = self._store.attribute_target(self.offset, attribute_name)
-        return self._store.die_by_offset(target_offset)
+    def get_DIE_from_attribute(self, attribute_name: str) -> DorisDie | None:  # noqa: N802
+        if attribute_name in self._attribute_dies:
+            return self._attribute_dies[attribute_name]
+        target_offset = self.get_DIE_offset_from_attribute(attribute_name)
+        resolved = self._store.die_by_offset(target_offset, self.cu.cu_offset)
+        self._attribute_dies[attribute_name] = resolved
+        return resolved
+
+    def get_DIE_offset_from_attribute(self, attribute_name: str) -> int | None:  # noqa: N802
+        """Return a reference target without hydrating the target DIE."""
+        if attribute_name in self._attribute_targets:
+            return self._attribute_targets[attribute_name]
+        target_offset = self._store.attribute_target(self.offset, attribute_name, self.cu.cu_offset)
+        self._attribute_targets[attribute_name] = target_offset
+        return target_offset
 
     def get_full_path(self) -> str:
         names: list[str] = []
@@ -99,11 +120,19 @@ class DorisDie:
         return "::".join(reversed(names))
 
     def get_parent(self) -> DorisDie | None:
-        parent_offset = self._data.parent_offset
-        return self._store.die_by_offset(parent_offset)
+        if not self._parent_resolved:
+            parent_offset = self._data.parent_offset
+            self._parent = self._store.die_by_offset(parent_offset, self.cu.cu_offset)
+            self._parent_resolved = True
+        return self._parent
 
     def iter_children(self) -> Iterable[DorisDie]:
-        return self._store.children_for_die(self.offset)
+        children = tuple(self._store.children_for_die(self.offset, self.cu.cu_offset))
+        for child in children:
+            if not getattr(child, "_parent_resolved", False):
+                child._parent = self
+                child._parent_resolved = True
+        return children
 
     def is_null(self) -> bool:
         return self._data.is_null
@@ -160,14 +189,16 @@ class DorisDwarfInfo:
     def __init__(self, store: DorisStoreView) -> None:
         self._store = store
 
-    def iter_CUs(self) -> Iterable[DorisCompilationUnit]:
+    def iter_CUs(self) -> Iterable[DorisCompilationUnit]:  # noqa: N802
         return self._store.iter_dwarf_units()
 
-    def get_DIE_from_refaddr(self, refaddr: int, cu: Any = None) -> DorisDie | None:
-        del cu
+    def get_DIE_from_refaddr(self, refaddr: int, cu: Any = None) -> DorisDie | None:  # noqa: N802
+        unit_offset = getattr(cu, "cu_offset", None)
+        if isinstance(unit_offset, int):
+            return self._store.die_by_offset(refaddr, unit_offset)
         return self._store.die_by_offset(refaddr)
 
-    def line_program_for_CU(self, CU: Any) -> StoreLineProgram | _EmptyLineProgram:  # noqa: N803
+    def line_program_for_CU(self, CU: Any) -> StoreLineProgram | _EmptyLineProgram:  # noqa: N802, N803
         program = self._store.line_program_for_unit(int(CU.cu_offset))
         return program if program is not None else _EmptyLineProgram()
 

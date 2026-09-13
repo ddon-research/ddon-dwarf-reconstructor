@@ -9,11 +9,13 @@ different evidence dimension appear complete.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field, is_dataclass
-from enum import Enum, StrEnum
-from typing import Any
+from dataclasses import asdict, dataclass, field
+from enum import StrEnum
 
+from ...core.serialization import to_jsonable as _jsonable
 from .disassembly import OrbisSdkDefinitionIdentity
+from .implementation_context import MethodContextPacket
+from .orbis_toolchain import OrbisToolchainContract
 
 
 class ValidationStatus(StrEnum):
@@ -24,6 +26,15 @@ class ValidationStatus(StrEnum):
     BLOCKED = "blocked"
     NOT_OBSERVED = "not_observed"
     UNAVAILABLE = "unavailable"
+    FAILED = "failed"
+
+
+class StaticEquivalenceDisposition(StrEnum):
+    """Promotion state for static target-object equivalence only."""
+
+    NOT_PROMOTED = "not_promoted"
+    TARGET_OBJECT_EQUIVALENT = "target_object_equivalent"
+    CONFLICTING = "conflicting"
     FAILED = "failed"
 
 
@@ -112,7 +123,7 @@ class RelocationApplication:
 
 @dataclass(frozen=True, slots=True)
 class NidBinding:
-    """Opaque or source-bound import/export identity associated with a symbol."""
+    """Opaque or source-bound SCE dynamic identity associated with a symbol."""
 
     relocation_id: str | None
     encoded_symbol: str | None
@@ -130,6 +141,7 @@ class NidBinding:
     encoded_module_index: int | None = None
     hash_status: ValidationStatus = ValidationStatus.NOT_OBSERVED
     context_status: ValidationStatus = ValidationStatus.NOT_OBSERVED
+    identity_kind: str = "sce_dynamic_tag"
 
     def to_dict(self) -> dict[str, object]:
         return _jsonable(asdict(self))
@@ -195,8 +207,33 @@ class CompilerEvidence:
     stderr_path: str | None = None
     output_path: str | None = None
     output_sha256: str | None = None
+    assembly_path: str | None = None
+    assembly_sha256: str | None = None
+    source_path: str | None = None
+    source_sha256: str | None = None
+    toolchain_profile: str | None = None
+    assembly_profile: str = "byte-replay"
     object_metadata: dict[str, object] = field(default_factory=dict)
     diagnostics: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict[str, object]:
+        return _jsonable(asdict(self))
+
+
+@dataclass(frozen=True, slots=True)
+class CompilerProbeManifest:
+    """Reusable toolchain-bound ABI probe bundle."""
+
+    profile: str
+    toolchain_profile: str
+    target_triple: str
+    compiler: str
+    compiler_sha256: str
+    compiler_version: str
+    probes: tuple[CompilerEvidence, ...]
+    status: ValidationStatus
+    diagnostics: tuple[str, ...] = ()
+    schema_version: str = "1.0"
 
     def to_dict(self) -> dict[str, object]:
         return _jsonable(asdict(self))
@@ -230,27 +267,7 @@ class SemanticParity:
     external_edge_status: ValidationStatus = ValidationStatus.NOT_OBSERVED
     effect_status: ValidationStatus = ValidationStatus.NOT_OBSERVED
     live_behavior_status: ValidationStatus = ValidationStatus.NOT_OBSERVED
-    diagnostics: tuple[str, ...] = ()
-
-    def to_dict(self) -> dict[str, object]:
-        return _jsonable(asdict(self))
-
-
-@dataclass(frozen=True, slots=True)
-class MethodContextPacket:
-    """One bounded join of DWARF, machine-code, relocation, and diagnostic evidence."""
-
-    declaration_die_offset: int | None
-    implementation_die_offset: int | None
-    declaration_cu_offset: int | None
-    implementation_cu_offset: int | None
-    code_ranges: tuple[tuple[int, int, str], ...] = ()
-    locations: tuple[dict[str, object], ...] = ()
-    cfi: tuple[dict[str, object], ...] = ()
-    disassembly_addresses: tuple[int, ...] = ()
-    relocation_ids: tuple[str, ...] = ()
-    nid_ids: tuple[str, ...] = ()
-    abi_facts: dict[str, object] = field(default_factory=dict)
+    static_equivalence: StaticEquivalenceDisposition = StaticEquivalenceDisposition.NOT_PROMOTED
     diagnostics: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
@@ -274,6 +291,7 @@ class MethodValidationEvidence:
     parity: SemanticParity
     artifacts: tuple[str, ...] = ()
     diagnostics: tuple[str, ...] = ()
+    stack_size: OrbisBinStackSizeEvidence | None = None
 
     def to_dict(self) -> dict[str, object]:
         return _jsonable(asdict(self))
@@ -299,43 +317,86 @@ class ImplementationValidationReport:
     analytical_store_manifest_sha256: str | None = None
     analytical_store_schema_version: str | None = None
     sdk_definition_identity: OrbisSdkDefinitionIdentity | None = None
+    toolchain_contract: OrbisToolchainContract | None = None
+    external_tool_evidence: tuple[ExternalToolObservation, ...] = ()
+    orbis_bin_evidence: OrbisBinEvidence | None = None
     relocation_evaluator_version: str = "1.0"
     nid_database_identity: str | None = None
     diagnostics: tuple[str, ...] = ()
-    schema_version: str = "4.1"
+    schema_version: str = "4.4"
     validation_profile: str = "source-bound-static"
 
     def to_dict(self) -> dict[str, object]:
         return _jsonable(asdict(self))
 
 
-def _jsonable(value: Any) -> Any:
-    """Convert nested frozen dataclasses/enums into stable JSON values."""
-    if isinstance(value, Enum):
-        return value.value
-    if is_dataclass(value):
-        return _jsonable(asdict(value))
-    if isinstance(value, dict):
-        return {str(key): _jsonable(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_jsonable(item) for item in value]
-    return value
+@dataclass(frozen=True, slots=True)
+class ExternalToolObservation:
+    """Validated source-bound export descriptor joined into a report."""
+
+    profile: str
+    authority: str
+    status: ValidationStatus
+    source_sha256: str
+    tool: str
+    tool_sha256: str
+    tool_version: str
+    manifest_path: str | None = None
+    output_path: str | None = None
+    output_sha256: str | None = None
+    diagnostics: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict[str, object]:
+        return _jsonable(asdict(self))
+
+
+@dataclass(frozen=True, slots=True)
+class OrbisBinStackSizeEvidence:
+    """One ``orbis-bin -dss`` observation associated with a method name."""
+
+    status: ValidationStatus
+    symbol: str
+    stack_size_bytes: int | None = None
+    manifest_path: str | None = None
+    output_sha256: str | None = None
+    diagnostics: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict[str, object]:
+        return _jsonable(asdict(self))
+
+
+@dataclass(frozen=True, slots=True)
+class OrbisBinEvidence:
+    """Parsed and raw observations from source-bound Orbis utility exports."""
+
+    status: ValidationStatus
+    profiles: tuple[str, ...] = ()
+    stack_sizes: tuple[OrbisBinStackSizeEvidence, ...] = ()
+    dynamic_symbol_count: int | None = None
+    diagnostics: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict[str, object]:
+        return _jsonable(asdict(self))
 
 
 __all__ = [
-    "AnalyticalModelEvidence",
     "AbiEvidence",
+    "AnalyticalModelEvidence",
     "CompilerEvidence",
+    "CompilerProbeManifest",
     "EvidenceStatus",
+    "ExternalToolObservation",
     "ImplementationValidationReport",
     "InstructionEffects",
     "LoadImageProfile",
     "MappedSegment",
-    "MethodContextPacket",
     "MethodValidationEvidence",
     "NidBinding",
     "NidResolution",
+    "OrbisBinEvidence",
+    "OrbisBinStackSizeEvidence",
     "RelocationApplication",
     "SemanticParity",
+    "StaticEquivalenceDisposition",
     "ValidationStatus",
 ]

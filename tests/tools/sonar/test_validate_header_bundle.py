@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 from tools.sonar import validate_header_bundle as validator
+from tools.sonar.msvc_validation.commands import CommandExecution
 
 pytestmark = [pytest.mark.unit, pytest.mark.non_functional, pytest.mark.quality]
 
@@ -109,18 +110,40 @@ def test_timeout_is_incomplete_not_success(tmp_path: Path) -> None:
     assert result["failure_class"] == "incomplete"
 
 
+def test_run_script_rejects_truncated_markers(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        validator,
+        "run_command",
+        lambda *_args, **_kwargs: CommandExecution(
+            0,
+            "partial",
+            "",
+            stdout_truncated=True,
+        ),
+    )
+
+    with pytest.raises(validator.SonarAnalysisError, match="truncated"):
+        validator._run_script(tmp_path / "compile.cmd", 10)
+
+
 def test_compiler_metadata_and_aggregate_status_are_independent(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     compiler = tmp_path / "cl.exe"
     compiler.write_bytes(b"compiler")
     monkeypatch.setattr(
-        validator.subprocess,
-        "run",
-        lambda command, **_kwargs: SimpleNamespace(
+        validator,
+        "run_command",
+        lambda _command, **_kwargs: SimpleNamespace(
             returncode=0,
             stdout="Microsoft (R) C/C++ Optimizing Compiler Version 19.51\n",
             stderr="",
+            output="Microsoft (R) C/C++ Optimizing Compiler Version 19.51\n",
+            timed_out=False,
+            stdout_truncated=False,
+            stderr_truncated=False,
         ),
     )
 
@@ -148,6 +171,62 @@ def test_compiler_metadata_and_aggregate_status_are_independent(
     assert aggregate["object_status"] == "present"
 
 
+def test_compiler_metadata_rejects_truncated_output(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    compiler = tmp_path / "cl.exe"
+    compiler.write_bytes(b"compiler")
+    monkeypatch.setattr(
+        validator,
+        "run_command",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            returncode=0,
+            stdout="prefix",
+            stderr="",
+            output="prefix",
+            timed_out=False,
+            stdout_truncated=True,
+            stderr_truncated=False,
+        ),
+    )
+
+    metadata = validator._compiler_metadata(str(compiler))
+
+    assert metadata["compiler_version_status"] == "not_observed"
+    assert metadata["compiler_version"] is None
+
+
+def test_main_fails_when_aggregate_compilation_fails(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    report = {
+        "compiler_path": "cl.exe",
+        "compiler_version": "19.51",
+        "bundle_count": 1,
+        "header_count": 2,
+        "process_exit_code": 1,
+        "process_timed_out": False,
+        "counts": {"failed": 0, "not_observed": 0, "passed": 2, "timed_out": 0},
+        "standalone_status": "observed",
+        "aggregate_status": "failed",
+        "status": "partial",
+        "failure_classes": {},
+        "diagnostic_code_counts": {},
+    }
+    monkeypatch.setattr(validator, "run_validation", lambda *_args: report)
+
+    exit_code = validator.main(
+        [
+            "--input-root",
+            str(tmp_path / "input"),
+            "--validation-directory",
+            str(tmp_path / "validation"),
+        ]
+    )
+
+    assert exit_code == 1
+
+
 def test_unit_result_records_separate_diagnostics_and_missing_object(tmp_path: Path) -> None:
     bundle = _bundle(tmp_path)
     _, units = validator.discover_units([bundle], tmp_path / "validation")
@@ -162,3 +241,43 @@ def test_unit_result_records_separate_diagnostics_and_missing_object(tmp_path: P
     assert result["failure_class"] == "object_missing"
     assert result["stdout_sha256"] != result["stderr_sha256"]
     assert result["diagnostic_codes"] == ["C4201"]
+
+
+def test_discover_bundles_supports_versioned_symbol_directories(tmp_path: Path) -> None:
+    version_root = tmp_path / "ps4-02020005"
+    symbol_dir = version_root / "rFoo"
+    shared_dir = version_root / "shared"
+    symbol_dir.mkdir(parents=True)
+    shared_dir.mkdir(parents=True)
+    (symbol_dir / "rFoo.h").write_text("class rFoo {};\n", encoding="utf-8")
+    (shared_dir / "MtObject.h").write_text("class MtObject {};\n", encoding="utf-8")
+
+    bundles = validator.discover_bundles(version_root)
+
+    assert bundles == [symbol_dir, shared_dir]
+
+
+def test_write_validation_script_uses_response_file_for_large_include_sets(tmp_path: Path) -> None:
+    # Create 30 bundles with long names to exceed 2048 chars
+    bundles: list[Path] = []
+    for i in range(30):
+        long_name = f"very_long_bundle_name_segment_to_exceed_command_line_budget_{i:03d}"
+        bundle = tmp_path / long_name
+        bundle.mkdir(parents=True)
+        (bundle / f"header_{i:03d}.h").write_text("class Foo {};\n", encoding="utf-8")
+        bundles.append(bundle)
+
+    _, units = validator.discover_units(bundles, tmp_path / "validation")
+    script = validator.write_validation_script(
+        tmp_path / "validation", tmp_path / "VsDevCmd.bat", units
+    )
+    text = script.read_text(encoding="utf-8")
+    rsp_path = tmp_path / "validation" / "translation-units" / "compile_all.rsp"
+
+    assert rsp_path.is_file()
+    assert (
+        "@%ROOT%translation-units\\compile_all.rsp" in text
+        or '@"%ROOT%translation-units\\compile_all.rsp"' in text
+    )
+    rsp_text = rsp_path.read_text(encoding="utf-8")
+    assert f'/I"{bundles[0]}"' in rsp_text

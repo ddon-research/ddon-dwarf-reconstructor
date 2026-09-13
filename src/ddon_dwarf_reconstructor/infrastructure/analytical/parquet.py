@@ -6,7 +6,7 @@ import hashlib
 import json
 import os
 import shutil
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Iterable
 from contextlib import suppress
 from pathlib import Path
@@ -312,10 +312,6 @@ class ParquetRecordSink:
             "cu_boundary_rotations": self._cu_boundary_rotations,
         }
 
-    def flush(self) -> None:
-        """Flush completed Arrow batches without closing partition writers."""
-        pass
-
     def checkpoint(self) -> tuple[str, ...]:
         """Close current files and rotate subsequent writes to new parts."""
         if self._closed:
@@ -398,8 +394,7 @@ class ParquetRecordSink:
     def _close_partition(self, partition: tuple[str, str, int]) -> None:
         writer = self._writers[partition]
         self._publisher._flush_buffer(self._pyarrow, writer, self._buffers[partition], partition[0])
-        with suppress(Exception):
-            writer.close()
+        writer.close()
         self._writers.pop(partition, None)
         self._part_numbers[partition] += 1
         self._buffer_bytes.pop(partition, None)
@@ -412,7 +407,19 @@ class ParquetRecordSink:
             self._checkpoint_rotations += len(partitions)
         self._buffer_bytes.clear()
         self._refresh_artifacts()
+        self._validate_closed_counts()
         return len(partitions)
+
+    def _validate_closed_counts(self) -> None:
+        observed: Counter[str] = Counter()
+        for artifact in self.artifacts:
+            family = (self.root / artifact.path).relative_to(self.target).parts[0]
+            observed[family] += sum(artifact.row_group_rows)
+        if observed != self.counts:
+            raise ValueError(
+                f"Closed Parquet row counts do not match written records: "
+                f"expected={dict(self.counts)!r}, observed={dict(observed)!r}"
+            )
 
     def _refresh_artifacts(self) -> None:
         for path in sorted(self.target.rglob(PARQUET_PART_GLOB)):

@@ -152,7 +152,12 @@ class ParquetStoreQueries(_ParquetStoreAccess):
         cache = self._selection_cache
         offset = (
             cache.get_symbol_offset(name)
-            if cache is not None and qualified_name is None and tags is None
+            if (
+                cache is not None
+                and qualified_name is None
+                and tags is None
+                and cache.get_symbol_completeness(name) is not False
+            )
             else None
         )
         if isinstance(offset, int):

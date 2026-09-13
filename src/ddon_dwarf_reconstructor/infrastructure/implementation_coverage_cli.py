@@ -11,22 +11,22 @@ from .implementation_coverage_audit import audit_implementation_coverage
 
 
 def audit_implementation_coverage_command(
-    implementation_report: Path = typer.Option(  # noqa: B008
+    implementation_report: Path = typer.Option(
         ...,
         "--implementation-report",
         help="Existing source-bound implementation report; it is never modified.",
     ),
-    ida_c_dump: Path = typer.Option(  # noqa: B008
+    ida_c_dump: Path = typer.Option(
         ...,
         "--ida-c-dump",
         help="Independent IDA C dump used only for post-generation comparison.",
     ),
-    output_dir: Path = typer.Option(  # noqa: B008
+    output_dir: Path = typer.Option(
         ...,
         "--output-dir",
         help="External directory for the isolated audit artifact.",
     ),
-    elf: Path | None = typer.Option(  # noqa: B008
+    elf: Path | None = typer.Option(
         None,
         "--elf",
         help="Optional ELF whose hash is retained as audit provenance only.",

@@ -328,3 +328,18 @@ def test_cli_json_capture_and_fe_profile_fallback(tmp_path: Path) -> None:
     assert profile.status == "observed"
     assert profile.source == "fe_http"
     assert "secret" not in str(transport.descriptor())
+
+
+def test_transport_caches_unavailable_fe_profile_endpoint() -> None:
+    transport = DorisDiagnosticTransport(DorisConfig(), timeout_seconds=0.1)
+    with patch(
+        "ddon_dwarf_reconstructor.infrastructure.analytical.doris_diagnostics_transport.urlopen",
+        side_effect=OSError("connection refused"),
+    ) as urlopen:
+        first = transport.profile("query-1", full=False)
+        second = transport.profile("query-2", full=True)
+
+    assert first.status == "unavailable"
+    assert second.status == "unavailable"
+    assert urlopen.call_count == 2
+    assert second.attempts == ({"source": "fe_http", "status": "cached_unavailable"},)

@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 from tools.sonar import prepare_msvc_analysis as sonar
+from tools.sonar.msvc_validation.commands import CommandExecution, run_command
 
 pytestmark = [pytest.mark.unit, pytest.mark.non_functional, pytest.mark.quality]
 
@@ -72,6 +74,103 @@ def test_visual_studio_discovery_reports_missing_locator(monkeypatch: pytest.Mon
 
     with pytest.raises(sonar.SonarAnalysisError, match="Program Files"):
         sonar.get_visual_studio_developer_command_file()
+
+
+def test_command_runner_uses_finite_timeout_and_preserves_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[list[str], int]] = []
+
+    def fake_run(arguments: list[str], *, timeout_seconds: int) -> CommandExecution:
+        calls.append((arguments, timeout_seconds))
+        return CommandExecution(0, "stdout", "stderr")
+
+    monkeypatch.setattr(sonar, "run_bounded_command", fake_run)
+
+    result = sonar._run_command(["tool.exe", "--version"])
+
+    assert result.returncode == 0
+    assert result.stdout == "stdout"
+    assert result.stderr == "stderr"
+    assert calls == [(["tool.exe", "--version"], sonar.DEFAULT_COMMAND_TIMEOUT_SECONDS)]
+
+
+def test_command_runner_rejects_timeout_as_incomplete_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        sonar,
+        "run_bounded_command",
+        lambda _arguments, **_kwargs: CommandExecution(
+            None,
+            "partial stdout",
+            "timeout stderr",
+            timed_out=True,
+        ),
+    )
+
+    with pytest.raises(sonar.SonarAnalysisError, match="timed out"):
+        sonar._run_command(["tool.exe"])
+
+
+def test_command_runner_rejects_missing_exit_status(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        sonar,
+        "run_bounded_command",
+        lambda _arguments, **_kwargs: CommandExecution(None, "", ""),
+    )
+
+    with pytest.raises(sonar.SonarAnalysisError, match="no exit status"):
+        sonar._run_command(["tool.exe"])
+
+
+def test_command_runner_rejects_truncated_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        sonar,
+        "run_bounded_command",
+        lambda _arguments, **_kwargs: CommandExecution(
+            0,
+            "retained prefix",
+            "",
+            stdout_truncated=True,
+        ),
+    )
+
+    with pytest.raises(sonar.SonarAnalysisError, match="truncated"):
+        sonar._run_command(["tool.exe"])
+
+
+def test_bounded_command_drains_both_streams_and_marks_truncation() -> None:
+    result = run_command(
+        [
+            sys.executable,
+            "-c",
+            "import sys; sys.stdout.write('o' * 4096); sys.stderr.write('e' * 4096)",
+        ],
+        timeout_seconds=10,
+        max_output_bytes=1024,
+    )
+
+    assert result.returncode == 0
+    assert len(result.stdout) == 1024
+    assert len(result.stderr) == 1024
+    assert result.stdout_truncated is True
+    assert result.stderr_truncated is True
+
+
+def test_bounded_command_timeout_is_incomplete() -> None:
+    result = run_command(
+        [sys.executable, "-c", "import time; time.sleep(30)"],
+        timeout_seconds=1,
+        max_output_bytes=1024,
+    )
+
+    assert result.returncode is None
+    assert result.timed_out is True
 
 
 def test_msvc_probe_uses_cmd_and_returns_compiler(
