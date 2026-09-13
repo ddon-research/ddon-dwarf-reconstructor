@@ -10,7 +10,7 @@ Dragon's Dogma Online research and modding.
   DWARF 2-4 vocabulary.
 - Read-only ELF and compressed-dump evidence inspection, plus a searchable DWARF 2/3/4 semantic
   index for correctness reviews.
-- Deterministic single-file and multi-file header generation.
+- Deterministic flat versioned header generation with global symbol deduplication.
 - Persistent source-bound symbol caches and streaming compressed-DWARF indexes.
 - Source-bound analytical DWARF stores with canonical typed Parquet rows, optional lossless
   JSONL audit output, and Doris projections.
@@ -36,6 +36,10 @@ Dragon's Dogma Online research and modding.
 uv sync --python 3.14.7 --locked
 uv run just test-unit
 ```
+
+Copy `.env.template` to `.env` to configure stable local paths (`ELF_FILE_PATH`, `DWARF_STORE_MANIFEST`,
+SDK tools, and Doris endpoints). When `.env` is present, CLI commands read these defaults automatically,
+enabling streamlined invocations like `uv run ddon-dwarf-reconstructor generate --symbol rLayout`.
 
 The documentation environment is the locked Zensical docs group with the preliminary
 `mkdocstrings-python` integration. Regenerate the source-derived Python API pages after adding or
@@ -280,11 +284,11 @@ SCE entries remain in the source-bound JSONL cache, while the implementation rep
 method-relevant entries. The SDK dynamic-relocation limitation is capability-filtered from normal
 generation and documented rather than retried. `llvm-tli-checker` is not used for ELF extraction.
 
-When the analytical-dwarf Compose stack remaps the FE SQL port on the workstation, keep the
-application endpoint aligned with that host mapping. For example, the container may still listen
-on `9030` while Windows publishes it as `19030`; set `DDON_DORIS_SQL_HOST=127.0.0.1` and
-`DDON_DORIS_SQL_PORT=19030` before generation. A refusal at the default `9030` is an endpoint
-configuration failure, not evidence that the running Doris service is unavailable.
+The canonical workstation Compose configuration in `ops/analytical-dwarf/compose.yaml` maps the
+FE SQL container port (`9030`) to host port `29030` (with FE HTTP on `28030` and BE Stream Load on
+`28040`). Set `DDON_DORIS_SQL_HOST=127.0.0.1` and `DDON_DORIS_SQL_PORT=29030` in `.env` or the
+generation shell. A refusal at the container default `9030` is an endpoint configuration failure,
+not evidence that the running Doris service is unavailable.
 
 ## Logging and diagnostics
 

@@ -106,11 +106,11 @@ explicit local path and the cold/warm state are recorded in the relevant Spec Ki
 Their absence does not invalidate deterministic fixture or integration evidence, but it must not
 be hidden behind a green default test command.
 
-For the current architecture refactoring, full-corpus headers, assembly/object parity, compiler
-acceptance, and the 110% per-workload performance bound remain `Blocked` until Doris BE and the
-named external toolchain prerequisites are restored. The deterministic gates above remain useful
-`Verified` evidence for the changed slice and must be reported separately from those external
-acceptance surfaces.
+With the recovery of the local Doris serving backend on September 9, 2026, full-corpus header
+generation, assembly/object parity, and MSVC compiler acceptance are unblocked. Verification proceeds
+through the hierarchical canary progression (`MtObject` -> `rLayout` -> `rAIFSM`) culminating in the
+unified 289 Season 2 batch run. The deterministic gates above remain fast `Verified` evidence for
+every slice before executing real-asset acceptance.
 
 ## Documentation-only changes
 

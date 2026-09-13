@@ -25,8 +25,8 @@ tasks remain visible.
 | [017 Nuitka and runtime comparison](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/017-nuitka-runtime-comparison) | Evaluation slice implemented; free-threaded Nuitka blocked upstream | runtime-aware CPython/Nuitka/free-threaded comparison and compiler/dependency evidence |
 | [018 Performance and algorithm audit](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/018-performance-algorithm-audit) | Complete; implementation, evidence, and repository gates pass | source-bound warm/cold traces, candidate decisions, and deterministic optimization evidence |
 | [019 Analytical DWARF store](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/019-analytical-dwarf-store) | Doris serving promoted; file-backed replacement, Flight SQL, and semantic validation partial/unresolved | one-pass lossless materialization, native serving evidence, query parity, and explicit replacement gates |
-| [020 Documentation API reference](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/020-documentation-api-reference) | Implemented; 305 modules and local repository gates verified | exhaustive source-derived Python module reference with deterministic generation and fail-closed docs validation |
-| [021 C++ reconstruction architecture](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/021-cpp-reconstruction-architecture) | In progress; characterized slices and deterministic gates verified, real-asset acceptance blocked | repository-wide source review, fresh all-output baselines, characterized reconstruction/toolchain boundaries, and exact parity with a 110% runtime limit |
+| [020 Documentation API reference](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/020-documentation-api-reference) | Implemented; 365 modules and local repository gates verified | exhaustive source-derived Python module reference with deterministic generation and fail-closed docs validation |
+| [021 C++ reconstruction architecture](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/021-cpp-reconstruction-architecture) | In progress; characterized slices and deterministic gates verified, real-asset acceptance unblocked | repository-wide source review, fresh all-output baselines, characterized reconstruction/toolchain boundaries, and exact parity with a 110% runtime limit |
 
 ## Next best step
 
@@ -37,7 +37,8 @@ validator record: Doris is the normal analytical runtime, while file-backed repl
 SQL, and semantic validation remain partial or unresolved. Feature 021 now owns the characterized
 C++ reconstruction boundaries, CU-qualified method context, output comparator, and deterministic
 workflow provenance check. Its next implementation work is review-coverage closure and the
-source-bound T010/T011/T022/T060 preflight once the recorded Doris BE blocker is resolved.
+source-bound T010/T011/T022/T060 hierarchical canary and unified batch acceptance with the
+recovered Doris serving backend.
 `KG-001` remains deferred and is owned only by Feature 015; Features 013 and 014 retain pointers
 to that record.
 

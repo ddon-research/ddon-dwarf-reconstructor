@@ -17,8 +17,8 @@ uv run ddon-dwarf-reconstructor --help
 uv run ddon-dwarf-reconstructor generate --help
 ```
 
-The root entry point has three intentional command groups: `generate`, `export-knowledge`, and
-`artifacts`.
+The root entry point has four intentional command groups: `generate`, `export-knowledge`,
+`artifacts`, and `performance`.
 
 ## 3. Materialize the analytical store
 
@@ -32,21 +32,42 @@ uv run ddon-dwarf-reconstructor artifacts materialize-dwarf `
   --output-dir $storeRoot
 ```
 
-## 4. Generate one symbol
+## 4. Start Doris and load the analytical store
+
+Normal generation and knowledge export query Doris directly; they do not scan Parquet files
+at query time. Start the local Doris container stack and load the materialized store:
+
+```powershell
+docker compose -f ops/analytical-dwarf/compose.yaml up -d
+$manifestPath = Join-Path $storeRoot 'store-<source-sha16>\manifest.json'
+uv run ddon-dwarf-reconstructor artifacts load-doris $manifestPath
+```
+
+Verify that `load-doris` completes with reconciled family counts. To avoid specifying paths on
+every command, you can set `DWARF_STORE_MANIFEST=$manifestPath` and `ELF_FILE_PATH=resources/DDOORBIS.elf`
+in your local `.env` file (copied from `.env.template`).
+
+## 5. Generate one symbol
 
 ```powershell
 uv run ddon-dwarf-reconstructor generate `
   resources/DDOORBIS.elf `
-  --dwarf-store (Join-Path $storeRoot 'store-<source-sha16>\manifest.json') `
+  --dwarf-store $manifestPath `
   --symbol MtObject `
   --output output/first-generation
+```
+
+When `.env` is configured with `ELF_FILE_PATH` and `DWARF_STORE_MANIFEST`, this command simplifies to:
+
+```powershell
+uv run ddon-dwarf-reconstructor generate --symbol MtObject --output output/first-generation
 ```
 
 The application opens one `ElfDwarfSession`, resolves the requested symbol and its complete
 dependency closure through the domain ports, and publishes a flat versioned directory. Context
 generation is enabled by default, so the manifest is available for development inspection.
 
-## 5. Check the result
+## 6. Check the result
 
 ```powershell
 Get-ChildItem output/first-generation -Recurse
@@ -74,7 +95,7 @@ layout. Use `--no-generate-context` for a clean headers/assembly-only handoff; i
 generation-context JSON. No `symbols/`, `implementations/`, or `methods/<id>/` directories are
 created.
 
-## 6. Continue from here
+## 7. Continue from here
 
 - Need a hierarchy: [Generate headers](../how-to/generate-headers.md).
 - Need graph-shaped evidence: [Export the knowledge graph](../how-to/export-knowledge-graph.md).

@@ -74,23 +74,35 @@ docker compose --file ops/analytical-dwarf/compose.yaml up -d
 docker compose --file ops/analytical-dwarf/compose.yaml ps --all
 ```
 
-The container ports remain Doris's canonical `8030`/`9030`/`8040` ports, but the workstation
-side of the mappings can be changed when Windows reserves a local port range. For example, the
-following keeps the same FE/BE services and serving profile while exposing the FE on alternate
-host ports:
+The container ports remain Doris's upstream `8030`/`9030`/`8040` ports. On the Windows workstation,
+the canonical Compose configuration in `ops/analytical-dwarf/.env` maps these to dedicated host ports:
+
+- **Frontend MySQL/SQL**: `29030` (container `9030`)
+- **Frontend HTTP**: `28030` (container `8030`)
+- **Backend Stream Load HTTP**: `28040` (container `8040`)
+
+The standard application environment configuration (or root `.env`) aligns with these canonical host ports:
 
 ```powershell
-$env:DDON_DORIS_HTTP_HOST_PORT = '18030'
-$env:DDON_DORIS_SQL_HOST_PORT = '19030'
-$env:DDON_DORIS_HTTP_URL = 'http://127.0.0.1:18030'
-$env:DDON_DORIS_SQL_PORT = '19030'
+$env:DDON_DORIS_SQL_HOST = '127.0.0.1'
+$env:DDON_DORIS_SQL_PORT = '29030'
+$env:DDON_DORIS_HTTP_URL = 'http://127.0.0.1:28030'
+$env:DDON_DORIS_STREAM_LOAD_URL = 'http://127.0.0.1:28040'
+```
+
+If Windows dynamic port reservations or local conflicts require alternate host ports, they can be
+overridden before starting Compose:
+
+```powershell
+$env:DDON_DORIS_HTTP_HOST_PORT = '<alt-fe-http-port>'
+$env:DDON_DORIS_SQL_HOST_PORT = '<alt-sql-port>'
+$env:DDON_DORIS_BE_HTTP_HOST_PORT = '<alt-be-stream-port>'
 docker compose --file ops/analytical-dwarf/compose.yaml up -d
 ```
 
-Use the same host-side values for the application configuration and health checks. The
-application default remains `127.0.0.1:9030`; when this remap is active, set
-`DDON_DORIS_SQL_HOST=127.0.0.1` and `DDON_DORIS_SQL_PORT=19030` in the generation shell. This is
-a transport remap only; it is not a different Doris backend or a serving-policy variant.
+When an alternate mapping is active, ensure `DDON_DORIS_SQL_PORT`, `DDON_DORIS_HTTP_URL`, and
+`DDON_DORIS_STREAM_LOAD_URL` in your application environment match those overridden host ports.
+This is a transport remap only; it is not a different Doris backend or a serving-policy variant.
 
 The analytical CLI uses `DDON_DORIS_HTTP_URL`, `DDON_DORIS_STREAM_LOAD_URL`,
 `DDON_DORIS_SQL_HOST`, `DDON_DORIS_SQL_PORT`, `DDON_DORIS_DATABASE`,

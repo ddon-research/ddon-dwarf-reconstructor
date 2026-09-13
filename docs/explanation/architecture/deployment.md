@@ -80,13 +80,15 @@ The optimization command is a reusable, change-triggered evidence tool rather th
 running service. It is rerun when the generator, source publication, Doris image/configuration,
 candidate variant, or representative workload changes.
 
-The complete Season 2 header closure is independently validated outside the runtime path. The
-final external input contains 289 bundles and 2,760 headers; MSVC `14.51.36231` compiled every
-header as a separate translation unit with zero failures or timeouts. The audit corrected nested
-base dependency closure, nested base qualification, template forward declarations, and namespace
-root discovery. No not-found or unresolved-type placeholders remain. The remaining `C4099`,
-`C4201`, and `C4309` records are warning-only diagnostics; IDA/Sonar and byte comparison against
-the unavailable historical approved header remain separate evidence surfaces.
+The complete Season 2 header closure is independently validated outside the runtime path. In the
+historical baseline, 289 bundles and 2,760 headers were checked; MSVC `14.51.36231` compiled every
+header as a separate translation unit with zero failures or timeouts. In the modern Feature 021
+architecture, the unified batch generates ~898 deduplicated headers into `generated/ps4-<client-version>/`,
+which undergo the same standalone MSVC compilation gate. The audit corrected nested base dependency
+closure, nested base qualification, template forward declarations, and namespace root discovery. No
+not-found or unresolved-type placeholders remain. The remaining `C4099`, `C4201`, and `C4309` records
+are warning-only diagnostics; IDA/Sonar and byte comparison against the unavailable historical approved
+header remain separate evidence surfaces.
 
 ## Documentation deployment
 

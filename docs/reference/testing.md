@@ -75,11 +75,13 @@ unavailable Doris, MSVC, real-asset, or performance observations. A truncated or
 query must remain non-complete through generation and must not publish a successful placeholder
 bundle.
 
-The latest source-bound Season 2 acceptance checked 289 roots and 2,760 header files, published
-1,150 complete assembly handoff bundles, and passed 2,760/2,760 independent MSVC header units.
-The detailed record distinguishes header publication, assembly/object parity, Doris-backed
-validation dimensions, and the isolated IDA completeness audit; repository gates do not promote
-the remaining unavailable PS4 evidence. See the
+The historical 2026-08-16 source-bound Season 2 acceptance checked 289 roots and 2,760 header files
+across separate bundles, published 1,150 complete assembly handoff bundles, and passed 2,760/2,760
+independent MSVC header units. In the modern Feature 021 architecture, all 289 roots generate into a
+single flat tree under `generated/ps4-<client-version>/` with ~898 globally deduplicated headers and
+2,564 assembly files. The detailed record distinguishes header publication, assembly/object parity,
+Doris-backed validation dimensions, and the isolated IDA completeness audit; repository gates do not
+promote the remaining unavailable PS4 evidence. See the
 [Season 2 acceptance record](https://github.com/ddon-research/ddon-dwarf-reconstructor/blob/main/specs/001-header-foundation/acceptance-season2-assembly-20260816.md).
 
 ## Nested project

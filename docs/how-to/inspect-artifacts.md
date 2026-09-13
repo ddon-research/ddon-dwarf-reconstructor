@@ -31,7 +31,7 @@ $env:MSYSTEM = "UCRT64"
 & C:\msys64\usr\bin\bash.exe --login -lc `
   'llvm-dwarfdump --verify /d/ddon-dwarf-reconstructor/resources/DDOORBIS.elf'
 & C:\msys64\usr\bin\bash.exe --login -lc `
-  'llvm-dwarfdump --verify-json=/c/Users/morph/AppData/Local/Temp/ddon-analytical-dwarf/verify.json /d/ddon-dwarf-reconstructor/resources/DDOORBIS.elf'
+  'llvm-dwarfdump --verify-json=/tmp/ddon-analytical-dwarf/verify.json /d/ddon-dwarf-reconstructor/resources/DDOORBIS.elf'
 ```
 
 Capture these outputs outside the repository and record their exit status. A verifier diagnostic

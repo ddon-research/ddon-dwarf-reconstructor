@@ -21,9 +21,11 @@ uv run ddon-dwarf-reconstructor export-knowledge --help
 ```
 
 Common inputs are an ELF path, one or more `--symbol` values or a `--symbols-file`, and an output
-directory. Use the help surface from the locked environment for
-the complete option list; this page intentionally documents stable commands rather than copying
-Typer's formatting.
+directory. When `.env` is configured (or corresponding environment variables are set), the ELF path
+argument and options such as `--output`, `--dwarf-store`, `--orbis-objdump`, and `--orbis-as` can be
+omitted, simplifying routine CLI invocations. Explicit CLI options always override configuration
+defaults. Use the help surface from the locked environment for the complete option list; this page
+intentionally documents stable commands rather than copying Typer's formatting.
 
 Normal generation and knowledge export require a source-bound `--dwarf-store` manifest whose
 complete projection has been loaded into Doris with `artifacts load-doris`. The manifest is
@@ -124,7 +126,7 @@ Use the explicit read-only validator for the remaining implementation dimensions
 
 ```powershell
 uv run ddon-dwarf-reconstructor artifacts validate-implementation <elf> `
-  --implementation-report <output>/ps4/implementations/0001-rLayout.json `
+  --implementation-report <output>/ps4-<client-version>/implementation-report.json `
   --dwarf-store <complete-analytical-store>/manifest.json `
   --output-dir $env:TEMP/ddon-implementation-validation `
   --original-addresses `
@@ -235,12 +237,14 @@ and reports name/body coverage and possible scope gaps. It never changes Doris t
 names or addresses, caches, compiler inputs, or implementation statuses. An IDA body absence is
 not evidence that a method is absent.
 
-The full 2026-08-16 Season 2 acceptance covered 289 roots, 2,760 header files, and 1,150 clean
-assembly bundles. Independent MSVC closure passed all 2,760 header translation units with zero
-failures and zero timeouts. It is recorded as `observed-partial`: artifact and Orbis assembler
-acceptance are observed; the static validator separately observed relocation and opaque NID
-identity, while method association, ABI/CFI, instruction safety, static parity, and live behavior
-remain independently reported. See the
+The historical 2026-08-16 Season 2 acceptance covered 289 roots, 2,760 header files across separate
+bundles, and 1,150 clean assembly bundles. Independent MSVC closure passed all 2,760 header translation
+units with zero failures and zero timeouts. (Under the modern unified architecture in Feature 021, all
+roots generate into a single flat tree under `generated/ps4-<client-version>/` with ~898 deduplicated
+headers, 446 shared headers, and 2,564 assembly files). It is recorded as `observed-partial`:
+artifact and Orbis assembler acceptance are observed; the static validator separately observed
+relocation and opaque NID identity, while method association, ABI/CFI, instruction safety, static
+parity, and live behavior remain independently reported. See the
 [`Season 2 acceptance record`](https://github.com/ddon-research/ddon-dwarf-reconstructor/blob/main/specs/001-header-foundation/acceptance-season2-assembly-20260816.md)
 for the exact counts and external audit artifacts.
 

@@ -168,21 +168,24 @@ fresh run published all 289 roots and matched every baseline header and bundle m
 independent MSVC closure passed 2,745/2,745 units with zero failures and zero timeouts. Incomplete
 counts remain separate from this accepted full-corpus evidence.
 
-For the PS4 assembly follow-up, the current Compose stack uses the same container FE port but may
-publish it on a different workstation port. The 2026-08-15 `rLayout` revalidation reached Doris
-on `127.0.0.1:19030` after aligning `DDON_DORIS_SQL_PORT`; the earlier refusal at `9030` was an
-endpoint mismatch, not a Doris availability result. The connection boundary records the attempted
-endpoint explicitly and never substitutes an unrequested probe.
+For the PS4 assembly follow-up, the canonical Compose stack publishes the FE SQL container port
+on host port `29030` (with FE HTTP on `28030` and BE Stream Load on `28040`), configured via `.env`.
+Historical runs such as the 2026-08-15 `rLayout` revalidation reached Doris on `127.0.0.1:19030` after
+an alternate host-port remap; refusals at default `9030` were endpoint mismatches, not Doris availability
+failures. The connection boundary records the attempted endpoint explicitly and never substitutes an
+unrequested probe.
 
-The completed 2026-08-16 Season 2 rerun covered all 289 resource roots: 2,760 header files were
-checked without a root generation failure, and 1,150 methods received the clean
-`.raw.asm`/`.s`/`.o`/`.context.json` handoff. A concurrent-run cache defect was found and fixed
-by comparing SDK identities after JSON round-tripping and versioning the disassembly cache key;
-the affected `rLoadingParam` root was rerun with observed SCE metadata and no diagnostics. The
-independent MSVC header closure passed 2,760/2,760 units with zero failures and zero timeouts. The
-run remains `observed-partial` because ABI/CFI, register/stack safety, relocation/NID promotion,
-static parity, and live behavior are separate gates. The exact counts and external audit links
-are in the [Season 2 acceptance record](https://github.com/ddon-research/ddon-dwarf-reconstructor/blob/main/specs/001-header-foundation/acceptance-season2-assembly-20260816.md).
+The historical 2026-08-16 Season 2 rerun covered all 289 resource roots across separate bundles:
+2,760 header files were checked without a root generation failure, and 1,150 methods received the
+clean `.raw.asm`/`.s`/`.o`/`.context.json` handoff. (The modern Feature 021 architecture generates
+all roots into a single flat tree under `generated/ps4-<client-version>/` with ~898 deduplicated
+headers). A concurrent-run cache defect was found and fixed by comparing SDK identities after JSON
+round-tripping and versioning the disassembly cache key; the affected `rLoadingParam` root was rerun
+with observed SCE metadata and no diagnostics. The independent MSVC header closure passed 2,760/2,760
+units with zero failures and zero timeouts. The run remains `observed-partial` because ABI/CFI,
+register/stack safety, relocation/NID promotion, static parity, and live behavior are separate gates.
+The exact counts and external audit links are in the
+[Season 2 acceptance record](https://github.com/ddon-research/ddon-dwarf-reconstructor/blob/main/specs/001-header-foundation/acceptance-season2-assembly-20260816.md).
 
 The follow-up validator path now treats Doris as a bounded analytical projection: stable method
 requests are fetched in 512-row batches for DIE, parameter, reference, attribute, location, and

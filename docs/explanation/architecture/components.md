@@ -99,8 +99,9 @@ the Doris batch adapter uses `(unit_offset, die_offset)` for filters and hydrate
 unqualified offset that is ambiguous across CUs returns unavailable evidence. The behavior is
 `Verified` by the two-CU collision and candidate-provenance cases in
 `tests/infrastructure/analytical/test_doris_method_context.py` and by the root architecture and
-correctness gates. Full-corpus output parity and live Doris acceptance remain `Blocked` by the
-recorded serving-backend failure; this slice does not claim those results.
+correctness gates. Following the recovery of the local Doris serving backend, method-context
+queries and full-corpus batch generation execute against the active backend on canonical host port
+`29030`.
 
 ## Cross-cutting invariants
 

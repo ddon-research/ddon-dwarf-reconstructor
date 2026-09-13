@@ -71,10 +71,17 @@ discovery. The follow-up is deliberately separate and does not change header byt
 the header manifest:
 
 ```powershell
-uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf \`
-  --dwarf-store $storeManifest --symbol rLayout \`
-  --extract-assembly \`
-  --orbis-objdump 'D:\SCE\ORBIS SDKs\8.000\host_tools\bin\orbis-objdump.exe'
+uv run ddon-dwarf-reconstructor generate resources/DDOORBIS.elf `
+  --dwarf-store $storeManifest --symbol rLayout `
+  --extract-assembly `
+  --orbis-objdump 'D:\SCE\ORBIS SDKs\12.000\host_tools\bin\orbis-objdump.exe'
+```
+
+When `.env` is configured with `ELF_FILE_PATH`, `DWARF_STORE_MANIFEST`, and `ORBIS_OBJDUMP_PATH`,
+the command simplifies to:
+
+```powershell
+uv run ddon-dwarf-reconstructor generate --symbol rLayout --extract-assembly
 ```
 
 Add `--llvm-readobj` only when a generic ELF/DWARF structural cross-check is wanted. It is
@@ -186,16 +193,20 @@ When `--llvm-objdump` is supplied, its target-aware slices use `x86_64-scei-ps4`
 the compact comparison projection; complete LLVM output remains in the source-bound cache. The
 target profile is additive and cannot affect Orbis eligibility, header bytes, or assembly selection.
 
-## Latest Season 2 acceptance
+## Season 2 acceptance baselines
 
-The 2026-08-16 rerun of all 289 nonblank roots in
+The historical 2026-08-16 rerun of all 289 nonblank roots in
 [`resources/season2-resources.txt`](../../resources/season2-resources.txt) published 289/289
-header manifests and implementation reports. It checked 2,760 header files and 10,093,364
-published bytes with no per-root generation failures. The reports contain 84,553 method rows;
-1,150 uniquely eligible methods produced each of `.raw.asm`, canonical `.s`, accepted `.o`, and
-`implementation-context/1.0` `.context.json`, with exact raw/report and object/text parity.
-The independent host MSVC closure then passed all 2,760 header translation units across the 289
-bundles, with zero failures and zero timeouts.
+header manifests and implementation reports across individual per-root bundles. It checked 2,760
+header files and 10,093,364 published bytes with no per-root generation failures. The reports
+contain 84,553 method rows; 1,150 uniquely eligible methods produced each of `.raw.asm`, canonical
+`.s`, accepted `.o`, and `implementation-context/1.0` `.context.json`, with exact raw/report and
+object/text parity. The independent host MSVC closure then passed all 2,760 header translation units
+across the 289 bundles, with zero failures and zero timeouts.
+
+Under the modern Feature 021 architecture, all 289 roots are generated in a single unified traversal
+into `generated/ps4-<client-version>/` with global deduplication across the whole symbol graph,
+producing ~898 headers (including 446 shared headers) and 2,564 assembly files.
 
 This is clean assembly handoff evidence, not semantic equivalence. The full measured result and
 remaining gaps are recorded in the
@@ -243,14 +254,14 @@ repository does not accept game binaries, generated headers, or runtime caches a
 
 If the analytical-dwarf Compose stack is healthy but generation reports a refused Doris
 connection, verify the host-side FE mapping before concluding that Doris is unavailable. The
-application default is `127.0.0.1:9030`; a workstation can publish the container's canonical
-`9030` on another host port such as `19030`. Check `docker compose --file
+application default is `127.0.0.1:9030` (the upstream Doris container default), whereas the workstation
+Compose configuration maps FE SQL to host port `29030`. Check `docker compose --file
 ops/analytical-dwarf/compose.yaml ps --all` and the exact endpoint with
-`Test-NetConnection 127.0.0.1 -Port 19030`, then align the application environment:
+`Test-NetConnection 127.0.0.1 -Port 29030`, then ensure your `.env` or application environment is aligned:
 
 ```powershell
 $env:DDON_DORIS_SQL_HOST = '127.0.0.1'
-$env:DDON_DORIS_SQL_PORT = '19030'
+$env:DDON_DORIS_SQL_PORT = '29030'
 $env:DDON_DORIS_DATABASE = 'dwarf'
 ```
 
