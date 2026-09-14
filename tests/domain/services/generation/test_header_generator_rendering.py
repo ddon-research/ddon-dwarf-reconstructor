@@ -12,6 +12,7 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import (
     MemberInfo,
     MethodInfo,
     ParameterInfo,
+    TemplateTypeParam,
 )
 from ddon_dwarf_reconstructor.domain.services.generation import HeaderRenderer
 
@@ -102,8 +103,8 @@ class TestHeaderGenerator:
         assert "OPERATOR_INFO operators[];" in header
 
     @pytest.mark.unit
-    def test_template_specialization_renders_as_primary_template(self, header_generator):
-        """Resolved specializations must not be emitted as illegal class specializations."""
+    def test_template_specialization_requires_recovered_parameter_signature(self, header_generator):
+        """A missing parameter signature must not synthesize a generic definition."""
         template_class = ClassInfo(
             name="Box<int>",
             byte_size=8,
@@ -120,9 +121,7 @@ class TestHeaderGenerator:
             {"Box<int>": template_class}, ["Box<int>"], "Box<int>"
         )
 
-        assert "template <typename T>" in header
-        assert "class Box" in header
-        assert "class Box<int>" not in header
+        assert "class Box" not in header
 
     @pytest.mark.unit
     def test_template_primary_constructor_uses_primary_name(self, header_generator):
@@ -137,6 +136,7 @@ class TestHeaderGenerator:
             nested_structs=[],
             unions=[],
             die_offset=0x5900,
+            template_parameters=[TemplateTypeParam("T", "int")],
         )
 
         header = header_generator.generate_single_file_hierarchy_header(

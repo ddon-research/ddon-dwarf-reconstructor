@@ -40,6 +40,8 @@ This page indexes every source module in the **domain modules** group. It is an 
 
 ::: ddon_dwarf_reconstructor.domain.models.dwarf.template_param_info
 
+::: ddon_dwarf_reconstructor.domain.models.dwarf.template_rendering
+
 ::: ddon_dwarf_reconstructor.domain.models.dwarf.type_reference
 
 ::: ddon_dwarf_reconstructor.domain.models.dwarf.union_info
@@ -172,6 +174,12 @@ This page indexes every source module in the **domain modules** group. It is an 
 
 ::: ddon_dwarf_reconstructor.domain.services.generation.special_header_renderer
 
+::: ddon_dwarf_reconstructor.domain.services.generation.template_declarations
+
+::: ddon_dwarf_reconstructor.domain.services.generation.template_families
+
+::: ddon_dwarf_reconstructor.domain.services.generation.template_forward_declarations
+
 ::: ddon_dwarf_reconstructor.domain.services.lazy_dwarf_index_service
 
 ::: ddon_dwarf_reconstructor.domain.services.lazy_index_context
@@ -231,6 +239,8 @@ This page indexes every source module in the **domain modules** group. It is an 
 ::: ddon_dwarf_reconstructor.domain.services.parsing.primitive_lookup
 
 ::: ddon_dwarf_reconstructor.domain.services.parsing.primitive_type_names
+
+::: ddon_dwarf_reconstructor.domain.services.parsing.template_argument_parser
 
 ::: ddon_dwarf_reconstructor.domain.services.parsing.type_chain_traverser
 

@@ -46,14 +46,15 @@ def header_names_for_group(
     current_directory: str,
 ) -> dict[str, str]:
     """Exclude alternate definitions of local C++ names from dependency includes."""
+    local_paths = {class_paths[name] for name in group if name in class_paths}
     local_display_names = {
         class_infos[name].qualified_name or class_infos[name].name for name in group
     }
     return {
         name: _relative_include(current_directory, dependency_path)
         for name, dependency_path in class_paths.items()
-        if name in group
-        or (class_infos[name].qualified_name or class_infos[name].name) not in local_display_names
+        if dependency_path not in local_paths
+        and (class_infos[name].qualified_name or class_infos[name].name) not in local_display_names
     }
 
 
@@ -126,14 +127,28 @@ def _classes_by_owner_and_source(
     class_infos: Mapping[str, ClassInfo], owners: Mapping[str, str]
 ) -> dict[tuple[str, str], list[str]]:
     grouped: dict[tuple[str, str], list[str]] = {}
+    family_sources = _family_sources(class_infos)
     for name, info in class_infos.items():
         source = (
             f"{info.name}.h"
             if info.kind == "namespace"
             else info.declaration_file or "UncategorizedDefinitions"
         )
+        if info.template_rendering is not None:
+            source = family_sources[info.template_rendering.primary]
         grouped.setdefault((owners.get(name, _SHARED_OWNER), source), []).append(name)
     return grouped
+
+
+def _family_sources(infos: Mapping[str, ClassInfo]) -> dict[str, str]:
+    sources: dict[str, set[str]] = {}
+    for info in infos.values():
+        plan = info.template_rendering
+        if plan is not None:
+            sources.setdefault(plan.primary, set()).add(
+                info.declaration_file or "UncategorizedDefinitions"
+            )
+    return {primary: min(values) for primary, values in sources.items()}
 
 
 def _groups_for_source(
@@ -152,9 +167,7 @@ def _groups_for_source(
     }
     conflicting_names = local_conflicting_names | set(globally_conflicting_names)
     conflicting = {
-        name
-        for name in names
-        if (class_infos[name].qualified_name or class_infos[name].name) in conflicting_names
+        name for name in names if _is_unplanned_conflict(class_infos[name], conflicting_names)
     }
     groups: dict[tuple[str, str, str], tuple[str, ...]] = {}
     regular = sorted(set(names) - conflicting)
@@ -168,3 +181,9 @@ def _groups_for_source(
 def guard_suffix(path: str) -> str:
     """Keep include guards unique when different headers share a target name."""
     return f"_{sha256_text(path)[:12].upper()}_H"
+
+
+def _is_unplanned_conflict(info: ClassInfo, conflicting_names: set[str]) -> bool:
+    return (
+        info.template_rendering is None and (info.qualified_name or info.name) in conflicting_names
+    )

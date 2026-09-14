@@ -73,7 +73,7 @@ class SymbolPublisher:
     REPORT_NAME = "implementation-report.json"
     SCHEMA_VERSION = "symbol-artifacts/1"
     ASM_PROFILE = "ida-evidence/1"
-    PRODUCER_ID = "ddon-dwarf-reconstructor.symbols"
+    PRODUCER_ID = "ddon-dwarf-reconstructor.symbols.template-families-v1"
 
     def __init__(self, assembler: Path | None = None) -> None:
         self.assembler = assembler

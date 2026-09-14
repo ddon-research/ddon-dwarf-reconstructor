@@ -13,6 +13,7 @@ from .method_signature_policy import (
     rendered_method_name,
 )
 from .rendering.operations import HeaderRenderingHost
+from .template_families import template_primary
 
 logger = get_logger(__name__)
 
@@ -23,8 +24,8 @@ class HeaderMethodRenderingService:
     ) -> list[str]:
         """Generate method declarations."""
         methods = self._deduplicate_rendered_methods(self._deduplicate_methods(methods))
-        template_info = self._template_rendering_info(class_name)
-        primary_name = template_info[0] if template_info else class_name
+        primary = template_primary(class_name) or class_name
+        primary_name = self._unqualify_type_expression(primary)
         constructors, destructors, operators, other_methods = self._partition_methods(
             methods, class_name, primary_name
         )

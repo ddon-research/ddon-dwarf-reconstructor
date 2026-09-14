@@ -13,10 +13,9 @@ from ...models.dwarf import (
     MemberInfo,
     MethodInfo,
     StructInfo,
-    TemplateTypeParam,
-    TemplateValueParam,
     UnionInfo,
 )
+from ...models.dwarf.template_param_info import TemplateParameter
 from .class_parser_context import ClassParserContext
 
 logger = get_logger(__name__)
@@ -35,8 +34,7 @@ class ParsedClassChildren:
     nested_structs: list[StructInfo] = field(default_factory=list)
     unions: list[UnionInfo] = field(default_factory=list)
     nested_classes: list[ClassInfo] = field(default_factory=list)
-    template_type_params: list[TemplateTypeParam] = field(default_factory=list)
-    template_value_params: list[TemplateValueParam] = field(default_factory=list)
+    template_parameters: list[TemplateParameter] = field(default_factory=list)
 
 
 class ClassParserChildrenMixin:
@@ -97,11 +95,11 @@ class ClassParserChildrenMixin:
     ) -> None:
         if child.tag == "DW_TAG_template_type_param":
             self._append_if_present(
-                result.template_type_params, self.parse_template_type_param(child)
+                result.template_parameters, self.parse_template_type_param(child)
             )
         else:
             self._append_if_present(
-                result.template_value_params, self.parse_template_value_param(child)
+                result.template_parameters, self.parse_template_value_param(child)
             )
 
     def _append_member_child(

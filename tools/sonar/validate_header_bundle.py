@@ -42,6 +42,10 @@ else:
 
 MSVC_FLAGS = ("/std:c++latest", "/EHsc", "/W4", "/Zc:__cplusplus")
 DIAGNOSTIC_CODE = re.compile(r"\b([CE]\d{4})\b", re.IGNORECASE)
+DIAGNOSTIC_LINE = re.compile(
+    r"^([A-Za-z0-9_./\\:-]+)\((\d+)\):\s+(?:fatal\s+)?error\s+([CE]\d{4}):",
+    re.IGNORECASE | re.MULTILINE,
+)
 UNRESOLVED_CODES = frozenset(
     {
         "C2061",  # syntax error: identifier
@@ -269,6 +273,19 @@ def _diagnostic_excerpt(text: str) -> list[str]:
     return lines[:20]
 
 
+def _record_diagnostic_lines(
+    text: str,
+    raw_counts: dict[str, int],
+    unique_locations: dict[str, set[tuple[str, str]]],
+) -> None:
+    for match in DIAGNOSTIC_LINE.finditer(text):
+        file_name = Path(match.group(1)).name
+        line_number = match.group(2)
+        code = match.group(3).upper()
+        raw_counts[code] = raw_counts.get(code, 0) + 1
+        unique_locations.setdefault(code, set()).add((file_name, line_number))
+
+
 def _classify_failure(codes: list[str]) -> str:
     if not codes:
         return "compile_error"
@@ -445,6 +462,33 @@ def _run_script(script: Path, timeout_seconds: int) -> tuple[int | None, str, bo
     return execution.returncode, execution.output, execution.timed_out
 
 
+def _aggregate_unit_metrics(
+    units: list[HeaderUnit], results: list[dict[str, Any]]
+) -> tuple[dict[str, int], dict[str, int], dict[str, int], dict[str, int], int]:
+    failure_classes: dict[str, int] = {}
+    diagnostic_codes: dict[str, int] = {}
+    raw_diagnostic_counts: dict[str, int] = {}
+    unique_locations: dict[str, set[tuple[str, str]]] = {}
+    error_limit_unit_count = 0
+    for unit, result in zip(units, results, strict=True):
+        failure_class = str(result["failure_class"])
+        failure_classes[failure_class] = failure_classes.get(failure_class, 0) + 1
+        for code in result["diagnostic_codes"]:
+            diagnostic_codes[str(code)] = diagnostic_codes.get(str(code), 0) + 1
+        if "C1003" in result["diagnostic_codes"]:
+            error_limit_unit_count += 1
+        log_text = _read_text(unit.stdout_log) + _read_text(unit.stderr_log)
+        _record_diagnostic_lines(log_text, raw_diagnostic_counts, unique_locations)
+    unique_location_counts = {k: len(v) for k, v in sorted(unique_locations.items())}
+    return (
+        failure_classes,
+        diagnostic_codes,
+        raw_diagnostic_counts,
+        unique_location_counts,
+        error_limit_unit_count,
+    )
+
+
 def run_validation(
     input_roots: list[Path], validation_directory: Path, timeout_seconds: int
 ) -> dict[str, Any]:
@@ -462,13 +506,14 @@ def run_validation(
     results = [_unit_result(unit, markers.get(unit.key), timed_out) for unit in units]
     aggregate = _aggregate_result(validation_directory, _read_aggregate_marker(output), timed_out)
     counts = validation_counts(results)
-    failure_classes: dict[str, int] = {}
-    diagnostic_codes: dict[str, int] = {}
-    for result in results:
-        failure_class = str(result["failure_class"])
-        failure_classes[failure_class] = failure_classes.get(failure_class, 0) + 1
-        for code in result["diagnostic_codes"]:
-            diagnostic_codes[str(code)] = diagnostic_codes.get(str(code), 0) + 1
+    (
+        failure_classes,
+        diagnostic_codes,
+        raw_diagnostic_counts,
+        unique_location_counts,
+        error_limit_unit_count,
+    ) = _aggregate_unit_metrics(units, results)
+    is_observed = counts.complete and not timed_out
     report = {
         "schema_version": 2,
         "tool": "tools.sonar.validate_header_bundle",
@@ -487,15 +532,14 @@ def run_validation(
         "process_exit_code": process_exit_code,
         "process_timed_out": timed_out,
         "counts": counts.to_dict(),
-        "standalone_status": "observed" if counts.complete and not timed_out else "partial",
+        "standalone_status": "observed" if is_observed else "partial",
         "aggregate_status": aggregate["status"],
-        "status": (
-            "observed"
-            if counts.complete and not timed_out and aggregate["status"] == "passed"
-            else "partial"
-        ),
+        "status": "observed" if is_observed and aggregate["status"] == "passed" else "partial",
         "failure_classes": failure_classes,
         "diagnostic_code_counts": dict(sorted(diagnostic_codes.items())),
+        "raw_diagnostic_counts": dict(sorted(raw_diagnostic_counts.items())),
+        "unique_location_counts": unique_location_counts,
+        "error_limit_unit_count": error_limit_unit_count,
         "aggregate": aggregate,
         "units": results,
     }
@@ -538,7 +582,11 @@ def main(argv: list[str] | None = None) -> int:
             "aggregate_status",
             "failure_classes",
             "diagnostic_code_counts",
+            "raw_diagnostic_counts",
+            "unique_location_counts",
+            "error_limit_unit_count",
         )
+        if key in report
     }
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0 if report["status"] == "observed" else 1

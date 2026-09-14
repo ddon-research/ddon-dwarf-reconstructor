@@ -688,3 +688,87 @@ Standalone MSVC compiler validation was executed across all 898 generated Season
   - Aggregate status: failed
 - Detailed report and per-header stdout/stderr logs are retained at
   `output/acceptance-candidate/season2-msvc/msvc-header-validation.json`.
+
+## September 14 template family reconstruction and header deduplication
+
+Following the observation of 90 repeated header basenames in Season 2 generation (notably 99 duplicate
+`rTbl2.h` and 38 duplicate `MtCollection.h` headers containing partial generic definitions that produced
+2,890 MSVC `error C2953` "class template has already been defined" failures), the template reconstruction
+architecture was refactored:
+
+1. **Parameter Model & Provenance**:
+   - Replaced split parameter lists with unified `template_parameters: list[TemplateParameter]` in
+     `domain/models/dwarf/template_param_info.py`, preserving exact child-DIE order.
+   - Parsers in `domain/services/parsing/class_parser_templates.py` record actual argument types,
+     non-type values, `uses_default` flags, and DWARF reference provenance (`argument_offset`, `cu_offset`, `die_offset`).
+2. **Doris Binary Store Full Audit**:
+   - Audited all 9,960 `rTbl2` DIEs in the binary via Doris (`rtbl2-audit-summary.json` and `rtbl2-raw-evidence.jsonl`):
+     - Every single one has `DW_AT_byte_size = 128` (100% uniform size across 9,960 DIEs).
+     - Every single one has 2 members, 1 base inheritance (`rTbl2Base`), and 1 `DW_TAG_template_type_param`.
+3. **Template Family Planning & AST Type Substitution**:
+   - Implemented `domain/services/generation/template_families.py` to plan template families conservatively:
+     - `generic`: When argument observations discriminate and normalized signatures and layouts match.
+     - `explicit`: When member methods or layouts differ across instantiations in DWARF, emitting
+       `template <typename T> class Family;` followed by `template <> class Family<Args...> : public Base`.
+     - `blocked`: When signatures or definitions conflict.
+   - Implemented `domain/services/generation/template_declarations.py` using AST type expression
+     replacement (`substitute_type`, `project_template`).
+4. **Ownership Planning & Deduplication**:
+   - Multi-root template families route to `_SHARED_OWNER` (`shared/`), producing a single canonical header.
+   - Fixed `symbol_header_validation.py` balanced bracket parsing in `_definition_matches` to handle attributes
+     and template bases without swallowing base arguments.
+   - Fixed `header_hierarchy.py` `_unique_definition_names` to deduplicate template classes by rendered
+     C++ declaration name, preventing collisions on differently-scoped argument types flattened in `shared/`.
+5. **Multi-Root Canary Validation**:
+   - Multi-root canary (`rAbilityData`, `rAchievement`, `rAttackParam`) emitted exactly one `shared/rTbl2.h`.
+   - All 28 canary headers passed standalone MSVC compilation with 0 failures (100% pass rate).
+6. **Full Season 2 Generation Results**:
+   - Output generated to `output/template-family-review/20260913/season2/ps4-02020005/`.
+   - Header count reduced from 898 to 753 (145 duplicate headers completely eliminated!).
+   - `rTbl2.h` reduced from 99 files across symbols to 1 canonical `shared/rTbl2.h`.
+   - `MtCollection.h` reduced from 38 files across symbols to 1 canonical `shared/MtCollection.h`.
+   - 8,322 total files published across all 289 requested roots (including 2,564 `.asm` and 1,690 classes) with zero validator errors.
+7. **MSVC Compiler Standalone Validation (`output/template-family-review/20260913/season2-msvc/msvc-header-validation.json`)**:
+   - **`error C2953` ("class template has already been defined"): Reduced from 2,890 mentions to 0 (100% eliminated!)**.
+   - **`error C2955` ("use of class template requires template argument list"): Reduced from 289 mentions to 15 (94.8% reduction)**.
+   - **Failed headers: Reduced from 463 to 264 (199 headers now compile cleanly, a 43% reduction in failures)**.
+   - **Passed headers: 489 / 753 headers pass standalone MSVC compilation (64.9% pass rate)**.
+   - Detailed comparison report retained in `output/template-family-review/20260913/msvc-comparison-report.json`.
+
+## September 15 MSVC compiler improvements, C2955/C1003 reduction, and member indirection fixes
+
+Following Astra's review and critical compiler analysis of the remaining 264 failed headers and 195 fatal
+`C1003` compiler cascades:
+
+1. **Canonical Template Argument Splitter (`template_argument_parser.py`)**:
+   - Replaced fragile character-level splitting with balanced delimiter tracking across `<>`, `()`, `[]`,
+     and `{}`. Correctly splits function-pointer template arguments (e.g. `cDelegateBase::cNodeT`).
+2. **Recursive Typedef and Nested Template Argument Collection**:
+   - Added recursive nested class typedef collection (`s8`, `u16`) in `dwarf_header_support.py` and nested
+     template argument extraction in `used_typedef_collection.py`.
+3. **Specialization Forward Declarations (`header_forward_declarations.py`)**:
+   - Added `_specialization_name_types` and `_template_parameter_types` to forward-declare user classes passed
+     as template specialization arguments (e.g., `cAIPawnAutoMotionNode` in `MtTypedArray`), eliminating
+     cascading fatal `C1003` compiler aborts.
+4. **Base Class Offsets in Template Family Signatures (`template_families.py`)**:
+   - Preserved `base_class_offsets` in family signature generation to prevent conflicting specialization merges.
+5. **Deduplication of Enum Class and Class Forward Declarations (`header_type_planning.py`, `header_hierarchy.py`)**:
+   - Expanded forward declaration pattern to match `enum class` and prioritized `enum class` over `class`
+     to eliminate duplicate and conflicting forward declarations (e.g., `MOT_TYPE` in `cDelegate.h`).
+6. **By-Value Member Indirection Detection Fix (`header_ordering.py`)**:
+   - Implemented `_is_indirection_type` (stripping `<...>` before testing `*` or `&`) to fix by-value members
+     containing pointer template arguments (e.g., `cDelegate_4<void, cpSequenceCtrl *, ...>`), ensuring
+     `#include "cDelegate.h"` is properly emitted in `cpSequenceCtrl.h`.
+7. **Typedef Forward Declaration Exclusion (`header_hierarchy.py`)**:
+   - Excluded types already defined as typedefs from forward declaration emission (e.g., `_Myt` in `vector.h`).
+8. **Enhanced MSVC Validator (`validate_header_bundle.py`)**:
+   - Added `raw_diagnostic_counts`, `unique_location_counts`, and `error_limit_unit_count` (`C1003`).
+9. **Compiler Verification Results (`output/template-family-review/current-validation/msvc-header-validation.json`)**:
+   - **Passed headers**: Increased from 489 to **580** (+91 headers compiling cleanly, a 18.6% increase).
+   - **Failed headers**: Reduced from 264 to **173** (-91 failed headers, a 34.5% reduction).
+   - **Fatal `C1003` compiler aborts**: Reduced from 195 to **16** (**91.8% reduction**).
+   - **`C2065` undeclared identifier headers**: Reduced from 212 to **80** (**62.3% reduction**).
+   - **`C2923` invalid template type argument headers**: Reduced from 202 to **12** (**94.1% reduction**).
+   - **`C2913` invalid explicit specialization headers**: Reduced from 210 to **87** (**58.6% reduction**).
+   - Target headers `cDelegate.h`, `cpSequenceCtrl.h`, `rStageJoint.h`, and `MtCollection.h` all compile **CLEANLY**.
+

@@ -87,24 +87,39 @@ class HeaderGenerationSupportMixin:
             return False
         return True
 
-    @staticmethod
+    @classmethod
+    def _collect_class_typedefs_and_packing(
+        cls,
+        context: GenerationRuntime,
+        class_info: ClassInfo,
+        all_typedefs: dict[str, str],
+    ) -> None:
+        if class_info.packing_info is None:
+            class_info.packing_info = calculate_packing_info(class_info)
+        all_typedefs.update(
+            context.type_resolver.collect_used_typedefs(
+                class_info.members,
+                class_info.methods,
+                class_info.unions,
+                class_info.nested_structs,
+            )
+        )
+        nested_classes = getattr(class_info, "nested_classes", None)
+        if isinstance(nested_classes, (list, tuple)):
+            for nested in nested_classes:
+                cls._collect_class_typedefs_and_packing(context, nested, all_typedefs)
+
+    @classmethod
     def _collect_typedefs_and_packing(
-        context: GenerationRuntime, class_infos: dict[str, ClassInfo]
+        cls,
+        context: GenerationRuntime,
+        class_infos: dict[str, ClassInfo],
     ) -> dict[str, str]:
         """Add packing information and collect all used typedefs."""
         started_at = perf_counter()
         all_typedefs: dict[str, str] = {}
         for class_info in class_infos.values():
-            if class_info.packing_info is None:
-                class_info.packing_info = calculate_packing_info(class_info)
-            all_typedefs.update(
-                context.type_resolver.collect_used_typedefs(
-                    class_info.members,
-                    class_info.methods,
-                    class_info.unions,
-                    class_info.nested_structs,
-                )
-            )
+            cls._collect_class_typedefs_and_packing(context, class_info, all_typedefs)
         log_event(
             logger,
             logging.DEBUG,

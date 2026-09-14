@@ -161,10 +161,7 @@ class HeaderNestedRenderingService:
         return dependencies
 
     def _nested_definition_key(self: HeaderRenderingHost, name: str) -> str:
-        template_info = self._template_rendering_info(name)
-        if template_info:
-            return template_info[0]
-        return self._unqualify_type_expression(name).split("<", 1)[0].strip()
+        return self._unqualify_type_expression(name).strip()
 
     @staticmethod
     def _nested_class_richness(class_info: ClassInfo) -> int:
@@ -211,18 +208,23 @@ class HeaderNestedRenderingService:
         self: HeaderRenderingHost, class_info: ClassInfo
     ) -> list[str]:
         declarations: list[str] = []
+        seen: set[str] = set()
         for nested_class in self._ordered_nested_classes(class_info.nested_classes):
             if not nested_class.name:
                 continue
             if "<" in nested_class.name:
                 declaration = self._aggregate_forward_declaration(nested_class.name)
-                if declaration is not None:
+                if declaration is not None and declaration not in seen:
+                    seen.add(declaration)
                     declarations.append(f"    {declaration}")
                 continue
             kind = (
                 nested_class.kind if nested_class.kind in {"class", "struct", "union"} else "class"
             )
-            declarations.append(f"    {kind} {self._unqualify_type_expression(nested_class.name)};")
+            declaration = f"{kind} {self._unqualify_type_expression(nested_class.name)};"
+            if declaration not in seen:
+                seen.add(declaration)
+                declarations.append(f"    {declaration}")
         return declarations
 
     def _nested_union_forward_declarations(

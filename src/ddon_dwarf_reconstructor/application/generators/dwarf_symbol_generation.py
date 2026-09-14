@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import asdict, replace
 from pathlib import Path
 
 from ...core.observability import get_logger, log_event
@@ -11,6 +12,7 @@ from ...domain.services.generation import SpecialHeaderRenderer, calculate_packi
 from ...domain.services.generation.header_dependency_plan import HeaderDependencyPlan
 from ...domain.services.generation.header_type_planning import HeaderTypePlanningService
 from ...domain.services.generation.rendering.type_policy import TypeExpressionPolicy
+from ...domain.services.generation.template_families import plan_template_families
 from ..generation.runtime import GenerationRuntime
 from .dwarf_header_generation import HeaderGenerationService
 from .dwarf_multi_file import MultiFileGenerationService
@@ -67,6 +69,8 @@ class SymbolExtractionService:
             hierarchy_order,
         )
         _ensure_packing_info(graph.class_infos)
+        graph.class_infos, families = plan_template_families(graph.class_infos, graph.origins)
+        graph.diagnostics += tuple(message for family in families for message in family.diagnostics)
         owners = _class_owners(graph.class_infos, graph.root_keys, graph.origins)
         groups = _header_groups(graph.class_infos, owners)
         paths = _allocate_header_paths(groups, graph.class_infos)
@@ -82,6 +86,14 @@ class SymbolExtractionService:
         _validate_rendered_headers(headers, paths, graph.class_infos, owners)
         diagnostics = _generation_diagnostics(context, graph, dependency_plan, typedef_names)
         result = _build_extraction_result(request, graph, headers, paths, owners, diagnostics)
+        result = replace(
+            result,
+            configuration={
+                **result.configuration,
+                "template_family_policy": "evidence-reconstruction/1",
+                "template_families": [asdict(family) for family in families],
+            },
+        )
         _log_generation_completed(result)
         return result
 
@@ -351,7 +363,17 @@ def _class_owners(
 ) -> dict[str, str]:
     root_by_key = {key: symbol for symbol, key in root_keys.items()}
     owners: dict[str, str] = {}
+    family_origins: dict[str, set[str]] = {}
+    for name, info in class_infos.items():
+        if info.template_rendering is not None:
+            family_origins.setdefault(info.template_rendering.primary, set()).update(
+                origins.get(name, ())
+            )
     for name in class_infos:
+        plan = class_infos[name].template_rendering
+        if plan is not None and len(family_origins[plan.primary]) > 1:
+            owners[name] = _SHARED_OWNER
+            continue
         if name in root_by_key:
             owners[name] = root_by_key[name]
             continue

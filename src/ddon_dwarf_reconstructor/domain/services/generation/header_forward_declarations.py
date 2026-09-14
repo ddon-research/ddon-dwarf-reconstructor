@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterator
 
-from ...models.dwarf import ClassInfo, MemberInfo, StructInfo, TypeReference
+from ...models.dwarf import ClassInfo, MemberInfo, StructInfo, TemplateTypeParam, TypeReference
 from ..parsing.die_type_classifier import DIETypeClassifier
 from .header_type_planning import HeaderTypePlanningService
 from .rendering.operations import HeaderRenderingHost
@@ -50,20 +50,35 @@ class HeaderForwardDeclarationService:
                 primitives,
             )
             if type_name:
-                for expression in self._template_expressions(type_name):
-                    if expression.split("<", 1)[0].strip().startswith("std::"):
-                        continue
-                    declaration = self._aggregate_forward_declaration(expression)
-                    if declaration is not None:
-                        declarations.add(declaration)
-                    declarations.update(
-                        self._template_argument_forward_declarations(expression, set(typedefs))
-                    )
+                self._collect_template_expression_declarations(
+                    declarations, type_name, excluded_names, typedefs
+                )
         for nested_class in class_info.nested_classes:
             declarations.update(
                 self._collect_forward_declarations(nested_class, typedefs, excluded_names)
             )
         return declarations
+
+    def _collect_template_expression_declarations(
+        self: HeaderRenderingHost,
+        declarations: set[str],
+        type_name: str,
+        excluded_names: set[str],
+        typedefs: dict[str, str],
+    ) -> None:
+        for expression in self._template_expressions(type_name):
+            raw_primary = expression.split("<", 1)[0].strip()
+            if raw_primary.startswith("std::"):
+                continue
+            clean_primary = self._unqualify_type_expression(raw_primary)
+            if raw_primary in excluded_names or clean_primary in excluded_names:
+                continue
+            declaration = self._aggregate_forward_declaration(expression)
+            if declaration is not None:
+                declarations.add(declaration)
+            declarations.update(
+                self._template_argument_forward_declarations(expression, set(typedefs))
+            )
 
     @classmethod
     def _nested_aggregate_names(cls, class_info: ClassInfo) -> set[str]:
@@ -98,6 +113,34 @@ class HeaderForwardDeclarationService:
         yield from self._nested_struct_types(class_info.nested_structs)
         yield from self._union_types(class_info)
         yield from self._method_types(class_info)
+        yield from self._template_parameter_types(class_info)
+
+    def _template_parameter_types(
+        self: HeaderRenderingHost, class_info: ClassInfo
+    ) -> Iterator[tuple[str | None, int | None, bool]]:
+        for parameter in class_info.template_parameters:
+            if isinstance(parameter, TemplateTypeParam) and parameter.argument_type:
+                offset = parameter.argument_offset
+                if offset is None:
+                    offset = self.dwarf_index.find_symbol_offset(parameter.argument_type)
+                yield parameter.argument_type, offset, False
+        yield from self._specialization_name_types(class_info.name)
+
+    def _specialization_name_types(
+        self: HeaderRenderingHost, class_name: str
+    ) -> Iterator[tuple[str | None, int | None, bool]]:
+        if not ("<" in class_name and class_name.endswith(">")):
+            return
+        opening = class_name.find("<")
+        arguments = HeaderTypePlanningService._split_template_arguments(
+            class_name[opening + 1 : -1]
+        )
+        for argument in arguments:
+            clean_arg = HeaderTypePlanningService._normalize_type_name(argument)
+            if clean_arg and not TypeExpressionPolicy.is_builtin(clean_arg):
+                offset = self.dwarf_index.find_symbol_offset(clean_arg)
+                if offset is not None:
+                    yield clean_arg, offset, False
 
     def _nested_struct_types(
         self: HeaderRenderingHost, structs: list[StructInfo]

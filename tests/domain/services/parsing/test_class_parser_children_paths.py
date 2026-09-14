@@ -80,8 +80,7 @@ def test_parse_class_children_collects_supported_direct_children() -> None:
     assert len(result.nested_classes) == 1
     assert len(result.nested_structs) == 1
     assert len(result.unions) == 1
-    assert result.template_type_params == [TemplateTypeParam("T")]
-    assert result.template_value_params == [TemplateValueParam("N", "int", 1)]
+    assert result.template_parameters == [TemplateTypeParam("T"), TemplateValueParam("N", "int", 1)]
 
 
 @pytest.mark.unit

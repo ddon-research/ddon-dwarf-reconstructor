@@ -48,6 +48,14 @@ class TypeResolverContext(Protocol):
         nested_structs: list[StructInfo] | None,
     ) -> set[str]: ...
 
+    def _collect_candidate_type(
+        self,
+        names: set[str],
+        type_name: str,
+        type_offset: int | None,
+        check_aggregate: bool,
+    ) -> None: ...
+
     def _resolve_candidate_typedefs(self, type_names: set[str]) -> dict[str, str]: ...
 
     def _resolve_declared_typedefs(

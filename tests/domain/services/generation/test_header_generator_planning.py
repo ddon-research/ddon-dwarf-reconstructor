@@ -11,10 +11,14 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import (
     ClassInfo,
     MemberInfo,
     MethodInfo,
+    TemplateTypeParam,
     TypeDeclarator,
     TypeReference,
 )
 from ddon_dwarf_reconstructor.domain.services.generation import HeaderRenderer
+from ddon_dwarf_reconstructor.domain.services.generation.header_type_planning import (
+    HeaderTypePlanningService,
+)
 
 
 class TestHeaderGenerator:
@@ -404,3 +408,70 @@ def test_nested_template_arguments_use_template_forward_declarations() -> None:
 
     assert "template <typename T> class MtStlAllocator;" in declarations
     assert "class MtStlAllocator;" not in declarations
+
+
+@pytest.mark.unit
+def test_template_forward_declaration_preserves_member_function_pointer_single_arity() -> None:
+    declaration = HeaderRenderer._template_forward_declaration(
+        "cNodeT<void (cClass::*)(int, float)>"
+    )
+
+    assert declaration == "template <typename T> class cNodeT;"
+
+
+@pytest.mark.unit
+def test_forward_declarations_include_template_parameters_from_specialization() -> None:
+    mock_dwarf_index = Mock()
+    header_generator = HeaderRenderer(mock_dwarf_index)
+    specialization_class = ClassInfo(
+        name="MtTypedArray<cAIPawnAutoMotionNode>",
+        byte_size=16,
+        members=[],
+        methods=[],
+        base_classes=[],
+        enums=[],
+        nested_structs=[],
+        unions=[],
+        die_offset=0x1000,
+        template_parameters=(
+            TemplateTypeParam(
+                name="T", argument_type="cAIPawnAutoMotionNode", argument_offset=0x2000
+            ),
+        ),
+    )
+    param_die = Mock(
+        tag="DW_TAG_class_type",
+        attributes={"DW_AT_name": b"cAIPawnAutoMotionNode"},
+    )
+    header_generator.dwarf_index.get_die_by_offset.side_effect = lambda offset: {
+        0x1000: Mock(
+            tag="DW_TAG_class_type",
+            attributes={"DW_AT_name": b"MtTypedArray<cAIPawnAutoMotionNode>"},
+        ),
+        0x2000: param_die,
+    }.get(offset)
+
+    header = header_generator.generate_header(specialization_class, include_metadata=False)
+
+    assert "class cAIPawnAutoMotionNode;" in header
+
+
+@pytest.mark.unit
+def test_forward_declaration_name_extracts_enum_class_name() -> None:
+    assert (
+        HeaderTypePlanningService._forward_declaration_name("enum class MOT_TYPE : int;")
+        == "MOT_TYPE"
+    )
+    assert HeaderTypePlanningService._forward_declaration_name("class MOT_TYPE;") == "MOT_TYPE"
+
+
+@pytest.mark.unit
+def test_hierarchy_forward_declarations_exclude_existing_typedefs() -> None:
+    declarations = {"class _Myt;", "class Other;"}
+    filtered = {
+        decl
+        for decl in declarations
+        if HeaderTypePlanningService._forward_declaration_name(decl) not in {"_Myt": "string"}
+    }
+
+    assert filtered == {"class Other;"}

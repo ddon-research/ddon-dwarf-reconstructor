@@ -12,15 +12,66 @@ from ...domain.models.dwarf import ClassInfo
 if TYPE_CHECKING:
     from .symbol_definition_graph import CanonicalDefinitionGraph
 
-_COMPLETE_DEFINITION_RE = re.compile(r"(?m)^\s*(?:class|struct|union)\s+([A-Za-z_]\w*)\b[^{;]*\{")
+_AGGREGATE_START_RE = re.compile(r"(?m)^\s*(?:class|struct|union)\b")
+_ATTR_RE = re.compile(r"__attribute__\s*\(\((?:[^()]|\([^()]*\))*\)\)\s*")
+_IDENTIFIER_RE = re.compile(r"[A-Za-z_]\w*")
 _INCLUDE_RE = re.compile(r'(?m)^\s*#include\s+"([^"]+)"\s*$')
+
+
+def _match_template_arguments(content: str, start: int) -> tuple[str, int] | None:
+    if start >= len(content) or content[start] != "<":
+        return "", start
+    depth = 1
+    index = start + 1
+    while index < len(content) and depth > 0:
+        character = content[index]
+        if character == "<":
+            depth += 1
+        elif character == ">":
+            depth -= 1
+        elif character in "{;\n":
+            return None
+        index += 1
+    return (content[start:index], index) if depth == 0 else None
+
+
+def _parse_definition_at(content: str, start: int) -> tuple[int, str] | None:
+    index = start
+    while index < len(content) and content[index].isspace():
+        index += 1
+    attribute_match = _ATTR_RE.match(content, index)
+    if attribute_match:
+        index = attribute_match.end()
+    identifier_match = _IDENTIFIER_RE.match(content, index)
+    if identifier_match is None:
+        return None
+    class_name = identifier_match.group(0)
+    arguments = _match_template_arguments(content, identifier_match.end())
+    if arguments is None:
+        return None
+    suffix, index = arguments
+    class_name += suffix
+    while index < len(content) and content[index] not in "{;":
+        index += 1
+    if index < len(content) and content[index] == "{":
+        return (index, class_name)
+    return None
+
+
+def _definition_matches(content: str) -> list[tuple[int, int, str]]:
+    results = []
+    for match in _AGGREGATE_START_RE.finditer(content):
+        parsed = _parse_definition_at(content, match.end())
+        if parsed is not None:
+            results.append((match.start(), parsed[0], parsed[1]))
+    return results
 
 
 def complete_definition_names(content: str) -> list[str]:
     """Return qualified C++ names for complete class definitions in a header."""
-    matches = tuple(_COMPLETE_DEFINITION_RE.finditer(content))
-    starts = {match.start(): match.group(1) for match in matches}
-    openings = {match.end() - 1: match.group(1) for match in matches}
+    matches = tuple(_definition_matches(content))
+    starts = {match[0]: match[2] for match in matches}
+    openings = {match[1]: match[2] for match in matches}
     scopes: list[str | None] = []
     names: list[str] = []
     for index, character in enumerate(content):
@@ -47,6 +98,29 @@ def validate_rendered_headers(
     _validate_class_assignments(assigned, class_infos, class_owners)
     for path, content in sorted(headers.items()):
         _validate_header_content(path, content, header_paths, paths, class_infos)
+    _validate_template_locations(headers, class_infos)
+
+
+def _expected_template_definitions(infos: Mapping[str, ClassInfo]) -> set[str]:
+    return {
+        _rendered_class_name(info)
+        for info in infos.values()
+        if info.template_rendering is not None and info.template_rendering.mode != "blocked"
+    }
+
+
+def _validate_template_locations(
+    headers: Mapping[str, str], infos: Mapping[str, ClassInfo]
+) -> None:
+    """Require a unique definition location for every planned emitted template."""
+    locations: dict[str, list[str]] = {name: [] for name in _expected_template_definitions(infos)}
+    for path, content in headers.items():
+        for name in complete_definition_names(content):
+            if name in locations:
+                locations[name].append(path)
+    invalid = {name: paths for name, paths in locations.items() if len(paths) != 1}
+    if invalid:
+        raise ValueError(f"Template definitions require one canonical location: {invalid!r}")
 
 
 def _assigned_header_classes(
@@ -127,7 +201,11 @@ def _validate_complete_definitions(
         raise ValueError(
             f"Generated header contains duplicate complete definitions: {path}: {duplicate_names!r}"
         )
-    expected_names = {_rendered_class_name(class_infos[class_name]) for class_name in class_names}
+    expected_names = {
+        _rendered_class_name(class_infos[name])
+        for name in class_names
+        if (plan := class_infos[name].template_rendering) is None or plan.mode != "blocked"
+    }
     missing_names = sorted(expected_names - set(rendered_names))
     if missing_names:
         raise ValueError(
@@ -139,6 +217,9 @@ def _rendered_class_name(class_info: ClassInfo) -> str:
     if class_info.containing_type and class_info.qualified_name:
         return class_info.qualified_name
     name = class_info.name.strip()
+    plan = class_info.template_rendering
+    if plan is not None and plan.mode == "explicit":
+        return re.sub(r"\b[A-Za-z_]\w*::(?=[A-Za-z_]\w*)", "", name)
     template_primary, separator, _arguments = name.partition("<")
     if separator:
         return template_primary.rsplit("::", 1)[-1].strip()

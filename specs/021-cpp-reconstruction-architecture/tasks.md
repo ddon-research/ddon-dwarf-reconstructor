@@ -72,6 +72,9 @@ required; T011 is still incomplete. Do not mix the changed producer with unchang
 - [x] T095 [US2] Prepare separate behavioral acceptance decisions for F011/F022/F023/F033 in `specs/021-cpp-reconstruction-architecture/contracts/validation-corrections.md`; dependencies: T004,T011; tier: characterization and explicit acceptance; tests: existing implementation parity/assembly/publisher fixtures named by each proposal; evidence: measured-evidence.md and retained reproductions; done: F011 has an accepted freshness correction, while F022/F023/F033 have concrete reproductions and explicit deferred status decisions before any evidence-contract change.
 - [x] T096 [US2] Remove F036/FR-006 repeated manifest parsing from `src/ddon_dwarf_reconstructor/infrastructure/analytical/doris.py`; dependencies: T004,T021; tier: unit/integration/producer measurement; tests: `tests/infrastructure/analytical/benchmark/test_paths.py`; evidence: measured-evidence.md and doris-load-label-probe.json; done: one validated source identity per load invocation, identical existing labels and deterministic result order, no global cache or full-store reload merely to benchmark this change.
 - [x] T097 [US2] Characterize F037/FR-006 durable load label identity in `src/ddon_dwarf_reconstructor/infrastructure/analytical/doris.py` and `doris_stream_load.py`; dependencies: T004,T011; tier: unit/explicit acceptance; tests: `tests/infrastructure/analytical/benchmark/test_paths.py` and `tests/infrastructure/analytical/test_doris_load_identity.py`; evidence: `contracts/validation-corrections.md` and measured-evidence.md; done: cross-table, changed source, repeated request, and existing-label outcomes have explicit expectations and a deferred migration decision; no blind replay of append-only loads.
+- [x] T105 [US2] Reconstruct template families before deduplicating headers; dependencies: T004,T021,T022; tier: unit/integration/compiler; tests: `tests/domain/services/generation/test_template_families.py`, `tests/application/generators/test_template_family_layout.py`, `tests/domain/services/parsing/test_class_parser_templates_paths.py`; evidence: `measured-evidence.md`, `output/template-family-review/20260913/msvc-comparison-report.json`; done: unified `TemplateParameter` preserving child-DIE order and provenance, AST type expression substitution (`substitute_type`, `project_template`), conservative family planning (`generic`, `explicit`, `blocked`), shared multi-root template ownership (`shared/rTbl2.h`, `shared/MtCollection.h`), 145 duplicate headers eliminated, MSVC error C2953 reduced from 2,890 to 0 (100% eliminated), failed headers reduced from 463 to 264.
+- [x] T106 [US2] Mitigate MSVC C2955/C1003 cascades, member pointer indirection, and forward-declaration collisions; dependencies: T105,T022; tier: unit/integration/compiler; tests: `tests/domain/services/generation/test_header_generator_planning.py`, `tests/domain/services/generation/test_header_generator_dependency_ordering.py`, `tests/domain/services/parsing/test_template_argument_parser.py`, `tests/domain/services/parsing/test_type_resolver.py`; evidence: `measured-evidence.md`, `output/template-family-review/current-validation/msvc-header-validation.json`; done: canonical balanced delimiter template splitter, recursive nested typedef and template argument resolution, specialization forward declarations, enum class/class forward-declaration deduplication, by-value member template dependency indirection detection, typedef forward declaration filtering; passed headers increased to 580 (+91), failed headers reduced to 173 (-91), C1003 error limit cascades reduced from 195 to 16 (-91.8%).
+
 
 T034 cannot close before T082,T083,T085-T088,T096 and the T097 acceptance disposition.
 T035 cannot close before the applicable remote blocker dispositions even though T090-T094 are
@@ -196,3 +199,26 @@ fast path, matching the Doris adapter's fail-closed policy; complete hints still
 `tests/infrastructure/analytical/test_parquet_partial_evidence.py` covers both paths and preserves
 the fallback query result's status and provenance. Full root gates remain required after this
 slice; no full-corpus or performance claim is made from the focused characterization alone.
+
+T105 is implemented across the template parsing, family planning, declaration synthesis, and
+header deduplication pipeline. `TemplateParameter` unifies type and value parameters with child-DIE
+ordering and DWARF provenance. `TemplateFamilyPlan` conservative planning discriminates between
+generic template emission and explicit specializations with base inheritance. Multi-root template
+families are assigned to `shared/`, eliminating 145 duplicate headers (including 99 duplicate `rTbl2.h`
+and 38 duplicate `MtCollection.h` files). In standalone MSVC compilation, `error C2953` was reduced
+from 2,890 to 0 (completely eliminated), and failed headers were reduced from 463 to 264.
+
+T106 is implemented to eliminate C2955/C1003 error cascades, member indirection detection bugs,
+and forward-declaration collisions. Balanced delimiter tracking across `<>`, `()`, `[]`, and `{}`
+in `template_argument_parser.py` fixed broken arity splits on function-pointer template arguments.
+Recursive nested typedef collection and nested template argument resolution provide complete type
+definitions. Specialization argument forward declarations eliminate cascading fatal `C1003` aborts.
+Base class offsets are retained in template family signatures to prevent conflicting layout merges.
+Forward-declaration deduplication now pairs `enum class` and `class`, prioritizing `enum class`.
+By-value member template dependency detection strips `<...>` before checking indirection (`*`, `&`),
+properly emitting `#include` statements for composite types like `cDelegate_4`. Typedef names are
+excluded from forward declaration emission. Standalone MSVC compilation of all 753 Season 2 headers
+increased cleanly passing headers to 580 (+91), reduced failed headers to 173 (-91), and reduced
+fatal `C1003` aborts from 195 to 16 (-91.8%). Target headers `cDelegate.h`, `cpSequenceCtrl.h`,
+`rStageJoint.h`, and `MtCollection.h` compile cleanly.
+

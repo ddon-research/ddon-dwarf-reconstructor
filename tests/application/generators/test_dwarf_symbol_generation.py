@@ -258,7 +258,7 @@ def test_cross_owner_conflicts_get_identity_suffixes_and_no_conflicting_include(
     )
 
     assert all("common-" in path for path in paths)
-    assert "second" in header_names
+    assert "second" not in header_names
     assert "first" not in header_names
 
 

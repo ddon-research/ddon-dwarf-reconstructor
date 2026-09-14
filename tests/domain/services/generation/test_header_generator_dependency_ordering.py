@@ -17,6 +17,9 @@ from ddon_dwarf_reconstructor.domain.services.generation import HeaderRenderer
 from ddon_dwarf_reconstructor.domain.services.generation.header_hierarchy import (
     HierarchyHeaderGenerationService,
 )
+from ddon_dwarf_reconstructor.domain.services.generation.header_ordering import (
+    HeaderOrderingService,
+)
 from ddon_dwarf_reconstructor.domain.services.generation.rendering import TypeExpressionPolicy
 
 
@@ -334,3 +337,24 @@ class TestHeaderGeneratorDependencyOrdering:
         )
 
         assert result == "template <typename T, typename U, typename V> class rTbl2;"
+
+    @pytest.mark.unit
+    def test_enum_class_forward_declaration_prefers_enum_class_over_class(self):
+        result = HierarchyHeaderGenerationService._preferred_forward_declaration(
+            "MOT_TYPE",
+            ["class MOT_TYPE;", "enum class MOT_TYPE : int;"],
+            {},
+        )
+
+        assert result == "enum class MOT_TYPE : int;"
+
+    @pytest.mark.unit
+    def test_template_argument_pointers_do_not_mark_outer_member_as_indirection(self):
+        assert not HeaderOrderingService._is_indirection_type(
+            "cDelegate_4<void, cpSequenceCtrl *, u32, u32, u16>"
+        )
+        assert HeaderOrderingService._is_indirection_type(
+            "cDelegate_4<void, cpSequenceCtrl *, u32, u32, u16>*"
+        )
+        assert HeaderOrderingService._is_indirection_type("int*")
+        assert not HeaderOrderingService._is_indirection_type("int")

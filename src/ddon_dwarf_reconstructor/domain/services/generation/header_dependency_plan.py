@@ -87,7 +87,9 @@ class HeaderDependencyPlanService:
         typedefs: Mapping[str, str] | None = None,
     ) -> HeaderDependencyPlan:
         """Build full and top-level dependency maps with shared name indexes."""
-        infos = dict(class_infos)
+        from .template_declarations import project_template
+
+        infos = {key: project_template(info) for key, info in class_infos.items()}
         typedef_map = dict(typedefs) if typedefs is not None else None
         name_index = build_header_name_index(infos)
         dependencies = self._definition_dependencies(infos, typedef_map, name_index=name_index)

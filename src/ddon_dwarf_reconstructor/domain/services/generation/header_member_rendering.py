@@ -8,6 +8,8 @@ from ....core.observability import get_logger
 from ...models.dwarf import ClassInfo, MemberInfo
 from .rendering.operations import HeaderRenderingHost
 from .rendering.type_policy import TypeExpressionPolicy
+from .template_declarations import project_template
+from .template_families import plan_template_families
 
 logger = get_logger(__name__)
 
@@ -192,70 +194,35 @@ class HeaderMemberRenderingService:
             return f"{declaration} : {member.bit_size}"
         return declaration
 
-    def _template_rendering_info(
-        self: HeaderRenderingHost, class_name: str
-    ) -> tuple[str, str, str] | None:
-        """Return primary name and argument names for a recovered specialization."""
-        opening = class_name.find("<")
-        if opening <= 0 or not class_name.endswith(">"):
-            return None
-
-        primary_name = self._unqualify_type_expression(class_name[:opening].strip())
-        argument = class_name[opening + 1 : -1].strip()
-        if not re.fullmatch(r"[A-Za-z_]\w*(?:::[A-Za-z_]\w*)*", primary_name):
-            return None
-        if not argument:
-            return None
-
-        short_argument = (
-            "N0"
-            if re.fullmatch(r"[-+]?\d+|true|false", argument)
-            else argument.rsplit("::", 1)[-1].strip()
-        )
-        return primary_name, argument, short_argument
-
-    @staticmethod
-    def _replace_template_argument(line: str, argument: str, short_argument: str) -> str:
-        """Substitute a recovered specialization argument with the template parameter."""
-        if re.fullmatch(r"[-+]?\d+|true|false", argument):
-            rendered = re.sub(
-                rf"(?<![A-Za-z0-9_]){re.escape(argument)}(?![A-Za-z0-9_])",
-                short_argument,
-                line,
-            )
-        else:
-            rendered = line.replace(argument, short_argument)
-        specialized_short = argument.rsplit("::", 1)[-1].strip()
-        if "::" in argument and re.fullmatch(r"[A-Za-z_]\w*", specialized_short):
-            rendered = re.sub(rf"\b{re.escape(specialized_short)}\b", short_argument, rendered)
-        return rendered
-
     def _generate_single_class(
         self: HeaderRenderingHost, class_info: ClassInfo, include_metadata: bool
     ) -> list[str]:
         """Generate a single class definition."""
+        class_info = _ensure_template_plan(class_info)
+        plan = class_info.template_rendering
+        if plan is not None and (plan.mode == "blocked" or not plan.representative):
+            return [f"// Incomplete template: {plan.diagnostic}"] if plan.mode == "blocked" else []
+        if plan is not None and plan.mode == "generic":
+            self._known_render_type_names.update(name for _argument, name in plan.substitutions)
+            class_info = project_template(class_info)
+            include_metadata = False
         class_name = class_info.name
-        template_info = self._template_rendering_info(class_name)
-        declaration_name = template_info[0] if template_info else class_name
-        lines = self._class_header_lines(
-            class_info, include_metadata, template_info, declaration_name
+        declaration_name = (
+            self._unqualify_type_expression(plan.primary)
+            if plan is not None and plan.mode == "generic"
+            else self._unqualify_type_expression(class_name)
         )
+        lines = self._class_header_lines(class_info, include_metadata, declaration_name)
         lines.extend(self._nested_type_lines(class_info, include_metadata))
         lines.extend(self._method_lines(class_info, class_name))
         lines.extend(self._member_lines(class_info))
         lines.append("};")
-        if template_info:
-            _, argument, short_argument = template_info
-            lines = [
-                self._replace_template_argument(line, argument, short_argument) for line in lines
-            ]
         return lines
 
     def _class_header_lines(
         self: HeaderRenderingHost,
         class_info: ClassInfo,
         include_metadata: bool,
-        template_info: tuple[str, str, str] | None,
         declaration_name: str,
     ) -> list[str]:
         lines = self._class_metadata_lines(class_info, include_metadata)
@@ -269,10 +236,9 @@ class HeaderMemberRenderingService:
         aggregate_kind = (
             class_info.kind if class_info.kind in {"class", "struct", "union"} else "class"
         )
-        if template_info:
-            lines.append(
-                self._template_parameter_declaration(class_info.name) or "template <typename T>"
-            )
+        plan = class_info.template_rendering
+        if plan is not None:
+            lines.append(plan.declaration if plan.mode == "generic" else "template <>")
         lines.extend([f"{aggregate_kind}{alignment} {declaration_name}{inheritance}", "{"])
         return lines
 
@@ -372,3 +338,10 @@ class HeaderMemberRenderingService:
                 for member in static_members
             )
         return lines
+
+
+def _ensure_template_plan(info: ClassInfo) -> ClassInfo:
+    if "<" not in info.name or info.template_rendering is not None:
+        return info
+    planned, _families = plan_template_families({info.name: info}, {})
+    return planned[info.name]

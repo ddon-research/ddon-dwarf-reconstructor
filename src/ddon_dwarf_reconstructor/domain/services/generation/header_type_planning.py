@@ -8,6 +8,7 @@ from ....core.observability import get_logger
 from ...models.analytical_dwarf import QueryStatus
 from ...models.dwarf import ClassInfo, StructInfo
 from ...ports.dwarf_lookup import DwarfLookupPort
+from ..parsing.template_argument_parser import split_template_arguments
 from .rendering.type_policy import TypeExpressionPolicy
 
 logger = get_logger(__name__)
@@ -222,27 +223,13 @@ class HeaderTypePlanningService:
 
     @staticmethod
     def _split_template_arguments(arguments: str) -> list[str]:
-        parts: list[str] = []
-        start = 0
-        depth = 0
-        for index, character in enumerate(arguments):
-            if character == "<":
-                depth += 1
-            elif character == ">":
-                depth -= 1
-            elif character == "," and depth == 0:
-                parts.append(arguments[start:index].strip())
-                start = index + 1
-        final = arguments[start:].strip()
-        if final:
-            parts.append(final)
-        return parts
+        return split_template_arguments(arguments)
 
     @staticmethod
     def _forward_declaration_name(declaration: str) -> str:
         """Extract the declared type name from a C++ forward declaration."""
         match = re.search(
-            r"(?:class|struct|union)\s+([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*;",
+            r"(?:(?:enum\s+)?class|struct|union)\s+([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)(?:\s*:\s*\w+)?\s*;",
             declaration,
         )
         return match.group(1) if match else declaration

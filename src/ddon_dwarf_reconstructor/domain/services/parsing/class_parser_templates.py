@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from ....core.dwarf import DwarfEntry, decode_dwarf_string
+from typing import TypedDict
+
+from ....core.dwarf import DwarfEntry, decode_dwarf_string, dwarf_reference_offset
 from ....core.observability import get_logger
 from ...models.dwarf import (
     TemplateTypeParam,
@@ -50,74 +52,43 @@ class ClassParserTemplatesMixin:
 
     def parse_template_type_param(
         self: ClassParserContext, param_die: DwarfEntry
-    ) -> TemplateTypeParam | None:
-        """Parse template type parameter (typename T or class T).
-
-        Args:
-            param_die: DwarfEntry representing the template type parameter
-
-        Returns:
-            TemplateTypeParam object if valid, None otherwise
-
-        Examples:
-            template <typename T>        -> TemplateTypeParam(name='T')
-            template <class U = int>     -> TemplateTypeParam(name='U', default_type='int')
-        """
-        # Get parameter name
-        name_attr = param_die.attributes.get("DW_AT_name")
-        if not name_attr:
-            logger.debug(f"Template type parameter at 0x{param_die.offset:x} has no name")
-            return None
-
-        param_name = decode_dwarf_string(name_attr.value)
-
-        # Check for default type
-        default_type = None
-        if "DW_AT_type" in param_die.attributes:
-            default_type = self.type_resolver.resolve_type_name(param_die)
-            logger.debug(f"Template type parameter '{param_name}' has default type: {default_type}")
-
-        logger.debug(f"Parsed template type parameter: {param_name}")
-        return TemplateTypeParam(name=param_name, default_type=default_type)
+    ) -> TemplateTypeParam:
+        """Retain the actual type argument and its reference provenance."""
+        return TemplateTypeParam(
+            name=decode_dwarf_string(
+                getattr(param_die.attributes.get("DW_AT_name"), "value", None)
+            ),
+            argument_type=self.type_resolver.resolve_type_name(param_die),
+            **_parameter_provenance(param_die),
+        )
 
     def parse_template_value_param(
         self: ClassParserContext, param_die: DwarfEntry
-    ) -> TemplateValueParam | None:
-        """Parse template value parameter (non-type template parameter).
-
-        Args:
-            param_die: DwarfEntry representing the template value parameter
-
-        Returns:
-            TemplateValueParam object if valid, None otherwise
-
-        Examples:
-            template <int N>             -> TemplateValueParam(name='N', type_name='int')
-            template <size_t Size = 10>  -> TemplateValueParam(name='Size', type_name='size_t', default_value=10)
-        """
-        # Get parameter name
-        name_attr = param_die.attributes.get("DW_AT_name")
-        if not name_attr:
-            logger.debug(f"Template value parameter at 0x{param_die.offset:x} has no name")
-            return None
-
-        param_name = decode_dwarf_string(name_attr.value)
-
-        # Get parameter type
-        param_type = self.type_resolver.resolve_type_name(param_die)
-        if param_type == "unknown_type":
-            param_type = "int"  # Fallback to int
-
-        # Check for default value
-        default_value = None
-        const_attr = param_die.attributes.get("DW_AT_const_value")
-        if const_attr:
-            default_value = const_attr.value
-            logger.debug(
-                f"Template value parameter '{param_name}' has default value: {default_value}"
-            )
-
-        logger.debug(f"Parsed template value parameter: {param_name} ({param_type})")
+    ) -> TemplateValueParam:
+        """Retain the actual non-type argument without inventing its type."""
         return TemplateValueParam(
-            name=param_name, type_name=param_type, default_value=default_value
+            name=decode_dwarf_string(
+                getattr(param_die.attributes.get("DW_AT_name"), "value", None)
+            ),
+            type_name=self.type_resolver.resolve_type_name(param_die),
+            argument_value=getattr(param_die.attributes.get("DW_AT_const_value"), "value", None),
+            **_parameter_provenance(param_die),
         )
+
+
+class _ParameterProvenance(TypedDict):
+    die_offset: int | None
+    cu_offset: int | None
+    argument_offset: int | None
+    uses_default: bool | None
+
+
+def _parameter_provenance(die: DwarfEntry) -> _ParameterProvenance:
+    cu_offset = getattr(die.cu, "cu_offset", None)
+    default = die.attributes.get("DW_AT_default_value")
+    return {
+        "die_offset": die.offset if isinstance(die.offset, int) else None,
+        "cu_offset": cu_offset if isinstance(cu_offset, int) else None,
+        "argument_offset": dwarf_reference_offset(die, "DW_AT_type"),
+        "uses_default": bool(default.value) if default is not None else None,
+    }

@@ -39,8 +39,8 @@ def test_template_type_parameter_supports_default_and_missing_name() -> None:
 
     assert result is not None
     assert result.name == "T"
-    assert result.default_type == "u32"
-    assert parser.parse_template_type_param(_die("DW_TAG_template_type_param")) is None
+    assert result.argument_type == "u32"
+    assert parser.parse_template_type_param(_die("DW_TAG_template_type_param")).name == ""
 
 
 @pytest.mark.unit
@@ -56,9 +56,9 @@ def test_template_value_parameter_defaults_unknown_type_and_reads_constant() -> 
 
     assert result is not None
     assert result.name == "Count"
-    assert result.type_name == "int"
-    assert result.default_value == 4
-    assert parser.parse_template_value_param(_die("DW_TAG_template_value_param")) is None
+    assert result.type_name == "unknown_type"
+    assert result.argument_value == 4
+    assert parser.parse_template_value_param(_die("DW_TAG_template_value_param")).name == ""
 
 
 @pytest.mark.unit

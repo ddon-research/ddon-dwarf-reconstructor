@@ -11,6 +11,7 @@ from .header_dependency_plan import HeaderDependencyPlan
 from .header_type_planning import HeaderTypePlanningService
 from .rendering.operations import HeaderRenderingHost
 from .rendering.type_policy import TypeExpressionPolicy
+from .template_forward_declarations import ensure_family_plans, planned_template_forwards
 
 logger = get_logger(__name__)
 
@@ -75,10 +76,10 @@ class HierarchyHeaderGenerationService:
                 declarations. Deterministic evidence export disables this so
                 rendering cannot mutate lazy-resolution state after closure
                 construction.
-
         Returns:
             Complete C++ header file as string
         """
+        class_infos = ensure_family_plans(class_infos)
         self._base_type_names = self._qualified_base_type_names(base_type_infos or class_infos)
         self._known_render_type_names = self._render_type_names(class_infos, typedefs or {})
         lines, rendered_target, guard_name = _hierarchy_preamble(
@@ -304,13 +305,21 @@ class HierarchyHeaderGenerationService:
             class_infos, typedefs or {}, resolve_forward_declarations
         )
         forward_decls = self._exclude_defined_declarations(forward_decls, class_infos)
-        forward_decls.update(self._base_forward_declarations(class_infos, class_infos))
+        forward_decls.update(self._base_forward_declarations(class_infos, class_infos, typedefs))
         forward_decls = self._exclude_included_forward_declarations(
             forward_decls,
             dependency_headers or {},
             base_type_infos or class_infos,
         )
-        return self._deduplicate_forward_declarations(forward_decls, class_infos)
+        forward_decls = planned_template_forwards(
+            self, forward_decls, base_type_infos or class_infos, class_infos
+        )
+        deduped = self._deduplicate_forward_declarations(forward_decls, class_infos)
+        if typedefs:
+            deduped = {
+                decl for decl in deduped if self._forward_declaration_name(decl) not in typedefs
+            }
+        return deduped
 
     def _exclude_included_forward_declarations(
         self: HeaderRenderingHost,
@@ -409,7 +418,7 @@ class HierarchyHeaderGenerationService:
         return next(
             (
                 kind
-                for kind in ("union", "struct", "class")
+                for kind in ("enum class", "union", "struct", "class")
                 if any(declaration.startswith(f"{kind} ") for declaration in candidates)
             ),
             "class",
@@ -465,8 +474,9 @@ class HierarchyHeaderGenerationService:
         self: HeaderRenderingHost,
         class_infos: dict[str, ClassInfo],
         known_infos: dict[str, ClassInfo],
+        typedefs: dict[str, str] | None = None,
     ) -> set[str]:
-        return _collect_base_forward_declarations(self, class_infos, known_infos)
+        return _collect_base_forward_declarations(self, class_infos, known_infos, typedefs)
 
     def _hierarchy_definitions(
         self: HeaderRenderingHost,
@@ -501,40 +511,24 @@ class HierarchyHeaderGenerationService:
         ordered_classes: list[str],
     ) -> list[str]:
         """Keep one definition per rendered declaration name."""
-        groups: dict[str, list[str]] = {}
-        for class_name in ordered_classes:
-            class_info = class_infos[class_name]
-            template_info = self._template_rendering_info(class_info.name)
-            declaration_name = template_info[0] if template_info else class_name
-            if not template_info:
-                declaration_name = class_info.name
-            groups.setdefault(declaration_name, []).append(class_name)
-
-        selected: dict[str, str] = {}
-        for declaration_name, candidates in groups.items():
-            selected[declaration_name] = max(
-                candidates,
-                key=lambda candidate: (
-                    len(class_infos[candidate].members)
-                    + 2 * len(class_infos[candidate].methods)
-                    + len(class_infos[candidate].nested_classes)
-                    + len(class_infos[candidate].nested_structs)
-                    + len(class_infos[candidate].enums)
-                    + len(class_infos[candidate].unions),
-                    -candidates.index(candidate),
-                ),
-            )
-
-        result: list[str] = []
-        seen: set[str] = set()
-        for class_name in ordered_classes:
-            class_info = class_infos[class_name]
-            template_info = self._template_rendering_info(class_info.name)
-            declaration_name = template_info[0] if template_info else class_info.name
-            if declaration_name in seen:
-                continue
-            seen.add(declaration_name)
-            result.append(selected[declaration_name])
+        result = []
+        seen = set()
+        for key in ordered_classes:
+            info = class_infos[key]
+            plan = info.template_rendering
+            if plan is not None:
+                if plan.mode == "blocked" or not plan.representative:
+                    continue
+                identity = (
+                    self._unqualify_type_expression(plan.primary)
+                    if plan.mode == "generic"
+                    else self._unqualify_type_expression(info.name)
+                )
+            else:
+                identity = info.qualified_name or info.name
+            if identity not in seen:
+                seen.add(identity)
+                result.append(key)
         return result
 
 
@@ -542,10 +536,12 @@ def _collect_base_forward_declarations(
     renderer: HeaderRenderingHost,
     class_infos: dict[str, ClassInfo],
     known_infos: dict[str, ClassInfo],
+    typedefs: dict[str, str] | None = None,
 ) -> set[str]:
     declarations: set[str] = set()
     primitives = renderer._primitive_names()
     known_names = _known_base_names(renderer, known_infos)
+    typedef_set = set(typedefs or {})
     for class_info in class_infos.values():
         for base_name in class_info.base_classes:
             declaration = _base_forward_declaration(renderer, base_name, primitives, known_names)
@@ -553,7 +549,7 @@ def _collect_base_forward_declarations(
                 declarations.add(declaration)
             for expression in renderer._template_expressions(base_name):
                 declarations.update(
-                    renderer._template_argument_forward_declarations(expression, set())
+                    renderer._template_argument_forward_declarations(expression, typedef_set)
                 )
     return declarations
 

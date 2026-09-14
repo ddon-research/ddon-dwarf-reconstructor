@@ -155,6 +155,26 @@ unresolved definitions remain context diagnostics. The readable `.asm` header us
 comments, while exact-byte `.s`/`.o` output remains an opt-in separate profile. A single-symbol
 invocation uses this same path.
 
+### Template family reconstruction
+
+Template classes (such as `rTbl2<T>` and `MtTypedArray<T>`) are reconstructed through conservative
+family planning rather than ad-hoc text substitution or per-specialization file emission:
+
+1. **Ordered Parameter Contracts**: The parser extracts unified `TemplateParameter` instances
+   preserving exact child-DIE order, argument types, non-type values, default flags, and DWARF
+   reference provenance (`argument_offset`, `cu_offset`, `die_offset`).
+2. **Conservative Family Planning**: Specializations of the same template primary are grouped into a
+   `TemplateFamilyPlan` with three modes:
+   - `generic`: When observed argument types discriminate and normalized member layouts and signatures
+     match across instantiations, a single template definition `template <typename T> class Name` is planned.
+   - `explicit`: When member layouts, methods, or virtual tables differ across instantiations in DWARF,
+     the family emits a forward declaration `template <typename T> class Name;` followed by explicit
+     specializations `template <> class Name<ConcreteType> : public Base`.
+   - `blocked`: When definitions or offsets conflict irreconcilably.
+3. **Shared Ownership and Deduplication**: Multi-root template families route to `shared/` (e.g.
+   `shared/rTbl2.h` and `shared/MtCollection.h`), completely eliminating duplicate definitions across
+   per-symbol folders and eliminating MSVC `error C2953` ("class template has already been defined").
+
 The historical 2026-08-10 Season 2 report passed all 2,760 headers. Warning-only compiler
 diagnostics remain evidence; they do not become generated code or runtime dependencies. The
 boundary-review baseline is separately normalized to 289 roots, 289 bundles, 289 manifests, 2,745
@@ -178,8 +198,8 @@ unrequested probe.
 The historical 2026-08-16 Season 2 rerun covered all 289 resource roots across separate bundles:
 2,760 header files were checked without a root generation failure, and 1,150 methods received the
 clean `.raw.asm`/`.s`/`.o`/`.context.json` handoff. (The modern Feature 021 architecture generates
-all roots into a single flat tree under `generated/ps4-<client-version>/` with ~898 deduplicated
-headers). A concurrent-run cache defect was found and fixed by comparing SDK identities after JSON
+all roots into a single flat tree under `generated/ps4-<client-version>/` with 753 deduplicated
+headers after template family reconstruction). A concurrent-run cache defect was found and fixed by comparing SDK identities after JSON
 round-tripping and versioning the disassembly cache key; the affected `rLoadingParam` root was rerun
 with observed SCE metadata and no diagnostics. The independent MSVC header closure passed 2,760/2,760
 units with zero failures and zero timeouts. The run remains `observed-partial` because ABI/CFI,

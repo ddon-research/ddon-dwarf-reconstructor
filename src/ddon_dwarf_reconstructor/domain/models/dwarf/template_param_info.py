@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class TemplateTypeParam:
     """Template type parameter (typename T or class T).
 
@@ -16,11 +16,15 @@ class TemplateTypeParam:
     name: str
     """Name of the type parameter (e.g., 'T', 'Key', 'Value')"""
 
-    default_type: str | None = None
-    """Default type if specified (e.g., 'int' in 'typename T = int')"""
+    argument_type: str | None = None
+    """Actual substituted type, not a source default argument."""
+    die_offset: int | None = None
+    cu_offset: int | None = None
+    argument_offset: int | None = None
+    uses_default: bool | None = None
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class TemplateValueParam:
     """Template value parameter (non-type template parameter).
 
@@ -30,8 +34,15 @@ class TemplateValueParam:
     name: str
     """Name of the value parameter (e.g., 'N', 'Size')"""
 
-    type_name: str = "int"
+    type_name: str = "unknown_type"
     """Type of the value parameter"""
 
-    default_value: Any | None = None
-    """Default value if specified (e.g., 10 in 'int N = 10')"""
+    argument_value: Any | None = None
+    """Actual instantiated value; a default requires separate DWARF evidence."""
+    die_offset: int | None = None
+    cu_offset: int | None = None
+    argument_offset: int | None = None
+    uses_default: bool | None = None
+
+
+type TemplateParameter = TemplateTypeParam | TemplateValueParam

@@ -266,3 +266,21 @@ def test_collect_used_typedefs_resolves_alias_from_exact_declared_die() -> None:
     assert resolver.collect_used_typedefs([member], []) == {"GPUFORMAT_TYPE": "DataFormat"}
     resolver._resolve_primitive_die.assert_called_once_with("GPUFORMAT_TYPE", typedef)
     index.targeted_symbol_search.assert_not_called()
+
+
+@pytest.mark.unit
+def test_collect_used_typedefs_extracts_nested_template_arguments() -> None:
+    index = Mock()
+    resolver = LazyTypeResolver(Mock(), index)
+    resolver._resolve_primitive_typedef = Mock(
+        side_effect=lambda name: (
+            "unsigned short" if name == "u16" else "unsigned int" if name == "u32" else None
+        )
+    )
+    member = MemberInfo(
+        "cb",
+        "cDelegate_4<void, cpSequenceCtrl *, u32, u32, u16>",
+        type_offset=None,
+    )
+    result = resolver.collect_used_typedefs([member], [])
+    assert result == {"u16": "unsigned short", "u32": "unsigned int"}

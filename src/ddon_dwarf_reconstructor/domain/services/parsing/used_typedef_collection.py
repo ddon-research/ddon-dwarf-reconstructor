@@ -6,6 +6,7 @@ from collections.abc import Iterator
 
 from ....core.observability import get_logger
 from ...models.dwarf import MemberInfo, MethodInfo, StructInfo, UnionInfo
+from .template_argument_parser import split_template_arguments
 from .type_resolver_context import TypeResolverContext
 
 logger = get_logger(__name__)
@@ -132,13 +133,26 @@ class UsedTypedefCollectionMixin:
         for type_name, type_offset, check_aggregate in self._type_references(
             members, methods, unions, nested_structs
         ):
-            base_type = self._extract_base_type(type_name)
-            if base_type in _EXCLUDED_TYPES:
-                continue
-            if check_aggregate and self._is_known_aggregate_type(base_type, type_offset):
-                continue
-            names.add(base_type)
+            self._collect_candidate_type(names, type_name, type_offset, check_aggregate)
         return names
+
+    def _collect_candidate_type(
+        self: TypeResolverContext,
+        names: set[str],
+        type_name: str,
+        type_offset: int | None,
+        check_aggregate: bool,
+    ) -> None:
+        base_type = self._extract_base_type(type_name)
+        if base_type in _EXCLUDED_TYPES:
+            return
+        if "<" in base_type and base_type.endswith(">"):
+            opening = base_type.find("<")
+            for arg in split_template_arguments(base_type[opening + 1 : -1]):
+                self._collect_candidate_type(names, arg, None, False)
+        if check_aggregate and self._is_known_aggregate_type(base_type, type_offset):
+            return
+        names.add(base_type)
 
     def _type_references(
         self: TypeResolverContext,

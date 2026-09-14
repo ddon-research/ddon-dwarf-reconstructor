@@ -169,7 +169,7 @@ class HeaderOrderingService:
         """Resolve by-value aliases whose terminal DIE is not in the text type."""
         for class_name, class_info in class_infos.items():
             for member in self._all_nested_members(class_info):
-                if member.is_static or "*" in member.type_name or "&" in member.type_name:
+                if member.is_static or self._is_indirection_type(member.type_name):
                     continue
                 alias = self._normalize_type_name(member.type_name).split("[", 1)[0].strip()
                 if alias not in typedefs:
@@ -328,20 +328,18 @@ class HeaderOrderingService:
 
     @staticmethod
     def _template_specialization_names(expression: str, name_index: Mapping[str, str]) -> set[str]:
-        primary = HeaderTypePlanningService._normalize_type_name(
-            expression.split("<", 1)[0].strip()
-        )
-        indexed_specializations = getattr(name_index, "specializations", None)
-        if indexed_specializations is not None:
-            direct = name_index.get(primary)
-            return set(indexed_specializations.get(primary, ())) | (
-                {direct} if direct is not None else set()
-            )
-        return {
-            key
-            for value, key in name_index.items()
-            if value == primary or value.startswith(f"{primary}<")
-        }
+        exact = name_index.get(expression)
+        if exact is not None:
+            return {exact}
+        if "<" in expression:
+            primary = expression.split("<", 1)[0].strip()
+            candidates = getattr(name_index, "specializations", {}).get(primary)
+            if candidates:
+                return set(candidates)
+            exact_primary = name_index.get(primary)
+            if exact_primary is not None:
+                return {exact_primary}
+        return set()
 
     def _value_typedef_underlyings(
         self: HeaderRenderingHost,
@@ -353,7 +351,7 @@ class HeaderOrderingService:
         return [
             typedefs[alias]
             for member in self._all_nested_members(class_info)
-            if "*" not in member.type_name and "&" not in member.type_name
+            if not self._is_indirection_type(member.type_name)
             for alias in [self._normalize_type_name(member.type_name).split("[", 1)[0].strip()]
             if alias in typedefs
         ]
@@ -415,12 +413,6 @@ class HeaderOrderingService:
         dependencies: dict[str, set[str]],
         offset_names: dict[int, str] | None = None,
     ) -> None:
-        # Recovered template specializations are rendered as one primary
-        # template definition. Their element types are represented by the
-        # recovered storage, so importing every concrete argument's header
-        # creates avoidable include cycles such as cArray<unZoneGroup, 8>.
-        if "<" in class_name:
-            return
         for member in members:
             dependencies[class_name].update(
                 self._member_dependency_names(member, class_name, name_index, offset_names)
@@ -479,6 +471,14 @@ class HeaderOrderingService:
             dependencies.add(referenced_name)
         return dependencies
 
+    @staticmethod
+    def _is_indirection_type(type_name: str) -> bool:
+        if "<" in type_name and ">" in type_name:
+            outer = re.sub(r"<.*>", "", type_name)
+        else:
+            outer = type_name
+        return "*" in outer or "&" in outer
+
     def _member_dependency_names(
         self: HeaderRenderingHost,
         member: MemberInfo,
@@ -486,7 +486,7 @@ class HeaderOrderingService:
         name_index: Mapping[str, str],
         offset_names: dict[int, str] | None,
     ) -> set[str]:
-        if member.is_static or "*" in member.type_name or "&" in member.type_name:
+        if member.is_static or self._is_indirection_type(member.type_name):
             return set()
         dependencies = {
             referenced_name

@@ -9,11 +9,12 @@ from typing import TYPE_CHECKING
 
 from .member_info import MemberInfo
 from .method_info import MethodInfo
+from .template_rendering import TemplateRendering
 
 if TYPE_CHECKING:
     from .enum_info import EnumInfo
     from .struct_info import StructInfo
-    from .template_param_info import TemplateTypeParam, TemplateValueParam
+    from .template_param_info import TemplateParameter
     from .union_info import UnionInfo
 
 
@@ -35,10 +36,9 @@ class ClassInfo:
     die_offset: int | None = None
     cu_offset: int | None = None  # Compilation unit offset for file mapping
     packing_info: dict[str, int] | None = None  # packing, padding, alignment hints
-    template_type_params: list[TemplateTypeParam] = field(default_factory=list)
-    """Template type parameters (typename T, class U, etc.)"""
-    template_value_params: list[TemplateValueParam] = field(default_factory=list)
-    """Template value parameters (int N, size_t Size, etc.)"""
+    template_parameters: list[TemplateParameter] = field(default_factory=list)
+    """Instantiated parameters in original child-DIE order."""
+    template_rendering: TemplateRendering | None = None
     kind: str = "class"
     qualified_name: str | None = None
     is_declaration: bool = False
