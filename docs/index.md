@@ -1,8 +1,9 @@
 # DDON DWARF Reconstructor
 
-The DDON DWARF Reconstructor turns ELF/DWARF evidence into deterministic C++ headers and
-source-bound knowledge bundles. This site is the project wiki: it explains how to use the tool,
-why the architecture is shaped as it is, and where the implementation roadmap is heading.
+This Python implementation is archived. Development has moved to an unpublished Rust rewrite.
+This site preserves the Python tool's usage, architecture, research, and unfinished requirements
+as of October 10, 2026. Start with the [archive status](reference/project-status.md) to understand
+the frozen implementation and its validation limits.
 
 The documentation is deliberately source-backed. A claim about behavior must be traceable to
 the Python implementation, a test, a generated artifact, or an explicitly identified external
@@ -12,10 +13,10 @@ explanation and reference layer around them.
 ## Start here
 
 - New to the repository: [First generation](tutorials/first-generation.md).
-- Running a normal change: [Validate changes](how-to/validate-changes.md).
+- Reproducing historical checks: [Validate changes](how-to/validate-changes.md).
 - Understanding the system: [Architecture overview](explanation/architecture/index.md).
 - Looking for a command or option: [CLI reference](reference/cli.md).
-- Checking planned work: [Roadmap](roadmap/index.md).
+- Inspecting unfinished work at retirement: [Frozen roadmap](roadmap/index.md).
 
 ## Documentation map
 

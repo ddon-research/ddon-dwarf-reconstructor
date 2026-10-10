@@ -1,10 +1,13 @@
 # Feature Specification: C++ reconstruction architecture
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Feature Branch**: `codex/021-cpp-reconstruction-architecture`
 
 **Created**: 2026-09-06
 
-**Status**: Specified; baseline and review in progress
+**Status**: Retired with incomplete acceptance; full-corpus parity and performance remain open
 
 This feature serves maintainers and implementing agents reviewing the entire reconstructor.
 Its outcome is a source-backed architectural refactoring with preserved header evidence,

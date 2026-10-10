@@ -1,5 +1,8 @@
 # Export the knowledge graph
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../reference/project-status.md).
+
 The exporter projects deterministic producer evidence into a portable graph-shaped bundle. The
 current contract is JSON Lines plus a manifest, not a live LadybugDB database or service. That keeps the export
 bounded, reviewable, and usable by downstream graph loaders without making graph infrastructure

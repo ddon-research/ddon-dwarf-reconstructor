@@ -1,5 +1,9 @@
 # Season 2 fidelity research and evidence audit
 
+> **Retained Rust successor research:** These notes concern the unpublished Rust rewrite.
+> They are not Python Feature 017 or acceptance evidence for this archived implementation.
+> See [archive status](../../docs/reference/project-status.md).
+
 **Date:** 2026-09-28  
 **Feature:** 017-dwarf-fidelity-and-clean-cpp  
 **Authority:** Rust source/reports for current behavior; identity-bound exports for comparisons; DWARF 4 standard and Python reference for format research.

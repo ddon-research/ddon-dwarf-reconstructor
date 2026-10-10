@@ -1,5 +1,8 @@
 # Feature 017: Nuitka and runtime comparison
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Status:** Implemented evaluation slice; free-threaded Nuitka remains blocked by upstream
 compiler/runtime incompatibility.
 

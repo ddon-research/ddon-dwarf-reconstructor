@@ -1,5 +1,8 @@
 # Tasks: C++ compilation repair
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 These tasks implement [the specification](spec.md). Completed items require retained evidence;
 creating the package alone completed no implementation tasks. Paths are repository-relative; source paths below are exact. A task closes
 only with evidence in [measured evidence](measured-evidence.md). Each code slice runs its focused

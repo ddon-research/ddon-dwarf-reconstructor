@@ -1,7 +1,11 @@
 # Feature 019: Analytical DWARF Store and Runtime Replacement
 
-**Status:** Doris serving promoted; file-backed runtime replacement, Flight SQL, and semantic
-validation remain partial, unresolved, or explicitly not observed.
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
+**Status:** Retired with incomplete acceptance. Doris serving promotion is retained historical
+evidence; file-backed runtime replacement, Flight SQL, and semantic validation remain partial,
+unresolved, or explicitly not observed.
 
 ## Goal 1: research and design
 

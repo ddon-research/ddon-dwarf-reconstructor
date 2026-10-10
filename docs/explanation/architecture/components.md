@@ -1,5 +1,8 @@
 # Components and boundaries
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 The recurring policies that cross these boundaries are centralized in
 [crosscutting concepts](crosscutting-concepts.md). This page stays focused on ownership and
 dependency direction; the section-8 page explains how logging, evidence, validation, and

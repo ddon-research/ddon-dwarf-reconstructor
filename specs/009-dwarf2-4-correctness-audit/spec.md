@@ -1,5 +1,8 @@
 # Feature Specification: DWARF 2-4 Correctness Audit and Goal Workflow
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Status**: Implemented with explicit real-asset and MSVC follow-up boundaries
 
 ## Goal

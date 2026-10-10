@@ -1,5 +1,8 @@
 # Feature specification: exhaustive Python API reference
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Feature branch:** `020-documentation-api-reference`  
 **Status:** Implemented and locally acceptance-verified on 2026-08-16  
 **Owner:** DDON DWARF Reconstructor maintainers

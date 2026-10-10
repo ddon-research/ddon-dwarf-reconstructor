@@ -1,5 +1,8 @@
 # Generate headers
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../reference/project-status.md).
+
 Use the canonical Typer entry point for reconstruction. The launcher is intentionally thin; the
 application layer receives typed requests and the composition root wires concrete infrastructure.
 

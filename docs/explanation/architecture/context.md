@@ -1,5 +1,8 @@
 # System context
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 The following C4 system-context view deliberately stays at the repository boundary. It answers
 who uses the system and which external inputs and consumers matter; it is not a module inventory.
 

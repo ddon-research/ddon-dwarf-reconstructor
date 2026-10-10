@@ -1,5 +1,8 @@
 # Implementation Plan: Incremental C++ declaration IR
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Feature**: `023-cpp-declaration-ir` | **Date**: 2026-09-20 | [Specification](spec.md)
 
 This architecture plan serves contributors after Feature 022 repair or its documented blocker

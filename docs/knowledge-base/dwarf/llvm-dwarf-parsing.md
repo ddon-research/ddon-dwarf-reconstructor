@@ -1,5 +1,8 @@
 # LLVM DWARF Parsing Implementation
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 Source: LLVM Project (<https://github.com/llvm/llvm-project>)
 Path: `llvm/lib/DebugInfo/DWARF/`
 Language: C++

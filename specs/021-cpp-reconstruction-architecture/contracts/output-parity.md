@@ -1,5 +1,8 @@
 # Output integrity and equivalence
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../../docs/reference/project-status.md).
+
 For reviewers, this reference separates proof that a bundle is internally valid from proof that
 it matches the initial producer. Real artifacts stay outside source control.
 

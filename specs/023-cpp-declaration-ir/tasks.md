@@ -1,7 +1,11 @@
 # Tasks: Incremental declaration IR and compiler validation
 
-These are future tasks for [the specification](spec.md). Implementation starts after Feature 022
-repair or a documented blocker handoff. Paths are repository-relative; proposed files are marked
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
+These are unimplemented tasks retained from [the specification](spec.md). The historical
+dependency was Feature 022 repair or a documented blocker handoff; retirement leaves this queue
+inactive. Paths are repository-relative; proposed files are marked
 new. A code slice runs focused tests plus `test-unit`, `check`, and `test`; final handoff also
 requires `coverage-ci` and `audit`. No task is completed by this planning package.
 

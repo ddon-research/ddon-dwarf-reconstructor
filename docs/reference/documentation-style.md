@@ -1,5 +1,8 @@
 # Documentation style
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](project-status.md).
+
 This reference defines how contributors write, organize, review, and retire documentation for the
 DDON DWARF Reconstructor. It is for maintainers, implementation contributors, and automation that
 creates or changes Markdown. The contract combines Diátaxis for reader intent with arc42 for

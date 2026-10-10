@@ -1,5 +1,8 @@
 # Compiler feedback and C++ rule lookup
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 This research note is for maintainers investigating Feature 022 declaration failures. It records
 host-compiler observations and the source evidence needed to classify them. It does not establish
 PS4 ABI/layout correctness or replace the full 289-root acceptance gate.

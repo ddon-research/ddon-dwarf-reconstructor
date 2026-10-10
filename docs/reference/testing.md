@@ -1,5 +1,8 @@
 # Testing and evidence tiers
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](project-status.md).
+
 Root tests have exactly one scope marker (`unit`, `integration`, or `acceptance`) and at least one
 purpose marker (`functional`, `regression`, or `non_functional`). Collection enforcement rejects
 ambiguous or missing classifications. `performance`, `slow`, `real_asset`, `packaging`, and

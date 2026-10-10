@@ -1,5 +1,8 @@
 # DWARF Specification Pipeline
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 Standalone tool that converts the locked DWARF 2, 3, and 4 source documents into deterministic
 JSON and Markdown artifacts. Source documents stay in a checksum-verified local cache and are not
 repository artifacts.

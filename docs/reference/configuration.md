@@ -1,5 +1,8 @@
 # Configuration and paths
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](project-status.md).
+
 The root project is pinned to CPython `3.14.7` and uv `0.12.3`. Install it with:
 
 ```powershell

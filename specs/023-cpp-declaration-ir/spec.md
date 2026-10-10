@@ -1,8 +1,11 @@
 # Feature Specification: Incremental C++ declaration IR and compiler validation
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Feature**: `023-cpp-declaration-ir`  
 **Created**: 2026-09-20  
-**Status**: Specified; sequenced after Feature 022 repair or evidence-backed handoff  
+**Status**: Retired with incomplete acceptance; specified but unimplemented
 **Input**: Derive an incremental declaration intermediate representation and compiler-based
 validation from the repair findings, with researched adoption gates for external tooling.
 

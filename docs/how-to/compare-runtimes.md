@@ -1,5 +1,8 @@
 # Compare CPython, Nuitka, and free-threaded Python
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../reference/project-status.md).
+
 Use this guide to answer whether the optional compiled launcher or free-threaded CPython improves
 the reconstructor. It is an opt-in environmental measurement. Keep the normal CPython environment
 and deterministic integration loop unchanged.

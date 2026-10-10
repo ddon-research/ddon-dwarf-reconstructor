@@ -1,5 +1,8 @@
 # Specification readiness: Declaration IR
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../../docs/reference/project-status.md).
+
 This checklist evaluates design readiness, not a completed compiler integration.
 
 - [x] Entry condition is Feature 022 repair or a demonstrated source-bound blocker handoff.

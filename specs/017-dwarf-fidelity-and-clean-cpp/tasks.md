@@ -1,5 +1,9 @@
 # Implementation tasks: Season 2 fidelity readiness
 
+> **Retained Rust successor research:** These notes concern the unpublished Rust rewrite.
+> They are not Python Feature 017 or acceptance evidence for this archived implementation.
+> See [archive status](../../docs/reference/project-status.md).
+
 **Status key:** specified = not started; in_progress = current working-tree implementation; implemented = code exists but full acceptance remains; blocked = requires an unavailable external input/tool. “Implemented” never means accepted without the listed evidence.
 
 ## T001 — Bind generated output and validation evidence

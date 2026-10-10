@@ -1,5 +1,8 @@
 # Validate an incremental declaration-IR slice
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 This guide serves implementers after Feature 022 repair or its documented blocker handoff.
 It requires the locked development environment and explicit compiler profiles for optional
 compiler tests. The IR and adapter paths in [tasks](tasks.md) are proposed, not available commands.

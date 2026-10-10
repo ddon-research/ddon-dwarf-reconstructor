@@ -1,5 +1,8 @@
 # Feature Specification: Source-bound external tool evidence
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Status**: Implemented; SDK 12 CPU/ABI evidence integrated, external SDK and proprietary loader
 checks remain explicit
 

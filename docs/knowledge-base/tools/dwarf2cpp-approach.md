@@ -1,5 +1,8 @@
 # dwarf2cpp - DWARF to C++ Header Generation
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 Source: <https://github.com/endstone-insider/dwarf2cpp>
 Local: `D:\dwarf2cpp\src\dwarf2cpp`
 Language: Python + C++ (pybind11)

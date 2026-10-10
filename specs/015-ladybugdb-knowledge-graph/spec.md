@@ -1,5 +1,8 @@
 # Feature Specification: LadybugDB-first knowledge-graph loader
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Feature branch:** `015-ladybugdb-knowledge-graph`
 **Task ID:** `KG-001`
 **Status:** Draft; LadybugDB selected for compatibility and import evaluation

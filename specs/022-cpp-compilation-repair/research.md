@@ -1,5 +1,8 @@
 # Research: Repair decisions and rejected assumptions
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 This record serves reviewers of the September 20 working tree and Gemini proposal. It separates
 observed defects from language constraints and future implementation decisions. See
 [measured evidence](measured-evidence.md) for run boundaries and retained report identities.

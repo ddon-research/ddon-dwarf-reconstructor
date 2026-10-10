@@ -1,5 +1,13 @@
 # DDON DWARF Reconstructor contributor guidance
 
+## Retirement status
+
+This Python implementation is archived as of October 10, 2026. Development has moved to an
+unpublished Rust rewrite. The guidance below preserves the historical Python reproduction
+contract; it does not authorize resuming unfinished feature work. Read
+[the archive status](docs/reference/project-status.md) before interpreting task lists or old
+passing reports. Features 021–023 retain incomplete acceptance, and local data must be preserved.
+
 This project extracts deterministic evidence from very large PS4 ELF/DWARF inputs. Performance is
 the first constraint for normal runtime/query work: avoid repeated ELF hashing, repeated full-DIE
 scans, whole-dump loads, and unbounded runtime intermediates. The explicit one-time analytical

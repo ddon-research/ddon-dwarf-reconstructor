@@ -1,5 +1,8 @@
 # Feature Specification: Documentation style and governance
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Feature branch:** `013-documentation-style-governance`
 **Status:** Style contract implemented; LadybugDB-first `KG-001` remains explicitly deferred
 **Owner:** DDON DWARF Reconstructor maintainers

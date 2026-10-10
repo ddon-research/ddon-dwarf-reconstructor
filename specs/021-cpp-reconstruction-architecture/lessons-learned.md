@@ -1,5 +1,8 @@
 # Lessons learned
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 This research record serves future maintainers. Refactoring lessons and performance conclusions
 remain pending until corresponding tasks and acceptance evidence finish.
 

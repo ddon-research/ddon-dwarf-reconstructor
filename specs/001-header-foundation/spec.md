@@ -1,12 +1,15 @@
 # Feature Specification: ABI-Oriented Header Foundation
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Feature Branch**: `001-header-foundation`
 
 **Created**: 2026-08-01
 
-**Status**: Observed-partial; header publication and host MSVC closure are complete for the
-current real-asset run, while PS4 ABI, instruction-effect, NID, static-parity, and live-behavior
-dimensions remain open.
+**Status**: Retired with incomplete acceptance. Historical header publication and host MSVC
+observations remain valid for their identified runs; PS4 ABI, instruction-effect, NID,
+static-parity, and live-behavior dimensions remain open.
 
 **Input**: Establish a trustworthy first header-reconstruction tier from PS4 ELF
 DWARF evidence, with deterministic source-bound artifacts and assembly validation.

@@ -1,5 +1,8 @@
 # Repository Tools
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../docs/reference/project-status.md).
+
 This directory contains development and research tools that support the DDON
 DWARF reconstructor without becoming part of the runtime package.
 

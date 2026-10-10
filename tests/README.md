@@ -1,5 +1,8 @@
 # Test suite guide
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../docs/reference/project-status.md).
+
 The root test suite is pytest-only. Use the repository's locked environment and `just` recipes:
 
 ```text

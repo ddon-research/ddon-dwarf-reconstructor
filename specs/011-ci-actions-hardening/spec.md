@@ -1,5 +1,8 @@
 # Feature Specification: CI and GitHub Actions Hardening
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Feature branch:** `011-ci-actions-hardening`
 **Status:** Complete
 **Owner:** DDON DWARF Reconstructor maintainers

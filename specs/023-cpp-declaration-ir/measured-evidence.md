@@ -1,5 +1,8 @@
 # Measured evidence: Declaration IR
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 This record serves reviewers deciding whether the planned IR and compiler adapter have been
 implemented and validated. The package is a specification; implementation has not started.
 

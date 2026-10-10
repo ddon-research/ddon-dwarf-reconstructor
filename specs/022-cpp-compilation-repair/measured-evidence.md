@@ -1,8 +1,19 @@
 # Measured evidence: Compilation repair
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
+## Retirement snapshot: October 10, 2026
+
+Commit `f0cb1af34f729ba7abfb7019bf7a4303c8a20bec` preserves the unfinished implementation
+as-is. Feature 022 is retired with incomplete acceptance. The v15 compiler observations below
+precede the final method-template changes; no new 289-root compiler, semantic, ABI, or performance
+acceptance was attempted for retirement. The [final status record](../../docs/reference/project-status.md)
+records fresh recipe failures and passing documentation/audit checks without changing task checks.
+
 ## T011 source-bound primary-template feasibility: September 26
 
-An explicit, bounded Doris query found 28,837 indexed `cArray<...>` definition-name rows and 252
+An explicit, bounded Doris query found 28,837 `cArray<...>` name-index rows and 252
 distinct spellings for source SHA-256 `4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0`.
 The external research script and report are under `output/compilation-repair-022/t011-20260926/`.
 `carray-family-complete-evidence.json` (SHA-256

@@ -1,5 +1,8 @@
 # Benchmark history
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 This page is generated from `resources/performance/benchmarks.sqlite3`. Raw profiler outputs remain in the OS-local performance artifact directory.
 
 Evidence statuses are `observed`, `partial`, `unavailable`, `blocked`, or `not_observed`. Real-asset rows are report-only; deterministic fixture budgets are gated by their explicit performance command.

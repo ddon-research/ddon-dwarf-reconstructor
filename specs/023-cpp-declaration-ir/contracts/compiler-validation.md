@@ -1,5 +1,8 @@
 # Contract: Optional compiler validation
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../../docs/reference/project-status.md).
+
 This proposed interface serves application orchestrators and compiler adapters. It is validation
 infrastructure; ordinary generation must not invoke it implicitly or require a compiler install.
 

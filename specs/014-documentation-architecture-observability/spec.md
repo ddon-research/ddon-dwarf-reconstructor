@@ -1,5 +1,8 @@
 # Feature specification: source-backed architecture and developer how-tos
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Status:** Implemented, merged, and publicly verified on GitHub Pages
 
 ## Intent

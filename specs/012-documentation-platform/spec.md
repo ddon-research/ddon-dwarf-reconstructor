@@ -1,5 +1,8 @@
 # Feature Specification: Source-backed documentation platform
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Feature branch:** `012-documentation-platform`
 **Status:** Implemented, acceptance-verified, and publicly deployed on GitHub Pages
 **Owner:** DDON DWARF Reconstructor maintainers

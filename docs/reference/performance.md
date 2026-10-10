@@ -1,5 +1,8 @@
 # Performance command reference
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](project-status.md).
+
 The `performance` group is the canonical opt-in resource and profiler interface:
 
 | Command | Purpose |

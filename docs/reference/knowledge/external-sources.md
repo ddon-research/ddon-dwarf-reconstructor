@@ -1,5 +1,8 @@
 # External sources
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../project-status.md).
+
 The project uses external sources as research or additive evidence, not as an unqualified source
 of PS4 semantics. The most important references are:
 

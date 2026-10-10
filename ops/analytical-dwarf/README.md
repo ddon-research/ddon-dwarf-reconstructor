@@ -1,5 +1,8 @@
 # Local analytical DWARF warehouse
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 Use this how-to to operate the local Doris serving cluster without losing its databases.
 It requires Docker Desktop with WSL 2, the locked development environment, and the ignored
 `.env` containing the verified volume names and host ports. Normal generation depends on this

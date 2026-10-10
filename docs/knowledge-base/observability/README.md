@@ -1,5 +1,8 @@
 # Observability knowledge base
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 This section records the logging, traceback, and telemetry decisions used by
 the reconstructor. The runtime remains deterministic and source-provenance
 first: diagnostics describe decisions and durations without becoming a second

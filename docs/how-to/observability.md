@@ -1,5 +1,8 @@
 # Operational observability
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../reference/project-status.md).
+
 The runtime logging boundary is the standard-library facade in `core.observability`. Infrastructure
 configures structlog rendering and the JSONL file; domain and application code do not import
 structlog, Rich, or OpenTelemetry.

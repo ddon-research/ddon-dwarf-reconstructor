@@ -1,5 +1,8 @@
 # Measured evidence
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 This research record serves reviewers checking what actually ran. Paths are local, retained
 artifacts; path existence is not source/store, compiler, or performance acceptance.
 

@@ -1,5 +1,8 @@
 # Testing pyramid and validation loop
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 ## Context
 
 The repository has a large and valuable unit suite because DWARF parsing and header rendering have

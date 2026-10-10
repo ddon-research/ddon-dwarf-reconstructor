@@ -1,5 +1,8 @@
 # Analytical DWARF store reference
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](project-status.md).
+
 This page describes the supported store boundary for generation and knowledge export. The
 research record, compatibility gates, and measured-evidence ledger live in
  [`Feature 019 specification`](https://github.com/ddon-research/ddon-dwarf-reconstructor/blob/main/specs/019-analytical-dwarf-store/spec.md).

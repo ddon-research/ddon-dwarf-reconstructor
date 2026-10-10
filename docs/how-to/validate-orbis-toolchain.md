@@ -1,5 +1,8 @@
 # Validate local Orbis CPU and ABI evidence
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../reference/project-status.md).
+
 Use this workflow when a validation run needs repeatable evidence from the local Orbis SDK.
 It is deliberately source-bound and offline: SDK outputs, compiler probe files, and performance
 results belong in an external directory, never in the repository.

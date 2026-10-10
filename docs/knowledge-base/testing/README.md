@@ -1,5 +1,8 @@
 # Testing knowledge base
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 This section records durable testing strategy decisions for the deterministic DWARF reconstructor.
 
 - [Dependabot correctness convergence (2026-08-03)](dependabot-correctness-convergence-2026-08-03.md)

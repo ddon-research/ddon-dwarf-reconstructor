@@ -1,5 +1,8 @@
 # Documentation system
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../reference/project-status.md).
+
 The repository uses three complementary structures:
 
 - **Diátaxis** assigns each page one reader need: learn, solve, look up, or understand.

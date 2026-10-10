@@ -1,5 +1,8 @@
 # Inspect durable artifacts
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../reference/project-status.md).
+
 Artifact commands are read-only or explicitly named maintenance operations. They expose the
 source catalog, symbol cache, compressed-dump index, ELF/DWARF facts, and external-tool evidence
 without mixing diagnostics into JSON stdout.

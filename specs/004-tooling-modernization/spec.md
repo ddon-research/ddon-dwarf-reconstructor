@@ -1,5 +1,8 @@
 # Feature Specification: Tooling Modernization
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Feature Branch**: `004-tooling-modernization`
 **Status**: Implemented
 

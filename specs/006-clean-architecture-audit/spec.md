@@ -1,5 +1,8 @@
 # Feature Specification: Clean Architecture Audit and Modernization
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Feature Branch**: `006-clean-architecture-audit`
 
 **Status**: Implementation and Tier 1/2 convergence complete; Tier 3 deferred

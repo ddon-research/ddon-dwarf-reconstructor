@@ -1,5 +1,8 @@
 # Implementation Plan: C++ compilation repair
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Feature**: `022-cpp-compilation-repair` | **Date**: 2026-09-20 | [Specification](spec.md)
 
 This plan is for implementers of the reviewed dirty producer. It defines future work; reviewed

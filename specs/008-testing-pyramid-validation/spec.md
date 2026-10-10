@@ -1,5 +1,8 @@
 # Feature Specification: Testing Pyramid and Validation Loop
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Feature branch:** `008-testing-pyramid-validation`
 **Status:** Completed
 **Owner:** DDON DWARF Reconstructor maintainers

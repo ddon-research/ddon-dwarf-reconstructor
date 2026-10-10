@@ -1,11 +1,22 @@
 # DDON DWARF Reconstructor
 
-Reconstructs deterministic C++ class definitions from DWARF debug information in ELF files for
-Dragon's Dogma Online research and modding.
+**This Python implementation is archived. Development has moved to an unpublished Rust rewrite.**
 
-## Features
+The repository preserves the Python ELF/DWARF reconstructor, its research, and its unfinished
+implementation as of October 10, 2026. It reconstructs C++ declarations for Dragon's Dogma Online
+research and modding. The documentation below describes the frozen Python snapshot; it does not
+describe the Rust rewrite.
 
-- Complete type dependency and inheritance resolution across compilation units.
+See the [archive status and validation record](docs/reference/project-status.md) for the preserved
+implementation commit, known failures, evidence boundaries, and local backup. Full compilation,
+semantic, ABI, and performance acceptance remains incomplete. The last retained `rGrass` probe
+passed 60 of 65 standalone headers and failed aggregate compilation; that probe does not validate
+the final implementation snapshot or all 289 Season 2 roots.
+
+## Retained capabilities
+
+- Type dependency and inheritance traversal across compilation units, with unresolved nested-owner
+  template cycles recorded in Feature 022.
 - Validated PS4 DWARF 4 and PS3 DWARF 2 producer detection, with parser contracts covering the
   DWARF 2-4 vocabulary.
 - Read-only ELF and compressed-dump evidence inspection, plus a searchable DWARF 2/3/4 semantic
@@ -26,7 +37,7 @@ Dragon's Dogma Online research and modding.
   register/stack, Orbis target-object, and static-parity evidence dimensions.
 - Typed CLI, locked uv dependencies, Ruff, Pyrefly, deptry, and just automation.
 
-## Requirements and setup
+## Historical requirements and setup
 
 - Regular CPython 3.14.7.
 - uv 0.12.3.

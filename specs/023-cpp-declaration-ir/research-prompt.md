@@ -1,5 +1,8 @@
 # Research prompt: DWARF to faithful C++ declarations
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 Use this bounded prompt after Feature 022 repair or a source-bound blocker handoff. Its audience
 is a researcher evaluating compiler integration. Deliver a decision record and reproducible small
 experiments, not a speculative library list or replacement implementation.

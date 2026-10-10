@@ -1,5 +1,8 @@
 # Implementation handoff
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 This operational record is for the next implementing agent. The full plan remains incomplete.
 
 - Branch: `codex/021-cpp-reconstruction-architecture`; preserve the existing dirty checkout.

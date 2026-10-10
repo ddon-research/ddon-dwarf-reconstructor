@@ -1,5 +1,8 @@
 # Repository-wide architecture review and refactoring plan — v6
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 ## Summary and corrections to v5
 
 Review the entire repository and implement justified refactorings, including analytical storage and nested tooling. Preserve current header output exactly and allow at most **10% regression in measured median and tail runtime**, assessed separately for each workload and cache state.

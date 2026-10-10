@@ -1,5 +1,8 @@
 # Data model: Repair contracts
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 This design reference describes additive contracts for the existing pipeline. These fields are
 requirements for implementation, not a claim that every current model already supplies them.
 

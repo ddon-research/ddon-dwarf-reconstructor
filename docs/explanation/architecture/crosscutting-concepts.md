@@ -1,5 +1,8 @@
 # Crosscutting concepts
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 This page is the repository's arc42 section-8 home. It documents the few policies that recur
 across multiple building blocks: observability, durable evidence, authority and provenance,
 validation, and documentation publication. It explains how those policies work, links them to

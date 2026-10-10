@@ -1,5 +1,8 @@
 # Data model: Declaration IR
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 This design reference defines proposed internal contracts. Implementation names may be split
 into cohesive modules, but the evidence/identity/emission boundaries must remain explicit.
 

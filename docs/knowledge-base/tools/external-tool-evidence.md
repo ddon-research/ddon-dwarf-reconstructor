@@ -1,5 +1,8 @@
 # External tool evidence
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 The reconstructor treats external inspection programs as one-time producers of durable evidence,
 not as hidden runtime dependencies. A local tool is first captured with bounded `--version` and
 `--help` output. A named profile then streams one output file for an immutable ELF/DWARF source.

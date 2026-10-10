@@ -1,5 +1,8 @@
 # Prepare local SonarQube C/C++ analysis
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 Use this how-to when you need SonarQube for VS Code to inspect the generated C++ headers with the
 same MSVC x64 validation command used by the repository. The workflow creates a compilation
 database through Sonar's Windows Build Wrapper. It is an opt-in local diagnostic workflow, not a

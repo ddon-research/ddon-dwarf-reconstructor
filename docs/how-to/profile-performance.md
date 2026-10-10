@@ -1,5 +1,8 @@
 # Profile the application
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../reference/project-status.md).
+
 Use this guide when you need reproducible evidence about CPU, RAM, process I/O, or method-level
 behavior. It is an opt-in workflow: normal generation does not import or run a profiler.
 

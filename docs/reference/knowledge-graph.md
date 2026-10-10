@@ -1,5 +1,8 @@
 # Knowledge graph contract
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](project-status.md).
+
 The current graph projection is a deterministic interchange bundle. It is deliberately useful
 without a database server and explicit about what has not yet been built.
 
@@ -28,10 +31,10 @@ The owning DIE is authoritative for producer facts. Tool observations are additi
 their tool/profile/source provenance. Missing data is represented as `not_observed`; partial
 search results are not complete evidence. Conflicting or unavailable observations remain visible.
 
-## Next graph step
+## Unimplemented graph design at retirement
 
 The repository does not currently publish a LadybugDB database, graph API, or interactive graph
-view. The next implementation is a LadybugDB-first evaluation and versioned loader over the
+view. The frozen design proposes a LadybugDB-first evaluation and versioned loader over the
 existing JSONL contract. It must preserve producer authority, validate source checksums, and add
 deterministic query fixtures before a live deployment is introduced.
 

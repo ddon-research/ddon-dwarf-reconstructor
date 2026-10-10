@@ -1,5 +1,8 @@
 # First generation
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../reference/project-status.md).
+
 This tutorial walks through the smallest useful reconstruction run. It assumes the repository
 has been synchronized with CPython 3.14.7 and that the local ELF is available. Real inputs are
 large and proprietary; keep their paths local and do not commit generated outputs.

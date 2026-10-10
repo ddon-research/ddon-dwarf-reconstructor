@@ -5,6 +5,10 @@ applyTo: '**/*'
 
 # Copilot project adapter
 
+This Python project is archived. Development has moved to an unpublished Rust rewrite.
+The instructions below are historical reproduction guidance; unfinished Spec Kit work is frozen.
+Read [the archive status](../docs/reference/project-status.md) before interpreting old evidence.
+
 `AGENTS.md` is the canonical repository instruction source for Codex and Copilot. The
 path-specific Python rules in `.github/instructions/python.instructions.md` apply to every Python
 file, and `.github/instructions/documentation.instructions.md` applies to Markdown. This file

@@ -1,5 +1,8 @@
 # Python API reference
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../reference/project-status.md).
+
 This reference is for developers who need the source-level Python contracts behind the DDON DWARF
 Reconstructor. It is an exhaustive inventory of modules under `src/ddon_dwarf_reconstructor`,
 including infrastructure and parser internals. The inventory is intentionally broader than the

@@ -1,5 +1,8 @@
 # Documentation validators
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 This directory contains the locked Node.js tools used by the repository documentation loop. It is
 not a second application project or a replacement for the root `uv` project.
 

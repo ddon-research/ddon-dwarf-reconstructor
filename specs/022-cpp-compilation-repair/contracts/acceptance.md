@@ -1,5 +1,8 @@
 # Contract: Repair publication, acceptance, and handoff
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../../docs/reference/project-status.md).
+
 This contract serves implementers and reviewers deciding whether Feature 022 is complete.
 It extends existing manifests and validators; field names below describe required information,
 not an already deployed serialization schema.

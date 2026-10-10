@@ -1,5 +1,8 @@
 # PS4 ELF Constants and Extensions
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 Sources: [GhidraOrbis](https://github.com/astrelsky/GhidraOrbis/tree/2d6e3fac23ae9830e941c32826e97100ed603311) at commit
 `2d6e3fac23ae9830e941c32826e97100ed603311` for research comparison and the
 local official Orbis binutils source package `binutils-orbis-2_22_1-src-SDK6500-n267` for the

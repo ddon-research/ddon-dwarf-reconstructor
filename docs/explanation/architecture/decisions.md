@@ -1,5 +1,8 @@
 # Decisions and trade-offs
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 ## Typed, layered core
 
 The domain stays independent of pyelftools, SQLite, zstd, Rich, structlog, and subprocesses. This

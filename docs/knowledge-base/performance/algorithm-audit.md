@@ -1,5 +1,8 @@
 # Evidence-first performance and algorithm audit
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 This research note records the Feature 018 audit of the warm indexed `rLayout` knowledge export
 and the cold source-bound compressed-DWARF index build. Raw profiles, sidecars, and proprietary
 inputs remain in `D:\ddon-perf-artifacts\algorithm-audit-20260804`; the repository stores the

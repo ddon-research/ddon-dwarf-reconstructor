@@ -1,5 +1,8 @@
 # Validation correction decisions
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../../docs/reference/project-status.md).
+
 This contract records behavioral decisions for evidence-fidelity findings that cannot be
 silently folded into a structural refactoring. It separates accepted artifact-safety changes
 from deferred changes to validation status semantics.

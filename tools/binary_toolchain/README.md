@@ -1,5 +1,8 @@
 # Binary inspection toolchain
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 This Compose project provides a reproducible, non-proprietary baseline for one-time ELF/DWARF
 exports. The image contains GNU Binutils, LLVM, elfutils, libdwarf headers, Python, pyelftools,
 `file`, and `zstd`. It deliberately does not redistribute Sony Orbis SDK binaries or attempt SELF

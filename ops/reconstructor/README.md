@@ -1,5 +1,8 @@
 # Linux profiling container
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 This Compose project runs the reconstructor under pinned Linux/amd64 CPython 3.14.7 with uv 0.12.3
 and the locked environment. It is an explicit compatibility and profiling workflow; it is not the
 normal generation path and it does not include Doris, proprietary inputs, Sony SDKs, credentials,

@@ -1,5 +1,8 @@
 # Architecture contract
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../../docs/reference/project-status.md).
+
 For implementers, this reference constrains the refactoring without promising new reconstruction
 features. Domain policies depend on core protocols, domain values/ports, and the standard library;
 application code coordinates through ports; infrastructure owns external libraries and I/O.

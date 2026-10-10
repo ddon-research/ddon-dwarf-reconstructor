@@ -1,5 +1,8 @@
 # Write or update documentation
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../reference/project-status.md).
+
 Use this guide when a code, workflow, investigation, or specification change needs documentation.
 It produces one focused, source-backed page and keeps the static site, roadmap, and instruction
 adapters aligned.

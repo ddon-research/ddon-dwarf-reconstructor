@@ -1,8 +1,11 @@
 # Feature Specification: C++ compilation repair
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Feature**: `022-cpp-compilation-repair`  
 **Created**: 2026-09-20  
-**Status**: Implementation in progress; acceptance pending  
+**Status**: Retired with incomplete acceptance; implementation preserved as-is
 **Input**: Review the unfinished compilation recovery, repair the existing pipeline first, and
 hand evidence-backed architectural blockers to a subsequent declaration-IR feature.
 

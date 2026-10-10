@@ -1,5 +1,8 @@
 # Feature Specification: Structured Observability and Error Diagnostics
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Feature Branch**: `007-observability-and-error-diagnostics`
 
 **Status**: Selected implementation slice complete; real PS4/performance acceptance is

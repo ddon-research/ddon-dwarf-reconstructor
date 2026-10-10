@@ -1,5 +1,8 @@
 # DWARF type resolution
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 This page records the low-level path from a DIE reference to a generated C++ declaration. The
 implementation is split so each policy has one owner.
 

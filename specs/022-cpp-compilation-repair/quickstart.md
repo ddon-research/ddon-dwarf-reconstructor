@@ -1,5 +1,8 @@
 # Validate a compilation repair slice
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 This guide is for contributors implementing Feature 022. It requires the locked development
 environment, existing documentation validators, and explicit local source/store paths for the
 real-asset tier. Commands describe validation to run during implementation; they do not imply

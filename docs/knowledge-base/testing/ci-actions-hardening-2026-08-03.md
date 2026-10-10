@@ -1,5 +1,8 @@
 # CI and GitHub Actions hardening (2026-08-03)
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 ## Scope
 
 This note records the evidence-led CI audit for `ddon-research/ddon-dwarf-reconstructor`. The

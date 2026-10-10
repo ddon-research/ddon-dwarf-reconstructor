@@ -1,5 +1,8 @@
 # Resume the architecture refactoring
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 This how-to serves the implementing agent. Read spec, tasks, handoff, measured evidence, and
 the three contracts before changing production files. The pre-refactor output gate is required.
 

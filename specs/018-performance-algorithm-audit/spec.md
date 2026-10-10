@@ -1,5 +1,8 @@
 # Feature 018: Evidence-first performance and algorithm audit
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Status:** Complete; implementation, source-bound evidence, regression checks, and repository
 quality/correctness gates pass.
 

@@ -1,5 +1,8 @@
 # IDA Pro PS4 Module Loader Insights
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 Source: [ps4_module_loader](https://github.com/SocraticBliss/ps4_module_loader/tree/657f9d380abfec9097bc4bddbc63551b3cd5e47b)
 by SocraticBliss, commit `657f9d380abfec9097bc4bddbc63551b3cd5e47b`, path `ps4_module.py`;
 license `GPL-3.0`. These are research/reference observations and are not treated as official

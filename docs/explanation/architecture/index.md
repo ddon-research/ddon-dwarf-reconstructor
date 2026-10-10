@@ -1,5 +1,8 @@
 # Architecture overview
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 This is the arc42 entry point for the reconstructor. It describes the system that exists in the
 source tree today. Deferred real-asset, compiler, and live-graph work stays labelled as deferred;
 this index does not turn roadmap intent into implementation evidence.

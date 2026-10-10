@@ -1,5 +1,8 @@
 # Ghidra DWARF Parsing Implementation
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 Source: Ghidra (<https://github.com/NationalSecurityAgency/ghidra>)
 Path: Ghidra/Features/Base/src/main/java/ghidra/app/util/bin/format/dwarf/
 

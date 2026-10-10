@@ -1,5 +1,8 @@
 # Repository review inventory
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 For implementing agents: source inspection is distinct from caller/test acceptance and full
 review closure. The adjacent JSON retains per-file responsibility, dependencies, caller/test
 discovery hints, state ownership, and findings. Import discovery does not promote review status.

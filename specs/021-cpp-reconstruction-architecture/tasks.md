@@ -1,5 +1,8 @@
 # Implementation tasks
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 This checklist is for implementing agents. Paths are repository-relative to
 `D:/ddon-dwarf-reconstructor`; task detail names the exact source/test surface. A completed
 task requires retained evidence in measured-evidence.md. Following the user's explicit request

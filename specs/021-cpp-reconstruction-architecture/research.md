@@ -1,5 +1,8 @@
 # Architecture review decisions
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 This research record serves maintainers evaluating the implementation choices. Source inspection
 is distinct from fixture, real-asset, compiler, and performance acceptance.
 

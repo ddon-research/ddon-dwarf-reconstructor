@@ -1,5 +1,8 @@
 # Nuitka and free-threaded runtime evaluation
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 This research note records dated Windows 11 / CPython 3.14.6 evidence. The active repository
 runtime is CPython 3.14.7 with uv 0.12.3. It is not a default
 deployment recommendation.

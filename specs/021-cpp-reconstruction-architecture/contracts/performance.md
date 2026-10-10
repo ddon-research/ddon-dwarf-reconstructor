@@ -1,5 +1,8 @@
 # Performance acceptance
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../../docs/reference/project-status.md).
+
 For benchmark operators, this reference defines matched source/state/runtime measurements.
 Use the existing PerformanceWorkload, PerformanceRunner, and HistoryStore contracts; raw
 samples and the history database remain external. Do not write the tracked history by default.

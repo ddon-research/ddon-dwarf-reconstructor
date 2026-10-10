@@ -1,5 +1,8 @@
 # Knowledge base
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../reference/project-status.md).
+
 The knowledge base preserves research notes, generated specifications, and bounded external
 evidence that support the deterministic reconstructor. It is intentionally different from the
 reference pages: a note may be exploratory or historical, while a reference page states a current

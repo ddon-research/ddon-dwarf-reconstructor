@@ -1,5 +1,8 @@
 # pyelftools API Reference and Usage Patterns
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 Source: pyelftools (<https://github.com/eliben/pyelftools>)
 **Policy**: We use pyelftools directly without reinventing DWARF parsing
 

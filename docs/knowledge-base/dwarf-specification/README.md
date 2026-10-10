@@ -1,5 +1,8 @@
 # DWARF Specification Knowledge Base
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 The authoritative DWARF 2, 3, and 4 specifications are published here as
 deterministic, machine-readable JSON and readable Markdown. The source
 documents remain official `.mm` and `.doc` downloads; PDFs, DOCX exports,

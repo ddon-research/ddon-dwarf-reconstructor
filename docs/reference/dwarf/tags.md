@@ -1,5 +1,8 @@
 # DWARF tag classification
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../project-status.md).
+
 Tag classification is centralized in `domain/models/dwarf/tag_constants.py` and
 `domain/services/parsing/die_type_classifier.py`. The classifier distinguishes class/struct/union,
 enumeration, typedef, base/qualifier, pointer/reference, array, function, and declaration-only

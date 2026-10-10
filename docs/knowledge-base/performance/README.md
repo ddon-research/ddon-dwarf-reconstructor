@@ -1,5 +1,8 @@
 # Performance evidence
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 This knowledge-base section records profiling tool decisions and generated benchmark history. The
 current workflow is source-bound, opt-in, and explicit about deterministic versus environmental
 evidence.

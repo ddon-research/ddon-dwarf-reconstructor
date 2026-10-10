@@ -1,5 +1,8 @@
 # Research: Declaration IR and compiler integration
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 This decision record serves maintainers choosing the architecture after repair. It records an
 initial recommendation; dependency adoption and full tool benchmarks remain unobserved.
 

@@ -1,5 +1,8 @@
 # Specification readiness: Compilation repair
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../../docs/reference/project-status.md).
+
 This checklist evaluates the specification package, not implementation acceptance.
 
 - [x] Reader, scope, prerequisites, and observed-versus-intended evidence are explicit.

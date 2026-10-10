@@ -1,5 +1,8 @@
 # Configure local Langfuse developer tracing
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../reference/project-status.md).
+
 Use this how-to when you want local traces from GitHub Copilot in VS Code or OpenAI Codex in
 WSL2. It provisions a loopback-only Langfuse stack and configures the developer tools to send
 telemetry to it. The Python reconstructor is not instrumented by this setup; its runtime logging

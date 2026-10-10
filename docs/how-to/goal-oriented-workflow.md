@@ -1,5 +1,8 @@
 # Use a goal-oriented workflow
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../reference/project-status.md).
+
 Use a thread-scoped goal when the work has a clear finish line but the path requires research,
 multiple implementation slices, or evidence gathering. The goal is a workflow contract; it does
 not replace `AGENTS.md`, the [documentation style](../reference/documentation-style.md), or the

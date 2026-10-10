@@ -1,5 +1,8 @@
 # Feature Specification: Source-bound profiling and benchmark history
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../../docs/reference/project-status.md).
+
 **Feature branch:** `016-performance-profiling`  
 **Status:** Implemented; deterministic fixture and explicit real-asset evidence are recorded  
 **Owner:** DDON DWARF Reconstructor maintainers

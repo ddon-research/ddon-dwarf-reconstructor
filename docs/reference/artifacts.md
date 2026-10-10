@@ -1,5 +1,8 @@
 # Durable artifact reference
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](project-status.md).
+
 Durable artifacts are keyed by source identity plus producer, schema, and configuration identity.
 They are validated before reuse and published atomically.
 

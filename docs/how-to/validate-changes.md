@@ -1,5 +1,8 @@
 # Validate changes
 
+> **Archived Python project:** This page describes the frozen Python snapshot.
+> Development has moved to an unpublished Rust rewrite. See [archive status](../reference/project-status.md).
+
 The root `justfile` is the single automation source of truth. The normal correctness loop keeps
 deterministic integration tests enabled; shortcuts that exclude integration or real assets are
 explicitly named.
