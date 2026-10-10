@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from ....core.dwarf import DwarfEntry, decode_dwarf_string
+from ....core.dwarf import DwarfEntry
 from ....core.observability import get_logger
+from ...models.dwarf import TypeReference
 from ..search_result import SearchStatus
-from .array_parser import parse_array_type
 from .type_resolver_context import TypeResolverContext
+from .type_scope import die_key, qualified_die_name
 
 logger = get_logger(__name__)
 _NAMED_TYPE_TAGS = frozenset(
@@ -48,117 +49,69 @@ class TypeResolutionMixin:
     def resolve_type_name(
         self: TypeResolverContext, die: DwarfEntry, type_attr_name: str = "DW_AT_type"
     ) -> str:
-        """Resolve type name using offset-based caching.
-
-        Args:
-            die: DIE to resolve type from
-            type_attr_name: Attribute name containing type reference
-
-        Returns:
-            Resolved type name as string
-        """
+        """Render a reference through the canonical structured type parser."""
         try:
-            # Check if the DIE has the type attribute
             if type_attr_name not in die.attributes:
                 if type_attr_name == "DW_AT_type" and die.tag in _NAMED_TYPE_TAGS:
-                    direct_name = self._named_type_name(die)
-                    if direct_name is not None:
-                        return direct_name
-                logger.debug(f"DIE {die.tag} has no {type_attr_name} attribute")
+                    return self.resolve_die_type(die)
                 return "void"
-
-            reference_offset = _reference_offset(die, type_attr_name)
-            if reference_offset is not None:
-                cached_name = self._type_name_cache.get(reference_offset)
-                if cached_name is not None:
-                    return cached_name
-
-            # Use pyelftools' efficient offset resolution
-            type_die = die.get_DIE_from_attribute(type_attr_name)
-            if type_die is None:
-                logger.debug(f"Could not resolve {type_attr_name} reference")
-                return "unknown_type"
-
-            # Check cache first
-            if type_die.offset in self._type_name_cache:
-                return self._type_name_cache[type_die.offset]
-
-            # Resolve type name
-            resolved_name = self._resolve_die_type_name(type_die)
-
-            # Cache the result
-            self._type_name_cache[type_die.offset] = resolved_name
-
-            return resolved_name
-
+            return self._referenced_type_name(die, type_attr_name)
         except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
-            logger.warning(
-                "Failed to resolve type reference for %s: %s", die.tag, error, exc_info=error
-            )
+            logger.warning("Failed to resolve type reference for %s", die.tag, exc_info=error)
             return "unknown_type"
 
+    def _referenced_type_name(
+        self: TypeResolverContext, die: DwarfEntry, type_attr_name: str
+    ) -> str:
+        unit, offset = die_key(die)
+        source_key = (
+            (unit, offset, type_attr_name) if unit is not None and offset is not None else None
+        )
+        target_key = self._reference_target_cache.get(source_key) if source_key else None
+        if target_key is not None and target_key in self._type_name_cache:
+            return self._type_name_cache[target_key]
+        target = die.get_DIE_from_attribute(type_attr_name)
+        if target is not None and source_key is not None:
+            if len(self._reference_target_cache) >= 65536:
+                self._reference_target_cache.clear()
+            self._reference_target_cache[source_key] = die_key(target)
+        return self.resolve_die_type(target) if target is not None else "unknown_type"
+
+    def resolve_type_reference(self: TypeResolverContext, type_die: DwarfEntry) -> TypeReference:
+        """Return source-bound declarator, alias and scope evidence."""
+        return self._reference_parser.parse(type_die)
+
+    def anonymous_typedef_die(self: TypeResolverContext, die: DwarfEntry) -> DwarfEntry | None:
+        """Reuse the request-owned index of aliases within an aggregate scope."""
+        return self._reference_parser.anonymous_typedefs.find(die)
+
+    def resolve_reference(self: TypeResolverContext, die: DwarfEntry) -> TypeReference:
+        """Return a declaration's immediate typed reference."""
+        return self._reference_parser.reference(die)
+
+    def resolve_die_type(self: TypeResolverContext, type_die: DwarfEntry) -> str:
+        """Resolve a type DIE without conflating equal offsets from different CUs."""
+        key = die_key(type_die)
+        cacheable = key[0] is not None and key[1] is not None
+        if cacheable and key in self._type_name_cache:
+            return self._type_name_cache[key]
+        try:
+            name = self.resolve_type_reference(type_die).name
+        except (AttributeError, KeyError, RuntimeError, TypeError, ValueError) as error:
+            logger.warning("Failed to resolve type DIE %s", type_die.tag, exc_info=error)
+            return "unknown_type"
+        if cacheable:
+            if len(self._type_name_cache) >= 65536:
+                self._type_name_cache.clear()
+            self._type_name_cache[key] = name
+        return name
+
     def _resolve_die_type_name(self: TypeResolverContext, type_die: DwarfEntry) -> str:
-        named_type = self._named_type_name(type_die)
-        if named_type is not None:
-            return named_type
-        if type_die.tag in {
-            "DW_TAG_pointer_type",
-            "DW_TAG_const_type",
-            "DW_TAG_volatile_type",
-            "DW_TAG_restrict_type",
-            "DW_TAG_reference_type",
-            "DW_TAG_rvalue_reference_type",
-        }:
-            return self._resolve_qualified_type(type_die)
-        if type_die.tag == "DW_TAG_array_type":
-            return self._resolve_array_type(type_die)
-        if type_die.tag == "DW_TAG_subroutine_type":
-            return "void"
-        if type_die.tag == "DW_TAG_ptr_to_member_type":
-            return "void*"
-        if type_die.tag == "DW_TAG_base_type":
-            return "base_type"
-        logger.debug("Unnamed type with tag: %s", type_die.tag)
-        return str(type_die.tag).replace("DW_TAG_", "")
+        return self.resolve_type_reference(type_die).name
 
     @staticmethod
     def _named_type_name(type_die: DwarfEntry) -> str | None:
-        name_attr = type_die.attributes.get("DW_AT_name")
-        if name_attr is None:
-            return None
-        return decode_dwarf_string(name_attr.value)
-
-    def _resolve_qualified_type(self: TypeResolverContext, type_die: DwarfEntry) -> str:
-        base_type = self.resolve_type_name(type_die)
-        if type_die.tag == "DW_TAG_pointer_type" and base_type == "unknown_type":
-            return "void*"
-        suffixes = {
-            "DW_TAG_pointer_type": "*",
-            "DW_TAG_const_type": "",
-            "DW_TAG_volatile_type": "",
-            "DW_TAG_restrict_type": "",
-            "DW_TAG_reference_type": "&",
-            "DW_TAG_rvalue_reference_type": "&&",
-        }
-        if type_die.tag == "DW_TAG_const_type":
-            return f"const {base_type}"
-        if type_die.tag == "DW_TAG_volatile_type":
-            return f"volatile {base_type}"
-        if type_die.tag == "DW_TAG_restrict_type":
-            return f"restrict {base_type}"
-        suffix = suffixes.get(str(type_die.tag))
-        return f"{base_type}{suffix or ''}"
-
-    def _resolve_array_type(self: TypeResolverContext, type_die: DwarfEntry) -> str:
-        try:
-            array_info = parse_array_type(type_die, self)
-        except (AttributeError, KeyError, TypeError, ValueError) as error:
-            logger.debug("Error in array parsing: %s", error, exc_info=error)
-        else:
-            if array_info:
-                return array_info.name
-        element_type = self.resolve_type_name(type_die)
-        return f"{element_type}[]"
+        return qualified_die_name(type_die)
 
     def find_typedef(self: TypeResolverContext, typedef_name: str) -> tuple[str, str] | None:
         """Find typedef using lazy loading and caching.
@@ -279,15 +232,3 @@ class TypeResolutionMixin:
             logger.warning("Error collecting typedefs from class: %s", error, exc_info=error)
 
         return used_typedefs
-
-
-def _reference_offset(die: DwarfEntry, attribute_name: str) -> int | None:
-    """Read an adapter-provided reference offset before hydrating its target DIE."""
-    resolver = getattr(die, "get_DIE_offset_from_attribute", None)
-    if not callable(resolver):
-        return None
-    try:
-        offset = resolver(attribute_name)
-    except AttributeError, KeyError, RuntimeError, TypeError, ValueError:
-        return None
-    return offset if isinstance(offset, int) and not isinstance(offset, bool) else None

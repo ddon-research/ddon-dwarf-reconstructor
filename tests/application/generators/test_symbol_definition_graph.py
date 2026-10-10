@@ -14,6 +14,8 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import (
     MemberInfo,
     MethodInfo,
     ParameterInfo,
+    TypeDeclarator,
+    TypeReference,
 )
 
 
@@ -78,6 +80,24 @@ def test_exact_identity_aliases_collapse_to_one_definition() -> None:
 
 
 @pytest.mark.unit
+@pytest.mark.regression
+@pytest.mark.parametrize("second_cu", [1, 2])
+def test_alias_observations_survive_exact_and_cross_cu_definition_merging(second_cu) -> None:
+    root = _class("Root", cu=1, die=2)
+    duplicate = _class("Root", cu=second_cu, die=2)
+    first_alias = TypeReference(TypeDeclarator("First"), die_offset=3, cu_offset=1)
+    second_alias = TypeReference(TypeDeclarator("Second"), die_offset=4, cu_offset=second_cu)
+    root.source_aliases = (first_alias,)
+    duplicate.source_aliases = (second_alias,)
+    graph = build_canonical_definition_graph(
+        _context({}, {}), ("Root",), {"Root": root, "duplicate": duplicate}, ["Root"]
+    )
+    assert len(graph.class_infos) == 1
+    assert set(next(iter(graph.class_infos.values())).source_aliases) == {first_alias, second_alias}
+    assert not any("conflicting" in diagnostic for diagnostic in graph.diagnostics)
+
+
+@pytest.mark.unit
 @pytest.mark.functional
 def test_same_content_across_compilation_units_merges() -> None:
     first = _class("Shared", cu=1, die=2)
@@ -119,6 +139,45 @@ def test_same_content_across_compilation_units_merges() -> None:
     assert len(graph.class_infos) == 1
     canonical = next(iter(graph.class_infos))
     assert set(graph.aliases[canonical]) == {"Shared|1|2", "Shared|3|4"}
+
+
+@pytest.mark.unit
+@pytest.mark.regression
+def test_same_layout_with_method_subset_has_one_cpp_definition() -> None:
+    field = MemberInfo("value", "int", offset=0)
+    shared = MethodInfo("identity", "void")
+    full = _class(
+        "MtMatrix", cu=1, die=2, members=[field], methods=[shared, MethodInfo("extra", "void")]
+    )
+    subset = _class("MtMatrix", cu=3, die=4, members=[field], methods=[shared])
+
+    graph = build_canonical_definition_graph(
+        _context({}, {}), ("full", "subset"), {"full": full, "subset": subset}, ["full", "subset"]
+    )
+
+    assert len(graph.class_infos) == 1
+    assert len(next(iter(graph.class_infos.values())).methods) == 2
+    assert set(next(iter(graph.aliases.values()))) == {"MtMatrix|1|2", "MtMatrix|3|4"}
+    assert len(set(graph.root_keys.values())) == 1
+    assert not any("conflicting complete definitions" in item for item in graph.diagnostics)
+
+
+@pytest.mark.unit
+@pytest.mark.regression
+def test_same_layout_with_incompatible_method_declarations_stays_conflicted() -> None:
+    field = MemberInfo("value", "int", offset=0)
+    first = _class("MtMatrix", cu=1, die=2, members=[field], methods=[MethodInfo("read", "int")])
+    second = _class("MtMatrix", cu=3, die=4, members=[field], methods=[MethodInfo("read", "float")])
+
+    graph = build_canonical_definition_graph(
+        _context({}, {}),
+        ("first", "second"),
+        {"first": first, "second": second},
+        ["first", "second"],
+    )
+
+    assert len(graph.class_infos) == 2
+    assert any("conflicting complete definitions" in item for item in graph.diagnostics)
 
 
 @pytest.mark.unit
@@ -207,3 +266,33 @@ def test_method_signature_dependency_is_reachable_once() -> None:
     readers = [name for name, info in graph.class_infos.items() if info.name == "MtDataReader"]
     assert len(readers) == 1
     assert graph.origins[readers[0]] == {"rAchievement"}
+
+
+@pytest.mark.unit
+@pytest.mark.regression
+def test_merged_cu_definition_keeps_source_offset_dependency_edge() -> None:
+    owner = _class("cDraw", cu=1, die=1)
+    nested = _class("SHADER_STATE", cu=1, die=15, qualified_name="cDraw::SHADER_STATE")
+    nested.containing_type = "cDraw"
+    nested.members = [MemberInfo("tag", "int", offset=0)]
+    namespace_first = _class("SHADER_STATE", cu=1, die=10, qualified_name="nDraw::SHADER_STATE")
+    namespace_second = _class("SHADER_STATE", cu=2, die=20, qualified_name="nDraw::SHADER_STATE")
+    graph = build_canonical_definition_graph(
+        _context({"cDraw": {20}}, {20: "SHADER_STATE"}),
+        ("cDraw",),
+        {
+            "cDraw": owner,
+            "nested": nested,
+            "namespace_first": namespace_first,
+            "namespace_second": namespace_second,
+        },
+        ["cDraw", "nested", "namespace_first", "namespace_second"],
+    )
+
+    published = [
+        key
+        for key, info in graph.class_infos.items()
+        if info.qualified_name == "nDraw::SHADER_STATE"
+    ]
+    assert len(published) == 1
+    assert graph.origins[published[0]] == {"cDraw"}

@@ -131,6 +131,8 @@ class SymbolExtractionResult:
     class_origins: Mapping[str, tuple[str, ...]]
     class_identities: Mapping[str, str]
     class_infos: Mapping[str, ClassInfo]
+    header_enums: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+    enum_origins: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
     class_aliases: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
     diagnostics: tuple[str, ...] = ()
     root_statuses: Mapping[str, str] = field(default_factory=dict)
@@ -146,6 +148,8 @@ class SymbolExtractionResult:
             "class_origins",
             "class_identities",
             "class_infos",
+            "header_enums",
+            "enum_origins",
             "class_aliases",
             "root_statuses",
             "configuration",
@@ -165,6 +169,20 @@ class SymbolExtractionResult:
     @property
     def class_count(self) -> int:
         return len(self.class_infos)
+
+    def roots_for_header(self, path: str) -> tuple[str, ...]:
+        """Reconcile class and enum origins for one published header."""
+        roots = {
+            root
+            for class_key in self.header_classes.get(path, ())
+            for root in self.class_origins.get(class_key, ())
+        }
+        roots.update(
+            root
+            for enum_key in self.header_enums.get(path, ())
+            for root in self.enum_origins.get(enum_key, ())
+        )
+        return tuple(sorted(roots))
 
 
 __all__ = [

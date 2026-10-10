@@ -3,6 +3,67 @@
 This research record serves reviewers checking what actually ran. Paths are local, retained
 artifacts; path existence is not source/store, compiler, or performance acceptance.
 
+## September 16 compilation recovery: implementation in progress
+
+This continuation implements the reviewed recovery plan. Earlier T105/T106 compiler counts are
+historical observations, not acceptance of the current producer. The retained full validation
+at review time was 683/753 passing, 70 failing, with aggregate failure. The 493-header probe had
+only two requested roots and is not a comparable full baseline.
+
+Evidence root: `output/template-family-review/recovery-20260916-223850/`.
+`working-tree.patch`, `working-state.json`, and `source-snapshot/` preserve the pre-recovery
+producer and relevant untracked source. Existing analytical data, caches, and compiler reports
+remain in place. The first unchanged generation stopped without an exit record and is incomplete;
+its `baseline/generate.log` is retained. A separate `baseline-retry/` ran all 289 roots from the
+frozen source through `PYTHONPATH`; the imported package path was verified. The September 20
+review found its completed report: 526/753 standalone headers passed, 227 failed, aggregate failed,
+and 29 units reported C1003. The earlier `current-validation` report has 683/753 passing and
+aggregate failure; these are distinct producer observations, not acceptance of today's dirty tree.
+The later alias probe requested one root and had 20/24 passing with aggregate failure.
+Both retained full bundles' recorded header hashes matched their files at review time.
+
+Active repair now belongs to [Feature 022](../022-cpp-compilation-repair/spec.md), whose
+[evidence ledger](../022-cpp-compilation-repair/measured-evidence.md) records manifest identities,
+current unit/format failures, and successful read-only Doris liveness checks. Subsequent
+[Feature 023](../023-cpp-declaration-ir/spec.md) defines incremental declaration-IR/compiler work.
+Historical slice passes below remain useful evidence, but do not close either successor or
+Feature 021's independent full-corpus parity/performance obligations.
+
+Implemented and verified structural slices:
+
+- `domain/models/dwarf/type_scope.py` and `type_reference.py` retain namespace/aggregate ancestry
+  and ordered pointer, reference, array, and callable layers. The request-owned parser in
+  `domain/services/parsing/type_reference_parser.py` preserves aliases, member-pointer owners,
+  parameter evidence, false flags, and CU/DIE offset zero. Its bounded caches include CU identity.
+- Parameter, field, and method-return rendering consume these references. Scope-aware aggregate
+  forwards require proven namespace ancestry; textual qualified names cannot fabricate namespaces.
+  Qualified base names survive absent offset-name map entries. Alias/enum tags cannot be forwarded
+  as invented aggregate declarations on this path. Remaining legacy alias, scope-emission, and
+  dependency paths still need the ownership plan below.
+- `template_families.py` now defaults concrete observations to explicit specializations. The
+  cross-instantiation method union and hardcoded fixed-array generic inference are removed.
+  Compatible methods merge only within one specialization; differing member offsets now conflict.
+  Independent textual template-forward inference remains a separate outstanding repair.
+
+| Slice | Retained verification | Result |
+| --- | --- | --- |
+| Structural parser | `checks/slice-b-unit.log`, `slice-b-check.log`, `slice-b-test.log` | 1,237 unit tests; quality check passed; 1,232 default tests |
+| Typed rendering and scope | `checks/slice-c-unit.log`, `slice-c-check.log`, `slice-c-test.log` | 1,249 unit tests; quality check passed; 1,244 default tests |
+| Explicit family planning | `checks/slice-d-unit.log`, `slice-d-check.log` | 1,251 unit tests; quality check passed |
+| Compiler canary | `canaries/typed-validation/msvc-header-validation.json` | One header and aggregate passed MSVC 19.51.36252; zero diagnostics |
+
+The compiler canary includes type assertions for arrays of callbacks, a templated nested owner,
+and a pure-virtual function returning a function pointer. It establishes host C++ syntax/type
+behavior, not PS4 layout acceptance. Focused regression tests reside in
+`tests/domain/services/parsing/test_type_reference_parser.py` and
+`tests/domain/services/generation/test_typed_declaration_rendering.py`.
+
+Completion remains unverified: aggregate parser tag dispatch and alias publication, recursive
+dependency/owner closure, mixed-scope emission, include-cycle grouping, diagnostic reconciliation,
+all-root standalone/aggregate compilation, identity/layout coverage, fresh/warm determinism,
+intentional output modes, coverage/audit, and matched per-workload/cache-state performance.
+No percentage threshold replaces full recovery; the matching p50/p95 limit remains 110%.
+
 ## Initial working-state snapshot: observed
 
 - HEAD: `5dc0a316e51f244ca49616775845c7dea510a499`; initial branch `main`.
@@ -674,6 +735,7 @@ The four-stage funnel verified feature parity across the refactored architecture
 Standalone MSVC compiler validation was executed across all 898 generated Season 2 headers using
 `tools/sonar/validate_header_bundle.py` with the local Visual Studio 18 Community MSVC toolchain
 (compiler version 19.51.36252 for x64):
+
 - Header discovery was enhanced in `validate_header_bundle.py` to support versioned root layouts
   with symbol subdirectories (`rAIFSM/`, `shared/`, etc.).
 - An automatic MSVC response file (`compile_all.rsp`) was added for aggregate translation units
@@ -771,4 +833,3 @@ Following Astra's review and critical compiler analysis of the remaining 264 fai
    - **`C2923` invalid template type argument headers**: Reduced from 202 to **12** (**94.1% reduction**).
    - **`C2913` invalid explicit specialization headers**: Reduced from 210 to **87** (**58.6% reduction**).
    - Target headers `cDelegate.h`, `cpSequenceCtrl.h`, `rStageJoint.h`, and `MtCollection.h` all compile **CLEANLY**.
-

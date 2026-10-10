@@ -14,6 +14,10 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import (
     StructInfo,
     UnionInfo,
 )
+from ddon_dwarf_reconstructor.domain.models.dwarf.type_reference import (
+    TypeDeclarator,
+    TypeReference,
+)
 from ddon_dwarf_reconstructor.domain.services.generation import HeaderRenderer
 
 
@@ -26,7 +30,15 @@ def test_header_renders_enum_struct_union_and_bitfield_members() -> None:
         members=[],
         methods=[],
         base_classes=[],
-        enums=[EnumInfo("Mode", 4, [EnumeratorInfo("MODE_A", 0), EnumeratorInfo("MODE_B", 1)])],
+        enums=[
+            EnumInfo(
+                "Mode",
+                4,
+                [EnumeratorInfo("MODE_A", 0), EnumeratorInfo("MODE_B", 1)],
+                scoped=True,
+                representation_type=TypeReference(TypeDeclarator("int")),
+            )
+        ],
         nested_structs=[StructInfo("Payload", 8, [MemberInfo("value", "u32", offset=0)], 0x12)],
         unions=[
             UnionInfo(
@@ -42,7 +54,7 @@ def test_header_renders_enum_struct_union_and_bitfield_members() -> None:
 
     header = generator.generate_header(info, include_metadata=False)
 
-    assert "enum class Mode" in header
+    assert "enum class Mode : int" in header
     assert "struct Payload" in header
     assert "union Choice" in header
     assert "number;" in header

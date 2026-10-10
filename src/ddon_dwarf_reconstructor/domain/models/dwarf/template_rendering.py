@@ -28,3 +28,4 @@ class TemplateFamilyPlan:
     provenance: tuple[tuple[str, int | None, int | None], ...]
     diagnostics: tuple[str, ...] = ()
     definition_signatures: tuple[tuple[str, str], ...] = ()
+    method_provenance: tuple[tuple[str, tuple[tuple[str, int | None, int | None], ...]], ...] = ()

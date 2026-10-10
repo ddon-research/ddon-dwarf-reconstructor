@@ -22,7 +22,7 @@ class HeaderRenderingHost(Protocol):
 
     dwarf_index: DwarfLookupPort
     class_parser: ClassParserPort | None
-    _base_type_names: dict[int, str]
+    _base_type_names: dict[tuple[int | None, int], str]
     _known_render_type_names: set[str]
     _forward_declaration_kind_cache: dict[str, str | None]
 

@@ -13,6 +13,7 @@ from ...models.dwarf import (
     MemberInfo,
     MethodInfo,
     StructInfo,
+    TypeReference,
     UnionInfo,
 )
 from ...models.dwarf.template_param_info import TemplateParameter
@@ -35,6 +36,7 @@ class ParsedClassChildren:
     unions: list[UnionInfo] = field(default_factory=list)
     nested_classes: list[ClassInfo] = field(default_factory=list)
     template_parameters: list[TemplateParameter] = field(default_factory=list)
+    declared_aliases: list[TypeReference] = field(default_factory=list)
 
 
 class ClassParserChildrenMixin:
@@ -47,6 +49,31 @@ class ClassParserChildrenMixin:
             self._parse_class_child(cu, child, class_name, processed_union_offsets, children)
         return children
 
+    def _append_enum_child(
+        self: ClassParserContext,
+        child: DwarfEntry,
+        result: ParsedClassChildren,
+    ) -> None:
+        enum_info = self.parse_enum(child)
+        if enum_info is not None:
+            result.enums.append(enum_info)
+
+    def _append_typedef_child(
+        self: ClassParserContext,
+        child: DwarfEntry,
+        result: ParsedClassChildren,
+    ) -> None:
+        if "DW_AT_type" in child.attributes:
+            target = child.get_DIE_from_attribute("DW_AT_type")
+            if target is not None:
+                child_name = child.attributes.get("DW_AT_name")
+                target_name = target.attributes.get("DW_AT_name")
+                if child_name is not None and child_name.value == getattr(
+                    target_name, "value", None
+                ):
+                    return
+        result.declared_aliases.append(self.type_resolver.resolve_type_reference(child))
+
     def _parse_class_child(
         self: ClassParserContext,
         cu: DwarfCompilationUnit,
@@ -55,15 +82,20 @@ class ClassParserChildrenMixin:
         processed_union_offsets: set[int],
         result: ParsedClassChildren,
     ) -> None:
-        if child.tag == "DW_TAG_member":
+        tag = child.tag
+        if tag == "DW_TAG_member":
             self._append_member_child(child, class_name, processed_union_offsets, result)
-        elif child.tag in {"DW_TAG_subprogram", "DW_TAG_inheritance", "DW_TAG_enumeration_type"}:
+        elif tag in {"DW_TAG_subprogram", "DW_TAG_inheritance"}:
             self._parse_primary_child(child, class_name, result)
-        elif child.tag in {"DW_TAG_class_type", "DW_TAG_structure_type", "DW_TAG_union_type"}:
+        elif tag == "DW_TAG_enumeration_type":
+            self._append_enum_child(child, result)
+        elif tag in {"DW_TAG_class_type", "DW_TAG_structure_type", "DW_TAG_union_type"}:
             self._parse_nested_child(cu, child, processed_union_offsets, result)
-        elif child.tag in {"DW_TAG_template_type_param", "DW_TAG_template_value_param"}:
+        elif tag in {"DW_TAG_template_type_param", "DW_TAG_template_value_param"}:
             self._parse_template_child(child, result)
-        elif child.tag not in {"DW_TAG_typedef", "DW_TAG_array_type"}:
+        elif tag == "DW_TAG_typedef":
+            self._append_typedef_child(child, result)
+        elif tag != "DW_TAG_array_type":
             self._log_unhandled_child(class_name, child)
 
     def _parse_primary_child(
@@ -73,8 +105,33 @@ class ClassParserChildrenMixin:
             self._append_if_present(result.methods, self.parse_method(child))
         elif child.tag == "DW_TAG_inheritance":
             self._append_base_class(child, result)
-        else:
-            self._append_if_present(result.enums, self.parse_enum(child))
+
+    def _append_nested_class(
+        self: ClassParserContext,
+        cu: DwarfCompilationUnit,
+        child: DwarfEntry,
+        result: ParsedClassChildren,
+    ) -> None:
+        class_info = self.parse_class_info(cu, child)
+        result.nested_classes.append(class_info)
+
+    def _append_nested_struct(
+        self: ClassParserContext,
+        child: DwarfEntry,
+        result: ParsedClassChildren,
+    ) -> None:
+        struct_info = self.parse_nested_structure(child)
+        if struct_info is not None:
+            result.nested_structs.append(struct_info)
+
+    def _append_nested_union(
+        self: ClassParserContext,
+        child: DwarfEntry,
+        result: ParsedClassChildren,
+    ) -> None:
+        union_info = self.parse_union(child)
+        if union_info is not None:
+            result.unions.append(union_info)
 
     def _parse_nested_child(
         self: ClassParserContext,
@@ -84,11 +141,11 @@ class ClassParserChildrenMixin:
         result: ParsedClassChildren,
     ) -> None:
         if child.tag == "DW_TAG_class_type":
-            result.nested_classes.append(self.parse_class_info(cu, child))
+            self._append_nested_class(cu, child, result)
         elif child.tag == "DW_TAG_structure_type":
-            self._append_if_present(result.nested_structs, self.parse_nested_structure(child))
-        else:
-            self._append_union_child(child, processed_union_offsets, result)
+            self._append_nested_struct(child, result)
+        elif child.offset not in processed_union_offsets:
+            self._append_nested_union(child, result)
 
     def _parse_template_child(
         self: ClassParserContext, child: DwarfEntry, result: ParsedClassChildren

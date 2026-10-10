@@ -5,6 +5,8 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+from .type_reference import TypeReference
+
 
 @dataclass
 class ParameterInfo:
@@ -18,6 +20,7 @@ class ParameterInfo:
     die_offset: int | None = None
     cu_offset: int | None = None
     is_artificial: bool = False
+    type_reference: TypeReference | None = None
 
 
 def real_parameters(parameters: Iterable[ParameterInfo] | None) -> tuple[ParameterInfo, ...]:

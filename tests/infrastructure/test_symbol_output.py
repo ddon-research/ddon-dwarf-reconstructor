@@ -192,6 +192,32 @@ def test_symbol_publisher_writes_flat_versioned_asm_with_comment_source_rows(
 
 @pytest.mark.unit
 @pytest.mark.regression
+def test_enum_only_header_counts_for_its_reachable_root(tmp_path: Path) -> None:
+    original = _symbols()
+    enum_path = "shared/nDraw-enums.h"
+    enum_identity = "nDraw::PASS_TYPE|20|7"
+    symbols = replace(
+        original,
+        headers={**original.headers, enum_path: "namespace nDraw { enum PASS_TYPE { A }; }\n"},
+        header_owners={**original.header_owners, enum_path: "shared"},
+        header_classes={**original.header_classes, enum_path: ()},
+        header_enums={enum_path: (enum_identity,)},
+        enum_origins={enum_identity: ("RootB",)},
+    )
+
+    target = SymbolPublisher().publish(
+        tmp_path, ELFPlatform.PS4, Path("PS4_02020005.elf"), "elf-sha", symbols, None
+    )
+    manifest = json.loads((target / "symbols.manifest.json").read_text(encoding="utf-8"))
+
+    assert manifest["headers"][enum_path]["enums"] == [enum_identity]
+    assert manifest["enum_origins"][enum_identity] == ["RootB"]
+    assert manifest["roots"]["RootA"]["header_count"] == 2
+    assert manifest["roots"]["RootB"]["header_count"] == 2
+
+
+@pytest.mark.unit
+@pytest.mark.regression
 def test_source_location_rows_are_never_emitted_as_assembler_lines() -> None:
     method = MethodAssemblyEvidence(
         owner="RootA",

@@ -190,7 +190,7 @@ class TestHeaderGenerator:
 
         # Should still generate valid header
         assert "class EmptyClass" in header
-        assert "#ifndef EMPTYCLASS_H" in header
+        assert "#ifndef DDON_EMPTYCLASS_8C10E5483044B34D_H" in header
 
     @pytest.mark.unit
     def test_generate_header_with_methods(self, header_generator):

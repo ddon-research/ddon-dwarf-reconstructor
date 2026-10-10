@@ -5,10 +5,33 @@ from __future__ import annotations
 from dataclasses import replace
 
 from ....core.observability import get_logger
-from ...models.dwarf import EnumInfo, StructInfo, UnionInfo
+from ...models.dwarf import EnumInfo, MemberInfo, StructInfo, UnionInfo
+from .enum_declarations import enum_definition_lines
 from .rendering.operations import HeaderRenderingHost
 
 logger = get_logger(__name__)
+
+
+def _enum_metadata(enum: EnumInfo, include_metadata: bool) -> list[str]:
+    if not include_metadata:
+        return []
+    size = str(enum.byte_size) if enum.byte_size is not None else "unavailable"
+    lines = [f"    // Enum {enum.name} ({size} bytes)"]
+    if enum.declaration_file:
+        lines.append(f"    // Declared in: {enum.declaration_file}")
+        if enum.declaration_line is not None:
+            lines.append(f"    //   Line: {enum.declaration_line}")
+    return lines
+
+
+def _ordered_struct_members(struct: StructInfo) -> list[MemberInfo]:
+    """Keep a zero-width alignment barrier in its original declaration position."""
+    included = [
+        member for member in struct.members if member.offset is not None or member.bit_size == 0
+    ]
+    if any(member.bit_size == 0 for member in included):
+        return included
+    return sorted(included, key=lambda member: member.offset or 0)
 
 
 class HeaderAggregateRenderingService:
@@ -16,26 +39,12 @@ class HeaderAggregateRenderingService:
         self: HeaderRenderingHost, enum: EnumInfo, include_metadata: bool
     ) -> list[str]:
         """Generate enum definition."""
-        lines = []
-
-        if include_metadata:
-            lines.append(f"    // Enum {enum.name} ({enum.byte_size} bytes)")
-            if hasattr(enum, "declaration_file") and enum.declaration_file:
-                lines.append(f"    // Declared in: {enum.declaration_file}")
-                if hasattr(enum, "declaration_line") and enum.declaration_line:
-                    lines.append(f"    //   Line: {enum.declaration_line}")
+        lines = _enum_metadata(enum, include_metadata)
 
         enum_name = (
             "" if enum.name == "unknown_enum" else self._unqualify_type_expression(enum.name)
         )
-        lines.append(f"    enum{' class ' + enum_name if enum_name else ''}")
-        lines.append("    {")
-
-        for i, enumerator in enumerate(enum.enumerators):
-            comma = "," if i < len(enum.enumerators) - 1 else ""
-            lines.append(f"        {enumerator.name} = {enumerator.value}{comma}")
-
-        lines.append("    };")
+        lines.extend(enum_definition_lines(enum, enum_name, indent="    "))
         lines.append("")
         return lines
 
@@ -51,22 +60,19 @@ class HeaderAggregateRenderingService:
         )
         lines = [
             f"    // Struct {struct_name} ({struct.byte_size} bytes)",
-            f"    struct {struct_name}",
+            "    typedef struct"
+            if struct.defining_alias is not None
+            else f"    struct {struct_name}",
             "    {",
         ]
 
-        # Sort members by offset
-        sorted_members = sorted(
-            [m for m in struct.members if m.offset is not None],
-            key=lambda m: m.offset,
-        )
-
-        for member in sorted_members:
+        for member in _ordered_struct_members(struct):
             declaration = self._format_member_declaration(member, containing_class_name)
             offset_comment = f"  // offset {member.offset}" if member.offset is not None else ""
             lines.append(f"        {declaration};{offset_comment}")
 
-        lines.extend(["    };", ""])
+        ending = f"    }} {struct_name};" if struct.defining_alias is not None else "    };"
+        lines.extend([ending, ""])
         return lines
 
     def _generate_union_definition(
@@ -79,14 +85,19 @@ class HeaderAggregateRenderingService:
         union_name = union.name if union.name else ""
         lines = [
             f"    // Union {union_name} ({union.byte_size} bytes)",
-            f"    union {union_name}" if union_name else "    union",
+            "    typedef union"
+            if union.defining_alias is not None
+            else f"    union {union_name}"
+            if union_name
+            else "    union",
             "    {",
         ]
         lines.extend(self._render_union_nested_structs(union, containing_class_name))
         lines.extend(
             self._render_union_members(union, containing_class_name, occupied_member_names)
         )
-        lines.extend(["    };", ""])
+        ending = f"    }} {union_name};" if union.defining_alias is not None else "    };"
+        lines.extend([ending, ""])
         return lines
 
     def _render_union_nested_structs(
@@ -128,7 +139,7 @@ class HeaderAggregateRenderingService:
         lines: list[str] = []
         used_names = set(occupied_member_names or ())
         for member in union.members:
-            if not member.name:
+            if not member.name and member.bit_size != 0:
                 continue
             member_name = member.name
             if member_name in used_names:

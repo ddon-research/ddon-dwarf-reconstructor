@@ -158,6 +158,25 @@ def _groups_for_source(
     class_infos: Mapping[str, ClassInfo],
     globally_conflicting_names: set[str] | frozenset[str] = frozenset(),
 ) -> dict[tuple[str, str, str], tuple[str, ...]]:
+    # Namespace DIEs are output by the dedicated namespace renderer.  A
+    # producer can place the namespace DIE and its sibling aggregates in the
+    # same source file; keep that root in its own group so the ordinary class
+    # renderer never receives a ``kind == namespace`` entry.
+    namespace_names = [name for name in names if class_infos[name].kind == "namespace"]
+    groups = _namespace_groups(owner, source, namespace_names, class_infos)
+    names = [name for name in names if class_infos[name].kind != "namespace"]
+    groups.update(_regular_groups(owner, source, names, class_infos, globally_conflicting_names))
+    return groups
+
+
+def _regular_groups(
+    owner: str,
+    source: str,
+    names: list[str],
+    class_infos: Mapping[str, ClassInfo],
+    globally_conflicting_names: set[str] | frozenset[str],
+) -> dict[tuple[str, str, str], tuple[str, ...]]:
+    groups: dict[tuple[str, str, str], tuple[str, ...]] = {}
     by_display: dict[str, list[str]] = {}
     for name in names:
         info = class_infos[name]
@@ -169,13 +188,21 @@ def _groups_for_source(
     conflicting = {
         name for name in names if _is_unplanned_conflict(class_infos[name], conflicting_names)
     }
-    groups: dict[tuple[str, str, str], tuple[str, ...]] = {}
     regular = sorted(set(names) - conflicting)
     if regular:
         groups[(owner, source, "")] = tuple(regular)
     for name in sorted(conflicting):
         groups[(owner, source, class_identity(class_infos[name]))] = (name,)
     return groups
+
+
+def _namespace_groups(
+    owner: str,
+    source: str,
+    names: Iterable[str],
+    class_infos: Mapping[str, ClassInfo],
+) -> dict[tuple[str, str, str], tuple[str, ...]]:
+    return {(owner, source, class_identity(class_infos[name])): (name,) for name in sorted(names)}
 
 
 def guard_suffix(path: str) -> str:

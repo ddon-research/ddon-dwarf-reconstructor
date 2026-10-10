@@ -49,7 +49,9 @@ class HeaderGenerationService(HeaderGenerationSupportMixin):
         # Check if this is a namespace
         if GeneratorLookupService.is_namespace(context, class_die):
             log_event(logger, logging.INFO, "namespace_header_generation", symbol=class_name)
-            return SpecialHeaderRenderer.render_namespace(class_name, cu, class_die)
+            return SpecialHeaderRenderer.render_namespace(
+                class_name, cu, class_die, context.class_parser
+            )
 
         # Build a complete closure so standalone output defines bases and by-value types.
         HeaderGenerationService._expand_typedef_search(context, full_hierarchy=True)

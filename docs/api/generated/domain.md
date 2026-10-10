@@ -44,6 +44,8 @@ This page indexes every source module in the **domain modules** group. It is an 
 
 ::: ddon_dwarf_reconstructor.domain.models.dwarf.type_reference
 
+::: ddon_dwarf_reconstructor.domain.models.dwarf.type_scope
+
 ::: ddon_dwarf_reconstructor.domain.models.dwarf.union_info
 
 ::: ddon_dwarf_reconstructor.domain.models.implementation_context
@@ -116,9 +118,15 @@ This page indexes every source module in the **domain modules** group. It is an 
 
 ::: ddon_dwarf_reconstructor.domain.services.generation
 
+::: ddon_dwarf_reconstructor.domain.services.generation.alias_evidence
+
+::: ddon_dwarf_reconstructor.domain.services.generation.alias_rendering
+
 ::: ddon_dwarf_reconstructor.domain.services.generation.definition_identity
 
 ::: ddon_dwarf_reconstructor.domain.services.generation.dependency_extractor
+
+::: ddon_dwarf_reconstructor.domain.services.generation.enum_declarations
 
 ::: ddon_dwarf_reconstructor.domain.services.generation.file_registry
 
@@ -126,11 +134,19 @@ This page indexes every source module in the **domain modules** group. It is an 
 
 ::: ddon_dwarf_reconstructor.domain.services.generation.header_cycles
 
+::: ddon_dwarf_reconstructor.domain.services.generation.header_dependency_ambiguity
+
+::: ddon_dwarf_reconstructor.domain.services.generation.header_dependency_names
+
 ::: ddon_dwarf_reconstructor.domain.services.generation.header_dependency_plan
 
 ::: ddon_dwarf_reconstructor.domain.services.generation.header_forward_declarations
 
+::: ddon_dwarf_reconstructor.domain.services.generation.header_guards
+
 ::: ddon_dwarf_reconstructor.domain.services.generation.header_hierarchy
+
+::: ddon_dwarf_reconstructor.domain.services.generation.header_hierarchy_support
 
 ::: ddon_dwarf_reconstructor.domain.services.generation.header_member_rendering
 
@@ -172,6 +188,8 @@ This page indexes every source module in the **domain modules** group. It is an 
 
 ::: ddon_dwarf_reconstructor.domain.services.generation.rendering.type_policy
 
+::: ddon_dwarf_reconstructor.domain.services.generation.scoped_declarations
+
 ::: ddon_dwarf_reconstructor.domain.services.generation.special_header_renderer
 
 ::: ddon_dwarf_reconstructor.domain.services.generation.template_declarations
@@ -197,6 +215,10 @@ This page indexes every source module in the **domain modules** group. It is an 
 ::: ddon_dwarf_reconstructor.domain.services.lazy_index_source
 
 ::: ddon_dwarf_reconstructor.domain.services.parsing
+
+::: ddon_dwarf_reconstructor.domain.services.parsing.aggregate_target
+
+::: ddon_dwarf_reconstructor.domain.services.parsing.anonymous_typedefs
 
 ::: ddon_dwarf_reconstructor.domain.services.parsing.array_parser
 
@@ -232,9 +254,13 @@ This page indexes every source module in the **domain modules** group. It is an 
 
 ::: ddon_dwarf_reconstructor.domain.services.parsing.dwarf_location_parser
 
+::: ddon_dwarf_reconstructor.domain.services.parsing.enum_evidence
+
 ::: ddon_dwarf_reconstructor.domain.services.parsing.method_evidence
 
 ::: ddon_dwarf_reconstructor.domain.services.parsing.parser_policy
+
+::: ddon_dwarf_reconstructor.domain.services.parsing.primitive_encoding
 
 ::: ddon_dwarf_reconstructor.domain.services.parsing.primitive_lookup
 
@@ -244,11 +270,15 @@ This page indexes every source module in the **domain modules** group. It is an 
 
 ::: ddon_dwarf_reconstructor.domain.services.parsing.type_chain_traverser
 
+::: ddon_dwarf_reconstructor.domain.services.parsing.type_reference_parser
+
 ::: ddon_dwarf_reconstructor.domain.services.parsing.type_resolution
 
 ::: ddon_dwarf_reconstructor.domain.services.parsing.type_resolver
 
 ::: ddon_dwarf_reconstructor.domain.services.parsing.type_resolver_context
+
+::: ddon_dwarf_reconstructor.domain.services.parsing.type_scope
 
 ::: ddon_dwarf_reconstructor.domain.services.parsing.typedef_collection
 

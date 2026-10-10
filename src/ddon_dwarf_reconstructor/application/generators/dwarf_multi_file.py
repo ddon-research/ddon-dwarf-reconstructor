@@ -31,7 +31,7 @@ class MultiFileGenerationService:
             return None
         return {
             create_header_filename(class_name): SpecialHeaderRenderer.render_namespace(
-                class_name, cu, die
+                class_name, cu, die, context.class_parser
             )
         }
 

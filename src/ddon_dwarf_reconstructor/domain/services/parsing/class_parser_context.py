@@ -22,7 +22,7 @@ from ...models.dwarf import (
 )
 from ...ports.analytical_store import DwarfQueryPort
 from ...ports.dwarf_lookup import DwarfLookupPort
-from ...ports.type_resolution import TypeNameResolver
+from ...ports.type_resolution import TypeResolverPort
 from ...ports.validation_dump import DumpDefinitionLocation, ValidationDumpPort
 
 if TYPE_CHECKING:
@@ -66,6 +66,14 @@ class ClassParserOperations(ClassParserImplementationContext, Protocol):
 
     def parse_method(self, method_die: DwarfEntry) -> MethodInfo | None: ...
 
+    @staticmethod
+    def _object_parameter_die(method_die: DwarfEntry) -> DwarfEntry | None: ...
+
+    @staticmethod
+    def _is_implicit_object_parameter(
+        parameter_die: DwarfEntry, object_parameter: DwarfEntry | None
+    ) -> bool: ...
+
     def parse_enum(self, enum_die: DwarfEntry) -> EnumInfo | None: ...
 
     def parse_class_info(self, cu: DwarfCompilationUnit, class_die: DwarfEntry) -> ClassInfo: ...
@@ -104,7 +112,7 @@ class ClassParserOperations(ClassParserImplementationContext, Protocol):
 
     def _template_argument_references_from_die(
         self,
-        type_resolver: TypeNameResolver,
+        type_resolver: TypeResolverPort,
         type_die: DwarfEntry | None,
         visited_offsets: set[int],
     ) -> tuple[TypeReference, ...]: ...
@@ -197,6 +205,18 @@ class ClassParserOperations(ClassParserImplementationContext, Protocol):
         result: ParsedClassChildren,
     ) -> None: ...
 
+    def _append_enum_child(self, child: DwarfEntry, result: ParsedClassChildren) -> None: ...
+
+    def _append_typedef_child(self, child: DwarfEntry, result: ParsedClassChildren) -> None: ...
+
+    def _append_nested_class(
+        self, cu: DwarfCompilationUnit, child: DwarfEntry, result: ParsedClassChildren
+    ) -> None: ...
+
+    def _append_nested_struct(self, child: DwarfEntry, result: ParsedClassChildren) -> None: ...
+
+    def _append_nested_union(self, child: DwarfEntry, result: ParsedClassChildren) -> None: ...
+
     def _parse_template_child(self, child: DwarfEntry, result: ParsedClassChildren) -> None: ...
 
     def _append_member_child(
@@ -230,7 +250,9 @@ class ClassParserOperations(ClassParserImplementationContext, Protocol):
 
     def _member_layout(
         self, member_die: DwarfEntry
-    ) -> tuple[int | None, bool, int | None, int | None, int | None]: ...
+    ) -> tuple[int | None, bool, int | None, int | None, int | None, int | None]: ...
+
+    def _bitfield_base_evidence(self, member_die: DwarfEntry) -> tuple[str, int | None]: ...
 
     def _vtable_type(self, member_name: str, type_name: str) -> str: ...
 
@@ -337,7 +359,18 @@ class ClassParserOperations(ClassParserImplementationContext, Protocol):
 
     def _parse_vtable_index(self, attribute: object) -> int | None: ...
 
-    def _parse_method_parameters(self, method_die: DwarfEntry) -> list[ParameterInfo]: ...
+    def _parse_method_children(
+        self, method_die: DwarfEntry
+    ) -> tuple[list[ParameterInfo], tuple[TemplateTypeParam | TemplateValueParam, ...]]: ...
+
+    def _parse_method_template_child(
+        self, child: DwarfEntry
+    ) -> TemplateTypeParam | TemplateValueParam | None: ...
+
+    @staticmethod
+    def _implicit_object_qualifiers(
+        parameters: list[ParameterInfo],
+    ) -> tuple[bool, bool, str | None]: ...
 
     def parse_parameter(
         self, param_die: DwarfEntry, param_index: int = 0
@@ -347,7 +380,7 @@ class ClassParserOperations(ClassParserImplementationContext, Protocol):
 class ClassParserContext(ClassParserOperations, Protocol):
     """State and cross-cutting operations shared by parser responsibilities."""
 
-    type_resolver: TypeNameResolver
+    type_resolver: TypeResolverPort
     type_chain_traverser: TypeChainTraverser
     dwarf_info: DwarfInfo
     lazy_index: DwarfLookupPort | None

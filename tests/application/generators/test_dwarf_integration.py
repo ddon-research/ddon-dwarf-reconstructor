@@ -50,7 +50,9 @@ class TestDwarfGeneratorIntegration:
 
             # Verify header structure without file I/O
             assert len(header_content) > 100, "Header should have substantial content"
-            assert "#ifndef MTOBJECT_H" in header_content, "Should have include guard"
+            assert "#ifndef DDON_MTOBJECT_9D496F3115A7ADD8_H" in header_content, (
+                "Should have include guard"
+            )
             assert "class MtObject" in header_content, "Should define the class"
             assert "Generated from DWARF debug information" in header_content
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
+from ....core.dwarf import DwarfEntry
 from ....core.observability import get_logger
 from ...models.dwarf import MemberInfo, MethodInfo, StructInfo, UnionInfo
 from .template_argument_parser import split_template_arguments
@@ -55,6 +56,31 @@ _INVALID_RESOLVED_TYPES = frozenset(
 )
 
 
+def _is_aggregate_member_die(die: DwarfEntry) -> bool:
+    parent = getattr(die, "get_parent", lambda: None)()
+    return parent is not None and getattr(parent, "tag", None) in {
+        "DW_TAG_class_type",
+        "DW_TAG_structure_type",
+        "DW_TAG_union_type",
+    }
+
+
+def _resolve_single_declared_typedef(
+    context: TypeResolverContext, die: DwarfEntry | None, type_name: str
+) -> tuple[str, str] | None:
+    if die is None or getattr(die, "tag", None) != "DW_TAG_typedef":
+        return None
+    alias = context._die_name(die) or context._extract_base_type(type_name)
+    if not alias or alias in context._primitive_typedefs or alias in _EXCLUDED_TYPES:
+        return None
+    if _is_aggregate_member_die(die):
+        return None
+    resolved_type = context._resolve_primitive_die(alias, die)
+    if resolved_type and resolved_type not in _INVALID_RESOLVED_TYPES:
+        return alias, resolved_type
+    return None
+
+
 class UsedTypedefCollectionMixin:
     def collect_used_typedefs(
         self: TypeResolverContext,
@@ -80,15 +106,11 @@ class UsedTypedefCollectionMixin:
         for type_name, offset in self._declared_typedef_references(
             members, methods, unions, nested_structs
         ):
-            alias = self._extract_base_type(type_name)
-            if alias in self._primitive_typedefs or alias in _EXCLUDED_TYPES:
-                continue
-            die = self.index.get_die_by_offset(offset)
-            if die is None or die.tag != "DW_TAG_typedef":
-                continue
-            resolved_type = self._resolve_primitive_die(alias, die)
-            if resolved_type and resolved_type not in _INVALID_RESOLVED_TYPES:
-                found[alias] = resolved_type
+            entry = _resolve_single_declared_typedef(
+                self, self.index.get_die_by_offset(offset), type_name
+            )
+            if entry is not None:
+                found[entry[0]] = entry[1]
         return found
 
     def _declared_typedef_references(

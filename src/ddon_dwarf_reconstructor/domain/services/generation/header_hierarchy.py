@@ -5,17 +5,28 @@ from __future__ import annotations
 import re
 
 from ....core.observability import get_logger, log_timing
-from ....core.path_policy import sanitize_for_filesystem
 from ...models.dwarf import ClassInfo
+from .alias_rendering import (
+    external_alias_lines,
+    referenced_namespace_aliases,
+    scoped_typedef_line,
+)
 from .header_dependency_plan import HeaderDependencyPlan
-from .header_type_planning import HeaderTypePlanningService
+from .header_guards import header_guard
+from .header_hierarchy_support import (
+    collect_base_forward_declarations,
+    hierarchy_metadata,
+    namespace_for_info,
+    preferred_forward_declaration,
+    qualified_base_type_names,
+    repair_qualified_specialization_forwards,
+)
 from .rendering.operations import HeaderRenderingHost
 from .rendering.type_policy import TypeExpressionPolicy
+from .scoped_declarations import scoped_declaration
 from .template_forward_declarations import ensure_family_plans, planned_template_forwards
 
 logger = get_logger(__name__)
-
-_QUALIFIED_BASE_CACHE: dict[tuple[int, int], dict[int, str]] = {}
 
 
 def _hierarchy_preamble(
@@ -29,7 +40,12 @@ def _hierarchy_preamble(
 ) -> tuple[list[str], str, str]:
     target_info = class_infos.get(target_class)
     rendered_target = target_info.name if target_info is not None else target_class
-    guard_name = f"{sanitize_for_filesystem(rendered_target).upper()}{guard_suffix}"
+    guard_identity = (
+        target_info.qualified_name or rendered_target
+        if target_info is not None
+        else rendered_target
+    )
+    guard_name = header_guard(guard_identity, guard_suffix)
     lines = renderer._hierarchy_header_prefix(guard_name)
     lines.extend(renderer._hierarchy_dependency_include_lines(dependency_headers))
     lines.extend(
@@ -44,7 +60,97 @@ def _hierarchy_preamble(
     return lines, rendered_target, guard_name
 
 
+def _typedef_forward_lines(
+    renderer: HeaderRenderingHost,
+    typedefs: dict[str, str] | None,
+    target_class: str,
+    class_infos: dict[str, ClassInfo],
+    dependency_headers: dict[str, str] | None,
+    base_type_infos: dict[str, ClassInfo] | None,
+) -> list[str]:
+    nested_alias_names = renderer._enclosing_nested_alias_names(target_class, class_infos)
+    typed_alias_names = {
+        alias.name
+        for alias in referenced_namespace_aliases(class_infos.values(), typedefs or {}).values()
+    }
+    declarations = renderer._normalize_typedef_forward_declarations(
+        renderer._collect_typedef_forward_declarations(typedefs or {}), class_infos
+    )
+    declarations = {
+        declaration
+        for declaration in declarations
+        if renderer._forward_declaration_name(declaration)
+        not in nested_alias_names | typed_alias_names
+    }
+    declarations = renderer._exclude_included_forward_declarations(
+        declarations, dependency_headers or {}, base_type_infos or class_infos
+    )
+    if not declarations:
+        return []
+    return [
+        "// Forward declarations",
+        *sorted(declarations, key=renderer._forward_declaration_order),
+        "",
+    ]
+
+
+def _is_declared_class_alias(typedef_name: str, class_infos: dict[str, ClassInfo]) -> bool:
+    return any(
+        a.name == typedef_name or a.name.split("::")[-1] == typedef_name
+        for info in class_infos.values()
+        for a in info.declared_aliases
+    )
+
+
+def _typedef_definition_line(
+    renderer: HeaderRenderingHost,
+    typedef_name: str,
+    underlying_type: str,
+    target_class: str,
+    class_infos: dict[str, ClassInfo],
+) -> str | None:
+    if renderer._normalize_type_name(underlying_type) == typedef_name:
+        return None
+    if renderer._is_enclosing_nested_alias(
+        typedef_name, underlying_type, target_class, class_infos
+    ):
+        return None
+    if _is_declared_class_alias(typedef_name, class_infos):
+        return None
+    if typedef_name == "size_t":
+        return "// size_t provided by the standard C++ headers"
+    rendered_type = renderer._void_alias_storage_type(underlying_type)
+    if "::*" in rendered_type or "(*" in rendered_type or "(" in rendered_type:
+        return f"using {typedef_name} = {rendered_type};"
+    return f"typedef {rendered_type} {typedef_name};"
+
+
+def _typedef_definition_lines(
+    renderer: HeaderRenderingHost,
+    typedefs: dict[str, str],
+    target_class: str,
+    class_infos: dict[str, ClassInfo],
+) -> list[str]:
+    lines = ["// Type definitions from DWARF"]
+    namespace_aliases = referenced_namespace_aliases(class_infos.values(), typedefs)
+    for typedef_name, underlying_type in renderer._ordered_typedefs(typedefs):
+        line = _typedef_definition_line(
+            renderer, typedef_name, underlying_type, target_class, class_infos
+        )
+        if line is not None:
+            lines.append(scoped_typedef_line(line, namespace_aliases.get(typedef_name)))
+    lines.append("")
+    return lines
+
+
 class HierarchyHeaderGenerationService:
+    @staticmethod
+    def _preferred_forward_declaration(
+        name: str, candidates: list[str], resolved_kinds: dict[str, str]
+    ) -> str:
+        """Compatibility facade for deterministic aggregate-forward selection."""
+        return preferred_forward_declaration(name, candidates, resolved_kinds)
+
     @log_timing
     def generate_single_file_hierarchy_header(
         self: HeaderRenderingHost,
@@ -61,27 +167,11 @@ class HierarchyHeaderGenerationService:
         *,
         dependency_plan: HeaderDependencyPlan | None = None,
     ) -> str:
-        """Generate a C++ header with the complete inheritance hierarchy in one file.
-
-        This method generates all classes in a single file with forward declarations
-        for dependencies when the single-file rendering mode is selected.
-
-        Args:
-            class_infos: Dictionary of class name -> ClassInfo
-            hierarchy_order: List of class names in base-to-derived order
-            target_class: Primary target class name
-            typedefs: Dictionary of typedef name -> underlying type
-            include_metadata: Whether to include DWARF metadata comments
-            resolve_forward_declarations: Query referenced DIEs when collecting
-                declarations. Deterministic evidence export disables this so
-                rendering cannot mutate lazy-resolution state after closure
-                construction.
-        Returns:
-            Complete C++ header file as string
-        """
+        """Generate one complete C++ hierarchy header."""
         class_infos = ensure_family_plans(class_infos)
         self._base_type_names = self._qualified_base_type_names(base_type_infos or class_infos)
-        self._known_render_type_names = self._render_type_names(class_infos, typedefs or {})
+        all_infos = {**(base_type_infos or {}), **class_infos}
+        self._known_render_type_names = self._render_type_names(all_infos, typedefs or {})
         lines, rendered_target, guard_name = _hierarchy_preamble(
             self,
             class_infos,
@@ -92,7 +182,7 @@ class HierarchyHeaderGenerationService:
             guard_suffix,
         )
         lines.extend(
-            self._hierarchy_metadata(class_infos, target_class, hierarchy_order, include_metadata)
+            hierarchy_metadata(class_infos, target_class, hierarchy_order, include_metadata)
         )
         forward_decls = self._hierarchy_forward_declarations(
             class_infos,
@@ -103,7 +193,13 @@ class HierarchyHeaderGenerationService:
             base_type_infos or class_infos,
         )
         if forward_decls:
-            lines.extend(["", "// Forward declarations", *sorted(forward_decls)])
+            lines.extend(
+                [
+                    "",
+                    "// Forward declarations",
+                    *sorted(forward_decls, key=self._forward_declaration_order),
+                ]
+            )
         lines.extend(
             self._hierarchy_definitions(
                 class_infos,
@@ -111,6 +207,7 @@ class HierarchyHeaderGenerationService:
                 include_metadata,
                 typedefs or {},
                 allow_cyclic_dependencies,
+                known_infos=all_infos,
                 dependency_plan=dependency_plan,
             )
         )
@@ -120,25 +217,11 @@ class HierarchyHeaderGenerationService:
         return "\n".join(lines)
 
     @staticmethod
-    def _qualified_base_type_names(class_infos: dict[str, ClassInfo]) -> dict[int, str]:
+    def _qualified_base_type_names(
+        class_infos: dict[str, ClassInfo],
+    ) -> dict[tuple[int, int], str]:
         """Map nested aggregate DIEs to names valid outside their containing type."""
-        key = (id(class_infos), len(class_infos))
-        if key in _QUALIFIED_BASE_CACHE:
-            return dict(_QUALIFIED_BASE_CACHE[key])
-        result: dict[int, str] = {}
-
-        def visit(info: ClassInfo) -> None:
-            if info.die_offset is not None and info.containing_type and info.qualified_name:
-                result[info.die_offset] = info.qualified_name
-            for nested in info.nested_classes:
-                visit(nested)
-
-        for info in class_infos.values():
-            visit(info)
-        if len(_QUALIFIED_BASE_CACHE) > 16:
-            _QUALIFIED_BASE_CACHE.clear()
-        _QUALIFIED_BASE_CACHE[key] = result
-        return dict(result)
+        return qualified_base_type_names(class_infos)
 
     @classmethod
     def _render_type_names(
@@ -146,12 +229,17 @@ class HierarchyHeaderGenerationService:
     ) -> set[str]:
         names = set(typedefs)
         for class_info in class_infos.values():
-            names.add(class_info.name)
-            if class_info.qualified_name:
-                names.add(class_info.qualified_name)
-            names.update(struct.name for struct in class_info.nested_structs if struct.name)
-            names.update(union.name for union in class_info.unions if union.name)
-            names.update(nested.name for nested in class_info.nested_classes if nested.name)
+            names.update(cls._class_render_names(class_info))
+        return names
+
+    @staticmethod
+    def _class_render_names(class_info: ClassInfo) -> set[str]:
+        names = {name for name in (class_info.name, class_info.qualified_name) if name}
+        names.update(
+            item.name for item in class_info.nested_structs + class_info.unions if item.name
+        )
+        for nested in class_info.nested_classes:
+            names.update(name for name in (nested.name, nested.qualified_name) if name)
         return names
 
     @staticmethod
@@ -181,28 +269,16 @@ class HierarchyHeaderGenerationService:
         dependency_headers: dict[str, str] | None = None,
         base_type_infos: dict[str, ClassInfo] | None = None,
     ) -> list[str]:
-        lines: list[str] = []
-        typedef_forward_decls = self._normalize_typedef_forward_declarations(
-            self._collect_typedef_forward_declarations(typedefs or {}), class_infos
+        lines = _typedef_forward_lines(
+            self,
+            typedefs,
+            target_class,
+            class_infos,
+            dependency_headers,
+            base_type_infos,
         )
-        typedef_forward_decls = self._exclude_included_forward_declarations(
-            typedef_forward_decls,
-            dependency_headers or {},
-            base_type_infos or class_infos,
-        )
-        if typedef_forward_decls:
-            lines.extend(["// Forward declarations", *sorted(typedef_forward_decls), ""])
         if typedefs:
-            lines.append("// Type definitions from DWARF")
-            for typedef_name, underlying_type in self._ordered_typedefs(typedefs):
-                if self._normalize_type_name(underlying_type) == typedef_name:
-                    continue
-                if typedef_name == "size_t":
-                    lines.append("// size_t provided by the standard C++ headers")
-                else:
-                    rendered_type = self._void_alias_storage_type(underlying_type)
-                    lines.append(f"typedef {rendered_type} {typedef_name};")
-            lines.append("")
+            lines.extend(_typedef_definition_lines(self, typedefs, target_class, class_infos))
         lines.extend(
             [
                 "// Generated from DWARF debug information using pyelftools",
@@ -210,6 +286,60 @@ class HierarchyHeaderGenerationService:
             ]
         )
         return lines
+
+    @classmethod
+    def _enclosing_nested_alias_names(
+        cls, target_class: str, class_infos: dict[str, ClassInfo]
+    ) -> set[str]:
+        info = next(
+            (
+                candidate
+                for key, candidate in class_infos.items()
+                if key == target_class
+                or candidate.name == target_class
+                or candidate.qualified_name == target_class
+            ),
+            None,
+        )
+        if info is None:
+            return set()
+        names: set[str] = set()
+
+        def visit(current: ClassInfo) -> None:
+            for nested in current.nested_classes:
+                if nested.name:
+                    names.add(nested.name)
+                if nested.qualified_name:
+                    names.add(nested.qualified_name)
+                visit(nested)
+            for item in (*current.nested_structs, *current.unions, *current.enums):
+                if item.name:
+                    names.add(item.name)
+            for alias in current.declared_aliases:
+                names.add(alias.name)
+                names.add(alias.name.split("::")[-1])
+
+        visit(info)
+        return names
+
+    @classmethod
+    def _is_enclosing_nested_alias(
+        cls,
+        typedef_name: str,
+        underlying_type: str,
+        target_class: str,
+        class_infos: dict[str, ClassInfo],
+    ) -> bool:
+        """Avoid global aliases whose type references a nested local type."""
+        nested_names = cls._enclosing_nested_alias_names(target_class, class_infos)
+        if not nested_names:
+            return False
+        if typedef_name in nested_names:
+            return True
+        return any(
+            bool(re.search(r"\b" + re.escape(name.split("::")[-1]) + r"\b", underlying_type))
+            for name in nested_names
+        )
 
     def _normalize_typedef_forward_declarations(
         self: HeaderRenderingHost,
@@ -259,39 +389,6 @@ class HierarchyHeaderGenerationService:
         )
         return names
 
-    @staticmethod
-    def _hierarchy_metadata(
-        class_infos: dict[str, ClassInfo],
-        target_class: str,
-        hierarchy_order: list[str],
-        include_metadata: bool,
-    ) -> list[str]:
-        if not include_metadata or target_class not in class_infos:
-            return []
-        main_class = class_infos[target_class]
-        target_name = main_class.name
-        lines = [
-            "",
-            f"// Target Class: {target_name}",
-            f"// - Size: {main_class.byte_size} bytes",
-            "// - DIE Offset: "
-            + (
-                f"0x{main_class.die_offset:08x}"
-                if main_class.die_offset is not None
-                else "unavailable"
-            ),
-        ]
-        if main_class.packing_info:
-            lines.append(
-                f"// - Suggested Packing: {main_class.packing_info['suggested_packing']} bytes"
-            )
-        if len(hierarchy_order) > 1:
-            names = [
-                class_infos[name].name if name in class_infos else name for name in hierarchy_order
-            ]
-            lines.append(f"// - Full Inheritance Chain: {' -> '.join(names)}")
-        return lines
-
     def _hierarchy_forward_declarations(
         self: HeaderRenderingHost,
         class_infos: dict[str, ClassInfo],
@@ -315,9 +412,16 @@ class HierarchyHeaderGenerationService:
             self, forward_decls, base_type_infos or class_infos, class_infos
         )
         deduped = self._deduplicate_forward_declarations(forward_decls, class_infos)
+        deduped = repair_qualified_specialization_forwards(deduped, class_infos)
         if typedefs:
+            blocked_names = set(typedefs) | {
+                alias.name
+                for alias in referenced_namespace_aliases(class_infos.values(), typedefs).values()
+            }
             deduped = {
-                decl for decl in deduped if self._forward_declaration_name(decl) not in typedefs
+                decl
+                for decl in deduped
+                if self._forward_declaration_name(decl) not in blocked_names
             }
         return deduped
 
@@ -365,81 +469,8 @@ class HierarchyHeaderGenerationService:
         grouped = {declaration for candidates in by_name.values() for declaration in candidates}
         result = declarations - grouped
         for name, candidates in by_name.items():
-            result.add(self._preferred_forward_declaration(name, candidates, resolved_kinds))
+            result.add(preferred_forward_declaration(name, candidates, resolved_kinds))
         return result
-
-    @staticmethod
-    def _preferred_forward_declaration(
-        name: str, candidates: list[str], resolved_kinds: dict[str, str]
-    ) -> str:
-        template_declaration = HierarchyHeaderGenerationService._preferred_template_declaration(
-            candidates
-        )
-        if template_declaration is not None:
-            return template_declaration
-        policy_kind = TypeExpressionPolicy.preferred_forward_kind(name)
-        preferred_kind = HierarchyHeaderGenerationService._select_forward_declaration_kind(
-            name, candidates, resolved_kinds, policy_kind
-        )
-        return HierarchyHeaderGenerationService._render_preferred_forward_declaration(
-            name, candidates, preferred_kind, policy_kind
-        )
-
-    @staticmethod
-    def _preferred_template_declaration(candidates: list[str]) -> str | None:
-        """Choose one stable declaration when specializations expose arities."""
-        templates = [candidate for candidate in candidates if candidate.startswith("template <")]
-        if not templates:
-            return None
-        return max(
-            templates,
-            key=lambda declaration: (
-                len(
-                    HeaderTypePlanningService._split_template_arguments(
-                        declaration[len("template <") : declaration.index("> class")]
-                    )
-                ),
-                declaration,
-            ),
-        )
-
-    @staticmethod
-    def _select_forward_declaration_kind(
-        name: str,
-        candidates: list[str],
-        resolved_kinds: dict[str, str],
-        policy_kind: str | None,
-    ) -> str:
-        if policy_kind is not None:
-            return policy_kind
-        resolved_kind = resolved_kinds.get(name)
-        if resolved_kind is not None:
-            return resolved_kind
-        return next(
-            (
-                kind
-                for kind in ("enum class", "union", "struct", "class")
-                if any(declaration.startswith(f"{kind} ") for declaration in candidates)
-            ),
-            "class",
-        )
-
-    @staticmethod
-    def _render_preferred_forward_declaration(
-        name: str,
-        candidates: list[str],
-        preferred_kind: str,
-        policy_kind: str | None,
-    ) -> str:
-        declaration = next(
-            (candidate for candidate in candidates if candidate.startswith(f"{preferred_kind} ")),
-            None,
-        )
-        if declaration is not None:
-            return declaration
-        if policy_kind is not None:
-            return f"{preferred_kind} {name};"
-        return candidates[0]
 
     def _resolved_forward_declarations(
         self: HeaderRenderingHost,
@@ -451,6 +482,19 @@ class HierarchyHeaderGenerationService:
             return set()
         declarations: set[str] = set()
         for class_info in class_infos.values():
+            # Concrete observations of an inferred primary are retained in
+            # the plan/manifest, but they are not declarations emitted by
+            # this header.  Feeding their nested arguments back into the
+            # forward planner creates invalid namespace declarations such as
+            # ``namespace cControl::cMouseExecution`` when those scopes are
+            # classes rather than namespaces.
+            rendering = class_info.template_rendering
+            if (
+                rendering is not None
+                and rendering.mode == "generic"
+                and not rendering.representative
+            ):
+                continue
             declarations.update(self._collect_forward_declarations(class_info, typedefs))
         return declarations
 
@@ -476,7 +520,7 @@ class HierarchyHeaderGenerationService:
         known_infos: dict[str, ClassInfo],
         typedefs: dict[str, str] | None = None,
     ) -> set[str]:
-        return _collect_base_forward_declarations(self, class_infos, known_infos, typedefs)
+        return collect_base_forward_declarations(self, class_infos, known_infos, typedefs)
 
     def _hierarchy_definitions(
         self: HeaderRenderingHost,
@@ -486,6 +530,7 @@ class HierarchyHeaderGenerationService:
         typedefs: dict[str, str] | None = None,
         allow_cyclic_dependencies: bool = False,
         *,
+        known_infos: dict[str, ClassInfo] | None = None,
         dependency_plan: HeaderDependencyPlan | None = None,
     ) -> list[str]:
         ordered_classes = self._order_class_definitions(
@@ -500,9 +545,21 @@ class HierarchyHeaderGenerationService:
             return []
         lines = ["", "// ========== Complete Definitions =========="]
         for class_name in ordered_classes:
-            lines.extend(
-                ["", *self._generate_single_class(class_infos[class_name], include_metadata)]
+            info = class_infos[class_name]
+            declaration = scoped_declaration(
+                info.qualified_name or info.name, info.kind, info.scope
             )
+            if declaration is not None:
+                lines.append(declaration)
+        for class_name in ordered_classes:
+            info = class_infos[class_name]
+            namespace = namespace_for_info(info)
+            if namespace:
+                lines.extend(["", f"namespace {namespace} {{"])
+            lines.extend(["", *self._generate_single_class(info, include_metadata)])
+            if namespace:
+                lines.extend(["", f"}}  // namespace {namespace}"])
+            lines.extend(external_alias_lines(info.source_aliases))
         return lines
 
     def _unique_definition_names(
@@ -520,9 +577,7 @@ class HierarchyHeaderGenerationService:
                 if plan.mode == "blocked" or not plan.representative:
                     continue
                 identity = (
-                    self._unqualify_type_expression(plan.primary)
-                    if plan.mode == "generic"
-                    else self._unqualify_type_expression(info.name)
+                    plan.primary if plan.mode == "generic" else (info.qualified_name or info.name)
                 )
             else:
                 identity = info.qualified_name or info.name
@@ -530,48 +585,3 @@ class HierarchyHeaderGenerationService:
                 seen.add(identity)
                 result.append(key)
         return result
-
-
-def _collect_base_forward_declarations(
-    renderer: HeaderRenderingHost,
-    class_infos: dict[str, ClassInfo],
-    known_infos: dict[str, ClassInfo],
-    typedefs: dict[str, str] | None = None,
-) -> set[str]:
-    declarations: set[str] = set()
-    primitives = renderer._primitive_names()
-    known_names = _known_base_names(renderer, known_infos)
-    typedef_set = set(typedefs or {})
-    for class_info in class_infos.values():
-        for base_name in class_info.base_classes:
-            declaration = _base_forward_declaration(renderer, base_name, primitives, known_names)
-            if declaration is not None:
-                declarations.add(declaration)
-            for expression in renderer._template_expressions(base_name):
-                declarations.update(
-                    renderer._template_argument_forward_declarations(expression, typedef_set)
-                )
-    return declarations
-
-
-def _known_base_names(renderer: HeaderRenderingHost, known_infos: dict[str, ClassInfo]) -> set[str]:
-    return {
-        renderer._normalize_type_name(value)
-        for info in known_infos.values()
-        for value in (info.name, info.qualified_name)
-        if value
-    }
-
-
-def _base_forward_declaration(
-    renderer: HeaderRenderingHost,
-    base_name: str,
-    primitives: set[str],
-    known_names: set[str],
-) -> str | None:
-    if not base_name:
-        return None
-    clean_name = renderer._normalize_type_name(base_name)
-    if not clean_name or clean_name in primitives or clean_name in known_names:
-        return None
-    return renderer._aggregate_forward_declaration(clean_name)

@@ -26,7 +26,9 @@ tasks remain visible.
 | [018 Performance and algorithm audit](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/018-performance-algorithm-audit) | Complete; implementation, evidence, and repository gates pass | source-bound warm/cold traces, candidate decisions, and deterministic optimization evidence |
 | [019 Analytical DWARF store](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/019-analytical-dwarf-store) | Doris serving promoted; file-backed replacement, Flight SQL, and semantic validation partial/unresolved | one-pass lossless materialization, native serving evidence, query parity, and explicit replacement gates |
 | [020 Documentation API reference](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/020-documentation-api-reference) | Implemented; 365 modules and local repository gates verified | exhaustive source-derived Python module reference with deterministic generation and fail-closed docs validation |
-| [021 C++ reconstruction architecture](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/021-cpp-reconstruction-architecture) | In progress; characterized slices and deterministic gates verified, real-asset acceptance unblocked | repository-wide source review, fresh all-output baselines, characterized reconstruction/toolchain boundaries, and exact parity with a 110% runtime limit |
+| [021 C++ reconstruction architecture](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/021-cpp-reconstruction-architecture) | In progress; full-corpus parity/performance acceptance remains open | repository-wide review and baseline obligations; active compilation recovery transferred to Feature 022 |
+| [022 C++ compilation repair](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/022-cpp-compilation-repair) | Implementation in progress; acceptance pending | repair the dirty producer's semantic/declaration gaps, validate all 289 roots, and retain evidence-backed blockers |
+| [023 C++ declaration IR](https://github.com/ddon-research/ddon-dwarf-reconstructor/tree/main/specs/023-cpp-declaration-ir) | Specified; follows repair or a documented blocker handoff | incremental typed declarations, optional compiler observations, and measured tooling adoption |
 
 ## Next best step
 
@@ -34,11 +36,14 @@ The current tranche is evidence-led convergence. Feature 001 is the real-asset i
 record: header publication and host MSVC closure are observed, while ABI, instruction effects,
 NIDs, static parity, and live behavior remain independent gates. Feature 019 is the serving and
 validator record: Doris is the normal analytical runtime, while file-backed replacement, Flight
-SQL, and semantic validation remain partial or unresolved. Feature 021 now owns the characterized
-C++ reconstruction boundaries, CU-qualified method context, output comparator, and deterministic
-workflow provenance check. Its next implementation work is review-coverage closure and the
-source-bound T010/T011/T022/T060 hierarchical canary and unified batch acceptance with the
-recovered Doris serving backend.
+SQL, and semantic validation remain partial or unresolved. Feature 021 retains repository-wide
+review, unchanged-output parity, and matching workload/cache-state performance obligations.
+Feature 022 is the active implementation queue: preserve the effective producer, repair semantic
+identity and declaration requirements, and validate all 289 roots. Current source/quality and
+retained compiler evidence are recorded in its feature artifacts; old probe counts do not accept
+the current producer. Feature 023 follows repair or a source-bound minimal blocker handoff and
+introduces a declaration IR and optional compiler validation incrementally. A handoff does not
+mark Feature 022 complete or relax its acceptance gates.
 `KG-001` remains deferred and is owned only by Feature 015; Features 013 and 014 retain pointers
 to that record.
 

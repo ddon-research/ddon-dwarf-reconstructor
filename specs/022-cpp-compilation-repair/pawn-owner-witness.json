@@ -1,0 +1,10 @@
+{
+  "source_sha256": "4236f598acc8f15893181455ed195e39dfa4dbfda4eeda8b56fcbd82312c63c0",
+  "kind": "enclosing_owner",
+  "entity": "cPawnActInterDisableMgr::cNode",
+  "cu_offset": 25252129,
+  "die_offset": 25602620,
+  "rule": "class.nest",
+  "evidence_path": "D:/ddon-dwarf-reconstructor/output/compilation-repair-022/t011-20260926/owner-evidence.json",
+  "evidence_sha256": "cb74bb6cd91565b83ababa2f0c807cdafe158d32d39ea881374b6ab01fcdac13"
+}

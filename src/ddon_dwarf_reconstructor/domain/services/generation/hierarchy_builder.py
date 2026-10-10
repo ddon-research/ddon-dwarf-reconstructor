@@ -11,7 +11,7 @@ from ....core.observability import get_logger, log_timing
 from ...models.dwarf import ClassInfo
 from ...ports.class_parser import ClassParserPort
 from ...ports.dwarf_lookup import DwarfLookupPort
-from .definition_identity import definition_identity_key, try_equivalent_class_info
+from .definition_identity import definition_identity_key
 from .dependency_extractor import DependencyExtractor
 from .hierarchy_builder_context import HierarchyBuilderContext
 from .hierarchy_chain import HierarchyChainMixin
@@ -297,8 +297,6 @@ class HierarchyBuilder(
             class_info = self._resolve_seed_class(
                 cu,
                 class_die,
-                current_name,
-                is_root_lookup,
                 parsed_targets,
                 classes_by_name,
             )
@@ -317,21 +315,13 @@ class HierarchyBuilder(
         self: HierarchyBuilderContext,
         cu: DwarfCompilationUnit,
         class_die: DwarfEntry,
-        current_name: str,
-        is_root_lookup: bool,
         parsed_targets: dict[tuple[int, int], ClassInfo] | None,
         classes_by_name: dict[str, ClassInfo] | None,
     ) -> ClassInfo:
         target_key = _target_key(cu, class_die)
         if parsed_targets is not None and target_key in parsed_targets:
             return parsed_targets[target_key]
-        class_info = None
-        if not is_root_lookup and classes_by_name is not None:
-            existing = classes_by_name.get(current_name)
-            if existing is not None:
-                class_info = try_equivalent_class_info(existing, (cu, class_die))
-        if class_info is None:
-            class_info = self.class_parser.parse_class_info(cu, class_die)
+        class_info = self.class_parser.parse_class_info(cu, class_die)
         if parsed_targets is not None:
             parsed_targets[target_key] = class_info
         if classes_by_name is not None:

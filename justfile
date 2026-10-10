@@ -101,6 +101,19 @@ analytical-fixture:
 analytical-compose-config:
     docker compose --file ops/analytical-dwarf/compose.yaml config --quiet
 
+# Canonical recovered workstation: all active storage lives in verified external volumes.
+analytical-linux-config:
+    docker compose --env-file ops/analytical-dwarf/.env --file ops/analytical-dwarf/compose.yaml --file ops/analytical-dwarf/compose.storage-linux.yaml config --quiet
+
+analytical-linux-up:
+    docker compose --env-file ops/analytical-dwarf/.env --file ops/analytical-dwarf/compose.yaml --file ops/analytical-dwarf/compose.storage-linux.yaml up -d
+
+analytical-linux-stop:
+    pwsh -NoProfile -File ops/analytical-dwarf/stop.ps1
+
+analytical-linux-preflight manifest="output/analytical-dwarf/main/store-4236f598acc8f158/manifest.json" output="$env:TEMP/ddon-analytical-dwarf/doris-preflight.json":
+    pwsh -NoProfile -File ops/analytical-dwarf/preflight.ps1 -ComposeOverlay ops/analytical-dwarf/compose.storage-linux.yaml -StoreManifest {{manifest}} -OutputPath {{output}}
+
 analytical-compose-flight-config:
     docker compose --file ops/analytical-dwarf/compose.yaml --file ops/analytical-dwarf/compose.flight.yaml config --quiet
 

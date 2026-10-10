@@ -9,21 +9,24 @@ from dataclasses import asdict, replace
 from typing import Any, Literal
 
 from ....core.content_hash import sha256_text
-from ...models.dwarf import ClassInfo, TemplateTypeParam, TemplateValueParam
+from ...models.dwarf import (
+    ClassInfo,
+    MethodInfo,
+    TemplateTypeParam,
+    TemplateValueParam,
+)
 from ...models.dwarf.template_rendering import TemplateFamilyPlan, TemplateRendering
-from .template_declarations import project_template
+from .alias_evidence import source_aliases
+from .method_signature_policy import canonical_method_signature, method_declaration_conflicts
+from .scoped_declarations import scoped_declaration
+from .template_declarations import primary_declaration
 
 
 def plan_template_families(
     infos: Mapping[str, ClassInfo], origins: Mapping[str, set[str]]
 ) -> tuple[dict[str, ClassInfo], tuple[TemplateFamilyPlan, ...]]:
     """Plan each qualified family once; input definitions remain untouched."""
-    families: dict[str, list[str]] = {}
-    for key, info in sorted(infos.items()):
-        name = info.qualified_name or info.name
-        primary = template_primary(name)
-        if primary is not None:
-            families.setdefault(primary, []).append(key)
+    families = _family_members(infos)
     rendered = dict(infos)
     plans = []
     for primary, keys in sorted(families.items()):
@@ -33,6 +36,41 @@ def plan_template_families(
     rendered, nested_plans = _plan_nested_families(rendered, origins)
     plans.extend(nested_plans)
     return rendered, tuple(plans)
+
+
+def _family_members(
+    infos: Mapping[str, ClassInfo], *, include_primaries: bool = False
+) -> dict[str, list[str]]:
+    families: dict[str, list[str]] = {}
+    for key, info in sorted(infos.items()):
+        name = info.qualified_name or info.name
+        primary = template_primary(name)
+        if primary is None and include_primaries and info.template_parameters:
+            primary = name
+        if primary is not None:
+            families.setdefault(primary, []).append(key)
+    return families
+
+
+def primary_declarations(infos: Mapping[str, ClassInfo]) -> tuple[set[str], tuple[str, ...]]:
+    """Use the same primary policy for declaration-only namespace observations."""
+    declarations: set[str] = set()
+    diagnostics: list[str] = []
+    for primary, keys in sorted(_family_members(infos, include_primaries=True).items()):
+        errors = _primary_diagnostics(primary, keys, infos)
+        if errors:
+            diagnostics.extend(errors)
+            continue
+        info = replace(
+            infos[keys[0]],
+            template_rendering=TemplateRendering(
+                primary, parameter_declaration(infos[keys[0]]) or "", "explicit"
+            ),
+        )
+        declaration = primary_declaration(info)
+        if declaration is not None:
+            declarations.add(declaration)
+    return declarations, tuple(diagnostics)
 
 
 def template_primary(name: str) -> str | None:
@@ -98,13 +136,14 @@ def _plan_family(
     declaration = parameter_declaration(infos[keys[0]]) or ""
     by_name = _specializations(keys, infos)
     diagnostics = _family_diagnostics(primary, keys, infos, by_name)
-    mode: Literal["generic", "explicit", "blocked"] = "blocked" if diagnostics else "explicit"
     projections = {
-        key: replace(infos[key], template_rendering=TemplateRendering(primary, declaration, mode))
+        key: replace(
+            infos[key],
+            template_rendering=TemplateRendering(primary, declaration, "explicit"),
+        )
         for key in keys
     }
-    if mode != "blocked" and _generic_candidates(projections):
-        mode = "generic"
+    mode: Literal["explicit", "blocked"] = "blocked" if diagnostics else "explicit"
     projections = _select_representatives(projections, by_name, mode, diagnostics)
     plan = TemplateFamilyPlan(
         primary,
@@ -115,6 +154,7 @@ def _plan_family(
         tuple((key, infos[key].cu_offset, infos[key].die_offset) for key in keys),
         tuple(diagnostics),
         tuple((key, sha256_text(_signature(infos[key]))) for key in keys),
+        _method_provenance(keys, infos),
     )
     return plan, projections
 
@@ -133,14 +173,37 @@ def _family_diagnostics(
     infos: Mapping[str, ClassInfo],
     by_name: dict[str, list[str]],
 ) -> list[str]:
-    declarations = {parameter_declaration(infos[key]) for key in keys}
-    diagnostics = []
-    if None in declarations or len(declarations) != 1:
-        diagnostics.append(f"unresolved template parameter signature: {primary}")
+    diagnostics = _primary_diagnostics(primary, keys, infos)
     diagnostics.extend(_unsupported_family_evidence(primary, keys, infos))
     for name, candidates in by_name.items():
-        if len({_signature(infos[key]) for key in candidates}) > 1:
+        if len({_signature(infos[key], include_methods=False) for key in candidates}) > 1:
             diagnostics.append(f"conflicting template specialization: {name}")
+        conflicts = _method_conflicts([infos[key] for key in candidates])
+        diagnostics.extend(
+            f"conflicting method declaration: {name}::{conflict}" for conflict in conflicts
+        )
+    return diagnostics
+
+
+def _parameter_signature(info: ClassInfo) -> tuple[str, ...] | None:
+    """Parameter names do not change a primary's kind/type signature."""
+    if parameter_declaration(info) is None:
+        return None
+    return tuple(
+        "type"
+        if isinstance(parameter, TemplateTypeParam)
+        else " ".join(parameter.type_name.split())
+        for parameter in info.template_parameters
+    )
+
+
+def _primary_diagnostics(
+    primary: str, keys: list[str], infos: Mapping[str, ClassInfo]
+) -> list[str]:
+    declarations = {_parameter_signature(infos[key]) for key in keys}
+    diagnostics = _primary_scope_diagnostics(primary, keys, infos)
+    if None in declarations or len(declarations) != 1:
+        diagnostics.append(f"unresolved template parameter signature: {primary}")
     return diagnostics
 
 
@@ -150,8 +213,6 @@ def _unsupported_family_evidence(
     infos: Mapping[str, ClassInfo],
 ) -> list[str]:
     diagnostics = []
-    if "<" in primary or any(infos[key].containing_type for key in keys):
-        diagnostics.append(f"unresolved enclosing-scope template emission: {primary}")
     for key in keys:
         info = infos[key]
         if info.is_declaration or any(
@@ -163,84 +224,87 @@ def _unsupported_family_evidence(
     return diagnostics
 
 
+def _primary_scope_diagnostics(
+    primary: str, keys: list[str], infos: Mapping[str, ClassInfo]
+) -> list[str]:
+    diagnostics = []
+    if "<" in primary or any(infos[key].containing_type for key in keys):
+        diagnostics.append(f"unresolved enclosing-scope template emission: {primary}")
+    if any(scoped_declaration(primary, infos[key].kind, infos[key].scope) is None for key in keys):
+        diagnostics.append(f"unresolved template primary scope: {primary}")
+    if len({infos[key].kind for key in keys}) != 1:
+        diagnostics.append(f"conflicting template aggregate kind: {primary}")
+    return diagnostics
+
+
 def _missing_argument(parameter: TemplateTypeParam | TemplateValueParam) -> bool:
     if isinstance(parameter, TemplateTypeParam):
         return parameter.argument_type in {None, "", "unknown_type"}
     return parameter.argument_value is None
 
 
+def _method_conflicts(infos: list[ClassInfo]) -> tuple[str, ...]:
+    """Find return/attribute disagreements for one source-level overload."""
+    return method_declaration_conflicts(method for info in infos for method in info.methods)
+
+
+def _method_provenance(
+    keys: list[str], infos: Mapping[str, ClassInfo]
+) -> tuple[tuple[str, tuple[tuple[str, int | None, int | None], ...]], ...]:
+    """Retain the source DIE for every observed method in the family manifest."""
+    evidence: dict[str, list[tuple[str, int | None, int | None]]] = {}
+    for key in keys:
+        info = infos[key]
+        for method in info.methods:
+            signature = repr(canonical_method_signature(method))
+            evidence.setdefault(signature, []).append((key, method.cu_offset, method.die_offset))
+    return tuple(
+        (signature, tuple(sorted(records))) for signature, records in sorted(evidence.items())
+    )
+
+
 def _select_representatives(
     projections: dict[str, ClassInfo],
     by_name: dict[str, list[str]],
-    mode: Literal["generic", "explicit", "blocked"],
+    mode: Literal["explicit", "blocked"],
     diagnostics: list[str],
 ) -> dict[str, ClassInfo]:
     result = {}
-    first = next(iter(projections))
+    methods = {
+        name: _specialization_methods([projections[key] for key in keys])
+        for name, keys in by_name.items()
+    }
     for key, info in projections.items():
         assert info.template_rendering is not None
         name = info.qualified_name or info.name
-        representative = key == (first if mode == "generic" else by_name[name][0])
+        representative = key == by_name[name][0]
         rendering = replace(
             info.template_rendering,
             mode=mode,
             representative=representative,
             diagnostic="; ".join(diagnostics) or None,
         )
-        result[key] = replace(info, template_rendering=rendering)
+        updated_info = replace(info, template_rendering=rendering)
+        if representative and mode != "blocked":
+            updated_info = replace(
+                updated_info,
+                methods=methods[name],
+                source_aliases=source_aliases(projections[item] for item in by_name[name]),
+            )
+        result[key] = updated_info
     return result
 
 
-def _type_substitutions(info: ClassInfo) -> tuple[tuple[str, str], ...] | None:
-    if any((info.nested_classes, info.nested_structs, info.unions, info.enums)):
-        return None
-    substitutions = []
-    for index, parameter in enumerate(info.template_parameters):
-        if isinstance(parameter, TemplateValueParam):
-            return None  # Folded integer equality does not prove a dependent expression.
-        argument = parameter.argument_type or ""
-        if not re.fullmatch(r"[A-Za-z_]\w*(?:::[A-Za-z_]\w*)*", argument):
-            return None
-        substitutions.append((argument, parameter.name or f"P{index}"))
-    if len(dict(substitutions)) != len(substitutions):
-        return None
-    return tuple(substitutions)
+def _specialization_methods(infos: list[ClassInfo]) -> list[MethodInfo]:
+    """Combine compatible observations only of the same concrete specialization."""
+    methods: dict[tuple[object, ...], MethodInfo] = {}
+    for info in infos:
+        for method in info.methods:
+            methods.setdefault(canonical_method_signature(method), method)
+    return list(methods.values())
 
 
-def _generic_candidates(projections: dict[str, ClassInfo]) -> bool:
-    """Require discriminating observations and identical normalized declarations."""
-    arguments = set()
-    normalized = set()
-    layouts = set()
-    for key, info in projections.items():
-        substitutions = _type_substitutions(info)
-        if not substitutions:
-            return False
-        assert info.template_rendering is not None
-        projection = replace(
-            info,
-            template_rendering=replace(
-                info.template_rendering, mode="generic", substitutions=substitutions
-            ),
-        )
-        projections[key] = projection
-        arguments.add(tuple(argument for argument, _name in substitutions))
-        layouts.add(
-            (info.byte_size, info.alignment, tuple(member.offset for member in info.members))
-        )
-        normalized.add(_signature(project_template(projection), generic=True))
-    if len(arguments) < 2 or len(normalized) != 1 or len(layouts) != 1:
-        return False
-    return _arguments_discriminate(arguments)
-
-
-def _arguments_discriminate(arguments: set[tuple[str, ...]]) -> bool:
-    return all(
-        len({args[index] for args in arguments}) > 1 for index in range(len(next(iter(arguments))))
-    )
-
-
-def _signature(info: ClassInfo, *, generic: bool = False) -> str:
+def _signature(info: ClassInfo, *, include_methods: bool = True) -> str:
     """Compare declaration semantics, excluding addresses and source-location metadata."""
     value = asdict(info)
     for field in (
@@ -255,23 +319,39 @@ def _signature(info: ClassInfo, *, generic: bool = False) -> str:
         "diagnostics",
         "packing_info",
         "containing_type",
+        "base_class_offsets",
+        "source_aliases",
     ):
         value.pop(field, None)
-    if generic:
-        # Concrete offsets remain in the original graph and family provenance.
-        value["members"] = [dict(member, offset=None) for member in value["members"]]
+    if not include_methods:
+        value.pop("methods", None)
     return json.dumps(_without_references(value), sort_keys=True, default=str)
 
 
 def _without_references(value: Any) -> Any:
     if isinstance(value, dict):
+        excluded = _signature_exclusions(value)
         return {
             key: _without_references(item)
             for key, item in value.items()
-            if key not in {"linkage_name", "is_declaration"}
-            and not key.endswith("type_offset")
-            and key not in {"die_offset", "cu_offset", "owner_die_offset", "argument_offset"}
+            if key not in excluded and not key.endswith("type_offset")
         }
     if isinstance(value, list | tuple):
         return [_without_references(item) for item in value]
     return value
+
+
+def _signature_exclusions(value: dict[str, Any]) -> set[str]:
+    excluded = {
+        "linkage_name",
+        "is_declaration",
+        "die_offset",
+        "cu_offset",
+        "owner_die_offset",
+        "argument_offset",
+    }
+    if value.get("type_reference") is not None:
+        excluded.add("type_name")
+    if value.get("return_type_reference") is not None:
+        excluded.add("return_type")
+    return excluded

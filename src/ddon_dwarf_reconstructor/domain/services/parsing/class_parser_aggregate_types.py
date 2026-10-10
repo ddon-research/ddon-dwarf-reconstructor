@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from decimal import Decimal
 from numbers import Integral
+from typing import Literal
 
 from ....core.dwarf import DwarfCompilationUnit, DwarfEntry, decode_dwarf_string
 from ....core.observability import get_logger, log_event
@@ -14,11 +15,23 @@ from ...models.dwarf import (
     StructInfo,
     UnionInfo,
 )
+from .anonymous_typedefs import bind_anonymous_definition
 from .class_parser_context import ClassParserContext
+from .enum_evidence import classify_enum, representation
+from .primitive_encoding import integer_encoding
+from .type_scope import die_key, lexical_scope
 
 logger = get_logger(__name__)
-_SIGNED_ENCODINGS = frozenset({0x05, 0x06})
-_UNSIGNED_ENCODINGS = frozenset({0x07, 0x08})
+
+
+def _enum_size(die: DwarfEntry) -> tuple[int | None, Literal["present", "absent", "invalid"]]:
+    attribute = die.attributes.get("DW_AT_byte_size")
+    if attribute is None:
+        return None, "absent"
+    size = ClassParserAggregateTypesMixin._exact_integer(attribute.value)
+    if size is None or size <= 0:
+        return None, "invalid"
+    return size, "present"
 
 
 class ClassParserAggregateTypesMixin:
@@ -38,11 +51,11 @@ class ClassParserAggregateTypesMixin:
         )
 
         # Get enum size
-        size_attr = enum_die.attributes.get("DW_AT_byte_size")
-        byte_size = self._exact_integer(size_attr.value) if size_attr is not None else None
-        if byte_size is None or byte_size <= 0:
-            byte_size = 4
+        byte_size, size_evidence = _enum_size(enum_die)
         signed = self._enum_signedness(enum_die)
+        semantics = classify_enum(enum_die)
+        representation_type, representation_offset = representation(enum_die, self.type_resolver)
+        cu_offset, die_offset = die_key(enum_die)
 
         # Parse enumerators
         enumerators = []
@@ -57,10 +70,25 @@ class ClassParserAggregateTypesMixin:
                 if enumerator:
                     enumerators.append(enumerator)
 
-        return EnumInfo(
-            name=enum_name,
-            byte_size=byte_size,
-            enumerators=enumerators,
+        return bind_anonymous_definition(
+            EnumInfo(
+                name=enum_name,
+                byte_size=byte_size,
+                enumerators=enumerators,
+                size_evidence=size_evidence,
+                scoped=semantics.scoped,
+                scopedness_evidence=semantics.scopedness_evidence,
+                enum_class_flag=semantics.enum_class_flag,
+                producer_profile=semantics.producer_profile,
+                representation_type=representation_type,
+                representation_offset=representation_offset,
+                fixed_base_evidence=semantics.fixed_base_evidence,
+                cu_offset=cu_offset,
+                die_offset=die_offset,
+                scope=lexical_scope(enum_die),
+            ),
+            enum_die,
+            self.type_resolver,
         )
 
     def _parse_enumerator(
@@ -197,9 +225,10 @@ class ClassParserAggregateTypesMixin:
         if encoding_attr is None:
             return None
         encoding = cls._exact_integer(encoding_attr.value)
-        if encoding in _SIGNED_ENCODINGS:
+        kind = integer_encoding(encoding)
+        if kind == "signed":
             return True
-        if encoding in _UNSIGNED_ENCODINGS:
+        if kind == "unsigned":
             return False
         return None
 
@@ -232,11 +261,15 @@ class ClassParserAggregateTypesMixin:
                 if member:
                     members.append(member)
 
-        return StructInfo(
-            name=struct_name,
-            byte_size=struct_size,
-            members=members,
-            die_offset=struct_die.offset,
+        return bind_anonymous_definition(
+            StructInfo(
+                name=struct_name,
+                byte_size=struct_size,
+                members=members,
+                die_offset=struct_die.offset,
+            ),
+            struct_die,
+            self.type_resolver,
         )
 
     def parse_union(self: ClassParserContext, union_die: DwarfEntry) -> UnionInfo | None:
@@ -272,12 +305,16 @@ class ClassParserAggregateTypesMixin:
                 if struct_info:
                     nested_structs.append(struct_info)
 
-        return UnionInfo(
-            name=union_name,
-            byte_size=union_size,
-            members=members,
-            nested_structs=nested_structs,
-            die_offset=union_die.offset,
+        return bind_anonymous_definition(
+            UnionInfo(
+                name=union_name,
+                byte_size=union_size,
+                members=members,
+                nested_structs=nested_structs,
+                die_offset=union_die.offset,
+            ),
+            union_die,
+            self.type_resolver,
         )
 
     def _get_declaration_file(

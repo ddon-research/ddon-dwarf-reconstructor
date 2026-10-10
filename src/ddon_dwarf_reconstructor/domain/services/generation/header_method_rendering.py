@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 
 from ....core.observability import get_logger
-from ...models.dwarf import MethodInfo, ParameterInfo, real_parameters
+from ...models.dwarf import MethodInfo, ParameterInfo, TemplateTypeParam, real_parameters
+from ...models.dwarf.type_reference import TypeReference
 from .method_signature_policy import (
+    canonical_parameter_type,
     is_conversion_operator,
     method_declaration_suffix,
+    method_overload_key,
     operator_return_type,
     rendered_method_name,
+    unique_method_declarations,
 )
 from .rendering.operations import HeaderRenderingHost
 from .template_families import template_primary
@@ -18,9 +23,65 @@ from .template_families import template_primary
 logger = get_logger(__name__)
 
 
+def _method_return_type(
+    renderer: HeaderRenderingHost, method: MethodInfo, preserve_qualified: bool
+) -> str:
+    return (
+        method.return_type
+        if preserve_qualified
+        else renderer._unqualify_type_expression(method.return_type)
+    )
+
+
+def _method_template_projection(method: MethodInfo) -> tuple[MethodInfo, str | None]:
+    """Recover a type-parametric declaration only from matching DIE identities."""
+    if len(method.template_parameters) != 1 or method.is_virtual:
+        return method, None
+    template = method.template_parameters[0]
+    if not isinstance(template, TemplateTypeParam) or not re.fullmatch(
+        r"[A-Za-z_]\w*", template.name
+    ):
+        return method, None
+    if template.cu_offset is None or template.argument_offset is None:
+        return method, None
+    projected = []
+    matched = False
+    for parameter in method.parameters or ():
+        replacement = _project_template_argument(parameter, template)
+        projected.append(replacement or parameter)
+        matched |= replacement is not None
+    if not matched:
+        return method, None
+    return replace(method, parameters=projected), f"template <typename {template.name}>"
+
+
+def _project_template_argument(
+    parameter: ParameterInfo, template: TemplateTypeParam
+) -> ParameterInfo | None:
+    reference = parameter.type_reference
+    if (
+        parameter.is_artificial
+        or parameter.cu_offset != template.cu_offset
+        or parameter.type_offset != template.argument_offset
+        or not isinstance(reference, TypeReference)
+        or reference.alias_target is not None
+        or reference.template_arguments
+        or reference.declarator.base_name != template.argument_type
+    ):
+        return None
+    new_reference = replace(
+        reference, declarator=replace(reference.declarator, base_name=template.name)
+    )
+    return replace(parameter, type_name=new_reference.name, type_reference=new_reference)
+
+
 class HeaderMethodRenderingService:
     def _generate_methods(
-        self: HeaderRenderingHost, methods: list[MethodInfo], class_name: str
+        self: HeaderRenderingHost,
+        methods: list[MethodInfo],
+        class_name: str,
+        *,
+        preserve_qualified: bool = False,
     ) -> list[str]:
         """Generate method declarations."""
         methods = self._deduplicate_rendered_methods(self._deduplicate_methods(methods))
@@ -30,34 +91,17 @@ class HeaderMethodRenderingService:
             methods, class_name, primary_name
         )
         return [
-            *self._render_constructors(constructors, primary_name),
+            *self._render_constructors(constructors, primary_name, preserve_qualified),
             *self._render_destructors(destructors),
-            *self._render_regular_methods(other_methods),
-            *self._render_operators(operators),
+            *self._render_regular_methods(other_methods, preserve_qualified),
+            *self._render_operators(operators, preserve_qualified),
         ]
 
     def _deduplicate_rendered_methods(
         self: HeaderRenderingHost, methods: list[MethodInfo]
     ) -> list[MethodInfo]:
         """Collapse aliases that render to one C++ signature despite DIE differences."""
-        unique_methods: list[MethodInfo] = []
-        seen_signatures: set[tuple[object, ...]] = set()
-        for method in methods:
-            signature = (
-                self._canonical_method_name(self._rendered_method_name(method.name)),
-                tuple(
-                    self._canonical_parameter_type(parameter)
-                    for parameter in real_parameters(method.parameters)
-                ),
-                method.is_const,
-                method.is_volatile,
-                method.ref_qualifier,
-            )
-            if signature in seen_signatures:
-                continue
-            seen_signatures.add(signature)
-            unique_methods.append(method)
-        return unique_methods
+        return unique_method_declarations(methods, self._rendered_method_key)
 
     @staticmethod
     def _is_constructor(method: MethodInfo, class_name: str, primary_name: str) -> bool:
@@ -85,10 +129,13 @@ class HeaderMethodRenderingService:
         return constructors, destructors, operators, other_methods
 
     def _render_constructors(
-        self: HeaderRenderingHost, methods: list[MethodInfo], class_name: str
+        self: HeaderRenderingHost,
+        methods: list[MethodInfo],
+        class_name: str,
+        preserve_qualified: bool = False,
     ) -> list[str]:
         return [
-            f"    {class_name}({self._format_parameters(method)}){self._method_suffix(method)};"
+            f"    {class_name}({self._format_parameters(method, preserve_qualified)}){self._method_suffix(method)};"
             for method in methods
         ]
 
@@ -99,25 +146,48 @@ class HeaderMethodRenderingService:
             for method in methods
         ]
 
-    def _render_regular_methods(self: HeaderRenderingHost, methods: list[MethodInfo]) -> list[str]:
-        return [
-            f"    {self._method_prefix(method)}{self._unqualify_type_expression(method.return_type)} "
-            f"{self._rendered_method_name(method.name)}({self._format_parameters(method)}){self._method_suffix(method)};"
-            for method in methods
-        ]
+    def _render_regular_methods(
+        self: HeaderRenderingHost, methods: list[MethodInfo], preserve_qualified: bool = False
+    ) -> list[str]:
+        return [self._render_typed_method(method, preserve_qualified) for method in methods]
 
-    def _render_operators(self: HeaderRenderingHost, methods: list[MethodInfo]) -> list[str]:
+    def _render_typed_method(
+        self: HeaderRenderingHost, method: MethodInfo, preserve_qualified: bool = False
+    ) -> str:
+        method, template_declaration = _method_template_projection(method)
+        suffix, separator, initializer = self._method_suffix(method).partition(" = ")
+        identifier = (
+            f"{self._rendered_method_name(method.name)}"
+            f"({self._format_parameters(method, preserve_qualified)}){suffix}"
+        )
+        reference = method.return_type_reference
+        declaration = (
+            reference.declarator.render(identifier)
+            if isinstance(reference, TypeReference)
+            else f"{_method_return_type(self, method, preserve_qualified)} {identifier}"
+        )
+        rendered = f"    {self._method_prefix(method)}{declaration}{separator}{initializer};"
+        return f"    {template_declaration}\n{rendered}" if template_declaration else rendered
+
+    def _render_operators(
+        self: HeaderRenderingHost, methods: list[MethodInfo], preserve_qualified: bool = False
+    ) -> list[str]:
         lines = []
         for method in methods:
             prefix = self._method_prefix(method)
-            params = self._format_parameters(method)
+            params = self._format_parameters(method, preserve_qualified)
             suffix = self._method_suffix(method)
             if self._is_conversion_operator(method.name):
                 lines.append(
                     f"    {prefix}{self._rendered_method_name(method.name)}({params}){suffix};"
                 )
             else:
-                return_type = operator_return_type(method)
+                if isinstance(method.return_type_reference, TypeReference):
+                    lines.append(self._render_typed_method(method, preserve_qualified))
+                    continue
+                return_type = (
+                    method.return_type if preserve_qualified else operator_return_type(method)
+                )
                 lines.append(
                     f"    {prefix}{return_type} {self._rendered_method_name(method.name)}"
                     f"({params}){suffix};"
@@ -132,116 +202,36 @@ class HeaderMethodRenderingService:
     @staticmethod
     def _deduplicate_methods(methods: list[MethodInfo]) -> list[MethodInfo]:
         """Remove duplicate DWARF method entries with identical C++ signatures."""
-        unique_methods: list[MethodInfo] = []
-        seen_signatures: set[tuple[object, ...]] = set()
-
-        for method in methods:
-            parameter_types = tuple(
-                HeaderMethodRenderingService._canonical_parameter_type(parameter)
-                for parameter in real_parameters(method.parameters)
-            )
-            signature = (
-                HeaderMethodRenderingService._canonical_method_name(method.name),
-                parameter_types,
-                method.is_static,
-                method.is_const,
-                method.is_volatile,
-                method.ref_qualifier,
-            )
-            if signature in seen_signatures:
-                continue
-            seen_signatures.add(signature)
-            unique_methods.append(method)
-
-        return unique_methods
+        return unique_method_declarations(methods, HeaderMethodRenderingService._source_method_key)
 
     @staticmethod
-    def _canonical_parameter_type(parameter: ParameterInfo) -> tuple[object, ...]:
-        """Normalize alias-only parameter names without losing declarator qualifiers."""
-        type_name = re.sub(r"\s+", " ", parameter.type_name.strip())
-        if parameter.type_offset is None:
-            return ("name", type_name, (), "")
+    def _source_method_key(method: MethodInfo) -> tuple[object, ...]:
+        parameter_types = tuple(
+            HeaderMethodRenderingService._canonical_parameter_type(parameter)
+            for parameter in real_parameters(method.parameters)
+        )
+        return method_overload_key(
+            method,
+            rendered_name=HeaderMethodRenderingService._canonical_method_name(method.name),
+            parameter_types=parameter_types,
+        )
 
-        qualifiers = tuple(re.findall(r"\b(?:const|volatile|restrict)\b", type_name))
-        declarator = re.sub(r"\b(?:const|volatile|restrict)\b", "", type_name)
-        declarator = re.sub(r"[A-Za-z_]\w*(?:::[A-Za-z_]\w*)*", "", declarator)
-        declarator = re.sub(r"\s+", "", declarator)
-        canonical_simple = HeaderMethodRenderingService._canonical_simple_type(type_name)
-        if canonical_simple is not None:
-            return ("name", canonical_simple, qualifiers, declarator)
-        return ("terminal", parameter.type_offset, qualifiers, declarator)
-
-    @staticmethod
-    def _canonical_simple_type(type_name: str) -> str | None:
-        clean_name = re.sub(r"\b(?:const|volatile|restrict)\b\s*", "", type_name).strip()
-        if HeaderMethodRenderingService._has_declarator(clean_name):
-            return None
-        words = clean_name.split()
-        if not words or not HeaderMethodRenderingService._simple_words_are_identifiers(words):
-            return None
-        if not HeaderMethodRenderingService._simple_words_are_allowed(words):
-            return None
-        return HeaderMethodRenderingService._canonical_alias(words) or " ".join(words)
-
-    @staticmethod
-    def _has_declarator(type_name: str) -> bool:
-        return any(token in type_name for token in ("*", "&", "[", "]", "(", ")"))
-
-    @staticmethod
-    def _simple_words_are_identifiers(words: list[str]) -> bool:
-        return all(re.fullmatch(r"[A-Za-z_]\w*", word) for word in words)
-
-    @staticmethod
-    def _simple_words_are_allowed(words: list[str]) -> bool:
-        builtin_words = {
-            "bool",
-            "char",
-            "double",
-            "float",
-            "int",
-            "long",
-            "short",
-            "signed",
-            "unsigned",
-        }
-        fixed_width_words = {
-            "uint8_t",
-            "uint16_t",
-            "uint32_t",
-            "uint64_t",
-            "int8_t",
-            "int16_t",
-            "int32_t",
-            "int64_t",
-        }
-        return all(
-            word in builtin_words
-            or re.fullmatch(r"(?:u|s|f)\d+", word) is not None
-            or word in fixed_width_words
-            for word in words
+    def _rendered_method_key(self: HeaderRenderingHost, method: MethodInfo) -> tuple[object, ...]:
+        """Keep all overload qualifiers while tolerating alias-only duplicates."""
+        method, _template_declaration = _method_template_projection(method)
+        parameter_types = tuple(
+            self._canonical_parameter_type(parameter)
+            for parameter in real_parameters(method.parameters)
+        )
+        return method_overload_key(
+            method,
+            rendered_name=self._canonical_method_name(self._rendered_method_name(method.name)),
+            parameter_types=parameter_types,
         )
 
     @staticmethod
-    def _canonical_alias(words: list[str]) -> str | None:
-        aliases = {
-            "u8": "signed char",
-            "s8": "signed char",
-            "u16": "unsigned short",
-            "s16": "short",
-            "u32": "unsigned int",
-            "s32": "int",
-            "u64": "unsigned long",
-            "s64": "long",
-            "uint8_t": "signed char",
-            "uint16_t": "unsigned short",
-            "uint32_t": "unsigned int",
-            "uint64_t": "unsigned long",
-            "int8_t": "signed char",
-            "int16_t": "short",
-            "int32_t": "int",
-            "int64_t": "long",
-        }
-        return aliases.get(words[0]) if len(words) == 1 else None
+    def _canonical_parameter_type(parameter: ParameterInfo) -> tuple[object, ...]:
+        return canonical_parameter_type(parameter)
 
     @staticmethod
     def _canonical_method_name(method_name: str) -> str:
@@ -278,17 +268,56 @@ class HeaderMethodRenderingService:
         """Return cv/ref/noexcept and special method declaration suffixes."""
         return method_declaration_suffix(method)
 
-    def _format_parameters(self: HeaderRenderingHost, method: MethodInfo) -> str:
+    def _format_parameters(
+        self: HeaderRenderingHost, method: MethodInfo, preserve_qualified: bool = False
+    ) -> str:
         """Format method parameters, filtering artificial ones."""
         if not method.parameters:
             return ""
 
         param_list = []
         for param in real_parameters(method.parameters):
-            param_type = self._unqualify_type_expression(param.type_name)
-            param_str = f"{param_type} {param.name}"
+            param_type = (
+                param.type_name
+                if preserve_qualified
+                else self._unqualify_type_expression(param.type_name)
+            )
+            reference = param.type_reference
+            param_str = (
+                reference.declarator.render(param.name)
+                if isinstance(reference, TypeReference)
+                else self._parameter_declaration(param_type, param.name)
+            )
             if param.default_value:
                 param_str += f" = {param.default_value}"
             param_list.append(param_str)
 
         return ", ".join(param_list)
+
+    @staticmethod
+    def _parameter_declaration(type_name: str, name: str) -> str:
+        """Insert a parameter name into ordinary and function-pointer declarators.
+
+        A resolved pointer-to-member function is rendered as
+        ``R (Owner::*)(Args...)``.  Appending the name (``... ) name``) is not
+        valid C++; the declarator name belongs inside the ``(*...)`` portion.
+        Keep this adjustment local to parameter rendering so the resolver can
+        continue returning a reusable type expression for aliases and fields.
+        """
+        member_pointer = re.search(
+            r"\(\s*([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*::\s*\*\s*\)",
+            type_name,
+        )
+        if member_pointer is not None:
+            replacement = f"({member_pointer.group(1)}::*{name})"
+            rendered = (
+                type_name[: member_pointer.start()]
+                + replacement
+                + type_name[member_pointer.end() :]
+            )
+            return rendered
+        free_pointer = re.search(r"\(\s*\*\s*\)", type_name)
+        if free_pointer is not None:
+            replacement = f"(*{name})"
+            return type_name[: free_pointer.start()] + replacement + type_name[free_pointer.end() :]
+        return f"{type_name} {name}"

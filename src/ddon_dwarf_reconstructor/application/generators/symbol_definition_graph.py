@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import json
-from collections import deque
+from collections import Counter, deque
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass, fields, is_dataclass
+from dataclasses import dataclass, fields, is_dataclass, replace
 from typing import TYPE_CHECKING, Any
 
 from ...core.content_hash import sha256_text
 from ...domain.models.dwarf import ClassInfo
+from ...domain.services.generation.alias_evidence import source_aliases
 from ...domain.services.generation.dependency_extractor import DependencyExtractor
 from ...domain.services.generation.header_type_planning import HeaderTypePlanningService
 
@@ -68,7 +69,7 @@ def build_canonical_definition_graph(
         canonical,
         _definition_indexes(class_infos),
     )
-    dependencies = _dependency_edges(context, canonical)
+    dependencies = _dependency_edges(context, canonical, class_infos, old_to_new)
     origins = _reachable_origins(roots, dependencies)
     reachable = {name for name, values in origins.items() if values}
     dropped = len(canonical) - len(reachable)
@@ -114,7 +115,23 @@ def _canonicalize(
             old_to_new,
             diagnostics,
         )
+    _flatten_identity_aliases(old_to_new, canonical)
     return canonical, old_to_new, aliases, diagnostics
+
+
+def _flatten_identity_aliases(
+    old_to_new: dict[str, str], canonical: Mapping[str, ClassInfo]
+) -> None:
+    """Resolve original class keys through exact and cross-CU merge stages."""
+    for source_key in old_to_new:
+        target = old_to_new[source_key]
+        visited = {source_key}
+        while target not in canonical:
+            if target in visited or target not in old_to_new:
+                raise ValueError(f"Unresolved canonical definition identity: {source_key}")
+            visited.add(target)
+            target = old_to_new[target]
+        old_to_new[source_key] = target
 
 
 def _exact_identity_representatives(
@@ -128,6 +145,9 @@ def _exact_identity_representatives(
     old_to_new: dict[str, str] = {}
     for _identity, entries in sorted(identity_groups.items(), key=lambda item: str(item[0])):
         _representative_name, representative = max(entries, key=lambda item: _richness(item[1]))
+        representative = replace(
+            representative, source_aliases=source_aliases(info for _, info in entries)
+        )
         identity_key = identity_key_for(representative)
         exact_representatives.append(
             (identity_key, representative, tuple(identity_text(info) for _, info in entries))
@@ -161,8 +181,8 @@ def _canonicalize_display(
     diagnostics: list[str],
 ) -> None:
     complete, declarations = _split_definition_entries(entries)
-    _append_conflict_diagnostic(display, complete, diagnostics)
     groups = _definition_groups(complete or declarations)
+    _append_conflict_diagnostic(display, groups if complete else [], diagnostics)
     selected_keys = _select_definition_groups(groups, canonical, aliases, old_to_new)
     _map_declarations(
         display, complete, declarations, selected_keys, canonical, old_to_new, diagnostics
@@ -202,14 +222,13 @@ def _map_declarations(
 
 def _append_conflict_diagnostic(
     display: str,
-    complete: list[tuple[str, ClassInfo, tuple[str, ...]]],
+    groups: list[list[tuple[str, ClassInfo, tuple[str, ...]]]],
     diagnostics: list[str],
 ) -> None:
-    fingerprints = {definition_fingerprint(entry[1]) for entry in complete}
-    if len(fingerprints) > 1:
+    if len(groups) > 1:
         diagnostics.append(
             f"conflicting complete definitions for {display}: "
-            + ", ".join(sorted(identity_text(entry[1]) for entry in complete))
+            + ", ".join(sorted(identity_text(entry[1]) for group in groups for entry in group))
         )
 
 
@@ -222,6 +241,9 @@ def _select_definition_groups(
     selected_keys: list[str] = []
     for group in groups:
         selected_key, selected_info, _ = max(group, key=lambda item: _richness(item[1]))
+        selected_info = replace(
+            selected_info, source_aliases=source_aliases(info for _, info, _ in group)
+        )
         canonical[selected_key] = selected_info
         aliases[selected_key] = tuple(sorted({alias for item in group for alias in item[2]}))
         selected_keys.append(selected_key)
@@ -231,6 +253,35 @@ def _select_definition_groups(
 
 
 def _definition_groups(
+    entries: list[tuple[str, ClassInfo, tuple[str, ...]]],
+) -> list[list[tuple[str, ClassInfo, tuple[str, ...]]]]:
+    by_shape: dict[str, list[tuple[str, ClassInfo, tuple[str, ...]]]] = {}
+    for entry in entries:
+        shape = definition_fingerprint(replace(entry[1], methods=[]))
+        by_shape.setdefault(shape, []).append(entry)
+    groups: list[list[tuple[str, ClassInfo, tuple[str, ...]]]] = []
+    for shape in sorted(by_shape):
+        bucket = by_shape[shape]
+        if bucket and not bucket[0][1].is_declaration and _has_method_superset(bucket):
+            groups.append(bucket)
+        else:
+            groups.extend(_exact_definition_groups(bucket))
+    return groups
+
+
+def _has_method_superset(entries: list[tuple[str, ClassInfo, tuple[str, ...]]]) -> bool:
+    signatures = [_method_signatures(info) for _, info, _ in entries]
+    return any(all(other <= candidate for other in signatures) for candidate in signatures)
+
+
+def _method_signatures(info: ClassInfo) -> Counter[str]:
+    return Counter(
+        sha256_text(json.dumps(_fingerprint_value(method), sort_keys=True, default=str))
+        for method in info.methods
+    )
+
+
+def _exact_definition_groups(
     entries: list[tuple[str, ClassInfo, tuple[str, ...]]],
 ) -> list[list[tuple[str, ClassInfo, tuple[str, ...]]]]:
     grouped: dict[str, list[tuple[str, ClassInfo, tuple[str, ...]]]] = {}
@@ -269,15 +320,35 @@ def _root_candidates(
 def _dependency_edges(
     context: GenerationRuntime,
     class_infos: Mapping[str, ClassInfo],
+    source_infos: Mapping[str, ClassInfo],
+    old_to_new: Mapping[str, str],
 ) -> dict[str, set[str]]:
     extractor = context.hierarchy_builder.dependency_extractor
     indexes = _definition_indexes(class_infos)
+    by_offset = _source_offset_index(indexes.by_offset, source_infos, old_to_new)
     return {
         name: _dependencies_for_definition(
-            name, info, extractor, class_infos, indexes.by_offset, indexes.by_name
+            name, info, extractor, class_infos, by_offset, indexes.by_name
         )
         for name, info in class_infos.items()
     }
+
+
+def _source_offset_index(
+    canonical_offsets: Mapping[int, list[str]],
+    source_infos: Mapping[str, ClassInfo],
+    old_to_new: Mapping[str, str],
+) -> dict[int, list[str]]:
+    """Keep every source DIE edge after equivalent CU definitions merge."""
+    by_offset = {offset: list(keys) for offset, keys in canonical_offsets.items()}
+    for source_key, info in source_infos.items():
+        canonical_key = old_to_new.get(source_key)
+        if info.die_offset is None or canonical_key is None:
+            continue
+        candidates = by_offset.setdefault(info.die_offset, [])
+        if canonical_key not in candidates:
+            candidates.append(canonical_key)
+    return by_offset
 
 
 def _definition_indexes(
@@ -349,9 +420,12 @@ def _select_named_candidate(
     class_infos: Mapping[str, ClassInfo],
     by_name: Mapping[str, list[str]],
 ) -> str | None:
+    lookup_name = (
+        HeaderTypePlanningService._lookup_type_name(value) if isinstance(value, str) else ""
+    )
     normalized = _normalized_type_name(value)
     raw = value if isinstance(value, str) else ""
-    candidates = by_name.get(raw, []) or by_name.get(normalized, [])
+    candidates = by_name.get(raw, []) or by_name.get(lookup_name, []) or by_name.get(normalized, [])
     if not candidates and "::" in normalized:
         candidates = by_name.get(normalized.rsplit("::", 1)[-1], [])
     return max(candidates, key=lambda name: _richness(class_infos[name])) if candidates else None
@@ -363,6 +437,9 @@ def _normalized_type_name(value: object) -> str:
 
 def _matches_name(info: ClassInfo, key: str, normalized: str) -> bool:
     names = {key, info.name, info.qualified_name or ""}
+    lookup_names = {HeaderTypePlanningService._lookup_type_name(name) for name in names if name}
+    if normalized in lookup_names:
+        return True
     return normalized in {
         HeaderTypePlanningService._normalize_type_name(name) for name in names if name
     }
@@ -461,6 +538,7 @@ def _fingerprint_value(value: Any) -> Any:
             "owner_die_offset",
             "return_type_offset",
             "type_offset",
+            "source_aliases",
         }
         return {
             field.name: _fingerprint_value(getattr(value, field.name))

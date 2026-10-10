@@ -31,6 +31,8 @@ class TypedefCollectionMixin:
         """Clear all runtime caches."""
         self._typedef_cache.clear()
         self._type_name_cache.clear()
+        self._reference_parser.clear()
+        self._reference_target_cache.clear()
         self._typedef_chains.clear()
         self._types_in_progress.clear()
         logger.info("LazyTypeResolver caches cleared")

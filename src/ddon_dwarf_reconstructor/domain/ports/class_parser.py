@@ -6,7 +6,7 @@ from typing import Protocol
 
 from ...core.dwarf import DwarfCompilationUnit, DwarfEntry
 from ..models.analytical_dwarf import QueryResult
-from ..models.dwarf import ClassInfo
+from ..models.dwarf import ClassInfo, EnumInfo
 from .analytical_store import DwarfQueryPort
 from .type_resolution import TypeNameResolver
 
@@ -23,6 +23,12 @@ class ClassParserPort(Protocol):
     ) -> tuple[DwarfCompilationUnit, DwarfEntry] | None: ...
 
     def parse_class_info(self, cu: DwarfCompilationUnit, class_die: DwarfEntry) -> ClassInfo: ...
+
+    def parse_enum(self, enum_die: DwarfEntry) -> EnumInfo | None: ...
+
+    def parse_template_declaration_info(
+        self, cu: DwarfCompilationUnit, class_die: DwarfEntry
+    ) -> ClassInfo: ...
 
     def _find_die_and_cu_by_offset(
         self, offset: int

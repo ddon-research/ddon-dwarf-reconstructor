@@ -69,9 +69,11 @@ def _definition_matches(content: str) -> list[tuple[int, int, str]]:
 
 def complete_definition_names(content: str) -> list[str]:
     """Return qualified C++ names for complete class definitions in a header."""
+    content = _cpp_code_only(content)
     matches = tuple(_definition_matches(content))
     starts = {match[0]: match[2] for match in matches}
     openings = {match[1]: match[2] for match in matches}
+    openings.update(_namespace_openings(content))
     scopes: list[str | None] = []
     names: list[str] = []
     for index, character in enumerate(content):
@@ -84,6 +86,21 @@ def complete_definition_names(content: str) -> list[str]:
         elif character == "}" and scopes:
             scopes.pop()
     return names
+
+
+def _namespace_openings(content: str) -> dict[int, str]:
+    return {
+        match.end() - 1: match.group(1)
+        for match in re.finditer(r"\bnamespace\s+([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*\{", content)
+    }
+
+
+def _cpp_code_only(content: str) -> str:
+    """Keep token positions while excluding comments and quoted literal contents."""
+    ignored = re.compile(
+        r"""//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*' """, re.DOTALL | re.VERBOSE
+    )
+    return ignored.sub(lambda match: re.sub(r"[^\n]", " ", match.group()), content)
 
 
 def validate_rendered_headers(
@@ -214,12 +231,20 @@ def _validate_complete_definitions(
 
 
 def _rendered_class_name(class_info: ClassInfo) -> str:
+    if class_info.scope is not None and class_info.scope.complete:
+        return class_info.qualified_name or class_info.scope.qualify(class_info.name)
     if class_info.containing_type and class_info.qualified_name:
         return class_info.qualified_name
     name = class_info.name.strip()
     plan = class_info.template_rendering
     if plan is not None and plan.mode == "explicit":
-        return re.sub(r"\b[A-Za-z_]\w*::(?=[A-Za-z_]\w*)", "", name)
+        # Explicit specializations retain qualified template arguments.  The
+        # generated declaration must be checked against that exact identity:
+        # ``rTbl2<rAcquirement::cAbilityData>`` and
+        # ``rTbl2<cAbilityData>`` can denote different classes.  Flattening
+        # the argument here made the internal validation reject a valid
+        # qualified specialization (and hid scope regressions).
+        return name
     template_primary, separator, _arguments = name.partition("<")
     if separator:
         return template_primary.rsplit("::", 1)[-1].strip()
@@ -266,6 +291,13 @@ def diagnostic_mentions_origin(diagnostic: str, name: str, class_info: ClassInfo
     if class_info.qualified_name:
         candidates.add(class_info.qualified_name)
 
+    if "unschedulable cyclic by-value dependency for symbol rendering: " in diagnostic:
+        _, _, rest = diagnostic.partition(
+            "unschedulable cyclic by-value dependency for symbol rendering: "
+        )
+        components = {item.strip() for item in rest.split("; ")}
+        return any(c in components for c in candidates)
+
     if " dependency for " in diagnostic:
         _, _, rest = diagnostic.partition(" dependency for ")
         owner = rest.split("::", 1)[0].split(":", 1)[0].strip()
@@ -280,13 +312,6 @@ def diagnostic_mentions_origin(diagnostic: str, name: str, class_info: ClassInfo
         _, _, rest = diagnostic.partition("declaration-only definition for ")
         display = rest.strip()
         return display in candidates
-
-    if "cyclic by-value dependency recovered for symbol rendering: " in diagnostic:
-        _, _, rest = diagnostic.partition(
-            "cyclic by-value dependency recovered for symbol rendering: "
-        )
-        components = {item.strip() for item in rest.split(",")}
-        return any(c in components for c in candidates)
 
     return name in diagnostic
 

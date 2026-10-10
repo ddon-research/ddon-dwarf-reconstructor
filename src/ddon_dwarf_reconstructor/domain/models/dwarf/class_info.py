@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING
 from .member_info import MemberInfo
 from .method_info import MethodInfo
 from .template_rendering import TemplateRendering
+from .type_reference import TypeReference
+from .type_scope import TypeScope
 
 if TYPE_CHECKING:
     from .enum_info import EnumInfo
@@ -46,3 +48,9 @@ class ClassInfo:
     nested_classes: list[ClassInfo] = field(default_factory=list)
     containing_type: str | None = None
     base_class_offsets: list[int] = field(default_factory=list)
+    scope: TypeScope | None = None
+    declared_aliases: list[TypeReference] = field(default_factory=list)
+    source_aliases: tuple[TypeReference, ...] = ()
+    """External aliases used to discover this aggregate; each retains its own scope."""
+    defining_alias: TypeReference | None = None
+    """Typedef naming an anonymous definition; never an invented aggregate tag."""

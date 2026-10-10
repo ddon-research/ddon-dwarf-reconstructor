@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import re
+from dataclasses import replace
+
 from ....core.dwarf import DwarfCompilationUnit, DwarfEntry, decode_dwarf_string
 from ....core.observability import get_logger, log_timing
 from ...models.dwarf import (
@@ -9,20 +12,69 @@ from ...models.dwarf import (
     MemberInfo,
     UnionInfo,
 )
-from .class_parser_children import ClassParserChildrenMixin
+from .aggregate_target import AGGREGATE_KINDS, resolve_aggregate_target
+from .anonymous_typedefs import bind_anonymous_definition
+from .class_parser_children import ClassParserChildrenMixin, ParsedClassChildren
 from .class_parser_context import ClassParserContext
 from .dwarf_location_parser import parse_location_offset
 from .parser_policy import DWARF_ACCESS_NAMES
+from .type_scope import die_key, flag, lexical_scope, qualified_die_name
 
 logger = get_logger(__name__)
 
 
+def _member_bitfield_evidence(
+    parser: ClassParserContext, die: DwarfEntry, bit_size: int | None
+) -> tuple[str | None, int | None]:
+    if bit_size is None:
+        return None, None
+    return parser._bitfield_base_evidence(die)
+
+
 class ClassParserClassInfoMixin(ClassParserChildrenMixin):
+    def parse_template_declaration_info(
+        self: ClassParserContext, cu: DwarfCompilationUnit, class_die: DwarfEntry
+    ) -> ClassInfo:
+        """Read a primary's signature without hydrating members or method bodies.
+
+        This declaration-only projection is never cached as a complete class.
+        Parameter parsing and lexical ancestry share the full parser's policy.
+        """
+        header = self._class_header(cu, class_die)
+        children = ParsedClassChildren()
+        for child in class_die.iter_children():
+            if child.tag in {"DW_TAG_template_type_param", "DW_TAG_template_value_param"}:
+                self._parse_template_child(child, children)
+        return ClassInfo(
+            header[0],
+            header[1],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            kind=header[6],
+            qualified_name=header[7],
+            containing_type=header[9],
+            die_offset=class_die.offset,
+            cu_offset=cu.cu_offset,
+            declaration_file=header[3],
+            declaration_line=header[4],
+            is_declaration=True,
+            scope=lexical_scope(class_die),
+            template_parameters=children.template_parameters,
+        )
+
     @log_timing
     def parse_class_info(
         self: ClassParserContext, cu: DwarfCompilationUnit, class_die: DwarfEntry
     ) -> ClassInfo:
         """Parse a class DIE into a stable domain model."""
+        target = resolve_aggregate_target(class_die, self.type_resolver)
+        if target.aliases:
+            info = self.parse_class_info(target.die.cu, target.die)
+            return replace(info, source_aliases=(*info.source_aliases, *target.aliases))
         cu_offset = getattr(cu, "cu_offset", None)
         die_offset = getattr(class_die, "offset", None)
         cache_key = (
@@ -59,7 +111,10 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
             qualified_name=header[7],
             is_declaration=header[8],
             containing_type=header[9],
+            scope=lexical_scope(class_die),
+            declared_aliases=children.declared_aliases,
         )
+        class_info = bind_anonymous_definition(class_info, class_die, self.type_resolver)
         if cache_key is not None:
             self._class_info_cache[cache_key] = class_info
         return class_info
@@ -72,12 +127,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
             name_attr.value if name_attr is not None else None,
             default="unknown_class",
         )
-        aggregate_kind = {
-            "DW_TAG_class_type": "class",
-            "DW_TAG_structure_type": "struct",
-            "DW_TAG_union_type": "union",
-            "DW_TAG_namespace": "namespace",
-        }.get(class_die.tag if isinstance(class_die.tag, str) else "", "class")
+        aggregate_kind = AGGREGATE_KINDS[class_die.tag]
         qualified_name = self._get_qualified_name(class_die, class_name)
         logger.debug("Parsing class: %s", class_name)
         size_attr = class_die.attributes.get("DW_AT_byte_size")
@@ -92,52 +142,17 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
             class_die.offset,
             aggregate_kind,
             qualified_name,
-            "DW_AT_declaration" in class_die.attributes,
+            flag(class_die, "DW_AT_declaration"),
             self._get_containing_type(class_die),
         )
 
     def _get_qualified_name(self: ClassParserContext, die: DwarfEntry, name: str) -> str:
         """Build a qualified name from namespace and containing-type parents."""
-        components = [name]
-        current_die = die
-        while True:
-            try:
-                parent_die = current_die.get_parent()
-            except AttributeError, RuntimeError:
-                break
-            if parent_die is None or parent_die.tag not in {
-                "DW_TAG_namespace",
-                "DW_TAG_class_type",
-                "DW_TAG_structure_type",
-                "DW_TAG_union_type",
-            }:
-                break
-            parent_name = parent_die.attributes.get("DW_AT_name")
-            if parent_name is None:
-                break
-            components.append(decode_dwarf_string(parent_name.value))
-            current_die = parent_die
-        return "::".join(reversed(components))
+        return qualified_die_name(die) or name
 
     def _get_containing_type(self: ClassParserContext, die: DwarfEntry) -> str | None:
-        """Return the qualified aggregate containing ``die``, when present."""
-        try:
-            parent_die = die.get_parent()
-        except AttributeError, RuntimeError:
-            return None
-
-        if parent_die is None or parent_die.tag not in {
-            "DW_TAG_class_type",
-            "DW_TAG_structure_type",
-            "DW_TAG_union_type",
-        }:
-            return None
-
-        name_attr = parent_die.attributes.get("DW_AT_name")
-        if name_attr is None:
-            return None
-        parent_name = decode_dwarf_string(name_attr.value)
-        return self._get_qualified_name(parent_die, parent_name)
+        """Return the evidenced nearest aggregate owner."""
+        return lexical_scope(die).containing_aggregate
 
     @staticmethod
     def _get_accessibility(die: DwarfEntry) -> str:
@@ -199,6 +214,22 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
         # Resolve member type first (for display)
         resolved_type_name = self.type_resolver.resolve_type_name(member_die)
         type_name = resolved_type_name
+        # A by-value alias to a fixed-array template must be rendered at its
+        # use site.  Keeping ``AbilityArray`` as a global alias would bind the
+        # unqualified nested element name before ``cContextPlayerInfo::cAbility``
+        # is declared.  Preserve the original typedef DIE offset while using
+        # its source expression for dependency and completeness planning.
+        if re.fullmatch(r"[A-Za-z_]\w*", resolved_type_name):
+            try:
+                underlying = self.type_resolver.resolve_typedef_chain(resolved_type_name)
+            except AttributeError, KeyError, RuntimeError, TypeError, ValueError:
+                underlying = resolved_type_name
+            if (
+                isinstance(underlying, str)
+                and underlying != resolved_type_name
+                and re.match(r"(?:[A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*<", underlying)
+            ):
+                type_name = underlying
         if "DW_AT_type" not in member_die.attributes:
             type_name = "unknown_type"
 
@@ -216,8 +247,10 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
         inline_struct = self._inline_struct_type(type_die)
         opaque_storage_size = self._opaque_storage_size(member_die, type_die, resolved_type_name)
         template_arguments = self._template_argument_references(type_die)
+        bit_kind, bit_bits = _member_bitfield_evidence(self, member_die, layout[3])
         if inline_struct is not None:
             type_name = "anonymous_struct"
+        cu_offset, die_offset = die_key(member_die)
 
         return MemberInfo(
             name=member_name,
@@ -230,11 +263,17 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
             access=self._get_accessibility(member_die),
             is_volatile=type_name.startswith("volatile "),
             bit_size=layout[3],
-            bit_offset=layout[4],
+            data_bit_offset=layout[4],
+            storage_bit_offset=layout[5],
+            bitfield_base_kind=bit_kind,
+            bitfield_base_bits=bit_bits,
+            cu_offset=cu_offset,
+            die_offset=die_offset,
             declared_type_offset=self.type_chain_traverser.get_declared_type_offset(member_die),
             inline_struct=inline_struct,
             opaque_storage_size=opaque_storage_size,
             template_arguments=template_arguments,
+            type_reference=self.type_resolver.resolve_reference(member_die),
         )
 
     @staticmethod
@@ -242,6 +281,8 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
         name_attr = member_die.attributes.get("DW_AT_name")
         if name_attr is not None:
             return decode_dwarf_string(name_attr.value)
+        if "DW_AT_bit_size" in member_die.attributes:
+            return ""
         if "union_type" in type_name or "structure_type" in type_name:
             logger.debug("Skipping unnamed union/struct member: %s", type_name)
             return None
@@ -252,7 +293,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
     @staticmethod
     def _member_layout(
         member_die: DwarfEntry,
-    ) -> tuple[int | None, bool, int | None, int | None, int | None]:
+    ) -> tuple[int | None, bool, int | None, int | None, int | None, int | None]:
         is_static = (
             member_die.attributes.get("DW_AT_external") is not None
             and member_die.attributes.get("DW_AT_declaration") is not None
@@ -261,11 +302,7 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
         offset_attr = member_die.attributes.get("DW_AT_data_member_location")
         bit_size_attr = member_die.attributes.get("DW_AT_bit_size")
         data_bit_offset_attr = member_die.attributes.get("DW_AT_data_bit_offset")
-        bit_offset_attr = (
-            data_bit_offset_attr
-            if data_bit_offset_attr is not None
-            else member_die.attributes.get("DW_AT_bit_offset")
-        )
+        storage_bit_offset_attr = member_die.attributes.get("DW_AT_bit_offset")
         const_value = (
             const_attr.value
             if const_attr is not None and isinstance(const_attr.value, int)
@@ -276,7 +313,8 @@ class ClassParserClassInfoMixin(ClassParserChildrenMixin):
             is_static,
             const_value,
             bit_size_attr.value if bit_size_attr else None,
-            bit_offset_attr.value if bit_offset_attr else None,
+            data_bit_offset_attr.value if data_bit_offset_attr else None,
+            storage_bit_offset_attr.value if storage_bit_offset_attr else None,
         )
 
     @staticmethod

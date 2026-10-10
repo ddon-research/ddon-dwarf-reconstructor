@@ -69,3 +69,14 @@ def test_same_basename_does_not_merge_unrelated_definitions() -> None:
     paths = allocate_header_paths(header_groups(infos, {"a": "shared", "b": "shared"}), infos)
     assert len(paths) == 2
     assert all(path.startswith("shared/Box-") for path in paths)
+
+
+def test_same_spelled_template_arguments_keep_both_publication_members() -> None:
+    infos = {"a": _template("left::Item"), "b": _template("right::Item")}
+    origins = {"a": {"RootA"}, "b": {"RootB"}}
+    planned, families = plan_template_families(infos, origins)
+    owners = _class_owners(planned, {}, origins)
+    paths = allocate_header_paths(header_groups(planned, owners), planned)
+    assert paths == {"shared/Box.h": ("shared", ("a", "b"))}
+    assert families[0].members == ("a", "b")
+    assert all(info.template_rendering.representative for info in planned.values())

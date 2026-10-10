@@ -7,11 +7,11 @@ from collections.abc import Iterator
 
 from ...models.dwarf import ClassInfo, MemberInfo, StructInfo, TemplateTypeParam, TypeReference
 from ..parsing.die_type_classifier import DIETypeClassifier
+from ..parsing.type_scope import lexical_scope
 from .header_type_planning import HeaderTypePlanningService
 from .rendering.operations import HeaderRenderingHost
 from .rendering.type_policy import TypeExpressionPolicy
-
-_FORWARD_DECLARABLE_CACHE: dict[int, bool] = {}
+from .scoped_declarations import reference_forward_declaration, scoped_declaration
 
 
 class HeaderForwardDeclarationService:
@@ -29,6 +29,11 @@ class HeaderForwardDeclarationService:
             for name in (class_info.name, class_info.qualified_name)
             if name
         }
+        template_parameter_names = {
+            parameter.name
+            for parameter in class_info.template_parameters
+            if getattr(parameter, "name", None)
+        }
         excluded_names = (
             (inherited_excluded_names or set())
             | enum_names
@@ -36,10 +41,11 @@ class HeaderForwardDeclarationService:
             | union_names
             | nested_names
             | own_names
+            | template_parameter_names
             | set(typedefs)
         )
         primitives = self._primitive_names()
-        declarations: set[str] = set()
+        declarations = self._structured_forward_declarations(class_info, excluded_names)
         for type_name, type_offset, allow_textual_pointer in self._referenced_types(class_info):
             self._add_forward_declaration(
                 declarations,
@@ -58,6 +64,16 @@ class HeaderForwardDeclarationService:
                 self._collect_forward_declarations(nested_class, typedefs, excluded_names)
             )
         return declarations
+
+    def _structured_forward_declarations(
+        self: HeaderRenderingHost, class_info: ClassInfo, excluded_names: set[str]
+    ) -> set[str]:
+        return {
+            declaration
+            for reference in self._structured_references(class_info)
+            if reference.declarator.base_name not in excluded_names
+            if (declaration := reference_forward_declaration(reference)) is not None
+        }
 
     def _collect_template_expression_declarations(
         self: HeaderRenderingHost,
@@ -115,6 +131,17 @@ class HeaderForwardDeclarationService:
         yield from self._method_types(class_info)
         yield from self._template_parameter_types(class_info)
 
+    @staticmethod
+    def _structured_references(class_info: ClassInfo) -> Iterator[TypeReference]:
+        references = [member.type_reference for member in class_info.members]
+        for method in class_info.methods:
+            references.append(method.return_type_reference)
+            references.extend(parameter.type_reference for parameter in method.parameters or [])
+        references.extend(class_info.declared_aliases)
+        for reference in references:
+            if isinstance(reference, TypeReference):
+                yield from reference.references()
+
     def _template_parameter_types(
         self: HeaderRenderingHost, class_info: ClassInfo
     ) -> Iterator[tuple[str | None, int | None, bool]]:
@@ -136,7 +163,7 @@ class HeaderForwardDeclarationService:
             class_name[opening + 1 : -1]
         )
         for argument in arguments:
-            clean_arg = HeaderTypePlanningService._normalize_type_name(argument)
+            clean_arg = HeaderTypePlanningService._lookup_type_name(argument)
             if clean_arg and not TypeExpressionPolicy.is_builtin(clean_arg):
                 offset = self.dwarf_index.find_symbol_offset(clean_arg)
                 if offset is not None:
@@ -205,7 +232,7 @@ class HeaderForwardDeclarationService:
         ):
             return
         assert type_name is not None
-        clean_name = self._normalize_type_name(type_name)
+        clean_name = HeaderTypePlanningService._lookup_type_name(type_name).rstrip("*& ").strip()
         declaration = self._forward_declaration_for_type(clean_name, type_offset)
         if declaration is not None:
             declarations.add(declaration)
@@ -214,19 +241,27 @@ class HeaderForwardDeclarationService:
         self: HeaderRenderingHost, clean_name: str, type_offset: int | None
     ) -> str | None:
         if type_offset is None:
-            return f"class {clean_name};"
+            return self._aggregate_forward_declaration(clean_name)
         die = self.dwarf_index.get_die_by_offset(type_offset)
-        if die and die.tag == "DW_TAG_typedef":
+        if die is None:
+            return self._aggregate_forward_declaration(clean_name)
+        if die and die.tag in {"DW_TAG_typedef", "DW_TAG_enumeration_type"}:
             return None
-        tag_declarations = {
-            "DW_TAG_enumeration_type": f"enum class {clean_name} : int;",
-            "DW_TAG_structure_type": f"struct {clean_name};",
-            "DW_TAG_union_type": f"union {clean_name};",
-        }
         tag = getattr(die, "tag", None)
         if not isinstance(tag, str):
             return self._aggregate_forward_declaration(clean_name)
-        return tag_declarations.get(tag, self._aggregate_forward_declaration(clean_name))
+        declaration = self._tag_forward_declaration(tag, clean_name)
+        if declaration is None:
+            return self._aggregate_forward_declaration(clean_name)
+        return scoped_declaration(clean_name, declaration.split()[0], lexical_scope(die))
+
+    @staticmethod
+    def _tag_forward_declaration(tag: str, clean_name: str) -> str | None:
+        return {
+            "DW_TAG_class_type": f"class {clean_name};",
+            "DW_TAG_structure_type": f"struct {clean_name};",
+            "DW_TAG_union_type": f"union {clean_name};",
+        }.get(tag)
 
     def _should_forward_declare(
         self: HeaderRenderingHost,
@@ -238,7 +273,7 @@ class HeaderForwardDeclarationService:
     ) -> bool:
         if not type_name:
             return False
-        clean_name = self._normalize_type_name(type_name)
+        clean_name = HeaderTypePlanningService._lookup_type_name(type_name).rstrip("*& ").strip()
         if "[" in clean_name or "]" in clean_name:
             return False
         if clean_name in primitives or self._is_builtin_type(clean_name):
@@ -261,21 +296,10 @@ class HeaderForwardDeclarationService:
     ) -> bool:
         if clean_name in excluded_names:
             return False
-        cached = _FORWARD_DECLARABLE_CACHE.get(type_offset)
-        if cached is not None:
-            return cached
         die = self.dwarf_index.get_die_by_offset(type_offset)
-        if die and die.tag == "DW_TAG_enumeration_type":
-            _FORWARD_DECLARABLE_CACHE[type_offset] = True
-            return True
         if not die:
-            _FORWARD_DECLARABLE_CACHE[type_offset] = False
             return False
-        declarable = DIETypeClassifier.is_forward_declarable(die)
-        if len(_FORWARD_DECLARABLE_CACHE) > 65536:
-            _FORWARD_DECLARABLE_CACHE.clear()
-        _FORWARD_DECLARABLE_CACHE[type_offset] = declarable
-        return declarable
+        return DIETypeClassifier.is_forward_declarable(die)
 
     @staticmethod
     def _is_textual_pointer(type_name: str, clean_name: str, allowed: bool) -> bool:
@@ -287,15 +311,12 @@ class HeaderForwardDeclarationService:
 
     @staticmethod
     def _aggregate_forward_declaration(clean_name: str) -> str | None:
-        clean_name = HeaderTypePlanningService._normalize_type_name(clean_name)
-        clean_name = HeaderTypePlanningService._unqualify_type_expression(clean_name)
+        clean_name = HeaderTypePlanningService._lookup_type_name(clean_name)
         if (
             not clean_name
             or clean_name in TypeExpressionPolicy.primitive_names()
             or TypeExpressionPolicy.is_builtin(clean_name)
+            or HeaderTypePlanningService._is_template_placeholder(clean_name)
         ):
             return None
-        template_declaration = HeaderTypePlanningService._template_forward_declaration(clean_name)
-        if template_declaration is not None:
-            return template_declaration
-        return f"class {clean_name};"
+        return scoped_declaration(clean_name)

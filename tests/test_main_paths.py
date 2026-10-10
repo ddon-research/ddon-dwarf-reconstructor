@@ -273,12 +273,14 @@ def test_symbol_generation_discovers_assembly_once_after_one_union(tmp_path: Pat
     config = Mock(output_dir=tmp_path, elf_file_path=Path("input.elf"), verbose=False)
     generator = mocker.MagicMock(platform=ELFPlatform.PS4)
     symbol_set = Mock(
+        headers={"A/A.h": "class A {};"},
         header_classes={"A/A.h": ("A",)},
         class_origins={"A": ("A",)},
         root_statuses={"A": "success"},
         header_count=1,
         class_count=1,
     )
+    symbol_set.roots_for_header.return_value = ("A",)
     report = ImplementationDiscoveryReport(
         "symbols",
         "header-sha",
@@ -327,12 +329,14 @@ def test_symbol_generation_propagates_partial_root_status(tmp_path: Path, mocker
     config = Mock(output_dir=tmp_path, elf_file_path=Path("input.elf"), verbose=False)
     generator = mocker.MagicMock(platform=ELFPlatform.PS4)
     symbol_set = Mock(
+        headers={"shared.h": "class A {}; class B {};"},
         header_classes={"shared.h": ("A", "B")},
         class_origins={"A": ("A",), "B": ("B",)},
         root_statuses={"A": "success", "B": "partial"},
         header_count=1,
         class_count=2,
     )
+    symbol_set.roots_for_header.return_value = ("A", "B")
     generator.extract_symbols.return_value = symbol_set
     identity_catalog = Mock(sha256=Mock(return_value="elf-sha"))
     mocker.patch.object(cli_main, "SymbolPublisher").return_value.publish.return_value = (
@@ -365,12 +369,14 @@ def test_symbol_generation_publishes_headers_before_assembly_discovery(
     config = Mock(output_dir=tmp_path, elf_file_path=Path("input.elf"), verbose=False)
     generator = mocker.MagicMock(platform=ELFPlatform.PS4)
     symbol_set = Mock(
+        headers={"A/A.h": "class A {};"},
         header_classes={"A/A.h": ("A",)},
         class_origins={"A": ("A",)},
         root_statuses={"A": "success"},
         header_count=1,
         class_count=1,
     )
+    symbol_set.roots_for_header.return_value = ("A",)
     generator.extract_symbols.return_value = symbol_set
     identity_catalog = Mock(sha256=Mock(return_value="elf-sha"))
     publish = mocker.patch.object(cli_main, "SymbolPublisher").return_value.publish

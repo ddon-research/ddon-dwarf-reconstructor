@@ -114,6 +114,8 @@ This page indexes every source module in the **infrastructure modules** group. I
 
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_query_batches
 
+::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_readiness
+
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_reference_hydration
 
 ::: ddon_dwarf_reconstructor.infrastructure.analytical.doris_registry

@@ -8,6 +8,37 @@ deterministic-check fixes proceed now; the subsequent continuation includes the 
 Full-corpus parity and performance acceptance remain
 required; T011 is still incomplete. Do not mix the changed producer with unchanged-code samples.
 
+## September 16 compilation recovery: transferred to Feature 022
+
+T105/T106 below retain historical implementation observations. They do not close the reviewed
+compilation recovery. Current evidence and its limits are recorded in
+[measured evidence](measured-evidence.md#september-16-compilation-recovery-implementation-in-progress).
+Feature 022 now owns the active compilation-repair queue. Feature 023 owns subsequent incremental
+declaration-IR/compiler work after repair or an evidence-backed handoff. The historical task
+descriptions below remain unchecked: transferring ownership is not completing acceptance.
+Do not implement them as a second parallel queue. Feature 021 retains its broader review,
+unchanged-output parity, and matching per-workload/cache-state performance obligations.
+
+| Historical task | Active owner in [Feature 022 tasks](../022-cpp-compilation-repair/tasks.md) |
+| --- | --- |
+| T107 producer/compiler baseline | T001,T002,T014 |
+| T108 scope/alias/declarator evidence | T003,T004,T008,T009 |
+| T109 declaration placement | T006,T009,T010,T011 |
+| T110 explicit template authority | T005,T006,T007 |
+| T111 owner closure | T010,T013 |
+| T112 publication grouping | T011,T012 |
+| T113 diagnostics and acceptance | T012-T020 |
+
+Historical descriptions retained for traceability:
+
+- [ ] T107 Preserve comparable producer/compiler evidence in `tools/sonar/validate_header_bundle.py` and `tests/tools/sonar/test_validate_header_bundle.py`; tier: artifact integrity and full environmental baseline; snapshot retained, unchanged all-root regeneration still requires completion and validation.
+- [ ] T108 Complete structured scope, aliases, and declarators in `src/ddon_dwarf_reconstructor/domain/models/dwarf/type_reference.py`, `domain/services/parsing/type_reference_parser.py`, and `domain/services/parsing/class_parser_class_info.py`; tests: `tests/domain/services/parsing/test_type_reference_parser.py`, `test_class_parser_core_edges.py`; tier: unit/property and source-bound queries. Ordered type and cache slices pass; aggregate tag dispatch and alias publication remain.
+- [ ] T109 Unify declaration placement in `src/ddon_dwarf_reconstructor/domain/services/generation/scoped_declarations.py`, `header_forward_declarations.py`, `header_type_planning.py`, `header_method_rendering.py`, and `header_member_rendering.py`; tests: `tests/domain/services/generation/test_typed_declaration_rendering.py`, `test_header_generator_planning.py`; tier: unit/compiler canaries. Typed rendering and proven namespace forwards pass; full lexical placement and template authority remain.
+- [ ] T110 Restore explicit template authority in `src/ddon_dwarf_reconstructor/domain/services/generation/template_families.py` and `template_forward_declarations.py`; tests: `tests/domain/services/generation/test_template_families.py`, `tests/application/generators/test_template_family_layout.py`; tier: unit/semantic/compiler. Speculative generic inference is removed; primary declarations and real-source reconciliation remain.
+- [ ] T111 Repair owner closure and dependencies in `src/ddon_dwarf_reconstructor/application/generators/symbol_definition_graph.py`, `domain/services/generation/header_dependency_plan.py`, and `header_ordering.py`; tests: `tests/application/generators/test_symbol_definition_graph.py`, `tests/domain/services/generation/test_header_generator_dependency_ordering.py`; tier: unit/integration/real-root. Preserve nested roots and redirect dependency edges through proven emission ownership.
+- [ ] T112 Repair publication grouping in `src/ddon_dwarf_reconstructor/application/generators/symbol_header_layout.py`, `domain/services/generation/header_hierarchy.py`, and `header_hierarchy_support.py`; tests: `tests/application/generators/test_dwarf_generator_multi_file.py`, `tests/domain/services/generation/test_header_aggregate_rendering.py`; tier: integration/compiler. Co-locate acyclic definition components when file grouping causes include cycles; preserve names and source provenance.
+- [ ] T113 Close diagnostics and all acceptance in `src/ddon_dwarf_reconstructor/application/generators/symbol_header_validation.py` and `infrastructure/symbol_output.py`; tests: `tests/application/generators/test_dwarf_generator_multi_file.py`, `tests/tools/sonar/test_validate_header_bundle.py`; tier: full compiler/semantic/determinism/performance plus root gates, coverage, and audit. Require all 289 roots and every resulting header, with no hidden exclusions or fabricated definitions.
+
 ## Setup and review
 
 - [x] T001 Preserve FR-001 snapshot in `output/refactoring-evidence/021/1b10b75e751c97b1/snapshot.json`; dependencies: none; tier: artifact integrity; done: closed ZIP CRC and all file hashes match, index and patches retained.
@@ -74,7 +105,6 @@ required; T011 is still incomplete. Do not mix the changed producer with unchang
 - [x] T097 [US2] Characterize F037/FR-006 durable load label identity in `src/ddon_dwarf_reconstructor/infrastructure/analytical/doris.py` and `doris_stream_load.py`; dependencies: T004,T011; tier: unit/explicit acceptance; tests: `tests/infrastructure/analytical/benchmark/test_paths.py` and `tests/infrastructure/analytical/test_doris_load_identity.py`; evidence: `contracts/validation-corrections.md` and measured-evidence.md; done: cross-table, changed source, repeated request, and existing-label outcomes have explicit expectations and a deferred migration decision; no blind replay of append-only loads.
 - [x] T105 [US2] Reconstruct template families before deduplicating headers; dependencies: T004,T021,T022; tier: unit/integration/compiler; tests: `tests/domain/services/generation/test_template_families.py`, `tests/application/generators/test_template_family_layout.py`, `tests/domain/services/parsing/test_class_parser_templates_paths.py`; evidence: `measured-evidence.md`, `output/template-family-review/20260913/msvc-comparison-report.json`; done: unified `TemplateParameter` preserving child-DIE order and provenance, AST type expression substitution (`substitute_type`, `project_template`), conservative family planning (`generic`, `explicit`, `blocked`), shared multi-root template ownership (`shared/rTbl2.h`, `shared/MtCollection.h`), 145 duplicate headers eliminated, MSVC error C2953 reduced from 2,890 to 0 (100% eliminated), failed headers reduced from 463 to 264.
 - [x] T106 [US2] Mitigate MSVC C2955/C1003 cascades, member pointer indirection, and forward-declaration collisions; dependencies: T105,T022; tier: unit/integration/compiler; tests: `tests/domain/services/generation/test_header_generator_planning.py`, `tests/domain/services/generation/test_header_generator_dependency_ordering.py`, `tests/domain/services/parsing/test_template_argument_parser.py`, `tests/domain/services/parsing/test_type_resolver.py`; evidence: `measured-evidence.md`, `output/template-family-review/current-validation/msvc-header-validation.json`; done: canonical balanced delimiter template splitter, recursive nested typedef and template argument resolution, specialization forward declarations, enum class/class forward-declaration deduplication, by-value member template dependency indirection detection, typedef forward declaration filtering; passed headers increased to 580 (+91), failed headers reduced to 173 (-91), C1003 error limit cascades reduced from 195 to 16 (-91.8%).
-
 
 T034 cannot close before T082,T083,T085-T088,T096 and the T097 acceptance disposition.
 T035 cannot close before the applicable remote blocker dispositions even though T090-T094 are
@@ -221,4 +251,3 @@ excluded from forward declaration emission. Standalone MSVC compilation of all 7
 increased cleanly passing headers to 580 (+91), reduced failed headers to 173 (-91), and reduced
 fatal `C1003` aborts from 195 to 16 (-91.8%). Target headers `cDelegate.h`, `cpSequenceCtrl.h`,
 `rStageJoint.h`, and `MtCollection.h` compile cleanly.
-

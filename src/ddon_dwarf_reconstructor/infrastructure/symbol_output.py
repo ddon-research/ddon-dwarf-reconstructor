@@ -71,9 +71,12 @@ def _version_source(version: str, filename_versions: set[str], parent_versions: 
 class SymbolPublisher:
     MANIFEST_NAME = "symbols.manifest.json"
     REPORT_NAME = "implementation-report.json"
-    SCHEMA_VERSION = "symbol-artifacts/1"
+    SCHEMA_VERSION = "symbol-artifacts/2"
     ASM_PROFILE = "ida-evidence/1"
-    PRODUCER_ID = "ddon-dwarf-reconstructor.symbols.template-families-v1"
+    # Bump the artifact producer whenever C++-observable template, scope, or
+    # callable rendering semantics change.  Existing bundles remain valid
+    # historical evidence but must not be reused as current output.
+    PRODUCER_ID = "ddon-dwarf-reconstructor.symbols.compilation-repair-v15"
 
     def __init__(self, assembler: Path | None = None) -> None:
         self.assembler = assembler
@@ -302,6 +305,9 @@ class SymbolPublisher:
                 name: list(origins) for name, origins in sorted(symbols.class_origins.items())
             },
             "class_identities": dict(sorted(symbols.class_identities.items())),
+            "enum_origins": {
+                name: list(origins) for name, origins in sorted(symbols.enum_origins.items())
+            },
             "class_aliases": {
                 name: list(aliases) for name, aliases in sorted(symbols.class_aliases.items())
             },
@@ -351,9 +357,7 @@ def _root_manifest(symbols: SymbolExtractionResult) -> dict[str, dict[str, objec
         root: {
             "status": symbols.root_statuses.get(root, "not_observed"),
             "header_count": sum(
-                any(root in symbols.class_origins.get(class_name, ()) for class_name in classes)
-                for path, classes in symbols.header_classes.items()
-                if path in symbols.header_owners
+                root in symbols.roots_for_header(path) for path in symbols.header_owners
             ),
         }
         for root in symbols.requested_symbols
@@ -365,6 +369,7 @@ def _header_manifest(symbols: SymbolExtractionResult) -> dict[str, dict[str, obj
         path: {
             "owner": symbols.header_owners[path],
             "classes": list(symbols.header_classes[path]),
+            "enums": list(symbols.header_enums.get(path, ())),
             "sha256": sha256_text(content),
             "bytes": len(content.encode("utf-8")),
         }

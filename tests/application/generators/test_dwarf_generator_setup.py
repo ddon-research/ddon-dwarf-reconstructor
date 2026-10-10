@@ -184,10 +184,10 @@ class TestDwarfGenerator:
             header_content = generator.facade.generate(GenerationRequest("MtObject")).only()
 
         # Verify header contains expected C++ elements
-        assert "#ifndef MTOBJECT_H" in header_content
+        assert "#ifndef DDON_MTOBJECT_9D496F3115A7ADD8_H" in header_content
         assert "class MtObject" in header_content
         assert "Generated from DWARF debug information" in header_content
-        assert header_content.strip().endswith("#endif // MTOBJECT_H")
+        assert header_content.strip().endswith("#endif // DDON_MTOBJECT_9D496F3115A7ADD8_H")
 
     @pytest.mark.unit
     def test_generate_header_builds_complete_standalone_closure(self, mocker):

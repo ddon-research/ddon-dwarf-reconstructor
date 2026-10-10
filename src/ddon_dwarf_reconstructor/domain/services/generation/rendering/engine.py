@@ -72,7 +72,7 @@ class _HeaderRenderingHost:
     def __init__(self, context: HeaderRenderContext, components: HeaderRenderingComponents) -> None:
         self.dwarf_index: DwarfLookupPort = context.dwarf_index
         self.class_parser: ClassParserPort | None = context.class_parser
-        self._base_type_names: dict[int, str] = {}
+        self._base_type_names: dict[tuple[int | None, int], str] = {}
         self._known_render_type_names: set[str] = set()
         self._forward_declaration_kind_cache: dict[str, str | None] = {}
         self._bindings: dict[str, Callable[..., object]] = {}
@@ -278,10 +278,6 @@ class HeaderRenderingEngine:
                 dependency_plan,
             ),
         )
-
-    @staticmethod
-    def _template_forward_declaration(type_name: str) -> str | None:
-        return HeaderTypePlanningService._template_forward_declaration(type_name)
 
     @staticmethod
     def _template_argument_forward_declarations(

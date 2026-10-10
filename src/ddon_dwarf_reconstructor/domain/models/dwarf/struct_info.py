@@ -5,6 +5,7 @@
 from dataclasses import dataclass
 
 from .member_info import MemberInfo
+from .type_reference import TypeReference
 
 
 @dataclass
@@ -15,3 +16,4 @@ class StructInfo:
     byte_size: int
     members: list[MemberInfo]
     die_offset: int | None = None
+    defining_alias: TypeReference | None = None

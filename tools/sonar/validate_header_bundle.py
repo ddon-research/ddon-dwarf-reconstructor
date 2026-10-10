@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 import re
@@ -22,8 +21,13 @@ if __package__ in {None, ""}:
         sys.path.insert(0, str(_repository_root))
     from tools.sonar.msvc_validation.catalog import build_header_catalog
     from tools.sonar.msvc_validation.commands import run_command
+    from tools.sonar.msvc_validation.manifest_binding import (
+        CompilerHeader,
+        inspect_manifest_binding,
+    )
     from tools.sonar.msvc_validation.publication import write_json_atomic
-    from tools.sonar.msvc_validation.reports import validation_counts
+    from tools.sonar.msvc_validation.reports import aggregate_unit_metrics, validation_counts
+    from tools.sonar.msvc_validation.validation_cli import explain_main, parse_args
     from tools.sonar.prepare_msvc_analysis import (
         SonarAnalysisError,
         get_visual_studio_developer_command_file,
@@ -32,8 +36,10 @@ if __package__ in {None, ""}:
 else:
     from .msvc_validation.catalog import build_header_catalog
     from .msvc_validation.commands import run_command
+    from .msvc_validation.manifest_binding import CompilerHeader, inspect_manifest_binding
     from .msvc_validation.publication import write_json_atomic
-    from .msvc_validation.reports import validation_counts
+    from .msvc_validation.reports import aggregate_unit_metrics, validation_counts
+    from .msvc_validation.validation_cli import explain_main, parse_args
     from .prepare_msvc_analysis import (
         SonarAnalysisError,
         get_visual_studio_developer_command_file,
@@ -42,10 +48,6 @@ else:
 
 MSVC_FLAGS = ("/std:c++latest", "/EHsc", "/W4", "/Zc:__cplusplus")
 DIAGNOSTIC_CODE = re.compile(r"\b([CE]\d{4})\b", re.IGNORECASE)
-DIAGNOSTIC_LINE = re.compile(
-    r"^([A-Za-z0-9_./\\:-]+)\((\d+)\):\s+(?:fatal\s+)?error\s+([CE]\d{4}):",
-    re.IGNORECASE | re.MULTILINE,
-)
 UNRESOLVED_CODES = frozenset(
     {
         "C2061",  # syntax error: identifier
@@ -273,19 +275,6 @@ def _diagnostic_excerpt(text: str) -> list[str]:
     return lines[:20]
 
 
-def _record_diagnostic_lines(
-    text: str,
-    raw_counts: dict[str, int],
-    unique_locations: dict[str, set[tuple[str, str]]],
-) -> None:
-    for match in DIAGNOSTIC_LINE.finditer(text):
-        file_name = Path(match.group(1)).name
-        line_number = match.group(2)
-        code = match.group(3).upper()
-        raw_counts[code] = raw_counts.get(code, 0) + 1
-        unique_locations.setdefault(code, set()).add((file_name, line_number))
-
-
 def _classify_failure(codes: list[str]) -> str:
     if not codes:
         return "compile_error"
@@ -462,33 +451,6 @@ def _run_script(script: Path, timeout_seconds: int) -> tuple[int | None, str, bo
     return execution.returncode, execution.output, execution.timed_out
 
 
-def _aggregate_unit_metrics(
-    units: list[HeaderUnit], results: list[dict[str, Any]]
-) -> tuple[dict[str, int], dict[str, int], dict[str, int], dict[str, int], int]:
-    failure_classes: dict[str, int] = {}
-    diagnostic_codes: dict[str, int] = {}
-    raw_diagnostic_counts: dict[str, int] = {}
-    unique_locations: dict[str, set[tuple[str, str]]] = {}
-    error_limit_unit_count = 0
-    for unit, result in zip(units, results, strict=True):
-        failure_class = str(result["failure_class"])
-        failure_classes[failure_class] = failure_classes.get(failure_class, 0) + 1
-        for code in result["diagnostic_codes"]:
-            diagnostic_codes[str(code)] = diagnostic_codes.get(str(code), 0) + 1
-        if "C1003" in result["diagnostic_codes"]:
-            error_limit_unit_count += 1
-        log_text = _read_text(unit.stdout_log) + _read_text(unit.stderr_log)
-        _record_diagnostic_lines(log_text, raw_diagnostic_counts, unique_locations)
-    unique_location_counts = {k: len(v) for k, v in sorted(unique_locations.items())}
-    return (
-        failure_classes,
-        diagnostic_codes,
-        raw_diagnostic_counts,
-        unique_location_counts,
-        error_limit_unit_count,
-    )
-
-
 def run_validation(
     input_roots: list[Path], validation_directory: Path, timeout_seconds: int
 ) -> dict[str, Any]:
@@ -497,6 +459,10 @@ def run_validation(
     validation_directory = validation_directory.expanduser().resolve()
     validation_directory.mkdir(parents=True, exist_ok=True)
     bundles, units = discover_units(input_roots, validation_directory)
+    publication = inspect_manifest_binding(
+        (CompilerHeader(unit.header, unit.header_sha256, unit.header_bytes) for unit in units),
+        input_roots,
+    )
     developer_command_file = get_visual_studio_developer_command_file()
     compiler = test_msvc_toolchain(developer_command_file)
     compiler_metadata = _compiler_metadata(compiler)
@@ -512,12 +478,13 @@ def run_validation(
         raw_diagnostic_counts,
         unique_location_counts,
         error_limit_unit_count,
-    ) = _aggregate_unit_metrics(units, results)
+    ) = aggregate_unit_metrics(results)
     is_observed = counts.complete and not timed_out
     report = {
         "schema_version": 2,
         "tool": "tools.sonar.validate_header_bundle",
         "validation_scope": "season2_header_closures",
+        "publication": publication,
         "started_at": started,
         "finished_at": _utc_now(),
         **compiler_metadata,
@@ -534,7 +501,13 @@ def run_validation(
         "counts": counts.to_dict(),
         "standalone_status": "observed" if is_observed else "partial",
         "aggregate_status": aggregate["status"],
-        "status": "observed" if is_observed and aggregate["status"] == "passed" else "partial",
+        "status": (
+            "observed"
+            if is_observed
+            and aggregate["status"] == "passed"
+            and publication["status"] == "matched"
+            else "partial"
+        ),
         "failure_classes": failure_classes,
         "diagnostic_code_counts": dict(sorted(diagnostic_codes.items())),
         "raw_diagnostic_counts": dict(sorted(raw_diagnostic_counts.items())),
@@ -547,22 +520,13 @@ def run_validation(
     return report
 
 
-def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--input-root",
-        type=Path,
-        action="append",
-        required=True,
-        help="Season batch root, symbol bundle, or ps4 header directory; repeatable.",
-    )
-    parser.add_argument("--validation-directory", type=Path, required=True)
-    parser.add_argument("--timeout-seconds", type=int, default=3600)
-    return parser.parse_args(argv)
-
-
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if args.explain_report is not None:
+        return explain_main(args)
+    if not args.input_root or args.explain_unit or args.requirement_witness:
+        print("Normal validation requires --input-root and no --explain-unit", file=sys.stderr)
+        return 2
     try:
         report = run_validation(args.input_root, args.validation_directory, args.timeout_seconds)
     except (HeaderValidationError, SonarAnalysisError, OSError) as error:
@@ -580,6 +544,7 @@ def main(argv: list[str] | None = None) -> int:
             "counts",
             "standalone_status",
             "aggregate_status",
+            "publication",
             "failure_classes",
             "diagnostic_code_counts",
             "raw_diagnostic_counts",

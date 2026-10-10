@@ -9,6 +9,14 @@ from collections.abc import Iterator, Mapping
 from ....core.observability import get_logger, log_event
 from ...models.dwarf import ClassInfo, MemberInfo
 from .header_cycles import cycle_fallback_name, strongly_connected_components
+from .header_dependency_names import (
+    _base_offset_dependencies,
+    _nested_names,
+    _offset_name_index,
+    _requires_complete_method_signature,
+    _resolve_class_name,
+    _type_offset_key,
+)
 from .header_dependency_plan import HeaderDependencyPlan, HeaderNameIndex, build_header_name_index
 from .header_type_planning import HeaderTypePlanningService
 from .rendering.operations import HeaderRenderingHost
@@ -19,40 +27,6 @@ logger = get_logger(__name__)
 def _class_name_index(class_infos: Mapping[str, ClassInfo]) -> HeaderNameIndex:
     """Map rendered C++ names to canonical keys and specialization candidates."""
     return build_header_name_index(class_infos)
-
-
-def _nested_names(class_info: ClassInfo) -> set[str]:
-    nested = tuple(HeaderTypePlanningService._iter_nested_classes(class_info))
-    names = {item.name for item in nested}
-    names.update(item.qualified_name for item in nested if item.qualified_name)
-    return names
-
-
-def _resolve_class_name(type_name: str, name_index: Mapping[str, str]) -> str | None:
-    clean_name = HeaderTypePlanningService._normalize_type_name(type_name)
-    if not clean_name:
-        return None
-    candidate = re.match(r"([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*(?:<|$)", clean_name)
-    primary = candidate.group(1) if candidate else re.split(r"[\s\[]", clean_name)[0]
-    for value in (clean_name, primary):
-        if value in name_index:
-            return name_index[value]
-    indexed_specializations = getattr(name_index, "specializations", None)
-    specializations = (
-        indexed_specializations.get(primary, ())
-        if indexed_specializations is not None
-        else tuple(
-            sorted(key for value, key in name_index.items() if value.startswith(f"{primary}<"))
-        )
-    )
-    return specializations[0] if len(specializations) == 1 else None
-
-
-def _requires_complete_method_signature(type_name: str) -> bool:
-    """Return whether a method signature has a complete-header contract."""
-    normalized = HeaderTypePlanningService._normalize_type_name(type_name)
-    primary = normalized.split("<", 1)[0].strip()
-    return primary == "MtDataReader"
 
 
 class HeaderOrderingService:
@@ -115,31 +89,44 @@ class HeaderOrderingService:
         name_index: Mapping[str, str] | None = None,
     ) -> dict[str, set[str]]:
         name_index = _class_name_index(class_infos) if name_index is None else name_index
-        offset_names = {
-            info.die_offset: name
-            for name, info in class_infos.items()
-            if info.die_offset is not None
-        }
+        offset_names = _offset_name_index(class_infos)
         dependencies: dict[str, set[str]] = {name: set() for name in class_infos}
         for class_name, class_info in class_infos.items():
-            self._add_base_dependencies(class_name, class_info, name_index, dependencies)
-            self._add_member_dependencies(
-                class_name, class_info.members, name_index, dependencies, offset_names
-            )
-            self._add_nested_aggregate_dependencies(
+            if (
+                class_info.template_rendering is not None
+                and class_info.template_rendering.mode == "generic"
+                and not class_info.template_rendering.representative
+            ):
+                continue
+            self._add_class_dependencies(
                 class_name, class_info, name_index, dependencies, offset_names
             )
-            self._add_method_dependencies(
-                class_name, class_info, name_index, dependencies, offset_names
-            )
-            for nested_class in HeaderTypePlanningService._iter_nested_classes(class_info):
-                self._add_base_dependencies(class_name, nested_class, name_index, dependencies)
-                self._add_member_dependencies(
-                    class_name, nested_class.members, name_index, dependencies, offset_names
-                )
         if typedefs:
             self._add_typedef_dependencies(class_infos, typedefs, name_index, dependencies)
         return dependencies
+
+    def _add_class_dependencies(
+        self: HeaderRenderingHost,
+        class_name: str,
+        class_info: ClassInfo,
+        name_index: Mapping[str, str],
+        dependencies: dict[str, set[str]],
+        offset_names: dict[tuple[int | None, int], str],
+    ) -> None:
+        self._add_base_dependencies(class_name, class_info, name_index, dependencies, offset_names)
+        self._add_member_dependencies(
+            class_name, class_info.members, name_index, dependencies, offset_names
+        )
+        self._add_nested_aggregate_dependencies(
+            class_name, class_info, name_index, dependencies, offset_names
+        )
+        self._add_method_dependencies(
+            class_name, class_info, name_index, dependencies, offset_names
+        )
+        for nested_class in class_info.nested_classes:
+            self._add_class_dependencies(
+                class_name, nested_class, name_index, dependencies, offset_names
+            )
 
     def cyclic_dependency_components(
         self: HeaderRenderingHost,
@@ -174,9 +161,12 @@ class HeaderOrderingService:
                 alias = self._normalize_type_name(member.type_name).split("[", 1)[0].strip()
                 if alias not in typedefs:
                     continue
-                referenced = _resolve_class_name(typedefs[alias], name_index)
-                if referenced and referenced != class_name:
-                    dependencies[class_name].add(referenced)
+                underlying = typedefs[alias]
+                dependencies[class_name].update(
+                    referenced
+                    for referenced in self._referenced_dependency_names(underlying, name_index)
+                    if referenced != class_name
+                )
 
     def _add_nested_aggregate_dependencies(
         self: HeaderRenderingHost,
@@ -184,7 +174,7 @@ class HeaderOrderingService:
         class_info: ClassInfo,
         name_index: Mapping[str, str],
         dependencies: dict[str, set[str]],
-        offset_names: dict[int, str] | None = None,
+        offset_names: dict[tuple[int | None, int], str] | None = None,
     ) -> None:
         """Track by-value types used by nested structs and unions."""
         nested_members = [
@@ -211,8 +201,9 @@ class HeaderOrderingService:
         typedefs: dict[str, str] | None = None,
     ) -> dict[str, str]:
         """Return headers needed by definitions rendered in another file."""
-        name_index = _class_name_index(class_infos)
-        dependencies = self._definition_dependencies(class_infos, typedefs, name_index=name_index)
+        plan = self.build_dependency_plan(class_infos, (), typedefs)
+        name_index = plan.name_index
+        dependencies = plan.dependencies
         current_headers = {
             header_names[class_name]
             for class_name in rendered_class_names
@@ -244,8 +235,9 @@ class HeaderOrderingService:
         typedefs: dict[str, str] | None = None,
     ) -> dict[str, dict[str, str]]:
         """Plan external includes for many files after one dependency scan."""
-        name_index = _class_name_index(class_infos)
-        dependencies = self._definition_dependencies(class_infos, typedefs, name_index=name_index)
+        plan = self.build_dependency_plan(class_infos, (), typedefs)
+        name_index = plan.name_index
+        dependencies = plan.dependencies
         known_header_names = dict(header_names)
         result: dict[str, dict[str, str]] = {}
         for group_id, rendered_names in sorted(groups.items()):
@@ -276,7 +268,7 @@ class HeaderOrderingService:
     @staticmethod
     def _required_dependency_names(
         rendered_class_names: set[str],
-        dependencies: dict[str, set[str]],
+        dependencies: Mapping[str, set[str] | frozenset[str]],
         header_names: dict[str, str],
         current_headers: set[str],
     ) -> set[str]:
@@ -321,10 +313,7 @@ class HeaderOrderingService:
         name_index: Mapping[str, str] | None = None,
     ) -> set[str]:
         name_index = _class_name_index(class_infos) if name_index is None else name_index
-        dependencies: set[str] = set()
-        for expression in self._template_expressions(underlying_type):
-            dependencies.update(self._template_specialization_names(expression, name_index))
-        return dependencies
+        return self._referenced_dependency_names(underlying_type, name_index)
 
     @staticmethod
     def _template_specialization_names(expression: str, name_index: Mapping[str, str]) -> set[str]:
@@ -333,12 +322,12 @@ class HeaderOrderingService:
             return {exact}
         if "<" in expression:
             primary = expression.split("<", 1)[0].strip()
-            candidates = getattr(name_index, "specializations", {}).get(primary)
-            if candidates:
-                return set(candidates)
             exact_primary = name_index.get(primary)
             if exact_primary is not None:
                 return {exact_primary}
+            candidates = getattr(name_index, "specializations", {}).get(primary)
+            if candidates:
+                return set(candidates)
         return set()
 
     def _value_typedef_underlyings(
@@ -372,15 +361,7 @@ class HeaderOrderingService:
         name_index: Mapping[str, str] | None = None,
     ) -> set[str]:
         name_index = _class_name_index(class_infos) if name_index is None else name_index
-        dependencies = self._typedef_dependency_names(
-            underlying_type, class_infos, name_index=name_index
-        )
-        direct = _resolve_class_name(underlying_type, name_index)
-        if direct:
-            dependencies.add(direct)
-        for expression in self._template_expressions(underlying_type):
-            dependencies.update(self._template_specialization_names(expression, name_index))
-        return dependencies
+        return self._typedef_dependency_names(underlying_type, class_infos, name_index=name_index)
 
     def _add_base_dependencies(
         self: HeaderRenderingHost,
@@ -388,7 +369,11 @@ class HeaderOrderingService:
         class_info: ClassInfo,
         name_index: Mapping[str, str],
         dependencies: dict[str, set[str]],
+        offset_names: Mapping[tuple[int | None, int], str],
     ) -> None:
+        dependencies[class_name].update(
+            _base_offset_dependencies(class_info, offset_names) - {class_name}
+        )
         for base_name in class_info.base_classes:
             dependency = _resolve_class_name(base_name, name_index)
             if dependency is not None and dependency != class_name:
@@ -411,7 +396,7 @@ class HeaderOrderingService:
         members: list[MemberInfo],
         name_index: Mapping[str, str],
         dependencies: dict[str, set[str]],
-        offset_names: dict[int, str] | None = None,
+        offset_names: dict[tuple[int | None, int], str] | None = None,
     ) -> None:
         for member in members:
             dependencies[class_name].update(
@@ -424,32 +409,37 @@ class HeaderOrderingService:
         class_info: ClassInfo,
         name_index: Mapping[str, str],
         dependencies: dict[str, set[str]],
-        offset_names: dict[int, str],
+        offset_names: dict[tuple[int | None, int], str],
     ) -> None:
-        """Keep only contractually complete method-signature types as includes.
-
-        The graph still traverses every signature dependency.  Header includes
-        are narrower: a declaration can name an incomplete class, while the
-        symbol contract requires a complete included definition for
-        ``MtDataReader``.  Importing every signature type pulled unrelated CU
-        variants into the same header and created avoidable include cycles.
-        """
-        for type_name, type_offset in self._method_signature_types(class_info):
+        """Include complete definitions only for contractually complete signatures."""
+        for type_name, type_offset, type_key in self._method_signature_types(class_info):
             if _requires_complete_method_signature(type_name):
                 dependencies[class_name].update(
                     self._complete_signature_dependencies(
-                        type_name, type_offset, class_name, name_index, offset_names
+                        type_name, type_offset, type_key, class_name, name_index, offset_names
                     )
                 )
 
     @staticmethod
     def _method_signature_types(
         class_info: ClassInfo,
-    ) -> Iterator[tuple[str, int | None]]:
+    ) -> Iterator[tuple[str, int | None, tuple[int | None, int] | None]]:
         for method in class_info.methods:
-            yield method.return_type, method.return_type_offset
+            yield (
+                method.return_type,
+                method.return_type_offset,
+                _type_offset_key(
+                    method.cu_offset, method.return_type_offset, method.return_type_reference
+                ),
+            )
             yield from (
-                (parameter.type_name, parameter.type_offset)
+                (
+                    parameter.type_name,
+                    parameter.type_offset,
+                    _type_offset_key(
+                        parameter.cu_offset, parameter.type_offset, parameter.type_reference
+                    ),
+                )
                 for parameter in method.parameters or ()
             )
 
@@ -457,16 +447,17 @@ class HeaderOrderingService:
         self: HeaderRenderingHost,
         type_name: str,
         type_offset: int | None,
+        type_key: tuple[int | None, int] | None,
         class_name: str,
         name_index: Mapping[str, str],
-        offset_names: dict[int, str],
+        offset_names: dict[tuple[int | None, int], str],
     ) -> set[str]:
         dependencies = {
             dependency
             for dependency in self._referenced_dependency_names(type_name, name_index)
             if dependency != class_name
         }
-        referenced_name = offset_names.get(type_offset) if type_offset is not None else None
+        referenced_name = offset_names.get(type_key) if type_key is not None else None
         if referenced_name and referenced_name != class_name:
             dependencies.add(referenced_name)
         return dependencies
@@ -484,7 +475,7 @@ class HeaderOrderingService:
         member: MemberInfo,
         class_name: str,
         name_index: Mapping[str, str],
-        offset_names: dict[int, str] | None,
+        offset_names: dict[tuple[int | None, int], str] | None,
     ) -> set[str]:
         if member.is_static or self._is_indirection_type(member.type_name):
             return set()
@@ -494,7 +485,8 @@ class HeaderOrderingService:
             if referenced_name != class_name
         }
         if member.type_offset is not None and offset_names:
-            referenced_name = offset_names.get(member.type_offset)
+            key = _type_offset_key(member.cu_offset, member.type_offset, member.type_reference)
+            referenced_name = offset_names.get(key) if key is not None else None
             if referenced_name and referenced_name != class_name:
                 dependencies.add(referenced_name)
         return dependencies
@@ -506,46 +498,64 @@ class HeaderOrderingService:
         referenced_name = _resolve_class_name(type_name, name_index)
         if referenced_name:
             dependencies.add(referenced_name)
-        for expression in self._template_expressions(type_name):
+        for expression in HeaderTypePlanningService._template_expressions(type_name):
             dependencies.update(self._template_specialization_names(expression, name_index))
+            opening = expression.find("<")
+            if opening < 0:
+                continue
+            arguments = HeaderTypePlanningService._split_template_arguments(
+                expression[opening + 1 : -1]
+            )
+            for argument in arguments:
+                argument_name = _resolve_class_name(argument, name_index)
+                if argument_name:
+                    dependencies.add(argument_name)
+                # Nested template arguments (for example allocator<vector<T>>)
+                # are represented by their own expressions and must contribute
+                # their complete by-value dependencies as well.
+                dependencies.update(self._referenced_dependency_names(argument, name_index))
         return dependencies
 
-    @staticmethod
-    def _stable_topological_order(
-        dependencies: dict[str, set[str]],
-        hierarchy_order: list[str],
-        allow_cycles: bool = False,
-    ) -> list[str]:
-        ordered: list[str] = []
-        remaining = {name: set(required) for name, required in dependencies.items()}
-        preferred = [name for name in hierarchy_order if name in remaining]
-        preferred.extend(sorted(set(remaining) - set(preferred)))
-        while remaining:
-            ready = HeaderOrderingService._ready_names(remaining, preferred)
-            if not ready:
-                cycle = ", ".join(sorted(remaining))
-                if not allow_cycles:
-                    raise ValueError(f"Cannot order cyclic by-value dependencies: {cycle}")
-                ready = [cycle_fallback_name(remaining, preferred)]
-                log_event(
-                    logger,
-                    logging.WARNING,
-                    "cyclic_by_value_dependency_recovered",
-                    cycle=cycle,
-                    selected=ready[0],
-                )
-            for name in ready:
-                ordered.append(name)
-                del remaining[name]
-                HeaderOrderingService._remove_dependency(remaining, name)
-        return ordered
 
-    @staticmethod
-    def _ready_names(remaining: dict[str, set[str]], preferred: list[str]) -> list[str]:
-        ready = [name for name in preferred if name in remaining and not remaining[name]]
-        return ready
+def _ready_names(remaining: dict[str, set[str]], preferred: list[str]) -> list[str]:
+    return [name for name in preferred if name in remaining and not remaining[name]]
 
-    @staticmethod
-    def _remove_dependency(remaining: dict[str, set[str]], name: str) -> None:
-        for required in remaining.values():
-            required.discard(name)
+
+def _remove_dependency(remaining: dict[str, set[str]], name: str) -> None:
+    for required in remaining.values():
+        required.discard(name)
+
+
+def _stable_topological_order(
+    dependencies: dict[str, set[str]],
+    hierarchy_order: list[str],
+    allow_cycles: bool = False,
+) -> list[str]:
+    ordered: list[str] = []
+    remaining = {name: set(required) for name, required in dependencies.items()}
+    preferred = [name for name in hierarchy_order if name in remaining]
+    preferred.extend(sorted(set(remaining) - set(preferred)))
+    while remaining:
+        ready = _ready_names(remaining, preferred)
+        if not ready:
+            cycle = ", ".join(sorted(remaining))
+            if not allow_cycles:
+                raise ValueError(f"Cannot order cyclic by-value dependencies: {cycle}")
+            ready = [cycle_fallback_name(remaining, preferred)]
+            log_event(
+                logger,
+                logging.WARNING,
+                "cyclic_by_value_dependency_unschedulable",
+                cycle=cycle,
+                selected=ready[0],
+            )
+        for name in ready:
+            ordered.append(name)
+            del remaining[name]
+            _remove_dependency(remaining, name)
+    return ordered
+
+
+HeaderOrderingService._stable_topological_order = staticmethod(_stable_topological_order)
+HeaderOrderingService._ready_names = staticmethod(_ready_names)
+HeaderOrderingService._remove_dependency = staticmethod(_remove_dependency)

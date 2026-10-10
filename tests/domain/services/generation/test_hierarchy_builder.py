@@ -7,6 +7,9 @@ import pytest
 
 from ddon_dwarf_reconstructor.domain.models.dwarf import ClassInfo
 from ddon_dwarf_reconstructor.domain.services.generation.hierarchy_builder import HierarchyBuilder
+from ddon_dwarf_reconstructor.domain.services.generation.hierarchy_dependencies import (
+    DependencyWork,
+)
 
 
 @pytest.mark.unit
@@ -358,6 +361,57 @@ def test_symbol_union_preserves_definition_identity_during_dependency_resolution
     builder.build_symbol_union_with_dependencies(("Root",))
 
     assert process.call_args.kwargs["preserve_definition_identity"] is True
+
+
+@pytest.mark.unit
+@pytest.mark.regression
+def test_same_named_same_sized_dependency_parses_distinct_source_layout(mocker) -> None:
+    parser = Mock()
+    builder = HierarchyBuilder(parser, Mock())
+    existing = ClassInfo("Shared", 8, [], [], [], [], [], [], cu_offset=1, die_offset=2)
+    target = ClassInfo("Shared", 8, [], [], [], [], [], [], cu_offset=3, die_offset=4)
+    target.members = [Mock(name="different_layout")]
+    cu = SimpleNamespace(cu_offset=3)
+    die = SimpleNamespace(
+        offset=4,
+        attributes={
+            "DW_AT_name": SimpleNamespace(value=b"Shared"),
+            "DW_AT_byte_size": SimpleNamespace(value=8),
+        },
+    )
+    mocker.patch.object(builder, "_try_resolve_type_target_by_offset", return_value=(cu, die))
+    parse = mocker.patch.object(builder, "_parse_type_target", return_value=target)
+    work = DependencyWork(classes_by_name={"Shared": existing})
+
+    resolved, key, cache_hit = builder._resolve_dependency_candidate(4, "Shared", work, True)
+
+    assert resolved is target
+    assert key == (3, 4)
+    assert cache_hit is False
+    parse.assert_called_once_with((cu, die))
+
+
+@pytest.mark.unit
+@pytest.mark.regression
+def test_same_named_base_seed_parses_distinct_source_layout() -> None:
+    parser = Mock()
+    builder = HierarchyBuilder(parser, Mock())
+    existing = ClassInfo("Shared", 8, [], [], [], [], [], [], cu_offset=1, die_offset=2)
+    target = ClassInfo("Shared", 8, [], [], [], [], [], [], cu_offset=3, die_offset=4)
+    parser.parse_class_info.return_value = target
+    cu = SimpleNamespace(cu_offset=3)
+    die = SimpleNamespace(
+        offset=4,
+        attributes={
+            "DW_AT_name": SimpleNamespace(value=b"Shared"),
+            "DW_AT_byte_size": SimpleNamespace(value=8),
+        },
+    )
+
+    resolved = builder._resolve_seed_class(cu, die, {}, {"Shared": existing})
+
+    assert resolved is target
+    parser.parse_class_info.assert_called_once_with(cu, die)
 
 
 @pytest.mark.unit

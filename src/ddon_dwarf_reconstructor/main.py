@@ -277,11 +277,7 @@ def _symbol_generation_outcomes(
         status = _ROOT_GENERATION_STATUSES.get(symbol_set.root_statuses.get(symbol, ""), "failed")
         headers = tuple(
             sorted(
-                path
-                for path, classes in symbol_set.header_classes.items()
-                if any(
-                    symbol in symbol_set.class_origins.get(class_name, ()) for class_name in classes
-                )
+                path for path in symbol_set.headers if symbol in symbol_set.roots_for_header(path)
             )
         )
         outcomes.append(GenerationOutcome(symbol=symbol, status=status, headers=headers))

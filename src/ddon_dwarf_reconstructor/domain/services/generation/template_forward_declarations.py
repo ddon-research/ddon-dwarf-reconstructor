@@ -2,7 +2,8 @@
 
 from ...models.dwarf import ClassInfo
 from .rendering.operations import HeaderRenderingHost
-from .template_families import plan_template_families
+from .template_declarations import primary_declaration
+from .template_families import plan_template_families, template_primary
 
 
 def planned_template_forwards(
@@ -13,14 +14,13 @@ def planned_template_forwards(
 ) -> set[str]:
     needed = {renderer._forward_declaration_name(declaration) for declaration in declarations}
     needed.update(
-        renderer._unqualify_type_expression(info.template_rendering.primary)
+        info.template_rendering.primary
         for info in local_infos.values()
         if info.template_rendering is not None
     )
+    needed.update(_referenced_primaries(renderer, local_infos))
     plans = {
-        renderer._unqualify_type_expression(
-            info.template_rendering.primary
-        ): info.template_rendering
+        info.template_rendering.primary: info
         for info in infos.values()
         if info.template_rendering is not None
     }
@@ -30,10 +30,35 @@ def planned_template_forwards(
         if renderer._forward_declaration_name(declaration) not in plans
     }
     for primary in needed & plans.keys():
-        plan = plans[primary]
-        if plan.mode != "blocked":
-            result.add(f"{plan.declaration} class {primary};")
+        declaration = primary_declaration(plans[primary])
+        if declaration is not None:
+            result.add(declaration)
     return result
+
+
+def _referenced_primaries(renderer: HeaderRenderingHost, infos: dict[str, ClassInfo]) -> set[str]:
+    needed: set[str] = set()
+    for info in infos.values():
+        for expression in _type_expressions(info):
+            for specialization in renderer._template_expressions(expression):
+                primary = template_primary(specialization)
+                if primary is not None:
+                    needed.add(primary)
+    return needed
+
+
+def _type_expressions(info: ClassInfo) -> list[str]:
+    """Inspect hydrated evidence without repeating symbol or DIE lookups."""
+    expressions = [*info.base_classes, *(member.type_name for member in info.members)]
+    for method in info.methods:
+        expressions.append(method.return_type)
+        expressions.extend(parameter.type_name for parameter in method.parameters or ())
+    expressions.extend(
+        alias.alias_target.name for alias in info.declared_aliases if alias.alias_target is not None
+    )
+    for child in info.nested_classes:
+        expressions.extend(_type_expressions(child))
+    return expressions
 
 
 def ensure_family_plans(infos: dict[str, ClassInfo]) -> dict[str, ClassInfo]:

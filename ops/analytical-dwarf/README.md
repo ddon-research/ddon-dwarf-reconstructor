@@ -1,54 +1,72 @@
 # Local analytical DWARF warehouse
 
-This Compose project is an explicit local benchmark dependency. It keeps Doris
-metadata, BE storage, and source-bound Parquet inputs outside source control.
+Use this how-to to operate the local Doris serving cluster without losing its databases.
+It requires Docker Desktop with WSL 2, the locked development environment, and the ignored
+`.env` containing the verified volume names and host ports. Normal generation depends on this
+cluster; fixture tests do not. Readiness checks are operational evidence, not corpus acceptance.
 
-The Doris 4.1.3 images are pinned by immutable amd64 digest in `compose.yaml` and
-[`images.lock.json`](images.lock.json). A fresh final-tag pull and registry comparison on
-2026-09-09 resolved the same FE/BE index digests, so no image-byte change was available to
-apply. The container build banner still reports `4.1.3-rc02`; its embedded commit matches the
-4.1.3 release and is retained as upstream build metadata rather than treated as a second image.
-The complete source-bound Season 2 generation and per-header MSVC closure audit were observed on
-2026-08-10; IDA/Sonar evidence and comparison with the unavailable historical approved header
-remain separate boundaries.
+## Start and validate the recovered cluster
 
-The 2026-09-09 BE outage was caused by its storage health check receiving `errno=5` while
-testing `.testfile` on the D: Windows bind mount at approximately 97.9% utilization. The
-source files remain readable and are preserved for copy-first recovery. Recovery must use a new
-directory on a fixed local disk, retain the original D: paths and forensic evidence, and leave
-`ignore_broken_disk` disabled. The original container objects were recreated during canonical
-promotion; their pre-promotion inspect, mount, network, and log evidence is retained. Matching
-forensic container definitions using the original D: mounts are retained in Docker with a
-`never_start` label and were never started. If the copied store cannot start, reload the validated complete
-Parquet manifest with `artifacts load-doris`; do not purge or rematerialize the source store as
-an outage workaround.
-
-The default bind mounts are repository-local ignored paths under
-`output/analytical-dwarf/warehouse` for Doris metadata, storage, and logs. The source-bound
-Parquet store under `output/analytical-dwarf/main` remains on the host: the loader reads it and
-uploads bounded batches through Doris Stream Load, so it does not need to be mounted into either
-container. Override the individual `DDON_DORIS_*` variables only when the replacement path is on
-a local fixed disk; do not use the portable E: drive. `%TEMP%\ddon-analytical-dwarf` is reserved
-for disposable diagnostic runs and is not the default durable warehouse.
-
-The current workstation recovery uses the ignored `ops/analytical-dwarf/.env` file to bind the
-canonical Compose services to the verified C: copy and host ports `28030`/`29030`/`28040`.
-Run Compose from this directory, or pass the file explicitly from the repository root:
+The workstation uses `compose.yaml` plus `compose.storage-linux.yaml`. The second file replaces
+all four Windows bind mounts with pre-existing external Linux volumes: FE metadata, BE storage,
+and both logs. Missing volumes fail closed instead of creating an empty replacement database.
+The pinned Doris 4.1.3 image digests remain in `images.lock.json`; the embedded `4.1.3-rc02`
+banner is retained upstream build metadata, not a different recovery image.
 
 ```powershell
-docker compose --env-file ops/analytical-dwarf/.env --file ops/analytical-dwarf/compose.yaml config --quiet
-docker compose --env-file ops/analytical-dwarf/.env --file ops/analytical-dwarf/compose.yaml up -d
-.\ops\analytical-dwarf\preflight.ps1 `
-  -ComposeFile .\ops\analytical-dwarf\compose.yaml `
-  -EnvFile .\ops\analytical-dwarf\.env `
-  -OutputPath .\output\refactoring-evidence\021\<working-state>\doris-preflight.json
+uv run just analytical-linux-config
+uv run just analytical-linux-up
+uv run just analytical-linux-preflight
 ```
 
-The original D: warehouse remains retained for forensics at the paths recorded in the Feature
-021 recovery receipt. Do not remove it until the recovered service has completed the required
-regression and performance evidence. The preflight also samples readable files, performs a
-temporary write/read round-trip with cleanup, rejects E:, and requires the configured free-space
-headroom before a Compose start.
+The four `DDON_DORIS_{FE,BE}_{DATA,LOG}_VOLUME` variables in the ignored `.env` select the
+verified volumes. Host ports remain `28030` (FE HTTP), `29030` (SQL), and `28040` (BE HTTP).
+Application connection variables are described below. The base Compose file alone is the legacy
+bind-mount layout: do not launch it against the recovered workstation.
+
+`preflight.ps1` accepts `-ComposeOverlay` as an ordered file array. It resolves effective Compose
+mounts, checks pinned images, performs a temporary write/sync/read test inside each Linux volume,
+and checks Linux capacity and the Windows disk backing Docker's VHDX. The default minimum free
+space is 15 percent. Existing bind-mount checks remain available for explicit legacy recovery.
+The script never creates missing volumes, clears failure flags, or repairs storage.
+
+With `-StoreManifest`, the report additionally separates FE connectivity, backend/tablet health,
+and complete source-bound symbol searches. Without it these dimensions are `not_observed`, even
+when storage passes. The canonical preflight recipe supplies the durable Season 2 manifest.
+Backend readiness requires healthy catalogued tablets; targeted queries do not prove every row.
+The cluster also holds `image_processing_rag`; recovery validation must preserve that database.
+
+## Preserve and recover storage
+
+The September 22 migration copied the current paired FE/BE state after stopping both services,
+verified all regular-file SHA-256 hashes and path/type/permission/owner inventories, and preserved
+the original Windows directories. The source-bound Parquet store remains on the host; loaders
+upload bounded Stream Load batches and do not require a Parquet bind mount. Evidence is retained
+under `output/compilation-repair-022/doris-recovery-20260922/` and summarized in
+[Feature 022](../../specs/022-cpp-compilation-repair/measured-evidence.md).
+
+A storage health-check I/O error coincided with Windows sleep. BE then recorded its broken path
+in container-local `conf/be_custom.conf`, preventing subsequent starts. This is evidence of the
+failure sequence, not proof of a physical disk failure or guaranteed sleep resilience after
+migration. The replacement uses the verified copy and omits that stale setting;
+`ignore_broken_disk` remains disabled. Original data, configuration, and logs are retained.
+
+For a future outage, capture container configuration, logs, effective mounts, cluster/tablet
+identities, and host events before repair. Stop writers and both services; copy the current FE
+and BE together to new storage, then verify hashes and metadata before promotion. Preserve every
+database. Do not delete original directories, reset FE, enable `ignore_broken_disk`, or blindly
+reload only DWARF. If copy validation fails, stop promotion and diagnose the retained evidence.
+Rollback after new writes requires reconciling those writes with the chosen snapshot.
+
+Before planned sleep or reboot, stop ingestion and use:
+
+```powershell
+uv run just analytical-linux-stop
+```
+
+After resuming, start with `analytical-linux-up` and rerun `analytical-linux-preflight` before
+resuming ingestion or generation. No automatic marker clearing, restart loop, or global power
+setting change is part of this workflow. Do not use `docker compose down --volumes` for cleanup.
 
 For a long producer run, use `--checkpoint-every-cus N` only when diagnostic snapshots are
 needed. Checkpoints rotate Parquet parts and preserve `checkpoint.json` after an interruption;
@@ -69,9 +87,9 @@ Parquet files or JSONL audit rows directly, and they fail closed if the registry
 stale, incomplete, or count-mismatched.
 
 ```powershell
-docker compose --file ops/analytical-dwarf/compose.yaml config --quiet
-docker compose --file ops/analytical-dwarf/compose.yaml up -d
-docker compose --file ops/analytical-dwarf/compose.yaml ps --all
+uv run just analytical-linux-config
+uv run just analytical-linux-up
+uv run just analytical-linux-preflight
 ```
 
 The container ports remain Doris's upstream `8030`/`9030`/`8040` ports. On the Windows workstation,
@@ -97,7 +115,7 @@ overridden before starting Compose:
 $env:DDON_DORIS_HTTP_HOST_PORT = '<alt-fe-http-port>'
 $env:DDON_DORIS_SQL_HOST_PORT = '<alt-sql-port>'
 $env:DDON_DORIS_BE_HTTP_HOST_PORT = '<alt-be-stream-port>'
-docker compose --file ops/analytical-dwarf/compose.yaml up -d
+uv run just analytical-linux-up
 ```
 
 When an alternate mapping is active, ensure `DDON_DORIS_SQL_PORT`, `DDON_DORIS_HTTP_URL`, and
@@ -137,8 +155,8 @@ The opt-in Flight SQL loop is:
 
 ```powershell
 uv sync --group flight-sql --locked
-docker compose --file ops/analytical-dwarf/compose.yaml --file ops/analytical-dwarf/compose.flight.yaml config --quiet
-docker compose --file ops/analytical-dwarf/compose.yaml --file ops/analytical-dwarf/compose.flight.yaml up -d
+docker compose --env-file ops/analytical-dwarf/.env --file ops/analytical-dwarf/compose.yaml --file ops/analytical-dwarf/compose.storage-linux.yaml --file ops/analytical-dwarf/compose.flight.yaml config --quiet
+docker compose --env-file ops/analytical-dwarf/.env --file ops/analytical-dwarf/compose.yaml --file ops/analytical-dwarf/compose.storage-linux.yaml --file ops/analytical-dwarf/compose.flight.yaml up -d
 uv run --group flight-sql ddon-dwarf-reconstructor performance check-doris-flight `
   --output "$env:TEMP/ddon-analytical-dwarf/analytical-flight/doris-flight-preflight.json"
 uv run --group flight-sql ddon-dwarf-reconstructor performance benchmark-doris-flight `

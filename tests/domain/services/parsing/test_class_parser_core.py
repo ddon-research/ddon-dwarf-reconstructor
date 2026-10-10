@@ -74,7 +74,8 @@ class TestClassParser:
         assert result.members[0].type_offset == 0x2000  # Verify offset captured
         assert result.members[0].access == "protected"
         assert result.members[0].bit_size == 3
-        assert result.members[0].bit_offset == 4
+        assert result.members[0].data_bit_offset == 4
+        assert result.members[0].storage_bit_offset is None
 
     @pytest.mark.unit
     @pytest.mark.regression
@@ -214,6 +215,8 @@ class TestClassParser:
         assert member.name == "m_flag"
         assert member.type_name == "unsigned char"
         assert member.type_offset == 0x3333  # Verify offset captured
+        assert member.storage_bit_offset == 7
+        assert member.data_bit_offset is None
 
     @pytest.mark.unit
     def test_parse_member_uses_opaque_storage_for_same_named_external_type(self, class_parser):
@@ -338,3 +341,30 @@ class TestClassParser:
         assert method.return_type == "int"
         assert method.return_type_offset == 0x4444  # Verify offset captured
         assert len(method.parameters) == 0
+
+    @pytest.mark.unit
+    def test_method_template_argument_keeps_zero_offset_and_single_child_walk(self, class_parser):
+        method_die = Mock(tag="DW_TAG_subprogram", offset=0x40)
+        method_die.attributes = {"DW_AT_name": Mock(value=b"searchT")}
+        method_die.cu.cu_offset = 0x20
+        method_die.get_parent.return_value = None
+        type_parameter = Mock(tag="DW_TAG_template_type_param", offset=0)
+        type_parameter.cu.cu_offset = 0x20
+        type_parameter.attributes = {
+            "DW_AT_name": Mock(value=b"T"),
+            "DW_AT_type": Mock(value=0),
+        }
+        type_parameter.get_DIE_from_attribute.return_value = Mock(offset=0)
+        method_die.iter_children.return_value = [type_parameter]
+        class_parser.type_resolver.resolve_type_name.return_value = "Target"
+
+        method = class_parser.parse_method(method_die)
+
+        assert method is not None
+        assert len(method.template_parameters) == 1
+        assert method.template_parameters[0].name == "T"
+        assert method.template_parameters[0].argument_type == "Target"
+        assert method.template_parameters[0].die_offset == 0
+        assert method.template_parameters[0].cu_offset == 0x20
+        assert method.template_parameters[0].argument_offset == 0
+        method_die.iter_children.assert_called_once_with()

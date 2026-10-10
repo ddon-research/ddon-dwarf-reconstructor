@@ -9,6 +9,7 @@ from ....core.observability import get_logger
 from ...ports.dwarf_lookup import DwarfLookupPort
 from .primitive_lookup import PrimitiveLookupMixin
 from .primitive_type_names import PrimitiveTypeNamesMixin
+from .type_reference_parser import TypeReferenceParser
 from .type_resolution import TypeResolutionMixin
 from .typedef_collection import TypedefCollectionMixin
 from .used_typedef_collection import UsedTypedefCollectionMixin
@@ -81,7 +82,11 @@ class LazyTypeResolver(
 
         # Runtime caches (offset-based and name-based)
         self._typedef_cache: dict[int, str] = {}  # offset → resolved typedef
-        self._type_name_cache: dict[int, str] = {}  # offset → resolved type name
+        self._type_name_cache: dict[tuple[int | None, int | None], str] = {}
+        self._reference_parser = TypeReferenceParser()
+        self._reference_target_cache: dict[
+            tuple[int | None, int, str], tuple[int | None, int | None]
+        ] = {}
         self._typedef_chains: dict[str, str] = {}  # name → final resolved type
 
         # Recursion tracking

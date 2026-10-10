@@ -7,8 +7,10 @@ from collections.abc import Mapping
 from ....core.dwarf import DwarfEntry
 from ....core.observability import get_logger
 from ...models.dwarf import StructInfo, TypeDeclarator, TypeReference
-from ...ports.type_resolution import TypeNameResolver
+from ...ports.type_resolution import TypeResolverPort
 from .class_parser_context import ClassParserContext
+from .primitive_encoding import integer_encoding
+from .type_scope import die_key, referenced_die
 
 logger = get_logger(__name__)
 
@@ -21,6 +23,51 @@ class ClassParserMemberTypesMixin:
         if "DW_AT_type" not in member_die.attributes:
             return None
         return member_die.get_DIE_from_attribute("DW_AT_type")
+
+    def _bitfield_base_evidence(
+        self: ClassParserContext, member_die: DwarfEntry
+    ) -> tuple[str, int | None]:
+        """Read the terminal type and width without guessing from a field name."""
+        terminal = ClassParserMemberTypesMixin._bitfield_terminal_type(
+            self._member_type_die(member_die)
+        )
+        if terminal is None:
+            return "unknown", None
+        if terminal.tag == "DW_TAG_enumeration_type":
+            kind = "enum"
+        elif terminal.tag == "DW_TAG_ptr_to_member_type":
+            kind = "member_pointer_storage"
+        elif terminal.tag == "DW_TAG_base_type":
+            encoding = terminal.attributes.get("DW_AT_encoding")
+            encoded = integer_encoding(getattr(encoding, "value", None))
+            kind = "integral" if encoded is not None else "unknown"
+        else:
+            kind = "non_integral"
+        size = ClassParserMemberTypesMixin._byte_size(terminal)
+        return kind, size * 8 if size is not None else None
+
+    @staticmethod
+    def _bitfield_terminal_type(start: DwarfEntry | None) -> DwarfEntry | None:
+        """Unwrap aliases and cv qualifiers without erasing pointer indirection."""
+        current = start
+        visited: set[tuple[int | None, int | None]] = set()
+        wrappers = {
+            "DW_TAG_typedef",
+            "DW_TAG_const_type",
+            "DW_TAG_volatile_type",
+            "DW_TAG_restrict_type",
+        }
+        for _ in range(20):
+            if current is None:
+                return None
+            key = die_key(current)
+            if key in visited:
+                return None
+            visited.add(key)
+            if current.tag not in wrappers:
+                return current
+            current = referenced_die(current)
+        return None
 
     def _inline_struct_type(
         self: ClassParserContext, type_die: DwarfEntry | None
@@ -132,7 +179,7 @@ class ClassParserMemberTypesMixin:
 
     def _template_argument_references_from_die(
         self: ClassParserContext,
-        type_resolver: TypeNameResolver,
+        type_resolver: TypeResolverPort,
         type_die: DwarfEntry | None,
         visited_offsets: set[int],
     ) -> tuple[TypeReference, ...]:

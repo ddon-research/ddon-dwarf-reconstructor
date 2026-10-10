@@ -10,9 +10,10 @@ import pytest
 from ddon_dwarf_reconstructor.application.generators.dwarf_symbol_generation import (
     SymbolExtractionService,
     _allocate_header_paths,
+    _cycle_diagnostics,
+    _generation_diagnostics,
     _header_groups,
     _header_names_for_group,
-    _is_builtin_signature_type,
     _rendered_class_name,
     _validate_rendered_headers,
 )
@@ -26,12 +27,73 @@ from ddon_dwarf_reconstructor.application.generators.symbol_header_validation im
     diagnostic_mentions_origin,
     root_statuses,
 )
+from ddon_dwarf_reconstructor.application.generators.symbol_method_diagnostics import (
+    is_builtin_signature_type as _is_builtin_signature_type,
+)
 from ddon_dwarf_reconstructor.domain.models.dwarf import (
     ClassInfo,
     MemberInfo,
     MethodInfo,
     ParameterInfo,
 )
+from ddon_dwarf_reconstructor.domain.services.generation.header_dependency_plan import (
+    HeaderDependencyPlan,
+    build_header_name_index,
+)
+
+
+@pytest.mark.unit
+@pytest.mark.regression
+def test_unscheduled_owner_cycle_has_explicit_witness() -> None:
+    renderer = SimpleNamespace(cyclic_dependency_components=lambda *args, **kwargs: ())
+    context = SimpleNamespace(header_renderer=renderer)
+    plan = HeaderDependencyPlan(
+        {"owner": frozenset({"consumer"}), "consumer": frozenset()},
+        {},
+        build_header_name_index({}),
+        {"owner": frozenset(), "consumer": frozenset({"owner"})},
+        (("consumer", "owner"),),
+    )
+
+    diagnostics = _cycle_diagnostics(context, {}, [], plan)
+    assert diagnostics == (
+        "cyclic lexical owner prerequisite is unscheduled: consumer requires owner owner; "
+        "component: consumer, owner",
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.regression
+def test_by_value_cycle_witness_keeps_template_commas_inside_identity() -> None:
+    nested_key = "nDDOUtility::cArray<Owner::Node, 16>|1|2"
+    owner_key = "Owner|1|1"
+    renderer = SimpleNamespace(
+        cyclic_dependency_components=lambda *args, **kwargs: ((nested_key, owner_key),)
+    )
+    context = SimpleNamespace(header_renderer=renderer)
+
+    diagnostics = _cycle_diagnostics(context, {}, [])
+
+    assert diagnostics == (
+        f"unschedulable cyclic by-value dependency for symbol rendering: {nested_key}; {owner_key}",
+    )
+    assert diagnostic_mentions_origin(diagnostics[0], nested_key, _class(nested_key, 2, "Array.h"))
+    assert diagnostic_mentions_origin(diagnostics[0], owner_key, _class("Owner", 1, "Owner.h"))
+    assert not diagnostic_mentions_origin(
+        diagnostics[0], "Other|1|3", _class("Other", 3, "Other.h")
+    )
+
+
+@pytest.mark.unit
+@pytest.mark.regression
+def test_ambiguous_complete_base_diagnostic_reaches_symbol_result() -> None:
+    renderer = SimpleNamespace(cyclic_dependency_components=lambda *args, **kwargs: ())
+    context = SimpleNamespace(header_renderer=renderer)
+    graph = SimpleNamespace(class_infos={}, hierarchy_order=[], diagnostics=())
+    witness = "ambiguous complete base requirement for derived: Node candidates first, second"
+    plan = HeaderDependencyPlan({}, {}, build_header_name_index({}), {}, (), (witness,))
+
+    assert _generation_diagnostics(context, graph, plan) == (witness,)
 
 
 def _class(
@@ -146,7 +208,7 @@ def test_symbols_retain_declaration_only_method_dependency_diagnostic() -> None:
         "MtDataReader": _class("MtDataReader", 3, "MtDataReader.h", is_declaration=True),
     }
     builder = MagicMock()
-    builder.build_full_hierarchy_with_dependencies.return_value = (
+    builder.build_symbol_union_with_dependencies.return_value = (
         classes,
         ["Root", "MtDataReader"],
     )
@@ -176,7 +238,7 @@ def test_namespace_symbol_uses_namespace_header_in_symbol_route() -> None:
     namespace = _class("rAcquirement", 1, "ignored.cpp")
     namespace.kind = "namespace"
     builder = MagicMock()
-    builder.build_full_hierarchy_with_dependencies.return_value = (
+    builder.build_symbol_union_with_dependencies.return_value = (
         {"rAcquirement|101|1": namespace},
         ["rAcquirement|101|1"],
     )
@@ -200,6 +262,10 @@ def test_namespace_symbol_uses_namespace_header_in_symbol_route() -> None:
     assert tuple(result.headers) == ("rAcquirement/rAcquirement.h",)
     assert "namespace rAcquirement" in result.headers["rAcquirement/rAcquirement.h"]
     assert "class rAcquirement" not in result.headers["rAcquirement/rAcquirement.h"]
+    builder.build_symbol_union_with_dependencies.assert_called_once_with(
+        ("rAcquirement",), max_depth=10, include_method_signatures=True
+    )
+    builder.build_full_hierarchy_with_dependencies.assert_not_called()
 
 
 @pytest.mark.unit

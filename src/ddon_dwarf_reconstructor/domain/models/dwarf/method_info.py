@@ -5,6 +5,8 @@
 from dataclasses import dataclass
 
 from .parameter_info import ParameterInfo
+from .template_param_info import TemplateParameter
+from .type_reference import TypeReference
 
 
 @dataclass
@@ -35,6 +37,8 @@ class MethodInfo:
     cu_offset: int | None = None
     owner_die_offset: int | None = None
     linkage_name: str | None = None
+    return_type_reference: TypeReference | None = None
+    template_parameters: tuple[TemplateParameter, ...] = ()
 
     def __post_init__(self) -> None:
         if self.parameters is None:

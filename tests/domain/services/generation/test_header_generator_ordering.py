@@ -14,6 +14,12 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import (
     ParameterInfo,
 )
 from ddon_dwarf_reconstructor.domain.services.generation import HeaderRenderer
+from ddon_dwarf_reconstructor.domain.services.generation.header_type_planning import (
+    HeaderTypePlanningService,
+)
+from ddon_dwarf_reconstructor.domain.services.generation.method_signature_policy import (
+    MethodDeclarationError,
+)
 
 
 class TestHeaderGenerator:
@@ -109,6 +115,58 @@ class TestHeaderGenerator:
             header_generator.stable_topological_order({"A": {"B"}, "B": {"A"}}, ["A", "B"])
 
     @pytest.mark.unit
+    def test_typedef_cycle_cannot_fall_back_to_alphabetical_order(self) -> None:
+        with pytest.raises(ValueError, match="cyclic typedef dependencies: A, B"):
+            HeaderTypePlanningService._ordered_typedefs({"A": "B", "B": "A"})
+
+    @pytest.mark.unit
+    def test_qualified_typedef_targets_do_not_create_false_local_cycle(self) -> None:
+        assert HeaderTypePlanningService._ordered_typedefs({"A": "ns::B", "B": "ns::A"}) == [
+            ("A", "ns::B"),
+            ("B", "ns::A"),
+        ]
+
+    @pytest.mark.unit
+    def test_nested_struct_cycle_cannot_fall_back_to_source_order(self) -> None:
+        with pytest.raises(ValueError, match="cyclic nested struct dependencies: A, B"):
+            HeaderTypePlanningService._topological_struct_names(
+                {"A": {"B"}, "B": {"A"}}, ["A", "B"]
+            )
+
+    @pytest.mark.unit
+    def test_nested_by_value_cycle_cannot_fall_back_to_source_order(self, header_generator) -> None:
+        nested = [
+            ClassInfo(
+                name=name,
+                byte_size=8,
+                members=[MemberInfo(name="peer", type_name=peer, offset=0)],
+                methods=[],
+                base_classes=[],
+                enums=[],
+                nested_structs=[],
+                unions=[],
+                die_offset=0x5600 + index,
+            )
+            for index, (name, peer) in enumerate((("A", "B"), ("B", "A")))
+        ]
+
+        owner = ClassInfo(
+            name="Owner",
+            byte_size=16,
+            members=[],
+            methods=[],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            nested_classes=nested,
+            die_offset=0x5700,
+        )
+
+        with pytest.raises(ValueError, match="cyclic by-value dependencies"):
+            header_generator.generate_header(owner, include_metadata=False)
+
+    @pytest.mark.unit
     def test_symbol_cycle_ordering_uses_deterministic_recovery(self, header_generator) -> None:
         classes = {
             name: ClassInfo(
@@ -185,8 +243,8 @@ class TestHeaderGenerator:
         assert "MT_CTSTR operator const char *" not in header
 
     @pytest.mark.unit
-    def test_duplicate_method_signatures_are_emitted_once(self, header_generator):
-        """Repeated DWARF entries must not create illegal return-only overloads."""
+    def test_conflicting_method_returns_fail_explicitly(self, header_generator):
+        """Return-only disagreement cannot be repaired by discarding evidence."""
         class_info = ClassInfo(
             name="DuplicateMethods",
             byte_size=8,
@@ -210,9 +268,8 @@ class TestHeaderGenerator:
             die_offset=0x5500,
         )
 
-        header = header_generator.generate_header(class_info, include_metadata=False)
-
-        assert header.count("cast(const MtDTI& dti);") == 1
+        with pytest.raises(MethodDeclarationError, match="conflicting method declaration"):
+            header_generator.generate_header(class_info, include_metadata=False)
 
     @pytest.mark.unit
     def test_method_signature_dependency_receives_complete_header_include(self, header_generator):

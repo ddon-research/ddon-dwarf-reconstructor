@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$ComposeFile = (Join-Path $PSScriptRoot "compose.yaml"),
+    [string[]]$ComposeOverlay = @(),
+    [string]$StoreManifest,
     [string]$EnvFile = (Join-Path $PSScriptRoot ".env"),
     [string]$ImageLockFile = (Join-Path $PSScriptRoot "images.lock.json"),
     [string]$OutputPath,
@@ -144,7 +146,9 @@ if (-not (Test-Path -LiteralPath $lock -PathType Leaf)) { $failures.Add("image l
 
 $rendered = ""
 if ($failures.Count -eq 0) {
-    $composeArgs = @("compose", "--env-file", $EnvFile, "-f", $compose, "config")
+    $composeArgs = @("compose", "--env-file", $EnvFile, "-f", $compose)
+    foreach ($overlay in $ComposeOverlay) { $composeArgs += @("-f", $overlay) }
+    $composeArgs += @("config", "--format", "json")
     $rendered = (& docker @composeArgs 2>&1 | Out-String)
     if ($LASTEXITCODE -ne 0) { $failures.Add("docker compose config failed") }
 }
@@ -175,44 +179,44 @@ if ($rendered -match '(?im)ignore_broken_disk\s*[:=]\s*true') {
 }
 
 $pathChecks = @()
-foreach ($key in @("DDON_DORIS_FE_DATA", "DDON_DORIS_FE_LOG", "DDON_DORIS_BE_DATA", "DDON_DORIS_BE_LOG")) {
-    $path = $envValues[$key]
-    if ([string]::IsNullOrWhiteSpace($path)) {
-        $failures.Add("$key is missing from the environment file")
-        continue
-    }
-    if (-not [System.IO.Path]::IsPathRooted($path)) {
-        $path = Join-Path (Split-Path -Parent $EnvFile) $path
-    }
-    $exists = Test-Path -LiteralPath $path -PathType Container
-    if (-not $exists) {
-        $failures.Add("$key directory is missing: $path")
-    }
-    $accessReport = if ($exists) {
-        Test-DirectoryAccess $path
+$servingChecks = [pscustomobject]@{
+    fe_connectivity = @{ status = "not_observed" }
+    backend_tablet_readiness = @{ status = "not_observed" }
+    source_bound_queries = @{ status = "not_observed" }
+}
+if ($failures.Count -eq 0) {
+    . (Join-Path $PSScriptRoot "preflight-storage.ps1")
+    $configuration = $rendered | ConvertFrom-Json
+    $pathChecks = @(Get-StorageChecks $configuration)
+}
+$storageStatus = if ($failures.Count -eq 0) { "pass" } else { "fail" }
+if ($storageStatus -eq "pass" -and -not [string]::IsNullOrWhiteSpace($StoreManifest)) {
+    $sqlPorts = @($configuration.services.'doris-fe'.ports | Where-Object target -EQ 9030)
+    if ($sqlPorts.Count -ne 1) {
+        $failures.Add("one FE SQL port publication is required")
     } else {
-        [pscustomobject]@{ readable = $false; writable = $false; status = "directory_missing"; errors = @() }
-    }
-    if ($accessReport.status -ne "pass") { $failures.Add("$($key): $($accessReport.status)") }
-    $driveReport = Get-DriveReport $path
-    if ($driveReport.status -ne "pass") { $failures.Add("$($key): $($driveReport.status)") }
-    $pathChecks += [pscustomobject]@{
-        variable = $key
-        directory = $path
-        access = $accessReport
-        drive = $driveReport
+        Push-Location (Join-Path $PSScriptRoot "../..")
+        try {
+            $servingJson = & uv run --no-sync python -m ddon_dwarf_reconstructor.infrastructure.analytical.doris_readiness `
+                --manifest $StoreManifest --sql-port $sqlPorts[0].published
+            if ($LASTEXITCODE -ne 0) { $failures.Add("serving readiness failed") }
+            if ($servingJson) { $servingChecks = ($servingJson | Out-String) | ConvertFrom-Json }
+        } finally { Pop-Location }
     }
 }
 
 $report = [pscustomobject]@{
-    checked_at = (Get-Date).ToUniversalTime().ToString("o")
+    checked_at = (Get-Date).ToString("o")
     compose_file = $compose
+    compose_overlays = $ComposeOverlay
+    storage_readiness = $storageStatus
+    serving = $servingChecks
     env_file = $envPath
     image_lock_file = $lock
     minimum_free_percent = $MinimumFreePercent
     images = $imageChecks
     paths = $pathChecks
-    ignore_broken_disk = "false_or_unset"
+    ignore_broken_disk = "not_enabled_in_rendered_compose"
     status = if ($failures.Count -eq 0) { "pass" } else { "fail" }
     failures = @($failures)
 }

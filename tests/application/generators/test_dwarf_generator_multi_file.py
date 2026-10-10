@@ -115,6 +115,28 @@ def test_multi_file_generation_renders_namespace_root(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
+def test_namespace_root_without_template_parameter_evidence_reports_omission() -> None:
+    cu = Mock(cu_offset=0x10)
+    namespace_die = Mock(tag="DW_TAG_namespace", offset=0x20)
+    children = []
+    for tag, name in (
+        ("DW_TAG_class_type", "cArray<class Item *, 4>"),
+        ("DW_TAG_class_type", "Widget"),
+    ):
+        child = Mock(tag=tag, attributes={"DW_AT_name": Mock(value=name.encode())})
+        children.append(child)
+    namespace_die.iter_children.return_value = children
+
+    rendered = SpecialHeaderRenderer.render_namespace("nDDOUtility", cu, namespace_die)
+
+    assert "// Unresolved template signature: cArray<class Item *, 4>" in rendered
+    assert "template <" not in rendered
+    assert "class cArray<Item *, 4>;" not in rendered
+    assert "namespace nDDOUtility {\n\n// Forward declarations\nclass Widget;" in rendered
+    assert "namespace nDDOUtility {\nclass cArray" not in rendered
+
+
+@pytest.mark.unit
 def test_render_helpers_skip_empty_file_groups(tmp_path: Path) -> None:
     generator = _generator(tmp_path)
     infos = {"A": _class("A")}

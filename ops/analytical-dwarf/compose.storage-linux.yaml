@@ -1,0 +1,41 @@
+# Explicit promotion to verified Linux-backed storage. Volumes must already exist;
+# Compose must never silently replace a missing recovered store with an empty one.
+services:
+  doris-fe:
+    volumes:
+      - type: volume
+        source: fe-data-linux
+        target: /opt/apache-doris/fe/doris-meta
+        volume:
+          nocopy: true
+      - type: volume
+        source: fe-log-linux
+        target: /opt/apache-doris/fe/log
+        volume:
+          nocopy: true
+  doris-be:
+    volumes:
+      - type: volume
+        source: be-data-linux
+        target: /opt/apache-doris/be/storage
+        volume:
+          nocopy: true
+      - type: volume
+        source: be-log-linux
+        target: /opt/apache-doris/be/log
+        volume:
+          nocopy: true
+
+volumes:
+  fe-data-linux:
+    external: true
+    name: ${DDON_DORIS_FE_DATA_VOLUME:?Set the verified FE data volume}
+  fe-log-linux:
+    external: true
+    name: ${DDON_DORIS_FE_LOG_VOLUME:?Set the verified FE log volume}
+  be-data-linux:
+    external: true
+    name: ${DDON_DORIS_BE_DATA_VOLUME:?Set the verified BE data volume}
+  be-log-linux:
+    external: true
+    name: ${DDON_DORIS_BE_LOG_VOLUME:?Set the verified BE log volume}

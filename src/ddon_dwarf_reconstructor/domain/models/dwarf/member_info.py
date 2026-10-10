@@ -27,8 +27,14 @@ class MemberInfo:
     access: str = "public"
     is_volatile: bool = False
     bit_size: int | None = None
-    bit_offset: int | None = None
+    data_bit_offset: int | None = None
+    storage_bit_offset: int | None = None
+    bitfield_base_kind: str | None = None
+    bitfield_base_bits: int | None = None
+    cu_offset: int | None = None
+    die_offset: int | None = None
     declared_type_offset: int | None = None  # Immediate typedef DIE offset, when present
     inline_struct: StructInfo | None = None  # Anonymous class/struct used as a member type
     opaque_storage_size: int | None = None  # Size used for an unrepresentable by-value type
     template_arguments: tuple[TypeReference, ...] = ()
+    type_reference: TypeReference | None = None

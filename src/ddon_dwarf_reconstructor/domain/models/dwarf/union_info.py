@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from .member_info import MemberInfo
+from .type_reference import TypeReference
 
 if TYPE_CHECKING:
     from .struct_info import StructInfo
@@ -22,3 +23,4 @@ class UnionInfo:
     members: list[MemberInfo]
     nested_structs: list[StructInfo]
     die_offset: int | None = None
+    defining_alias: TypeReference | None = None

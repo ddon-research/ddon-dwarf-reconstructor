@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from ...models.dwarf import ClassInfo, MemberInfo, StructInfo, UnionInfo
+from .alias_rendering import member_alias_lines
+from .enum_declarations import enum_forward
 from .rendering.operations import HeaderRenderingHost
+from .template_declarations import nested_primary_declaration
 
 
 class HeaderNestedRenderingService:
@@ -27,7 +30,9 @@ class HeaderNestedRenderingService:
         return [
             *self._nested_type_forward_declarations(class_info),
             *self._enum_lines(class_info, include_metadata),
+            *member_alias_lines(class_info),
             *self._nested_aggregate_definition_lines(class_info),
+            *member_alias_lines(class_info, after_definitions=True),
         ]
 
     def _nested_aggregate_definition_lines(
@@ -38,6 +43,10 @@ class HeaderNestedRenderingService:
             return []
         lines = ["public:"]
         for index, (kind, aggregate) in enumerate(units):
+            if aggregate.defining_alias is not None:
+                lines.append(f"{aggregate.defining_alias.declaration_access or 'public'}:")
+            else:
+                lines.append("public:")
             if kind == "class":
                 assert isinstance(aggregate, ClassInfo)
                 nested_lines = self._generate_single_class(aggregate, include_metadata=False)
@@ -76,10 +85,7 @@ class HeaderNestedRenderingService:
             for key, (kind, aggregate) in units.items()
         }
         preferred = list(units)
-        try:
-            ordered_names = self._stable_topological_order(dependencies, preferred)
-        except ValueError:
-            ordered_names = preferred
+        ordered_names = self._stable_topological_order(dependencies, preferred)
         return [units[name] for name in ordered_names]
 
     def _nested_aggregate_dependencies(
@@ -138,10 +144,7 @@ class HeaderNestedRenderingService:
             key: self._nested_class_dependencies(info, names) for key, info in candidates.items()
         }
         preferred = list(candidates)
-        try:
-            ordered_names = self._stable_topological_order(dependencies, preferred)
-        except ValueError:
-            ordered_names = preferred
+        ordered_names = self._stable_topological_order(dependencies, preferred)
         return [candidates[name] for name in ordered_names]
 
     def _nested_class_dependencies(
@@ -190,9 +193,11 @@ class HeaderNestedRenderingService:
         self: HeaderRenderingHost, class_info: ClassInfo
     ) -> list[str]:
         return [
-            f"    enum class {self._unqualify_type_expression(enum.name)};"
+            f"    {declaration}"
             for enum in class_info.enums
             if enum.name and enum.name != "unknown_enum"
+            if (declaration := enum_forward(enum, self._unqualify_type_expression(enum.name)))
+            is not None
         ]
 
     def _nested_struct_forward_declarations(
@@ -201,7 +206,7 @@ class HeaderNestedRenderingService:
         return [
             f"    struct {self._unqualify_type_expression(struct.name)};"
             for struct in class_info.nested_structs
-            if struct.name
+            if struct.name and struct.defining_alias is None
         ]
 
     def _nested_class_forward_declarations(
@@ -210,10 +215,10 @@ class HeaderNestedRenderingService:
         declarations: list[str] = []
         seen: set[str] = set()
         for nested_class in self._ordered_nested_classes(class_info.nested_classes):
-            if not nested_class.name:
+            if not nested_class.name or nested_class.defining_alias is not None:
                 continue
             if "<" in nested_class.name:
-                declaration = self._aggregate_forward_declaration(nested_class.name)
+                declaration = nested_primary_declaration(nested_class, class_info)
                 if declaration is not None and declaration not in seen:
                     seen.add(declaration)
                     declarations.append(f"    {declaration}")
@@ -233,7 +238,7 @@ class HeaderNestedRenderingService:
         return [
             f"    union {self._unqualify_type_expression(union.name)};"
             for union in class_info.unions
-            if union.name
+            if union.name and union.defining_alias is None
         ]
 
     def _enum_lines(
@@ -243,6 +248,10 @@ class HeaderNestedRenderingService:
             return []
         lines = ["public:"]
         for enum in class_info.enums:
+            if enum.defining_alias is not None:
+                lines.append(f"{enum.defining_alias.declaration_access or 'public'}:")
+            else:
+                lines.append("public:")
             lines.extend(self._generate_enum_definition(enum, include_metadata))
         return lines
 

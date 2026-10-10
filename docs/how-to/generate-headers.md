@@ -255,8 +255,7 @@ repository does not accept game binaries, generated headers, or runtime caches a
 If the analytical-dwarf Compose stack is healthy but generation reports a refused Doris
 connection, verify the host-side FE mapping before concluding that Doris is unavailable. The
 application default is `127.0.0.1:9030` (the upstream Doris container default), whereas the workstation
-Compose configuration maps FE SQL to host port `29030`. Check `docker compose --file
-ops/analytical-dwarf/compose.yaml ps --all` and the exact endpoint with
+Compose configuration maps FE SQL to host port `29030`. Check `uv run just analytical-linux-preflight` and the exact endpoint with
 `Test-NetConnection 127.0.0.1 -Port 29030`, then ensure your `.env` or application environment is aligned:
 
 ```powershell

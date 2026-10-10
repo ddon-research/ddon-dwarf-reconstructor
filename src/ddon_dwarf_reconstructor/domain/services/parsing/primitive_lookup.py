@@ -71,7 +71,9 @@ class PrimitiveLookupMixin:
                 "Primitive search for %s ended as %s: %s",
                 type_name,
                 result.status.value,
-                "; ".join(result.diagnostics),
+                "; ".join(result.diagnostics)
+                if isinstance(getattr(result, "diagnostics", None), (list, tuple))
+                else "",
             )
             return None
         return result.die_offset

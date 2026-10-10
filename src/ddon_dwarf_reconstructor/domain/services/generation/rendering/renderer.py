@@ -157,10 +157,6 @@ class HeaderRenderer:
         )
 
     @staticmethod
-    def _template_forward_declaration(type_name: str) -> str | None:
-        return HeaderRenderingEngine._template_forward_declaration(type_name)
-
-    @staticmethod
     def _template_argument_forward_declarations(
         expression: str, typedef_names: set[str]
     ) -> set[str]:

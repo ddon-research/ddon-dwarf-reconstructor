@@ -70,16 +70,25 @@ class DependencyExtractor:
         )
         for member in class_info.members:
             dependencies.update(self._get_member_dependency_offsets(member))
+        for alias in (*class_info.declared_aliases, *class_info.source_aliases):
+            dependencies.update(self._get_reference_offsets(alias.alias_target))
         if include_method_signatures:
-            for method in class_info.methods:
-                offset = self._get_method_return_type_offset(method)
+            self._collect_method_signature_dependencies(class_info, dependencies)
+        return dependencies
+
+    def _collect_method_signature_dependencies(
+        self, class_info: ClassInfo, dependencies: set[int]
+    ) -> None:
+        for method in class_info.methods:
+            dependencies.update(self._get_reference_offsets(method.return_type_reference))
+            offset = self._get_method_return_type_offset(method)
+            if offset is not None:
+                dependencies.add(offset)
+            for parameter in method.parameters or []:
+                dependencies.update(self._get_reference_offsets(parameter.type_reference))
+                offset = self._get_parameter_type_offset(parameter)
                 if offset is not None:
                     dependencies.add(offset)
-                for parameter in method.parameters or []:
-                    offset = self._get_parameter_type_offset(parameter)
-                    if offset is not None:
-                        dependencies.add(offset)
-        return dependencies
 
     def _nested_aggregate_dependencies(
         self,
@@ -175,21 +184,34 @@ class DependencyExtractor:
     # Private helper methods
 
     def _get_member_dependency_offsets(self, member: MemberInfo) -> set[int]:
-        offsets: set[int] = set()
+        offsets = self._get_reference_offsets(member.type_reference)
         type_offset = self._get_member_type_offset(member)
         if type_offset is not None:
             offsets.add(type_offset)
         for reference in getattr(member, "template_arguments", ()):
             offsets.update(self._get_template_reference_offsets(reference))
+        if member.inline_struct is not None:
+            for child in member.inline_struct.members:
+                offsets.update(self._get_member_dependency_offsets(child))
+        return offsets
+
+    @staticmethod
+    def _get_reference_offsets(reference: TypeReference | None) -> set[int]:
+        if not isinstance(reference, TypeReference):
+            return set()
+        offsets: set[int] = set()
+        for dependency in reference.references():
+            if dependency.die_offset is not None:
+                offsets.add(dependency.die_offset)
+            offsets.update(
+                scope.die_offset
+                for scope in dependency.scope.components
+                if scope.kind != "namespace" and scope.die_offset is not None
+            )
         return offsets
 
     def _get_template_reference_offsets(self, reference: TypeReference) -> set[int]:
-        offsets: set[int] = set()
-        if reference.die_offset is not None:
-            offsets.add(reference.die_offset)
-        for nested_reference in reference.template_arguments:
-            offsets.update(self._get_template_reference_offsets(nested_reference))
-        return offsets
+        return self._get_reference_offsets(reference)
 
     def _get_member_type_offset(self, member: MemberInfo) -> int | None:
         """Get type offset from a member.

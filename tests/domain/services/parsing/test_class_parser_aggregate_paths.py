@@ -8,8 +8,13 @@ from unittest.mock import Mock
 import pytest
 
 from ddon_dwarf_reconstructor.domain.models.dwarf import MemberInfo, StructInfo
+from ddon_dwarf_reconstructor.domain.models.dwarf.type_reference import (
+    TypeDeclarator,
+    TypeReference,
+)
 from ddon_dwarf_reconstructor.domain.services.parsing import ClassParser
 from ddon_dwarf_reconstructor.domain.services.parsing.type_chain_traverser import TypeChainTraverser
+from tests.support.type_graph import TypeAttribute, TypeDie, TypeUnit
 
 
 def _parser() -> ClassParser:
@@ -160,8 +165,197 @@ def test_parse_enum_defaults_missing_name_and_size() -> None:
 
     assert result is not None
     assert result.name == "unknown_enum"
-    assert result.byte_size == 4
+    assert result.byte_size is None
+    assert result.scoped is False
     assert result.enumerators == []
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("flag", "expected", "evidence"),
+    [(None, None, "absent"), (0, False, "explicit_false"), (1, True, "present")],
+)
+def test_enum_scopedness_distinguishes_absence_from_explicit_flags(
+    flag: int | None, expected: bool | None, evidence: str
+) -> None:
+    parser = _parser()
+    attributes = {"DW_AT_name": TypeAttribute(b"Mode")}
+    if flag is not None:
+        attributes["DW_AT_enum_class"] = TypeAttribute(flag)
+    enum = TypeDie("DW_TAG_enumeration_type", 0, attributes, TypeUnit(0))
+
+    result = parser.parse_enum(enum)
+
+    assert result is not None
+    assert result.scoped is expected
+    assert result.scopedness_evidence == evidence
+    assert result.byte_size is None
+    assert result.size_evidence == "absent"
+    assert result.cu_offset == result.die_offset == 0
+    assert result.fixed_base_evidence is None
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("legacy_flag", "has_base", "expected_scoped", "expected_evidence", "fixed"),
+    [
+        (None, False, False, "legacy_nonfixed", False),
+        (1, True, None, "legacy_fixed", True),
+        (None, True, None, "legacy_inconsistent", None),
+    ],
+)
+def test_ps4_clang35_enum_flag_means_fixed_base_not_scopedness(
+    legacy_flag: int | None,
+    has_base: bool,
+    expected_scoped: bool | None,
+    expected_evidence: str,
+    fixed: bool | None,
+) -> None:
+    parser = _parser()
+    unit = TypeUnit(0, {"items": [["version", 4]]})
+    top = TypeDie("DW_TAG_compile_unit", 0, cu=unit)
+    top.attributes["DW_AT_producer"] = TypeAttribute(
+        b"clang version 3.5.0 (PS4 clang version 2.50.0.2333)"
+    )
+    top.attributes["DW_AT_language"] = TypeAttribute(4)
+    enum = TypeDie("DW_TAG_enumeration_type", 7, cu=unit, parent=top).named("Mode")
+    if legacy_flag is not None:
+        enum.attributes["DW_AT_enum_class"] = TypeAttribute(legacy_flag)
+    if has_base:
+        base = TypeDie("DW_TAG_base_type", 8, cu=unit).named("unsigned int")
+        enum.link(base)
+        parser.type_resolver.resolve_type_reference.return_value = TypeReference(
+            TypeDeclarator("unsigned int"), cu_offset=0, die_offset=8
+        )
+
+    result = parser.parse_enum(enum)
+
+    assert result is not None
+    assert result.scoped is expected_scoped
+    assert result.scopedness_evidence == expected_evidence
+    assert result.enum_class_flag == (True if legacy_flag == 1 else None)
+    assert result.fixed_base_evidence is fixed
+    assert result.producer_profile == "ps4-clang35-dwarf4-cxx"
+
+
+@pytest.mark.unit
+def test_legacy_enum_rule_requires_exact_producer_language_and_version() -> None:
+    parser = _parser()
+    unit = TypeUnit(0, {"version": 5})
+    top = TypeDie("DW_TAG_compile_unit", 0, cu=unit)
+    top.attributes["DW_AT_producer"] = TypeAttribute(
+        b"clang version 3.5.0 (PS4 clang version 2.50.0.2333)"
+    )
+    top.attributes["DW_AT_language"] = TypeAttribute(4)
+    enum = TypeDie("DW_TAG_enumeration_type", 7, cu=unit, parent=top).named("Mode")
+
+    result = parser.parse_enum(enum)
+
+    assert result is not None
+    assert result.scoped is None
+    assert result.scopedness_evidence == "absent"
+    assert result.producer_profile is None
+
+
+@pytest.mark.unit
+def test_member_pointer_alias_bit_size_is_storage_not_bitfield_width() -> None:
+    parser = _parser()
+    unit = TypeUnit(613377789)
+    pointer = TypeDie("DW_TAG_ptr_to_member_type", 613430910, cu=unit)
+    alias = TypeDie("DW_TAG_typedef", 613430263, cu=unit).named("UpdateFunc").link(pointer)
+    member = (
+        TypeDie(
+            "DW_TAG_member",
+            613430240,
+            {
+                "DW_AT_bit_size": TypeAttribute(128),
+                "DW_AT_bit_offset": TypeAttribute(18446744073709551488),
+            },
+            unit,
+        )
+        .named("mpUpdateFunc")
+        .link(alias)
+    )
+
+    kind, bits = parser._bitfield_base_evidence(member)
+
+    assert kind == "member_pointer_storage"
+    assert bits is None
+
+
+@pytest.mark.unit
+def test_enum_representation_is_separate_from_unproved_fixed_base() -> None:
+    parser = _parser()
+    unsigned = TypeDie("DW_TAG_base_type", 0, cu=TypeUnit(0)).named("unsigned char")
+    unsigned.attributes["DW_AT_encoding"] = TypeAttribute(0x08)
+    unsigned.attributes["DW_AT_byte_size"] = TypeAttribute(1)
+    enum = TypeDie(
+        "DW_TAG_enumeration_type",
+        7,
+        {"DW_AT_name": TypeAttribute(b"ByteMode"), "DW_AT_byte_size": TypeAttribute(1)},
+    ).link(unsigned)
+    parser.type_resolver.resolve_type_reference.return_value = TypeReference(
+        TypeDeclarator("unsigned char"), die_offset=0, cu_offset=0, kind="DW_TAG_base_type"
+    )
+
+    result = parser.parse_enum(enum)
+
+    assert result is not None
+    assert result.byte_size == 1
+    assert result.size_evidence == "present"
+    assert result.representation_type is not None
+    assert result.representation_type.name == "unsigned char"
+    assert result.representation_offset == 0
+    assert result.fixed_base_evidence is None
+
+
+@pytest.mark.unit
+def test_invalid_enum_size_is_retained_as_unavailable_with_provenance() -> None:
+    parser = _parser()
+    enum = TypeDie(
+        "DW_TAG_enumeration_type",
+        9,
+        {"DW_AT_name": TypeAttribute(b"BadSize"), "DW_AT_byte_size": TypeAttribute(0)},
+    )
+
+    result = parser.parse_enum(enum)
+
+    assert result is not None
+    assert result.byte_size is None
+    assert result.size_evidence == "invalid"
+    assert result.scoped is None
+
+
+@pytest.mark.unit
+def test_unnamed_zero_width_bitfield_preserves_type_and_distinct_offsets() -> None:
+    parser = _parser()
+    base = TypeDie("DW_TAG_base_type", 4).named("unsigned int")
+    base.attributes["DW_AT_encoding"] = TypeAttribute(0x07)
+    base.attributes["DW_AT_byte_size"] = TypeAttribute(4)
+    alias = TypeDie("DW_TAG_typedef", 3).named("Bits").link(base)
+    member = TypeDie(
+        "DW_TAG_member",
+        0,
+        {
+            "DW_AT_data_member_location": TypeAttribute(0),
+            "DW_AT_bit_size": TypeAttribute(0),
+            "DW_AT_data_bit_offset": TypeAttribute(32),
+            "DW_AT_bit_offset": TypeAttribute(0),
+        },
+    ).link(alias)
+    parser.type_resolver.resolve_type_name.return_value = "Bits"
+    parser.type_resolver.resolve_reference.return_value = TypeReference(TypeDeclarator("Bits"))
+
+    result = parser.parse_member(member)
+
+    assert result is not None
+    assert result.name == ""
+    assert result.bit_size == 0
+    assert result.data_bit_offset == 32
+    assert result.storage_bit_offset == 0
+    assert result.bitfield_base_kind == "integral"
+    assert result.bitfield_base_bits == 32
+    assert result.die_offset == 0
 
 
 @pytest.mark.unit

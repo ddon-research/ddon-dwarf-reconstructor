@@ -13,6 +13,10 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import (
     ParameterInfo,
     StructInfo,
 )
+from ddon_dwarf_reconstructor.domain.models.dwarf.type_reference import (
+    TypeDeclarator,
+    TypeReference,
+)
 from ddon_dwarf_reconstructor.domain.services.generation import HeaderRenderer
 from ddon_dwarf_reconstructor.domain.services.generation.header_hierarchy import (
     HierarchyHeaderGenerationService,
@@ -203,12 +207,12 @@ class TestHeaderGeneratorDependencyOrdering:
                 MethodInfo(
                     name="concat",
                     return_type="void",
-                    parameters=[ParameterInfo("value", "MT_CHAR", type_offset=0x10)],
+                    parameters=[ParameterInfo("value", "MT_CHAR", type_offset=0x10, cu_offset=0)],
                 ),
                 MethodInfo(
                     name="concat",
                     return_type="void",
-                    parameters=[ParameterInfo("value", "MT_CTSTR", type_offset=0x10)],
+                    parameters=[ParameterInfo("value", "MT_CTSTR", type_offset=0x10, cu_offset=0)],
                 ),
             ],
             base_classes=[],
@@ -252,6 +256,58 @@ class TestHeaderGeneratorDependencyOrdering:
 
         assert "read(Value* value);" in header
         assert "read(const Value* value);" in header
+
+    @pytest.mark.unit
+    def test_const_pointer_and_nonconst_reference_overloads_remain_distinct(self, header_generator):
+        class_info = ClassInfo(
+            name="PointerOverloads",
+            byte_size=8,
+            members=[],
+            methods=[
+                MethodInfo(
+                    name="read",
+                    return_type="void",
+                    parameters=[ParameterInfo("value", "const Value*")],
+                ),
+                MethodInfo(
+                    name="read",
+                    return_type="void",
+                    parameters=[ParameterInfo("value", "Value*&")],
+                ),
+            ],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x5521,
+        )
+
+        header = header_generator.generate_header(class_info, include_metadata=False)
+
+        assert "read(const Value* value);" in header
+        assert "read(Value*& value);" in header
+
+    @pytest.mark.unit
+    def test_ref_qualified_method_overloads_remain_distinct(self, header_generator):
+        class_info = ClassInfo(
+            name="RefOverloads",
+            byte_size=8,
+            members=[],
+            methods=[
+                MethodInfo(name="value", return_type="int", ref_qualifier="&"),
+                MethodInfo(name="value", return_type="int", ref_qualifier="&&"),
+            ],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            die_offset=0x5522,
+        )
+
+        header = header_generator.generate_header(class_info, include_metadata=False)
+
+        assert "value() &;" in header
+        assert "value() &&;" in header
 
     @pytest.mark.unit
     def test_nested_struct_pointer_members_receive_forward_declarations(self, header_generator):
@@ -299,6 +355,8 @@ class TestHeaderGeneratorDependencyOrdering:
                     name="Mode",
                     byte_size=4,
                     enumerators=[EnumeratorInfo(name="MODE_A", value=0)],
+                    scoped=True,
+                    representation_type=TypeReference(TypeDeclarator("int")),
                 )
             ],
             nested_structs=[],
@@ -308,7 +366,7 @@ class TestHeaderGeneratorDependencyOrdering:
 
         header = header_generator.generate_header(class_info, include_metadata=False)
 
-        assert "enum class Mode" in header
+        assert "enum class Mode : int" in header
         assert "void setMode(Mode mode);" in header
 
     @pytest.mark.unit
@@ -326,17 +384,16 @@ class TestHeaderGeneratorDependencyOrdering:
         assert TypeExpressionPolicy.preferred_forward_kind("Texture") == "class"
 
     @pytest.mark.unit
-    def test_template_forward_declarations_survive_kind_deduplication(self):
-        result = HierarchyHeaderGenerationService._preferred_forward_declaration(
-            "rTbl2",
-            [
-                "template <typename T> class rTbl2;",
-                "template <typename T, typename U, typename V> class rTbl2;",
-            ],
-            {},
-        )
-
-        assert result == "template <typename T, typename U, typename V> class rTbl2;"
+    def test_conflicting_template_forward_signatures_are_rejected(self):
+        with pytest.raises(ValueError, match="conflicting template primary declarations"):
+            HierarchyHeaderGenerationService._preferred_forward_declaration(
+                "rTbl2",
+                [
+                    "template <typename T> class rTbl2;",
+                    "template <typename T, typename U, typename V> class rTbl2;",
+                ],
+                {},
+            )
 
     @pytest.mark.unit
     def test_enum_class_forward_declaration_prefers_enum_class_over_class(self):
@@ -358,3 +415,118 @@ class TestHeaderGeneratorDependencyOrdering:
         )
         assert HeaderOrderingService._is_indirection_type("int*")
         assert not HeaderOrderingService._is_indirection_type("int")
+
+    @pytest.mark.unit
+    def test_nested_base_class_resolves_to_outer_owner_class(self):
+        from ddon_dwarf_reconstructor.domain.services.generation.header_dependency_plan import (
+            build_header_name_index,
+        )
+
+        inner = ClassInfo(
+            name="Constraint",
+            byte_size=8,
+            members=[],
+            methods=[],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            qualified_name="uModel::Constraint",
+        )
+        outer = ClassInfo(
+            name="uModel",
+            byte_size=100,
+            members=[],
+            methods=[],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            qualified_name="uModel",
+            nested_classes=[inner],
+        )
+        derived = ClassInfo(
+            name="uConstraint",
+            byte_size=50,
+            members=[],
+            methods=[],
+            base_classes=["uModel::Constraint"],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            qualified_name="uConstraint",
+        )
+        index = build_header_name_index({"uModel": outer, "uConstraint": derived})
+
+        assert index["uModel::Constraint"] == "uModel"
+
+    @pytest.mark.unit
+    def test_generic_template_instantiations_do_not_inject_dependencies_into_container_header(
+        self, header_generator
+    ):
+        from ddon_dwarf_reconstructor.domain.models.dwarf import (
+            TemplateTypeParam,
+            TemplateValueParam,
+        )
+        from ddon_dwarf_reconstructor.domain.services.generation.template_families import (
+            plan_template_families,
+        )
+
+        carray1 = ClassInfo(
+            name="cArray<bool, 8>",
+            qualified_name="nDDOUtility::cArray<bool, 8>",
+            byte_size=8,
+            members=[MemberInfo("elems", "bool[8]", offset=0)],
+            methods=[],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            template_parameters=[
+                TemplateTypeParam("T", "bool"),
+                TemplateValueParam("N", "unsigned int", 8),
+            ],
+            declaration_file="nDDOUtility.h",
+        )
+        carray2 = ClassInfo(
+            name="cArray<cContextPlayerInfo::cAbility, 10>",
+            qualified_name="nDDOUtility::cArray<cContextPlayerInfo::cAbility, 10>",
+            byte_size=100,
+            members=[MemberInfo("elems", "cContextPlayerInfo::cAbility[10]", offset=0)],
+            methods=[],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            template_parameters=[
+                TemplateTypeParam("T", "cContextPlayerInfo::cAbility"),
+                TemplateValueParam("N", "unsigned int", 10),
+            ],
+            declaration_file="nDDOUtility.h",
+        )
+        player_info = ClassInfo(
+            name="cContextPlayerInfo",
+            qualified_name="cContextPlayerInfo",
+            byte_size=200,
+            members=[
+                MemberInfo(
+                    "mAbilities", "nDDOUtility::cArray<cContextPlayerInfo::cAbility, 10>", offset=0
+                ),
+            ],
+            methods=[],
+            base_classes=[],
+            enums=[],
+            nested_structs=[],
+            unions=[],
+            declaration_file="cContextPlayerInfo.h",
+        )
+        planned, _ = plan_template_families(
+            {"carray1": carray1, "carray2": carray2, "player": player_info}, {}
+        )
+        deps = header_generator.external_dependency_headers_for_groups(
+            planned,
+            {"nddo.h": {"carray1", "carray2"}, "player.h": {"player"}},
+            {"carray1": "nddo.h", "carray2": "nddo.h", "player": "player.h"},
+        )
+        assert deps["nddo.h"] == {}
+        assert deps["player.h"] == {"carray2": "nddo.h"}

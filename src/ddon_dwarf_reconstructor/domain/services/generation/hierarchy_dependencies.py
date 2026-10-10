@@ -15,7 +15,6 @@ from ..parsing.die_type_classifier import DIETypeClassifier
 from .definition_identity import (
     definition_identity,
     definition_identity_key,
-    try_equivalent_class_info,
 )
 
 logger = get_logger(__name__)
@@ -377,12 +376,6 @@ class HierarchyDependencyWorkMixin:
             if cached is not None:
                 work.cache_hit_count += 1
                 return cached, target_key, True
-        existing = work.classes_by_name.get(type_name)
-        if existing is not None:
-            equivalent = try_equivalent_class_info(existing, target)
-            if equivalent is not None:
-                work.cache_hit_count += 1
-                return equivalent, target_key, True
         return self._parse_type_target(target), target_key, False
 
     def _process_next_name(

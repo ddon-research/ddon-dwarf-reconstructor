@@ -206,8 +206,6 @@ class HierarchyBuilderContext(Protocol):
         self,
         cu: DwarfCompilationUnit,
         class_die: DwarfEntry,
-        current_name: str,
-        is_root_lookup: bool,
         parsed_targets: dict[tuple[int, int], ClassInfo] | None,
         classes_by_name: dict[str, ClassInfo] | None,
     ) -> ClassInfo: ...

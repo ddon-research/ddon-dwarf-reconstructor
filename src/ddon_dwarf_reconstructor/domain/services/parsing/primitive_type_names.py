@@ -1,9 +1,12 @@
-"""Names and declarator syntax recovered from primitive DIE chains."""
+"""Primitive alias display through the canonical structural type parser."""
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from ....core.dwarf import DwarfEntry, decode_dwarf_string
 from ....core.observability import get_logger
+from ...models.dwarf import TypeReference
 from .type_resolver_context import TypeResolverContext
 
 logger = get_logger(__name__)
@@ -11,89 +14,22 @@ logger = get_logger(__name__)
 
 class PrimitiveTypeNamesMixin:
     def _get_primitive_base_type_name(self: TypeResolverContext, type_die: DwarfEntry) -> str:
-        """Return a display name while preserving pointer and qualifier syntax."""
-        tag = type_die.tag
-        if tag in {"DW_TAG_base_type", "DW_TAG_typedef"}:
-            return self._named_or_typedef_name(type_die)
-        if tag in {
-            "DW_TAG_pointer_type",
-            "DW_TAG_reference_type",
-            "DW_TAG_const_type",
-            "DW_TAG_volatile_type",
-            "DW_TAG_restrict_type",
-        }:
-            return self._qualified_primitive_name(type_die)
-        if tag in {
-            "DW_TAG_ptr_to_member_type",
-            "DW_TAG_subroutine_type",
-            "DW_TAG_class_type",
-            "DW_TAG_structure_type",
-            "DW_TAG_union_type",
-        }:
-            return self._special_primitive_name(type_die)
-        logger.debug("Unhandled type DIE tag: %s", tag)
-        return "unknown_type"
-
-    def _named_or_typedef_name(self: TypeResolverContext, type_die: DwarfEntry) -> str:
-        if type_die.tag == "DW_TAG_base_type":
-            return self._die_name(type_die) or "unknown_type"
-        return self._resolve_referenced_name(type_die, "unknown_type")
-
-    def _qualified_primitive_name(self: TypeResolverContext, type_die: DwarfEntry) -> str:
-        if type_die.tag == "DW_TAG_pointer_type":
-            return self._resolve_referenced_name(type_die, "void", "*")
-        if type_die.tag == "DW_TAG_reference_type":
-            return self._resolve_referenced_name(type_die, "void", "&")
-        qualifier = {
-            "DW_TAG_const_type": "const",
-            "DW_TAG_volatile_type": "volatile",
-            "DW_TAG_restrict_type": "restrict",
-        }[type_die.tag]
-        referenced_name = self._resolve_referenced_name(type_die, "unknown_type")
-        return f"{qualifier} {referenced_name}"
-
-    def _special_primitive_name(self: TypeResolverContext, type_die: DwarfEntry) -> str:
-        if type_die.tag == "DW_TAG_ptr_to_member_type":
-            return self._resolve_member_pointer_name(type_die)
-        if type_die.tag == "DW_TAG_subroutine_type":
-            return self._resolve_subroutine_name(type_die)
-        return self._die_name(type_die) or "unknown_type"
-
-    def _resolve_referenced_name(
-        self: TypeResolverContext,
-        type_die: DwarfEntry,
-        missing_name: str,
-        suffix: str = "",
-    ) -> str:
-        if "DW_AT_type" not in type_die.attributes:
-            return missing_name
-        target_die = type_die.get_DIE_from_attribute("DW_AT_type")
-        if target_die is None:
-            return missing_name
-        return f"{self._get_primitive_base_type_name(target_die)}{suffix}"
-
-    def _resolve_member_pointer_name(self: TypeResolverContext, type_die: DwarfEntry) -> str:
-        for attribute_name in ("DW_AT_containing_type", "DW_AT_type"):
-            if attribute_name not in type_die.attributes:
-                continue
-            target_die = type_die.get_DIE_from_attribute(attribute_name)
-            if target_die:
-                return self._get_primitive_base_type_name(target_die)
-        logger.debug("Incomplete pointer-to-member type at offset 0x%x", type_die.offset)
-        return "unknown_type"
-
-    def _resolve_subroutine_name(self: TypeResolverContext, type_die: DwarfEntry) -> str:
-        if "DW_AT_type" not in type_die.attributes:
-            return "void"
-        target_die = type_die.get_DIE_from_attribute("DW_AT_type")
-        return self._get_primitive_base_type_name(target_die) if target_die else "void"
+        """Expand evidenced aliases without losing declarator structure."""
+        reference = self.resolve_type_reference(type_die)
+        return _expanded_alias(reference).name if not reference.diagnostics else "unknown_type"
 
     @staticmethod
     def _die_name(type_die: DwarfEntry) -> str | None:
-        name_attr = type_die.attributes.get("DW_AT_name")
+        attributes = getattr(type_die, "attributes", None)
+        if not isinstance(attributes, dict) or "DW_AT_name" not in attributes:
+            return None
+        name_attr = attributes["DW_AT_name"]
         if name_attr is None:
             return None
-        return decode_dwarf_string(name_attr.value)
+        value = getattr(name_attr, "value", name_attr)
+        if isinstance(value, (bytes, str)):
+            return decode_dwarf_string(value)
+        return None
 
     def _extract_base_type(self: TypeResolverContext, type_name: str) -> str:
         """Remove qualifiers, array dimensions, and indirection from a type name."""
@@ -130,3 +66,22 @@ class PrimitiveTypeNamesMixin:
         while type_name.endswith(("&&", "&", "*")):
             type_name = type_name[: -(2 if type_name.endswith("&&") else 1)].strip()
         return type_name
+
+
+def _expanded_alias(reference: TypeReference) -> TypeReference:
+    if reference.alias_target is None:
+        return reference
+    target = _expanded_alias(reference.alias_target)
+    declaration = target.declarator
+    qualifiers = reference.declarator.qualifiers
+    if qualifiers and declaration.layers:
+        first, *rest = declaration.layers
+        declaration = replace(
+            declaration, layers=(replace(first, qualifiers=(*first.qualifiers, *qualifiers)), *rest)
+        )
+    elif qualifiers:
+        declaration = replace(declaration, qualifiers=(*declaration.qualifiers, *qualifiers))
+    return replace(
+        target,
+        declarator=replace(declaration, layers=(*reference.declarator.layers, *declaration.layers)),
+    )

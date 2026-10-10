@@ -7,7 +7,11 @@ from unittest.mock import Mock
 
 import pytest
 
+from ddon_dwarf_reconstructor.domain.models.dwarf import ParameterInfo
 from ddon_dwarf_reconstructor.domain.services.parsing import ClassParser, LazyTypeResolver
+from ddon_dwarf_reconstructor.domain.services.parsing.class_parser_methods import (
+    ClassParserMethodsMixin,
+)
 
 
 class TestClassParser:
@@ -97,6 +101,23 @@ class TestClassParser:
         assert method is not None
         assert method.is_noreturn is True
         assert method.is_noexcept is False
+
+    @pytest.mark.unit
+    @pytest.mark.parametrize(
+        ("object_type", "expected"),
+        [
+            ("const Widget*", (True, False, None)),
+            ("volatile Widget* &", (False, True, "&")),
+            ("Widget* const", (False, False, None)),
+            ("Widget* &&", (False, False, "&&")),
+        ],
+    )
+    def test_implicit_object_cv_and_ref_qualifiers(
+        self, object_type: str, expected: tuple[bool, bool, str | None]
+    ) -> None:
+        parameters = [ParameterInfo("this", object_type, is_artificial=True)]
+
+        assert ClassParserMethodsMixin._implicit_object_qualifiers(parameters) == expected
 
     @pytest.mark.unit
     def test_parse_parameter_basic(self, class_parser):

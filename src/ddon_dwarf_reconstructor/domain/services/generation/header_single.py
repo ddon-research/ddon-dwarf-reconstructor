@@ -3,11 +3,41 @@
 from __future__ import annotations
 
 from ....core.observability import get_logger, log_timing
-from ....core.path_policy import sanitize_for_filesystem
 from ...models.dwarf import ClassInfo
+from .alias_rendering import (
+    external_alias_lines,
+    referenced_namespace_aliases,
+    scoped_typedef_line,
+)
+from .header_guards import header_guard
+from .header_hierarchy_support import namespace_for_info
 from .rendering.operations import HeaderRenderingHost
+from .template_declarations import primary_declaration
+from .template_forward_declarations import ensure_family_plans, planned_template_forwards
 
 logger = get_logger(__name__)
+
+
+def _scoped_definition(info: ClassInfo, lines: list[str]) -> list[str]:
+    namespace = namespace_for_info(info)
+    result = [f"namespace {namespace} {{", *lines, "}"] if namespace else list(lines)
+    return [*result, *external_alias_lines(info.source_aliases)]
+
+
+def _exclude_alias_forwards(
+    renderer: HeaderRenderingHost,
+    declarations: set[str],
+    class_info: ClassInfo,
+    typedefs: dict[str, str],
+) -> set[str]:
+    alias_names = {
+        alias.name for alias in referenced_namespace_aliases((class_info,), typedefs).values()
+    }
+    return {
+        declaration
+        for declaration in declarations
+        if renderer._forward_declaration_name(declaration) not in alias_names
+    }
 
 
 class SingleHeaderGenerationService:
@@ -30,17 +60,18 @@ class SingleHeaderGenerationService:
         Returns:
             Complete C++ header file as string
         """
+        class_info = ensure_family_plans({class_info.name: class_info})[class_info.name]
         class_name = class_info.name
-        sanitized_name = sanitize_for_filesystem(class_name).upper()
+        guard = header_guard(class_info.qualified_name or class_name)
         lines = [
-            f"#ifndef {sanitized_name}_H",
-            f"#define {sanitized_name}_H",
+            f"#ifndef {guard}",
+            f"#define {guard}",
             "",
             "#include <cstdint>",
             "",
         ]
 
-        lines.extend(self._single_typedef_lines(typedefs))
+        lines.extend(self._single_typedef_lines(typedefs, class_info))
 
         if include_metadata:
             lines.extend(self._generate_metadata_header(class_info, cu_offset))
@@ -49,22 +80,31 @@ class SingleHeaderGenerationService:
 
         # Generate class definition
         class_lines = self._generate_single_class(class_info, include_metadata)
-        lines.extend([""] + class_lines)
+        lines.extend([""] + _scoped_definition(class_info, class_lines))
 
-        lines.extend(["", f"#endif // {sanitized_name}_H"])
+        lines.extend(["", f"#endif // {guard}"])
 
         return "\n".join(lines)
 
     def _single_typedef_lines(
-        self: HeaderRenderingHost, typedefs: dict[str, str] | None
+        self: HeaderRenderingHost, typedefs: dict[str, str] | None, class_info: ClassInfo
     ) -> list[str]:
         lines: list[str] = []
         typedef_map = typedefs or {}
-        typedef_forward_decls = self._collect_typedef_forward_declarations(typedef_map)
+        typedef_forward_decls = _exclude_alias_forwards(
+            self, self._collect_typedef_forward_declarations(typedef_map), class_info, typedef_map
+        )
         if typedef_forward_decls:
-            lines.extend(["// Forward declarations", *sorted(typedef_forward_decls), ""])
+            lines.extend(
+                [
+                    "// Forward declarations",
+                    *sorted(typedef_forward_decls, key=self._forward_declaration_order),
+                    "",
+                ]
+            )
         if not typedefs:
             return lines
+        namespace_aliases = referenced_namespace_aliases((class_info,), typedefs)
         lines.append("// Type definitions from DWARF")
         for typedef_name, underlying_type in self._ordered_typedefs(typedefs):
             if self._normalize_type_name(underlying_type) == typedef_name:
@@ -73,7 +113,11 @@ class SingleHeaderGenerationService:
                 lines.append("// size_t provided by the standard C++ headers")
                 continue
             rendered_type = self._void_alias_storage_type(underlying_type)
-            lines.append(f"typedef {rendered_type} {typedef_name};")
+            if "::*" in rendered_type:
+                declaration = f"using {typedef_name} = {rendered_type};"
+            else:
+                declaration = f"typedef {rendered_type} {typedef_name};"
+            lines.append(scoped_typedef_line(declaration, namespace_aliases.get(typedef_name)))
         lines.append("")
         return lines
 
@@ -82,10 +126,21 @@ class SingleHeaderGenerationService:
         class_info: ClassInfo,
         typedefs: dict[str, str] | None,
     ) -> list[str]:
-        forward_decls = self._collect_forward_declarations(class_info, typedefs or {})
+        forward_decls = _exclude_alias_forwards(
+            self,
+            self._collect_forward_declarations(class_info, typedefs or {}),
+            class_info,
+            typedefs or {},
+        )
+        infos = {class_info.name: class_info}
+        forward_decls = planned_template_forwards(self, forward_decls, infos, infos)
         if not forward_decls:
             return []
-        return ["", "// Forward declarations", *sorted(forward_decls)]
+        return [
+            "",
+            "// Forward declarations",
+            *sorted(forward_decls, key=self._forward_declaration_order),
+        ]
 
     @log_timing
     def generate_single_class_header(
@@ -111,9 +166,13 @@ class SingleHeaderGenerationService:
         Returns:
             Complete C++ header file with includes and class definition
         """
+        class_info = ensure_family_plans({class_info.name: class_info})[class_info.name]
         class_name = class_info.name
-        sanitized_class = sanitize_for_filesystem(class_name).upper()
-        lines = self._single_class_header_prefix(sanitized_class)
+        guard = header_guard(class_info.qualified_name or class_name)
+        lines = self._single_class_header_prefix(guard)
+        primary = primary_declaration(class_info)
+        if primary is not None:
+            lines.append(primary)
         lines.extend(self._dependency_include_lines(class_name, class_dependencies))
         lines.extend(self._base_class_include_lines(class_info, class_dependencies))
         lines.extend(self._typedef_block(typedefs))
@@ -122,18 +181,18 @@ class SingleHeaderGenerationService:
 
         # Generate class definition (no forward declarations - all includes above)
         class_lines = self._generate_single_class(class_info, include_metadata=False)
-        lines.extend(class_lines)
+        lines.extend(_scoped_definition(class_info, class_lines))
 
         # Close include guard
-        lines.extend(["", f"#endif // {sanitized_class}_H"])
+        lines.extend(["", f"#endif // {guard}"])
 
         return "\n".join(lines)
 
     @staticmethod
-    def _single_class_header_prefix(sanitized_class: str) -> list[str]:
+    def _single_class_header_prefix(guard: str) -> list[str]:
         return [
-            f"#ifndef {sanitized_class}_H",
-            f"#define {sanitized_class}_H",
+            f"#ifndef {guard}",
+            f"#define {guard}",
             "",
             "#include <cstdint>",
             "",
@@ -182,7 +241,10 @@ class SingleHeaderGenerationService:
                 lines.append("// size_t provided by the standard C++ headers")
             else:
                 rendered_type = self._void_alias_storage_type(underlying_type)
-                lines.append(f"typedef {rendered_type} {typedef_name};")
+                if "::*" in rendered_type:
+                    lines.append(f"using {typedef_name} = {rendered_type};")
+                else:
+                    lines.append(f"typedef {rendered_type} {typedef_name};")
         lines.append("")
         return lines
 

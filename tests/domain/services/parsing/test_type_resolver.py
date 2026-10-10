@@ -8,6 +8,7 @@ from ddon_dwarf_reconstructor.domain.models.dwarf import MemberInfo, MethodInfo,
 from ddon_dwarf_reconstructor.domain.services.definition_selection import DefinitionCandidate
 from ddon_dwarf_reconstructor.domain.services.parsing.type_resolver import LazyTypeResolver
 from ddon_dwarf_reconstructor.domain.services.search_result import SearchResult, SearchStatus
+from tests.support.type_graph import TypeDie
 
 
 @pytest.fixture
@@ -48,6 +49,7 @@ def test_named_type_resolution_is_cached(resolver: LazyTypeResolver) -> None:
     source = Mock(tag="DW_TAG_member")
     source.attributes = {"DW_AT_type": Mock()}
     target = Mock(tag="DW_TAG_base_type", offset=0x100)
+    target.cu = Mock(cu_offset=7)
     target.attributes = {"DW_AT_name": Mock(value=b"unsigned int")}
     source.get_DIE_from_attribute.return_value = target
 
@@ -62,18 +64,38 @@ def test_named_type_resolution_uses_cached_reference_offset_before_hydration(
     resolver: LazyTypeResolver,
 ) -> None:
     """A repeated type reference must not rehydrate its target DIE."""
-    source = Mock(tag="DW_TAG_member")
+    source = Mock(tag="DW_TAG_member", offset=0x20)
+    source.cu = Mock(cu_offset=7)
     source.attributes = {"DW_AT_type": Mock()}
     source.get_DIE_offset_from_attribute.return_value = 0x100
     target = Mock(tag="DW_TAG_class_type", offset=0x100)
+    target.cu = Mock(cu_offset=7)
     target.attributes = {"DW_AT_name": Mock(value=b"MtDataReader")}
     source.get_DIE_from_attribute.return_value = target
 
     assert resolver.resolve_type_name(source) == "MtDataReader"
     assert resolver.resolve_type_name(source) == "MtDataReader"
 
-    source.get_DIE_offset_from_attribute.assert_called_with("DW_AT_type")
     source.get_DIE_from_attribute.assert_called_once_with("DW_AT_type")
+
+
+@pytest.mark.unit
+@pytest.mark.regression
+def test_incomplete_cu_dies_with_equal_offsets_are_not_cached(
+    resolver: LazyTypeResolver,
+) -> None:
+    first = TypeDie("DW_TAG_base_type", 0, cu=None).named("First")
+    second = TypeDie("DW_TAG_base_type", 0, cu=None).named("Second")
+
+    assert resolver.resolve_die_type(first) == "First"
+    assert resolver.resolve_die_type(second) == "Second"
+    assert (None, 0) not in resolver._type_name_cache
+
+    first_member = TypeDie("DW_TAG_member", 1, cu=None).link(first)
+    second_member = TypeDie("DW_TAG_member", 1, cu=None).link(second)
+    assert resolver.resolve_type_name(first_member) == "First"
+    assert resolver.resolve_type_name(second_member) == "Second"
+    assert not resolver._reference_target_cache
 
 
 @pytest.mark.unit
@@ -185,7 +207,7 @@ def test_collect_typedefs_from_die_uses_lazy_resolution(resolver: LazyTypeResolv
 @pytest.mark.unit
 def test_clear_caches_resets_all_runtime_state(resolver: LazyTypeResolver) -> None:
     resolver._typedef_cache[1] = "int"
-    resolver._type_name_cache[2] = "float"
+    resolver._type_name_cache[(0, 2)] = "float"
     resolver._typedef_chains["Alias"] = "int"
     resolver._types_in_progress.add("Alias")
 
@@ -284,3 +306,24 @@ def test_collect_used_typedefs_extracts_nested_template_arguments() -> None:
     )
     result = resolver.collect_used_typedefs([member], [])
     assert result == {"u16": "unsigned short", "u32": "unsigned int"}
+
+
+@pytest.mark.unit
+def test_collect_used_typedefs_uses_die_name_over_extracted_base_type() -> None:
+    index = Mock()
+    index.targeted_symbol_search.return_value = SearchResult(
+        SearchStatus.NOT_FOUND, None, 0.0, 0, ()
+    )
+    resolver = LazyTypeResolver(Mock(), index)
+    typedef = Mock(tag="DW_TAG_typedef", attributes={"DW_AT_name": Mock(value=b"MT_CTSTR")})
+    index.get_die_by_offset.return_value = typedef
+    resolver._resolve_primitive_die = Mock(return_value="const MT_CHAR*")
+    member = MemberInfo(
+        "name",
+        "const MT_CHAR*[2]",
+        type_offset=0x1000,
+        declared_type_offset=0x2000,
+    )
+
+    assert resolver.collect_used_typedefs([member], []) == {"MT_CTSTR": "const MT_CHAR*"}
+    resolver._resolve_primitive_die.assert_called_once_with("MT_CTSTR", typedef)

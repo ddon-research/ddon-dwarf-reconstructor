@@ -77,8 +77,8 @@ class TestHeaderGenerator:
         assert len(header) > 0
 
         # Check for include guards
-        assert "#ifndef TESTCLASS_H" in header
-        assert "#define TESTCLASS_H" in header
+        assert "#ifndef DDON_TESTCLASS_7D5248D14A65EF46_H" in header
+        assert "#define DDON_TESTCLASS_7D5248D14A65EF46_H" in header
         assert "#endif" in header
 
         # Check for class definition
@@ -136,7 +136,7 @@ class TestHeaderGenerator:
         header = header_generator.generate_header(outer_class, include_metadata=False)
 
         assert "class cDialogPage" in header
-        assert "template <typename T> class MtTypedArray;" in header
+        assert "template <typename T> class MtTypedArray;" not in header
         assert "class MtTypedArray<rTutorialDialogMessage::cDialogPage>;" not in header
         assert "MtTypedArray<cDialogPage> m_page_info;" in header
 
@@ -216,6 +216,7 @@ class TestHeaderGenerator:
             nested_structs=[],
             unions=[],
             die_offset=0x2000,
+            cu_offset=0x10,
             qualified_name="cZoneLayout::cInGameGroupManager",
             containing_type="cZoneLayout",
         )
@@ -230,6 +231,7 @@ class TestHeaderGenerator:
             nested_structs=[],
             unions=[],
             die_offset=0x3000,
+            cu_offset=0x10,
         )
 
         header = header_generator.generate_single_file_hierarchy_header(
@@ -249,8 +251,8 @@ class TestHeaderGenerator:
 
         # Should generate valid header structure
         assert isinstance(header, str)
-        assert "#ifndef TESTCLASS_H" in header
-        assert "#define TESTCLASS_H" in header
+        assert "#ifndef DDON_TESTCLASS_7D5248D14A65EF46_H" in header
+        assert "#define DDON_TESTCLASS_7D5248D14A65EF46_H" in header
         assert "#endif" in header
 
     @pytest.mark.unit
@@ -394,10 +396,13 @@ class TestHeaderGenerator:
 
 
 @pytest.mark.unit
-def test_template_forward_declaration_matches_multiple_argument_arity() -> None:
-    declaration = HeaderRenderer._template_forward_declaration("Box<Pair<int, float>, 4>")
-
-    assert declaration == "template <typename T, auto N1> class Box;"
+def test_template_spelling_does_not_invent_parameter_types() -> None:
+    declarations = HeaderRenderer._template_argument_forward_declarations(
+        "Consumer<Box<Pair<int, float>, 4>>", set()
+    )
+    assert not any(
+        "class Box" in declaration or "class Pair" in declaration for declaration in declarations
+    )
 
 
 @pytest.mark.unit
@@ -406,17 +411,16 @@ def test_nested_template_arguments_use_template_forward_declarations() -> None:
         "MtStlVector<s8, MtStlAllocator<signed char>>", set()
     )
 
-    assert "template <typename T> class MtStlAllocator;" in declarations
+    assert "template <typename T> class MtStlAllocator;" not in declarations
     assert "class MtStlAllocator;" not in declarations
 
 
 @pytest.mark.unit
-def test_template_forward_declaration_preserves_member_function_pointer_single_arity() -> None:
-    declaration = HeaderRenderer._template_forward_declaration(
-        "cNodeT<void (cClass::*)(int, float)>"
+def test_callable_argument_spelling_does_not_invent_a_primary_signature() -> None:
+    declarations = HeaderRenderer._template_argument_forward_declarations(
+        "cNodeT<void (cClass::*)(int, float)>", set()
     )
-
-    assert declaration == "template <typename T> class cNodeT;"
+    assert not declarations
 
 
 @pytest.mark.unit
@@ -443,6 +447,7 @@ def test_forward_declarations_include_template_parameters_from_specialization() 
         tag="DW_TAG_class_type",
         attributes={"DW_AT_name": b"cAIPawnAutoMotionNode"},
     )
+    param_die.get_parent.return_value = None
     header_generator.dwarf_index.get_die_by_offset.side_effect = lambda offset: {
         0x1000: Mock(
             tag="DW_TAG_class_type",
@@ -475,3 +480,99 @@ def test_hierarchy_forward_declarations_exclude_existing_typedefs() -> None:
     }
 
     assert filtered == {"class Other;"}
+
+
+@pytest.mark.unit
+def test_typedef_forward_declarations_never_emit_builtins() -> None:
+    typedefs = {
+        "bool": "bool",
+        "unsigned": "unsigned int",
+        "void": "void",
+        "AISensorCheckFunc": "unsigned int (MtObject::*)()",
+        "PredicateFunc": "bool (cTarget::*)() const",
+        "NormalClass": "MyCustomClass*",
+    }
+    decls = HeaderTypePlanningService._collect_typedef_forward_declarations(typedefs)
+    assert "class bool;" not in decls
+    assert "class unsigned;" not in decls
+    assert "class void;" not in decls
+    assert "class int;" not in decls
+    assert "class MtObject;" in decls
+    assert "class cTarget;" in decls
+    assert "class MyCustomClass;" in decls
+
+
+@pytest.mark.unit
+def test_member_pointer_typedef_requires_evidence_for_qualified_owner_scope() -> None:
+    typedefs = {"Callback": "bool (ns::Owner::*)(int) const"}
+
+    declarations = HeaderTypePlanningService._collect_typedef_forward_declarations(typedefs)
+
+    assert declarations == set()
+
+
+@pytest.mark.unit
+def test_member_pointer_typedef_is_rendered_with_using_and_owner_forward() -> None:
+    header_generator = HeaderRenderer(Mock())
+    class_info = ClassInfo(
+        name="OwnerUser",
+        byte_size=8,
+        members=[],
+        methods=[],
+        base_classes=[],
+        enums=[],
+        nested_structs=[],
+        unions=[],
+        die_offset=0x7102,
+    )
+
+    header = header_generator.generate_header(
+        class_info,
+        typedefs={"Callback": "unsigned int (MtObject::*)(void*, void*) const"},
+        include_metadata=False,
+    )
+
+    assert "class MtObject;" in header
+    assert "using Callback = unsigned int (MtObject::*)(void*, void*) const;" in header
+    assert "typedef unsigned int (MtObject::*)(void*, void*) const Callback;" not in header
+
+
+@pytest.mark.unit
+def test_nested_template_alias_is_kept_at_its_enclosing_use_site() -> None:
+    header_generator = HeaderRenderer(Mock())
+    nested = ClassInfo(
+        name="cAbility",
+        qualified_name="Owner::cAbility",
+        byte_size=4,
+        members=[],
+        methods=[],
+        base_classes=[],
+        enums=[],
+        nested_structs=[],
+        unions=[],
+        die_offset=0x7100,
+    )
+    owner = ClassInfo(
+        name="Owner",
+        byte_size=40,
+        members=[MemberInfo("abilities", "cArray<Owner::cAbility, 2>", offset=0)],
+        methods=[],
+        base_classes=[],
+        enums=[],
+        nested_structs=[],
+        unions=[],
+        nested_classes=[nested],
+        die_offset=0x7101,
+    )
+
+    header = header_generator.generate_single_file_hierarchy_header(
+        {"Owner": owner},
+        ["Owner"],
+        "Owner",
+        typedefs={"AbilityArray": "cArray<Owner::cAbility, 2>"},
+        include_metadata=False,
+        resolve_forward_declarations=False,
+    )
+
+    assert "typedef cArray<Owner::cAbility, 2> AbilityArray;" not in header
+    assert "cArray<cAbility, 2> abilities;" in header
